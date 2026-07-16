@@ -18,9 +18,13 @@ export function readPlayerIntent(
   runMode = false,
 ): PlayerIntent {
   const x =
-    Number(input.isDown('moveRight')) - Number(input.isDown('moveLeft'));
+    Number(input.isDown('moveRight')) -
+    Number(input.isDown('moveLeft')) +
+    (input.readAxis?.('moveX') ?? 0);
   const y =
-    Number(input.isDown('moveForward')) - Number(input.isDown('moveBackward'));
+    Number(input.isDown('moveForward')) -
+    Number(input.isDown('moveBackward')) +
+    (input.readAxis?.('moveY') ?? 0);
   const move = new Vector2(x, y);
   if (move.lengthSq() > 1) move.normalize();
   return {

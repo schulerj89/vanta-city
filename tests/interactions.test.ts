@@ -187,7 +187,7 @@ describe('InteractionSystem', () => {
     prompt.init();
 
     harness.system.update();
-    expect(mount.textContent).toBe('[G] Use sign');
+    expect(mount.textContent).toBe('[G / X] Use sign');
     expect(mount.querySelector('.interaction-prompt')).not.toHaveProperty(
       'hidden',
       true,
@@ -214,7 +214,7 @@ describe('InteractionSystem', () => {
     const prompt = new InteractionPromptSystem(mount, harness.system);
     prompt.init();
     harness.system.update();
-    expect(mount.textContent).toBe('[G] Use terminal');
+    expect(mount.textContent).toBe('[G / X] Use terminal');
 
     harness.collision.addDefinition({
       id: 'moving-obstruction',
@@ -229,7 +229,7 @@ describe('InteractionSystem', () => {
 
     harness.collision.remove('moving-obstruction');
     harness.system.update();
-    expect(mount.textContent).toBe('[G] Use terminal');
+    expect(mount.textContent).toBe('[G / X] Use terminal');
     harness.system.unregister('terminal');
     expect(mount.querySelector('.interaction-prompt')).toHaveProperty(
       'hidden',

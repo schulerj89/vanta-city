@@ -49,6 +49,7 @@ import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
 import type { WorldEvents } from './world/WorldEvents';
 import { testDistrict } from './world/levels/testDistrict';
+import { AccessibilityPreferenceStore } from './accessibility/AccessibilityPreferences';
 
 async function bootstrap(): Promise<void> {
   const mount = document.querySelector<HTMLElement>('#game');
@@ -64,6 +65,12 @@ async function bootstrap(): Promise<void> {
   const assets = new ThreeAssetLoader(assetCatalog);
   const runtime = new GameRuntime(input);
   const pageParameters = new URLSearchParams(window.location.search);
+  const prefersReducedMotion =
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const accessibility = new AccessibilityPreferenceStore(window.localStorage, {
+    reducedCameraMotion: prefersReducedMotion,
+    dialogueTypewriter: !prefersReducedMotion,
+  });
   const developmentParameters = import.meta.env.DEV
     ? pageParameters
     : undefined;
@@ -157,10 +164,16 @@ async function bootstrap(): Promise<void> {
     collision,
     undefined,
     new CameraPreferenceStore(window.localStorage),
+    accessibility,
   );
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
-  const help = new HelpOverlaySystem(mount, runtime, helpControlEntries);
+  const help = new HelpOverlaySystem(
+    mount,
+    runtime,
+    helpControlEntries,
+    accessibility,
+  );
   const interactions = new InteractionSystem(
     input,
     runtime.state,
@@ -207,8 +220,9 @@ async function bootstrap(): Promise<void> {
     ReturnType<ThirdPersonCameraSystem['requestConversation']> | undefined;
   const dialogue = new DialogueSessionController(input, conversations, {
     typewriterEnabled:
-      pageParameters.get('dialogueTypewriter') !== '0' &&
-      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+      pageParameters.get('dialogueTypewriter') === '0'
+        ? false
+        : accessibility.current.dialogueTypewriter,
     cameraHooks: {
       onDialogueStarted: (session) => {
         dialogueCamera?.release();
@@ -230,6 +244,9 @@ async function bootstrap(): Promise<void> {
         player.setPresentationFacingTarget();
       },
     },
+  });
+  const unsubscribeAccessibility = accessibility.subscribe((preferences) => {
+    dialogue.setTypewriterEnabled(preferences.dialogueTypewriter);
   });
   const dialoguePortraits = new DialoguePortraitResolver(
     await createDialogueSpeakers(npcDefinitions, assetCatalog),
@@ -366,6 +383,7 @@ async function bootstrap(): Promise<void> {
   if (pageParameters.get('skipPicker') !== '1') characterPicker.open();
 
   installHotDisposal(runtime, assets, development, () => {
+    unsubscribeAccessibility();
     disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
     worldEvents.clear();

@@ -1,12 +1,17 @@
 import type { GameSystem } from '../core/lifecycle';
+import { GamepadInputAdapter } from './GamepadInput';
 
 export type ActionName = string;
-export type ActionBindings = Readonly<Record<ActionName, readonly string[]>>;
+export type AxisName = 'moveX' | 'moveY' | 'cameraX' | 'cameraY';
+export type ActionBindings<Binding = string> = Readonly<
+  Record<ActionName, readonly Binding[]>
+>;
 
 export interface InputReader {
   isDown(action: ActionName): boolean;
   wasPressed(action: ActionName): boolean;
   wasReleased(action: ActionName): boolean;
+  readAxis?(axis: AxisName): number;
   isUiFocused?(): boolean;
 }
 
@@ -43,6 +48,7 @@ export class InputSystem
   public constructor(
     private readonly bindings: ActionBindings,
     private readonly target: Window = window,
+    private readonly gamepad = new GamepadInputAdapter(),
   ) {
     this.boundCodes = new Set(Object.values(bindings).flat());
   }
@@ -102,7 +108,7 @@ export class InputSystem
   public isUiFocused(): boolean {
     const active = document.activeElement;
     return Boolean(
-      active instanceof HTMLInputElement ||
+      isTextEntryInput(active) ||
       active instanceof HTMLTextAreaElement ||
       active instanceof HTMLSelectElement ||
       (active instanceof HTMLElement && active.isContentEditable),
@@ -110,20 +116,49 @@ export class InputSystem
   }
 
   public isDown(action: ActionName): boolean {
-    return this.codesFor(action).some((code) => this.downCodes.has(code));
+    this.codesFor(action);
+    return (
+      (!this.isUiFocused() &&
+        this.isGamepadActionAllowed(action) &&
+        this.gamepad.isDown(action)) ||
+      this.bindings[action]!.some((code) => this.downCodes.has(code))
+    );
   }
 
   public wasPressed(action: ActionName): boolean {
-    return this.codesFor(action).some((code) => this.pressedCodes.has(code));
+    this.codesFor(action);
+    return (
+      (!this.isUiFocused() &&
+        this.isGamepadActionAllowed(action) &&
+        this.gamepad.wasPressed(action)) ||
+      this.bindings[action]!.some((code) => this.pressedCodes.has(code))
+    );
   }
 
   public wasReleased(action: ActionName): boolean {
-    return this.codesFor(action).some((code) => this.releasedCodes.has(code));
+    this.codesFor(action);
+    return (
+      (!this.isUiFocused() &&
+        this.isGamepadActionAllowed(action) &&
+        this.gamepad.wasReleased(action)) ||
+      this.bindings[action]!.some((code) => this.releasedCodes.has(code))
+    );
+  }
+
+  public readAxis(axis: AxisName): number {
+    return this.isUiFocused() || this.activeModal()
+      ? 0
+      : this.gamepad.readAxis(axis);
+  }
+
+  public update(): void {
+    this.gamepad.poll();
   }
 
   public lateUpdate(): void {
     this.pressedCodes.clear();
     this.releasedCodes.clear();
+    this.gamepad.lateUpdate();
   }
 
   public dispose(): void {
@@ -138,6 +173,7 @@ export class InputSystem
     this.target.removeEventListener('wheel', this.onWheel);
     this.pointerTarget?.removeEventListener('click', this.onPointerTargetClick);
     this.clear();
+    this.gamepad.dispose();
     this.attached = false;
   }
 
@@ -145,6 +181,26 @@ export class InputSystem
     const codes = this.bindings[action];
     if (!codes) throw new Error(`Unknown input action: ${action}`);
     return codes;
+  }
+
+  private isGamepadActionAllowed(action: ActionName): boolean {
+    const modal = this.activeModal();
+    if (!modal) return true;
+    if (modal.id === 'controls-help') {
+      return action === 'closeHelp' || action === 'toggleHelp';
+    }
+    if (modal.classList.contains('character-picker')) {
+      return action.startsWith('picker');
+    }
+    return false;
+  }
+
+  private activeModal(): HTMLElement | undefined {
+    return (
+      document.querySelector<HTMLElement>(
+        '[aria-modal="true"]:not([hidden])',
+      ) ?? undefined
+    );
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -211,9 +267,27 @@ export class InputSystem
 
 function isEditableTarget(target: EventTarget | null): boolean {
   return (
-    target instanceof HTMLInputElement ||
+    isTextEntryInput(target) ||
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLSelectElement ||
     (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function isTextEntryInput(target: unknown): target is HTMLInputElement {
+  return (
+    target instanceof HTMLInputElement &&
+    ![
+      'button',
+      'checkbox',
+      'color',
+      'file',
+      'hidden',
+      'image',
+      'radio',
+      'range',
+      'reset',
+      'submit',
+    ].includes(target.type)
   );
 }

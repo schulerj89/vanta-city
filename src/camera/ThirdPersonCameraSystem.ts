@@ -12,6 +12,7 @@ import type {
   WorldPosition,
 } from '../world/Spatial';
 import type { CinematicAnchorDefinition } from '../world/LevelDefinition';
+import type { AccessibilityPreferenceStore } from '../accessibility/AccessibilityPreferences';
 import {
   CameraPreferenceStore,
   cameraPreferenceLimits,
@@ -38,6 +39,7 @@ export interface ThirdPersonCameraConfig {
   readonly initialDistance: number;
   readonly zoomSensitivity: number;
   readonly keyboardOrbitSpeed: number;
+  readonly gamepadOrbitSpeed: number;
   readonly zoomSharpness: number;
   readonly followSharpness: number;
   readonly collisionEnterSharpness: number;
@@ -68,6 +70,7 @@ export const defaultThirdPersonCameraConfig: ThirdPersonCameraConfig = {
   initialDistance: defaultCameraPreferences.followDistance,
   zoomSensitivity: 0.006,
   keyboardOrbitSpeed: MathUtils.degToRad(105),
+  gamepadOrbitSpeed: MathUtils.degToRad(150),
   zoomSharpness: 12,
   followSharpness: 12,
   collisionEnterSharpness: 30,
@@ -208,6 +211,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
         followDistance: config.initialDistance,
       },
     ),
+    private readonly accessibility?: AccessibilityPreferenceStore,
   ) {
     this.preferences.update({
       followDistance: clampZoom(
@@ -463,8 +467,19 @@ export class ThirdPersonCameraSystem implements GameSystem {
       const keyboardOrbit =
         Number(this.input?.isDown('cameraOrbitRight') === true) -
         Number(this.input?.isDown('cameraOrbitLeft') === true);
-      if (keyboardOrbit !== 0) {
-        this.yaw += keyboardOrbit * this.config.keyboardOrbitSpeed * time.delta;
+      const gamepadX = this.input?.readAxis?.('cameraX') ?? 0;
+      const gamepadY = this.input?.readAxis?.('cameraY') ?? 0;
+      if (keyboardOrbit !== 0 || gamepadX !== 0 || gamepadY !== 0) {
+        this.yaw +=
+          (keyboardOrbit * this.config.keyboardOrbitSpeed +
+            gamepadX * this.config.gamepadOrbitSpeed) *
+          time.delta;
+        const yDirection = preferences.invertY ? -1 : 1;
+        this.pitch = clampPitch(
+          this.pitch -
+            gamepadY * this.config.gamepadOrbitSpeed * yDirection * time.delta,
+          this.config,
+        );
         this.secondsSinceOrbit = 0;
       } else {
         this.secondsSinceOrbit += time.delta;
@@ -486,6 +501,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
     const explicitRecenter = this.input?.isDown('cameraRecenter') === true;
     const automaticRecenter =
       currentPreferences.automaticRecenter &&
+      this.accessibility?.current.reducedCameraMotion !== true &&
       this.secondsSinceOrbit >= this.config.recenterDelay &&
       isMovingCameraForward(this.player.movement.velocity, this.yaw);
     const recenterRequested = explicitRecenter || automaticRecenter;
@@ -502,19 +518,31 @@ export class ThirdPersonCameraSystem implements GameSystem {
       );
     }
 
-    this.smoothedDistance = damp(
-      this.smoothedDistance,
-      clampZoom(currentPreferences.followDistance, this.config),
-      this.config.zoomSharpness,
-      time.delta,
+    const reducedMotion =
+      this.accessibility?.current.reducedCameraMotion === true;
+    const followDistance = clampZoom(
+      currentPreferences.followDistance,
+      this.config,
     );
-    this.shoulderOffset = damp(
-      this.shoulderOffset,
+    const shoulderOffset =
       shoulderSign(currentPreferences.shoulderSide) *
-        this.config.shoulderOffset,
-      this.config.shoulderSharpness,
-      time.delta,
-    );
+      this.config.shoulderOffset;
+    this.smoothedDistance = reducedMotion
+      ? followDistance
+      : damp(
+          this.smoothedDistance,
+          followDistance,
+          this.config.zoomSharpness,
+          time.delta,
+        );
+    this.shoulderOffset = reducedMotion
+      ? shoulderOffset
+      : damp(
+          this.shoulderOffset,
+          shoulderOffset,
+          this.config.shoulderSharpness,
+          time.delta,
+        );
 
     const playerPosition = this.player.movement.position;
     this.desiredTarget.set(
@@ -532,7 +560,9 @@ export class ThirdPersonCameraSystem implements GameSystem {
     } else if (this.transitionProgress >= 1) {
       this.target.lerp(
         this.desiredTarget,
-        smoothingFactor(this.config.followSharpness, time.delta),
+        reducedMotion
+          ? 1
+          : smoothingFactor(this.config.followSharpness, time.delta),
       );
     }
     this.calculateGameplayPose(this.desiredTarget, time.delta);
@@ -739,6 +769,15 @@ export class ThirdPersonCameraSystem implements GameSystem {
     sharpness: number,
   ): void {
     if (!isFiniteVector(desiredPosition) || !isFiniteVector(desiredTarget)) {
+      return;
+    }
+    if (this.accessibility?.current.reducedCameraMotion === true) {
+      this.transitionProgress = 1;
+      this.camera.position.copy(desiredPosition);
+      this.target.copy(desiredTarget);
+      this.camera.fov = desiredFov;
+      this.camera.lookAt(this.target);
+      this.camera.updateProjectionMatrix();
       return;
     }
     if (this.transitionProgress < 1) {

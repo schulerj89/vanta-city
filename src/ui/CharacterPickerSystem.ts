@@ -14,6 +14,7 @@ import type {
   CharacterPreviewSurface,
 } from '../characters/CharacterPreviewSystem';
 import type { CharacterSelectionStore } from '../characters/CharacterSelection';
+import { bindingLabel } from '../input/defaultBindings';
 
 export type CharacterPickerPreviewState =
   | 'idle'
@@ -105,7 +106,12 @@ export class CharacterPickerSystem implements GameSystem {
   public update(time: FrameTime): void {
     if (!this.input) return;
     if (!this.openState) {
-      if (this.input.wasPressed('openCharacterPicker')) this.open();
+      if (
+        this.input.wasPressed('openCharacterPicker') &&
+        (this.state?.current === 'playing' || this.state?.current === 'paused')
+      ) {
+        this.open();
+      }
       return;
     }
     this.preview.update(time.delta);
@@ -315,8 +321,7 @@ export class CharacterPickerSystem implements GameSystem {
     footer.className = 'character-picker__footer';
     const hints = document.createElement('p');
     hints.className = 'character-picker__hints';
-    hints.textContent =
-      '← → switch character  ·  Space change pose  ·  Enter confirm  ·  Esc cancel';
+    hints.textContent = `${bindingLabel('pickerPrevious')} / ${bindingLabel('pickerNext')} switch character  ·  ${bindingLabel('pickerSelect')} change pose  ·  ${bindingLabel('pickerConfirm')} confirm  ·  ${bindingLabel('pickerCancel')} cancel`;
     const actions = document.createElement('div');
     actions.append(
       this.actionButton('Preview next pose', 'preview-animation', 'quiet'),

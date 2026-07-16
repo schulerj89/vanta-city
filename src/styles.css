@@ -201,6 +201,47 @@ canvas {
   white-space: nowrap;
 }
 
+.help-overlay kbd[data-input='gamepad'] {
+  border-color: rgb(214 169 92 / 55%);
+  color: #ffe7b6;
+}
+
+.help-overlay__preferences {
+  padding: clamp(1.1rem, 3vw, 1.75rem);
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(7 17 23 / 96%);
+}
+
+.help-overlay__preferences > p {
+  margin-top: 0.35rem;
+  color: #adc4bc;
+}
+
+.help-overlay__preference {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+
+.help-overlay__preference input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: #7ce2c6;
+}
+
+.help-overlay__preference span,
+.help-overlay__preference small {
+  display: block;
+}
+
+.help-overlay__preference small {
+  margin-top: 0.2rem;
+  color: #adc4bc;
+  line-height: 1.4;
+}
+
 @media (max-width: 42rem) {
   .help-button {
     top: max(0.65rem, env(safe-area-inset-top));

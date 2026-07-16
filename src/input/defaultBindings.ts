@@ -6,6 +6,8 @@ export type ControlGroup =
 export interface ControlActionMetadata {
   readonly bindings: readonly string[];
   readonly keys: readonly string[];
+  readonly gamepad: readonly string[];
+  readonly gamepadButtons: readonly number[];
   readonly label: string;
   readonly group: ControlGroup;
   readonly help: boolean;
@@ -18,28 +20,62 @@ export const controlActions = {
     ['W', '↑'],
     'Move forward',
     'Movement',
+    ['Left stick'],
   ),
   moveBackward: control(
     ['KeyS', 'ArrowDown'],
     ['S', '↓'],
     'Move backward',
     'Movement',
+    ['Left stick'],
   ),
-  moveLeft: control(['KeyA', 'ArrowLeft'], ['A', '←'], 'Move left', 'Movement'),
+  moveLeft: control(
+    ['KeyA', 'ArrowLeft'],
+    ['A', '←'],
+    'Move left',
+    'Movement',
+    ['Left stick'],
+  ),
   moveRight: control(
     ['KeyD', 'ArrowRight'],
     ['D', '→'],
     'Move right',
     'Movement',
+    ['Left stick'],
   ),
-  toggleRun: control(['KeyR'], ['R'], 'Toggle walk / run', 'Movement'),
-  jump: control(['Space'], ['Space'], 'Jump', 'Movement'),
-  cameraOrbitLeft: control(['KeyQ'], ['Q'], 'Orbit camera left', 'Camera'),
-  cameraOrbitRight: control(['KeyE'], ['E'], 'Orbit camera right', 'Camera'),
+  toggleRun: control(
+    ['KeyR'],
+    ['R'],
+    'Toggle walk / run',
+    'Movement',
+    ['L3'],
+    [10],
+  ),
+  jump: control(['Space'], ['Space'], 'Jump', 'Movement', ['A'], [0]),
+  cameraOrbitLeft: control(['KeyQ'], ['Q'], 'Orbit camera left', 'Camera', [
+    'Right stick',
+  ]),
+  cameraOrbitRight: control(['KeyE'], ['E'], 'Orbit camera right', 'Camera', [
+    'Right stick',
+  ]),
   cameraOrbit: control(['Mouse0'], ['Drag'], 'Orbit camera freely', 'Camera'),
-  cameraRecenter: control(['KeyC'], ['C'], 'Recenter camera', 'Camera'),
-  cameraSwitchShoulder: control(['KeyV'], ['V'], 'Switch shoulder', 'Camera'),
-  interact: control(['KeyG'], ['G'], 'Interact / talk', 'Actions'),
+  cameraRecenter: control(
+    ['KeyC'],
+    ['C'],
+    'Recenter camera',
+    'Camera',
+    ['R3'],
+    [11],
+  ),
+  cameraSwitchShoulder: control(
+    ['KeyV'],
+    ['V'],
+    'Switch shoulder',
+    'Camera',
+    ['RB'],
+    [5],
+  ),
+  interact: control(['KeyG'], ['G'], 'Interact / talk', 'Actions', ['X'], [2]),
   punch: control(
     ['KeyJ'],
     ['J'],
@@ -52,63 +88,95 @@ export const controlActions = {
     'Kick (alternates side; one action at a time)',
     'Actions',
   ),
-  toggleHelp: control(['KeyH'], ['H'], 'Open / close controls', 'Interface'),
-  closeHelp: control(['Escape'], ['Esc'], 'Close controls', 'Interface'),
-  pause: control(['KeyP'], ['P'], 'Pause / resume', 'Interface'),
+  toggleHelp: control(
+    ['KeyH'],
+    ['H'],
+    'Open / close controls',
+    'Interface',
+    ['View'],
+    [8],
+  ),
+  closeHelp: control(
+    ['Escape'],
+    ['Esc'],
+    'Close controls',
+    'Interface',
+    ['B'],
+    [1],
+  ),
+  pause: control(['KeyP'], ['P'], 'Pause / resume', 'Interface', ['Menu'], [9]),
   toggleDebug: control(['Backquote'], ['`'], 'Developer tools', 'Interface'),
   openCharacterPicker: control(
     ['KeyK'],
     ['K'],
     'Character picker',
     'Interface',
+    ['Y'],
+    [3],
   ),
   advanceDialogue: control(
     ['Enter', 'Space', 'Mouse0'],
     ['Enter', 'Space', 'Click'],
     'Continue dialogue',
     'Dialogue & picker',
+    ['A'],
+    [0],
   ),
   skipDialogueTypewriter: control(
     ['KeyF'],
     ['F'],
     'Reveal dialogue text',
     'Dialogue & picker',
+    ['X'],
+    [2],
   ),
   cancelDialogue: control(
     ['Escape'],
     ['Esc'],
     'Cancel dialogue',
     'Dialogue & picker',
+    ['B'],
+    [1],
   ),
   pickerPrevious: control(
     ['ArrowLeft', 'KeyA'],
     ['←', 'A'],
     'Previous character',
     'Dialogue & picker',
+    ['D-pad left'],
+    [14],
   ),
   pickerNext: control(
     ['ArrowRight', 'KeyD'],
     ['→', 'D'],
     'Next character',
     'Dialogue & picker',
+    ['D-pad right'],
+    [15],
   ),
   pickerSelect: control(
     ['Space'],
     ['Space'],
     'Preview next emote',
     'Dialogue & picker',
+    ['X'],
+    [2],
   ),
   pickerConfirm: control(
     ['Enter'],
     ['Enter'],
     'Confirm character',
     'Dialogue & picker',
+    ['A'],
+    [0],
   ),
   pickerCancel: control(
     ['Escape', 'Backspace'],
     ['Esc', 'Backspace'],
     'Close character picker',
     'Dialogue & picker',
+    ['B'],
+    [1],
   ),
 } as const satisfies Readonly<Record<string, ControlActionMetadata>>;
 
@@ -123,11 +191,21 @@ export const defaultBindings = Object.fromEntries(
   Record<DefaultAction, readonly string[]>
 > satisfies ActionBindings;
 
+export const defaultGamepadButtons = Object.fromEntries(
+  Object.entries(controlActions).map(([action, metadata]) => [
+    action,
+    metadata.gamepadButtons,
+  ]),
+) as Readonly<
+  Record<DefaultAction, readonly number[]>
+> satisfies ActionBindings<number>;
+
 export interface HelpControlEntry {
   readonly action: DefaultAction;
   readonly label: string;
   readonly group: ControlGroup;
   readonly keys: readonly string[];
+  readonly gamepad: readonly string[];
 }
 
 export const helpControlEntries: readonly HelpControlEntry[] = Object.entries(
@@ -140,13 +218,15 @@ export const helpControlEntries: readonly HelpControlEntry[] = Object.entries(
           label: metadata.label,
           group: metadata.group,
           keys: metadata.keys,
+          gamepad: metadata.gamepad,
         },
       ]
     : [],
 );
 
 export function bindingLabel(action: DefaultAction): string {
-  return controlActions[action].keys.join(' / ');
+  const binding = controlActions[action];
+  return [...binding.keys, ...binding.gamepad].join(' / ');
 }
 
 export const characterControlSummary = [
@@ -162,7 +242,9 @@ function control(
   keys: readonly string[],
   label: string,
   group: ControlGroup,
+  gamepad: readonly string[] = [],
+  gamepadButtons: readonly number[] = [],
   help = true,
 ): ControlActionMetadata {
-  return { bindings, keys, label, group, help };
+  return { bindings, keys, gamepad, gamepadButtons, label, group, help };
 }

@@ -3,11 +3,13 @@ import type { GameContext } from '../game/GameRuntime';
 import type { GameRuntime } from '../game/GameRuntime';
 import type { InputReader } from '../input/InputSystem';
 import type { ControlGroup, HelpControlEntry } from '../input/defaultBindings';
+import type { AccessibilityPreferenceStore } from '../accessibility/AccessibilityPreferences';
 
 export interface HelpOverlaySnapshot {
   readonly open: boolean;
   readonly openedFromPlaying: boolean;
   readonly focusedElement: string | undefined;
+  readonly preferences: AccessibilityPreferenceStore['current'] | undefined;
 }
 
 export class HelpOverlaySystem implements GameSystem<GameContext> {
@@ -27,6 +29,7 @@ export class HelpOverlaySystem implements GameSystem<GameContext> {
     private readonly mount: HTMLElement,
     private readonly runtime: GameRuntime,
     private readonly controls: readonly HelpControlEntry[],
+    private readonly preferences?: AccessibilityPreferenceStore,
   ) {}
 
   public init(context: GameContext): void {
@@ -59,6 +62,14 @@ export class HelpOverlaySystem implements GameSystem<GameContext> {
   }
 
   public update(): void {
+    if (
+      this.openState &&
+      (this.input?.wasPressed('closeHelp') ||
+        this.input?.wasPressed('toggleHelp'))
+    ) {
+      this.close();
+      return;
+    }
     if (
       !this.openState &&
       this.input?.wasPressed('toggleHelp') &&
@@ -110,6 +121,7 @@ export class HelpOverlaySystem implements GameSystem<GameContext> {
         active instanceof HTMLElement
           ? (active.getAttribute('aria-label') ?? active.textContent?.trim())
           : undefined,
+      preferences: this.preferences?.current,
     };
   }
 
@@ -146,7 +158,7 @@ export class HelpOverlaySystem implements GameSystem<GameContext> {
     title.textContent = 'Controls';
     const description = document.createElement('p');
     description.textContent =
-      'Keyboard controls change by context. Gameplay actions pause while a menu owns focus.';
+      'Keyboard, mouse, and gamepad controls change by context. Gameplay actions pause while a menu owns focus.';
     copy.append(eyebrow, title, description);
     this.closeButton.type = 'button';
     this.closeButton.className = 'help-overlay__close';
@@ -175,6 +187,12 @@ export class HelpOverlaySystem implements GameSystem<GameContext> {
           keyElement.textContent = key;
           term.append(keyElement);
         }
+        for (const button of entry.gamepad) {
+          const keyElement = document.createElement('kbd');
+          keyElement.textContent = button;
+          keyElement.dataset.input = 'gamepad';
+          term.append(keyElement);
+        }
         const detail = document.createElement('dd');
         detail.textContent = entry.label;
         list.append(term, detail);
@@ -183,7 +201,54 @@ export class HelpOverlaySystem implements GameSystem<GameContext> {
       grid.append(section);
     }
     panel.append(header, grid);
+    if (this.preferences) panel.append(this.buildPreferences());
     return panel;
+  }
+
+  private buildPreferences(): HTMLElement {
+    const section = document.createElement('section');
+    section.className = 'help-overlay__preferences';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Accessibility';
+    const description = document.createElement('p');
+    description.textContent = 'Saved on this device.';
+    section.append(heading, description);
+    section.append(
+      this.preferenceToggle(
+        'Reduce camera motion',
+        'Removes automatic recentering and animated camera smoothing.',
+        'reducedCameraMotion',
+      ),
+      this.preferenceToggle(
+        'Animate dialogue text',
+        'Turn off to reveal each dialogue line immediately.',
+        'dialogueTypewriter',
+      ),
+    );
+    return section;
+  }
+
+  private preferenceToggle(
+    label: string,
+    description: string,
+    key: 'reducedCameraMotion' | 'dialogueTypewriter',
+  ): HTMLElement {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'help-overlay__preference';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = this.preferences?.current[key] ?? false;
+    input.addEventListener('change', () => {
+      this.preferences?.update({ [key]: input.checked });
+    });
+    const copy = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = label;
+    const detail = document.createElement('small');
+    detail.textContent = description;
+    copy.append(name, detail);
+    wrapper.append(input, copy);
+    return wrapper;
   }
 
   private canOpen(): boolean {
@@ -221,7 +286,17 @@ export class HelpOverlaySystem implements GameSystem<GameContext> {
     }
     if (event.code === 'Tab') {
       event.preventDefault();
-      this.closeButton.focus();
+      const focusable = [
+        this.closeButton,
+        ...Array.from(this.overlay.querySelectorAll<HTMLInputElement>('input')),
+      ];
+      const current = focusable.indexOf(
+        document.activeElement as HTMLInputElement,
+      );
+      const step = event.shiftKey ? -1 : 1;
+      focusable[
+        (current + step + focusable.length) % focusable.length
+      ]?.focus();
     }
   };
 }

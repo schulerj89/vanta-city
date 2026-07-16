@@ -45,4 +45,15 @@ describe('readPlayerIntent', () => {
     expect(intent.move.lengthSq()).toBe(0);
     expect(intent.jump).toBe(true);
   });
+
+  it('combines analog movement with simultaneous keyboard input', () => {
+    const input = inputReader(['moveForward']);
+    input.readAxis = (axis) =>
+      axis === 'moveX' ? 0.5 : axis === 'moveY' ? 0.25 : 0;
+    const intent = readPlayerIntent(input);
+
+    expect(intent.move.length()).toBeCloseTo(1);
+    expect(intent.move.x).toBeGreaterThan(0);
+    expect(intent.move.y).toBeGreaterThan(0);
+  });
 });

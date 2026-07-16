@@ -39,6 +39,8 @@ The character picker opens before entering the district and can be reopened with
 The scene keeps an emergency generated placeholder behind the two local character assets. See
 [Player controller](docs/player-controller.md) for tuning and integration APIs.
 
+Standard gamepad bindings and persistent motion/dialogue preferences are documented in [Controls and accessibility](docs/controls-accessibility.md).
+
 Development builds can open the developer panel with the backtick key or `?debug=1`; production builds do not initialize the panel or its commands.
 
 Run the isolated foundation sandbox without a story scene:
