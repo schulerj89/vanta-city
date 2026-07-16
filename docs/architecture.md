@@ -4,13 +4,13 @@
 
 Vanta City uses TypeScript, Vite, and Three.js without a UI framework. The current UI is small and DOM-native; adding a framework now would add runtime and ownership complexity without solving a foundation requirement. Modules are organized by responsibility rather than by speculative feature layers.
 
-No physics library is installed yet. A floor and primitive verification scene do not require one, and character/vehicle requirements should drive that choice. Future collision code must sit behind a game-owned `PhysicsWorld`/`PhysicsBody` contract and exchange plain game data at its boundary. Player, vehicle, mission, or NPC code must not import a physics package directly.
+No third-party physics library is installed. The first vertical slice uses a deterministic game-owned `StaticCollisionWorld` behind the narrower `CollisionWorld` query contract. Authored `StaticColliderDefinition` data is shared by level loading and the collision adapter; player and camera code do not depend on level files or a physics package.
 
 ## Runtime lifecycle
 
 `GameRuntime` owns the animation frame, `GameClock`, `GameStateMachine`, event bus, and ordered `SystemRegistry`. `init()` initializes registered systems in registration order, transitions `booting` to `playing`, and starts the frame loop. `dispose()` stops the loop, disposes systems in reverse registration order, then clears events.
 
-Every frame, the clock converts milliseconds to seconds and caps delta at 0.1 seconds. Its baseline resets after resume, preventing a backgrounded or paused tab from creating a large simulation step. The registry runs all `update` hooks, then all `lateUpdate` hooks. Systems default to simulation updates; systems declaring `updateMode = 'always'` continue while paused. Rendering, input edge cleanup, and the debug overlay use this mode.
+Every frame, the clock converts milliseconds to seconds and caps delta at 0.1 seconds. Its baseline resets after resume, preventing a backgrounded or paused tab from creating a large simulation step. The registry runs all `update` hooks, then all `lateUpdate` hooks. Systems default to simulation updates; systems declaring `updateMode = 'always'` continue while paused. Rendering, input edge cleanup, the follow camera, and the development panel use this mode.
 
 `pause()` and `resume()` transition state and notify every system through optional lifecycle hooks. The animation frame continues while paused so input, state UI, and rendering remain responsive, while simulation systems stop.
 
@@ -36,7 +36,7 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 `AssetCatalog` validates logical IDs for models, animations, and textures. `GameAssetLoader` exposes cached source loads, progress/error status, and independent model instances. `ThreeAssetLoader` deduplicates concurrent and completed loads, evicts failed requests so they can be retried, and owns disposal of cached GPU resources. Cached glTF scenes are source data and must never be inserted into the live scene; consumers use `instantiateModel()` or `CharacterLoader.instantiate()` and dispose the returned instance. Gameplay code supplies asset IDs and must not scatter URLs through feature code.
 
-`CharacterDefinition` separates identity, display name, model/animation asset IDs, clip mappings, transform corrections, and optional attachment/material variation metadata. `CharacterSelectionReader` is the read-only selection contract for a future player spawner. The current `CharacterSelectionStore` persists its choice in session storage, while `CharacterPreviewSystem` and `CharacterSelectorSystem` provide a development preview without coupling the runtime to UI details. `CharacterLoader` validates animation discovery and guarantees the primitive fallback path.
+`CharacterDefinition` separates identity, display name, model/animation asset IDs, clip mappings, transform corrections, and optional attachment/material variation metadata. `CharacterSelectionStore` persists its choice in session storage. `CharacterPlayerVisual` consumes the read-only selection and `CharacterLoader`, replacing only presentation when selection changes and guaranteeing the primitive fallback path. Preview/selector components remain reusable development utilities but are not separate actors in the district runtime.
 
 `RenderSystem` exclusively owns the Three.js renderer, scene, camera, canvas, resize observer, and render call. It caps device pixel ratio at two. Future third-person camera logic should update the injected camera from its own simulation system; it should not create another renderer or animation loop.
 
@@ -79,10 +79,11 @@ Parallel work may rely on these APIs:
 - `GameAssetLoader`, `AssetManifest`, and logical asset IDs
 - `AssetCatalog`, `AssetLoadStatus`, `ModelInstance`, and `CharacterLoader`
 - `CharacterDefinition`, `CharacterSelectionReader`, and `LoadedCharacter`
-- `DebugDataSource.getPlayerPosition`
-- `PlayerPositionSource.getPlayerPosition/getPlayerTransform`
+- `WorldPosition`, `WorldPose`, and `WorldPoseSource`
+- `PlayerControllerSystem.getPlayerPosition/getWorldPose`
 - `PlayerControllerSystem.teleport/reset/setControlEnabled/getDebugSnapshot`
 - `CollisionWorld.moveCharacter/castCamera`
+- `StaticColliderDefinition` and `WorldCollisionSystem`
 - `DebugRegistry` registration and command APIs (development-only)
 - `DebugVisualHelpers.register` and standard helper IDs (development-only)
 - `RenderSystem.scene`, `.camera`, and `.renderer` (renderer configuration only; do not start another loop)

@@ -6,6 +6,11 @@ import type { GameObjectWorld } from '../entities/GameObjectWorld';
 import type { GameContext } from '../game/GameRuntime';
 import type { InputReader } from '../input/InputSystem';
 import type { CollisionWorld } from '../physics/CollisionWorld';
+import type {
+  WorldPose,
+  WorldPoseSource,
+  WorldPosition,
+} from '../world/Spatial';
 import { idlePlayerIntent, readPlayerIntent } from './PlayerIntent';
 import {
   PlayerMovementSimulation,
@@ -16,15 +21,7 @@ import type {
   PlayerMovementState,
 } from './PlayerMovement';
 import { PlaceholderPlayerVisual } from './PlayerVisual';
-
-export interface PlayerTransformSnapshot {
-  readonly position: {
-    readonly x: number;
-    readonly y: number;
-    readonly z: number;
-  };
-  readonly facingYaw: number;
-}
+import type { PlayerVisual } from './PlayerVisual';
 
 export interface PlayerDebugSnapshot {
   readonly velocity: {
@@ -37,28 +34,17 @@ export interface PlayerDebugSnapshot {
   readonly blocked: boolean;
 }
 
-export interface PlayerPositionSource {
-  getPlayerPosition(): {
-    readonly x: number;
-    readonly y: number;
-    readonly z: number;
-  };
-  getPlayerTransform(): PlayerTransformSnapshot;
-}
-
 const controlledStates: readonly GameState[] = ['playing'];
 
-export class PlayerControllerSystem
-  implements GameSystem, PlayerPositionSource
-{
+export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   public readonly id = 'player-controller';
   public readonly movement: PlayerMovementSimulation;
-  public readonly visual = new PlaceholderPlayerVisual();
 
   private readonly spawnPosition: Vector3;
   private input: InputReader | undefined;
   private state: GameContext['state'] | undefined;
   private controlEnabled = true;
+  private visualAdded = false;
 
   public constructor(
     private readonly objects: GameObjectWorld,
@@ -66,15 +52,18 @@ export class PlayerControllerSystem
     spawnPosition = new Vector3(0, 0, 7),
     config: PlayerMovementConfig = defaultPlayerMovementConfig,
     private readonly cameraYaw: () => number = () => 0,
+    public readonly visual: PlayerVisual = new PlaceholderPlayerVisual(),
   ) {
     this.spawnPosition = spawnPosition.clone();
     this.movement = new PlayerMovementSimulation(collision, config);
   }
 
-  public init(context: GameContext): void {
+  public async init(context: GameContext): Promise<void> {
     this.input = context.input;
     this.state = context.state;
+    await this.visual.init?.();
     this.objects.add(this.visual);
+    this.visualAdded = true;
     this.reset();
   }
 
@@ -99,19 +88,19 @@ export class PlayerControllerSystem
     return this.controlEnabled;
   }
 
-  public getPlayerPosition(): {
-    readonly x: number;
-    readonly y: number;
-    readonly z: number;
-  } {
+  public getPlayerPosition(): WorldPosition {
     const { x, y, z } = this.movement.position;
     return { x, y, z };
   }
 
-  public getPlayerTransform(): PlayerTransformSnapshot {
+  public getWorldPose(): WorldPose {
     return {
       position: this.getPlayerPosition(),
-      facingYaw: this.movement.facingYaw,
+      forward: {
+        x: Math.sin(this.movement.facingYaw),
+        y: 0,
+        z: Math.cos(this.movement.facingYaw),
+      },
     };
   }
 
@@ -135,7 +124,9 @@ export class PlayerControllerSystem
   }
 
   public dispose(): void {
-    this.objects.remove(this.visual.id);
+    if (this.visualAdded) this.objects.remove(this.visual.id);
+    else this.visual.dispose?.();
+    this.visualAdded = false;
     this.input = undefined;
     this.state = undefined;
   }

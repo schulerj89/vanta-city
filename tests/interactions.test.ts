@@ -2,13 +2,10 @@ import { EventBus } from '../src/core/events';
 import { GameStateMachine } from '../src/core/gameState';
 import type { StateEvents } from '../src/core/gameState';
 import type { InputReader } from '../src/input/InputSystem';
-import type {
-  Interactable,
-  InteractionPose,
-  PlayerInteractionQuery,
-} from '../src/interactions/Interactable';
+import type { Interactable } from '../src/interactions/Interactable';
 import { InteractionSystem } from '../src/interactions/InteractionSystem';
 import { InteractionPromptSystem } from '../src/ui/InteractionPromptSystem';
+import type { WorldPose, WorldPoseSource } from '../src/world/Spatial';
 
 class TestInput implements InputReader {
   public pressed = false;
@@ -31,7 +28,7 @@ class TestInput implements InputReader {
 interface Harness {
   readonly events: EventBus<StateEvents>;
   readonly input: TestInput;
-  readonly pose: { current: InteractionPose | undefined };
+  readonly pose: { current: WorldPose | undefined };
   readonly state: GameStateMachine;
   readonly system: InteractionSystem;
 }
@@ -45,10 +42,10 @@ function createHarness(): Harness {
     current: {
       position: { x: 0, y: 0, z: 0 },
       forward: { x: 0, y: 0, z: 1 },
-    } satisfies InteractionPose as InteractionPose | undefined,
+    } satisfies WorldPose as WorldPose | undefined,
   };
-  const player: PlayerInteractionQuery = {
-    getInteractionPose: () => pose.current,
+  const player: WorldPoseSource = {
+    getWorldPose: () => pose.current,
   };
   const system = new InteractionSystem(input, state, player);
   system.init({ events });

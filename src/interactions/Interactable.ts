@@ -1,19 +1,5 @@
 import type { GameState } from '../core/gameState';
-
-export interface WorldLocation {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-}
-
-export interface InteractionPose {
-  readonly position: WorldLocation;
-  readonly forward: WorldLocation;
-}
-
-export interface PlayerInteractionQuery {
-  getInteractionPose(): InteractionPose | undefined;
-}
+import type { WorldPose, WorldPosition } from '../world/Spatial';
 
 export interface InteractionAvailabilityContext {
   readonly gameState: GameState;
@@ -31,7 +17,7 @@ export type InteractionAvailabilityPredicate = (
 export interface Interactable {
   readonly id: string;
   readonly prompt: string;
-  readonly location: WorldLocation | (() => WorldLocation);
+  readonly location: WorldPosition | (() => WorldPosition);
   readonly range?: number;
   readonly priority?: number;
   readonly enabled?: boolean;
@@ -73,15 +59,15 @@ export interface InteractionEvents {
 
 export interface InteractionVisibilityQuery {
   isVisible(
-    from: WorldLocation,
-    to: WorldLocation,
+    from: WorldPosition,
+    to: WorldPosition,
     target: Interactable,
   ): boolean;
 }
 
 export interface InteractionCandidate {
   readonly target: InteractionTargetSummary;
-  readonly location: WorldLocation;
+  readonly location: WorldPosition;
   readonly distance: number;
   readonly facing: number;
   readonly visible: boolean;
@@ -90,13 +76,13 @@ export interface InteractionCandidate {
 
 export interface InteractionDebugTarget {
   readonly id: string;
-  readonly location: WorldLocation;
+  readonly location: WorldPosition;
   readonly range: number;
   readonly available: boolean;
 }
 
 export interface InteractionDebugSnapshot {
-  readonly pose: InteractionPose | undefined;
+  readonly pose: WorldPose | undefined;
   readonly targets: readonly InteractionDebugTarget[];
   readonly candidates: readonly InteractionCandidate[];
   readonly selectedId: string | undefined;

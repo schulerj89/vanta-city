@@ -6,7 +6,7 @@ The on-foot feature keeps four concerns separate:
 
 - `PlayerIntent` translates named `InputReader` actions into normalized movement intent.
 - `PlayerMovementSimulation` owns acceleration, velocity, gravity, jumping, collision, grounding, steps, slope limits, and movement-state decisions. It never reads DOM input.
-- `PlaceholderPlayerVisual` mirrors the simulated transform and can be replaced by a character model without changing simulation.
+- `CharacterPlayerVisual` mirrors the simulated transform, loads the selected character, and falls back to primitives without changing simulation.
 - `ThirdPersonCameraSystem` owns orbit, pitch/zoom limits, smooth follow, delayed/manual re-centering, and obstruction response. Pointer events remain inside `InputSystem`.
 
 Player and camera input are accepted only in the `playing` game state. Pause uses the foundation's simulation pause. Dialogue and cinematic states continue the lifecycle but feed no player intent and ignore camera input. `setControlEnabled(false)` provides an additional direct lock for feature-owned transitions.
@@ -38,14 +38,14 @@ Bindings live only in `src/input/defaultBindings.ts`.
 The `PlayerControllerSystem` instance is the stable owner other branches should receive by constructor injection:
 
 - `getPlayerPosition()` returns a copied plain `{ x, y, z }` value.
-- `getPlayerTransform()` returns copied position plus `facingYaw`.
+- `getWorldPose()` returns the shared copied position/forward contract consumed by interactions and future location-based systems.
 - `getDebugSnapshot()` returns copied velocity, grounded state, movement state, and collision-blocked state.
 - `teleport(position, facingYaw?)` clears velocity and re-probes the ground.
 - `reset()` returns to the configured spawn and clears movement.
 - `setControlEnabled(enabled)` and `isControlEnabled()` provide an explicit feature lock.
 - `movement.state` exposes `idle`, `walking`, `running`, `airborne`, and `landing` for a future animation adapter. Animation code should observe it, not mutate simulation.
 
-The camera exposes `getYaw()`, `obstructed`, `snapToPlayer()`, and its read-only config. Static world branches register axis-aligned boxes or planar ramps with `StaticCollisionWorld`; player code depends only on the narrower `CollisionWorld` interface.
+The camera exposes `getYaw()`, `obstructed`, `snapToPlayer()`, and its read-only config. `WorldCollisionSystem` consumes the level's shared `StaticColliderDefinition` list and keeps `StaticCollisionWorld` synchronized across reloads; player code depends only on the narrower `CollisionWorld` interface.
 
 ## Integration risks
 

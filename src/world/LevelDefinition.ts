@@ -1,6 +1,8 @@
 import type { AssetManifest } from '../assets/AssetLoader';
+import type { StaticColliderDefinition } from '../physics/StaticCollider';
+import type { Vector3Tuple } from './Spatial';
 
-export type Vector3Tuple = readonly [x: number, y: number, z: number];
+export type { Vector3Tuple } from './Spatial';
 
 export interface TransformDefinition {
   readonly position: Vector3Tuple;
@@ -26,16 +28,6 @@ export interface BoxVisualDefinition extends WorldEntry {
 
 export type EnvironmentVisualDefinition =
   GltfVisualDefinition | BoxVisualDefinition;
-
-/**
- * Static collision is intentionally plain game data. Rotated boxes are OBBs;
- * physics adapters and camera queries may consume them without importing Three.js.
- */
-export interface StaticBoxColliderDefinition extends WorldEntry {
-  readonly kind: 'box';
-  readonly size: Vector3Tuple;
-  readonly tags?: readonly string[];
-}
 
 export type SpawnKind = 'player' | 'npc';
 
@@ -68,7 +60,7 @@ export interface LevelDefinition {
   readonly id: string;
   readonly name: string;
   readonly environment: readonly EnvironmentVisualDefinition[];
-  readonly staticCollision: readonly StaticBoxColliderDefinition[];
+  readonly staticCollision: readonly StaticColliderDefinition[];
   readonly spawns: readonly SpawnPointDefinition[];
   readonly locations: readonly NamedLocationDefinition[];
   readonly triggers: readonly TriggerVolumeDefinition[];

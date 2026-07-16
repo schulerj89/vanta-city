@@ -41,12 +41,6 @@ export function setupDevelopmentTools(
     },
   });
   debug.registerCommand({
-    id: 'level.reload',
-    label: 'Reload level',
-    group: 'Actions',
-    run: () => window.location.reload(),
-  });
-  debug.registerCommand({
     id: 'helpers.toggle',
     label: 'Toggle helper',
     group: 'Actions',

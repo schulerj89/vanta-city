@@ -8,7 +8,12 @@ import {
 import type { GameObject } from '../entities/GameObject';
 import type { PlayerMovementSimulation } from './PlayerMovement';
 
-export class PlaceholderPlayerVisual implements GameObject {
+export interface PlayerVisual extends GameObject {
+  init?(): void | Promise<void>;
+  sync(movement: PlayerMovementSimulation): void;
+}
+
+export class PlaceholderPlayerVisual implements PlayerVisual {
   public readonly id = 'player';
   public readonly object3d = new Group();
   private readonly material = new MeshStandardMaterial({

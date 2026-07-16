@@ -3,6 +3,9 @@ import { Vector3 } from 'three';
 import { AssetCatalog } from './assets/AssetCatalog';
 import { ThreeAssetLoader } from './assets/AssetLoader';
 import { assetManifest } from './assets/catalog';
+import { CharacterLoader } from './characters/CharacterLoader';
+import { CharacterSelectionStore } from './characters/CharacterSelection';
+import { characterDefinitions } from './characters/characters';
 import type { GameSystem } from './core/lifecycle';
 import { EventBus } from './core/events';
 import { GameObjectWorld } from './entities/GameObjectWorld';
@@ -12,6 +15,8 @@ import { InputSystem } from './input/InputSystem';
 import { defaultBindings } from './input/defaultBindings';
 import { InteractionSystem } from './interactions/InteractionSystem';
 import { StaticCollisionWorld } from './physics/CollisionWorld';
+import { WorldCollisionSystem } from './physics/WorldCollisionSystem';
+import { CharacterPlayerVisual } from './player/CharacterPlayerVisual';
 import { PlayerControllerSystem } from './player/PlayerControllerSystem';
 import { RenderSystem } from './render/RenderSystem';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
@@ -56,9 +61,13 @@ async function bootstrap(): Promise<void> {
         debug: development.debug,
         visualHelpers: development.visualHelpers,
       });
-      runtime.register(input).register(development.systems[0]).register(sandbox);
+      runtime
+        .register(input)
+        .register(development.systems[0]!)
+        .register(sandbox);
       runtime.register(new GameObjectWorld(render.scene)).register(render);
-      for (const system of development.systems.slice(1)) runtime.register(system);
+      for (const system of development.systems.slice(1))
+        runtime.register(system);
       await runtime.init();
       installHotDisposal(runtime, assets, development);
       return;
@@ -72,11 +81,20 @@ async function bootstrap(): Promise<void> {
     levels,
     'test-district',
     worldEvents,
-    input,
   );
-  const collision = createDistrictCollision();
-  const spawn = findSpawn(testDistrict.definition, undefined, 'player');
+  const collision = new StaticCollisionWorld();
+  const worldCollision = new WorldCollisionSystem(collision, worldEvents);
+  const spawn = findSpawn(testDistrict.definition);
   const objects = new GameObjectWorld(render.scene);
+  const characterSelection = new CharacterSelectionStore(
+    characterDefinitions,
+    'vanta-placeholder',
+    window.sessionStorage,
+  );
+  const characterVisual = new CharacterPlayerVisual(
+    characterSelection,
+    new CharacterLoader(assets),
+  );
   const cameraReference: { current?: ThirdPersonCameraSystem } = {};
   const player = new PlayerControllerSystem(
     objects,
@@ -84,6 +102,7 @@ async function bootstrap(): Promise<void> {
     new Vector3(...spawn.position),
     undefined,
     () => cameraReference.current?.getYaw() ?? 0,
+    characterVisual,
   );
   const camera = new ThirdPersonCameraSystem(
     render.camera,
@@ -93,19 +112,7 @@ async function bootstrap(): Promise<void> {
   );
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
-  const interactions = new InteractionSystem(input, runtime.state, {
-    getInteractionPose: () => {
-      const transform = player.getPlayerTransform();
-      return {
-        position: transform.position,
-        forward: {
-          x: Math.sin(transform.facingYaw),
-          y: 0,
-          z: Math.cos(transform.facingYaw),
-        },
-      };
-    },
-  });
+  const interactions = new InteractionSystem(input, runtime.state, player);
   interactions.register({
     id: 'interaction.garage-door',
     prompt: 'Inspect garage door',
@@ -119,6 +126,14 @@ async function bootstrap(): Promise<void> {
     repeatable: false,
     interact: () => undefined,
   });
+  let interactionDebug:
+    | import('./interactions/InteractionDebugSystem').InteractionDebugSystem
+    | undefined;
+  if (development) {
+    const { InteractionDebugSystem } =
+      await import('./interactions/InteractionDebugSystem');
+    interactionDebug = new InteractionDebugSystem(render.scene, interactions);
+  }
 
   const debugUnregister = development
     ? registerVerticalSliceDebug(
@@ -127,19 +142,24 @@ async function bootstrap(): Promise<void> {
         player,
         camera,
         interactions,
+        characterSelection,
+        characterVisual,
+        interactionDebug,
       )
     : [];
 
   runtime.register(input);
-  if (development) runtime.register(development.systems[0]);
+  if (development) runtime.register(development.systems[0]!);
   runtime
+    .register(worldCollision)
     .register(levelSystem)
     .register(objects)
     .register(player)
     .register(camera)
     .register(interactions)
-    .register(new InteractionPromptSystem(mount, interactions))
-    .register(render);
+    .register(new InteractionPromptSystem(mount, interactions));
+  if (interactionDebug) runtime.register(interactionDebug);
+  runtime.register(render);
   for (const system of development?.systems.slice(1) ?? []) {
     runtime.register(system);
   }
@@ -158,44 +178,30 @@ async function bootstrap(): Promise<void> {
   });
 }
 
-function createDistrictCollision(): StaticCollisionWorld {
-  const collision = new StaticCollisionWorld();
-  for (const collider of testDistrict.definition.staticCollision) {
-    const [x, y, z] = collider.position;
-    const [width, height, depth] = collider.size;
-    if (collider.tags?.includes('ramp')) {
-      const run = depth * Math.cos(collider.rotation?.[0] ?? 0);
-      const rise = depth * Math.sin(collider.rotation?.[0] ?? 0);
-      collision.addRamp({
-        id: collider.id,
-        minX: x - width / 2,
-        maxX: x + width / 2,
-        minZ: z - run / 2,
-        maxZ: z + run / 2,
-        baseHeight: y + rise / 2,
-        slopeX: 0,
-        slopeZ: -rise / run,
-      });
-    } else {
-      collision.addBox({
-        id: collider.id,
-        min: new Vector3(x - width / 2, y - height / 2, z - depth / 2),
-        max: new Vector3(x + width / 2, y + height / 2, z + depth / 2),
-      });
-    }
-  }
-  return collision;
-}
-
 function registerVerticalSliceDebug(
   development: import('./debug/setupDevelopmentTools').DevelopmentTools,
   level: LevelSystem,
   player: PlayerControllerSystem,
   camera: ThirdPersonCameraSystem,
   interactions: InteractionSystem,
+  characterSelection: CharacterSelectionStore,
+  characterVisual: CharacterPlayerVisual,
+  interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
 ): (() => void)[] {
   const { debug, visualHelpers } = development;
   return [
+    debug.registerValue({
+      id: 'player.character',
+      label: 'Character',
+      group: 'Player',
+      read: () => characterSelection.getSelectedId(),
+    }),
+    debug.registerValue({
+      id: 'player.character-source',
+      label: 'Character source',
+      group: 'Player',
+      read: () => characterVisual.source,
+    }),
     debug.registerValue({
       id: 'player.position',
       label: 'Position',
@@ -232,6 +238,24 @@ function registerVerticalSliceDebug(
       group: 'Interactions',
       read: () => interactions.getDebugSnapshot().candidates.length,
     }),
+    debug.registerValue({
+      id: 'level.current',
+      label: 'Level',
+      group: 'World',
+      read: () => level.activeLevel?.id ?? 'loading',
+    }),
+    debug.registerValue({
+      id: 'level.colliders',
+      label: 'Colliders',
+      group: 'World',
+      read: () => level.activeLevel?.staticCollision.length,
+    }),
+    debug.registerValue({
+      id: 'level.spawns',
+      label: 'Spawns',
+      group: 'World',
+      read: () => level.activeLevel?.spawns.length,
+    }),
     debug.registerCommand({
       id: 'player.reset',
       label: 'Reset player',
@@ -239,18 +263,47 @@ function registerVerticalSliceDebug(
       run: () => player.reset(),
     }),
     debug.registerCommand({
+      id: 'player.select-character',
+      label: 'Select character',
+      group: 'Actions',
+      argumentLabel: 'character id',
+      run: (id) => {
+        if (!id) throw new Error('A character id is required');
+        characterSelection.select(id);
+      },
+    }),
+    debug.registerCommand({
+      id: 'level.reload',
+      label: 'Reload level',
+      group: 'Actions',
+      run: async () => {
+        const id = level.activeLevel?.id;
+        if (!id) throw new Error('No level is loaded');
+        await level.load(id);
+      },
+    }),
+    debug.registerCommand({
       id: 'player.teleport',
       label: 'Teleport to spawn',
       group: 'Actions',
       argumentLabel: 'spawn id',
       run: (id) => {
-        const spawn = level.getSpawn(id || undefined, 'player');
+        const spawn = level.getSpawn(id || undefined);
         player.teleport(new Vector3(...spawn.position), spawn.rotation?.[1]);
       },
     }),
     visualHelpers.register('collision', {
-      setVisible: (visible) => level.setDebugVisible(visible),
+      setVisible: (visible) => level.setDebugGroupVisible('collision', visible),
     }),
+    visualHelpers.register('spawnPoints', {
+      setVisible: (visible) => level.setDebugGroupVisible('spawns', visible),
+    }),
+    visualHelpers.register('triggers', {
+      setVisible: (visible) => level.setDebugGroupVisible('triggers', visible),
+    }),
+    ...(interactionDebug
+      ? [visualHelpers.register('interactionRanges', interactionDebug)]
+      : []),
   ];
 }
 

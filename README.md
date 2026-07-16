@@ -14,9 +14,9 @@ pnpm install
 pnpm dev
 ```
 
-Open the URL printed by Vite. The Foundry test district uses only generated primitives, so no external assets are required. Press `Escape` or `P` to pause/resume and the backtick key to toggle the debug overlay plus world collision, spawn, trigger, location, and camera helpers.
+Open the URL printed by Vite. The Foundry test district uses only generated primitives, so no external assets are required. Press `Escape` or `P` to pause/resume and the backtick key to open the developer panel. Its toggles expose collision, spawn, trigger, and interaction helpers.
 
-Use the character panel to select a session-persistent character, inspect it with the rotation control, or disable automatic rotation. External character files are optional; see [Character assets and registration](docs/characters.md).
+The selected session-persistent character is used by the playable player. In development, use the `Select character` command to change it; missing external files automatically fall back to the primitive character. See [Character assets and registration](docs/characters.md).
 
 ## On-foot controls
 
@@ -29,7 +29,7 @@ Use the character panel to select a session-persistent character, inspect it wit
 - `Escape` or `P`: pause/resume
 - Backtick: toggle movement and camera diagnostics
 
-The scene uses a generated capsule placeholder and requires no character asset. See
+The scene guarantees a generated placeholder and requires no character asset. See
 [Player controller](docs/player-controller.md) for tuning and integration APIs.
 
 Development builds can open the developer panel with the backtick key or `?debug=1`; production builds do not initialize the panel or its commands.
@@ -54,4 +54,4 @@ pnpm size
 pnpm preview
 ```
 
-See [Architecture](docs/architecture.md) for integration contracts and design decisions, and [World levels](docs/world-levels.md) for level APIs and environment GLB registration.
+See [Architecture](docs/architecture.md) and [First-wave integration decisions](docs/first-wave-integration.md) for design decisions, and [World levels](docs/world-levels.md) for level APIs and environment GLB registration.

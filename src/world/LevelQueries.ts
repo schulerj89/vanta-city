@@ -3,9 +3,9 @@ import type {
   LevelDefinition,
   NamedLocationDefinition,
   SpawnPointDefinition,
-  StaticBoxColliderDefinition,
   TriggerVolumeDefinition,
 } from './LevelDefinition';
+import type { StaticColliderDefinition } from '../physics/StaticCollider';
 
 export function findSpawn(
   level: LevelDefinition,
@@ -31,7 +31,7 @@ export interface LevelLocations {
   getLocation(id: string): NamedLocationDefinition;
   getTrigger(id: string): TriggerVolumeDefinition;
   getCinematicAnchor(id: string): CinematicAnchorDefinition;
-  getStaticColliders(): readonly StaticBoxColliderDefinition[];
+  getStaticColliders(): readonly StaticColliderDefinition[];
 }
 
 export class DefinitionLevelLocations implements LevelLocations {
@@ -61,7 +61,7 @@ export class DefinitionLevelLocations implements LevelLocations {
     return required(this.anchors, id, 'cinematic anchor', this.definition.id);
   }
 
-  public getStaticColliders(): readonly StaticBoxColliderDefinition[] {
+  public getStaticColliders(): readonly StaticColliderDefinition[] {
     return this.definition.staticCollision;
   }
 }

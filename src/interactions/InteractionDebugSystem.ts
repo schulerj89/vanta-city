@@ -9,9 +9,9 @@ import {
 } from 'three';
 import type { Object3D, Scene } from 'three';
 import type { GameSystem } from '../core/lifecycle';
-import type { InputReader } from '../input/InputSystem';
+import type { DebugVisualHelper } from '../debug/DebugVisualHelpers';
 import type { InteractionSystem } from './InteractionSystem';
-import type { WorldLocation } from './Interactable';
+import type { WorldPosition } from '../world/Spatial';
 
 const RANGE_SEGMENTS = 48;
 
@@ -21,20 +21,17 @@ function isDebugLine(
   return 'isLine' in object && object.isLine === true;
 }
 
-export class InteractionDebugSystem implements GameSystem {
+export class InteractionDebugSystem implements GameSystem, DebugVisualHelper {
   public readonly id = 'interaction-debug';
   public readonly updateMode = 'always' as const;
 
   private readonly root = new Group();
-  private readonly panel = document.createElement('aside');
   private visible: boolean;
 
   public constructor(
     private readonly scene: Scene,
-    private readonly mount: HTMLElement,
-    private readonly input: InputReader,
     private readonly interactions: InteractionSystem,
-    initiallyVisible = true,
+    initiallyVisible = false,
   ) {
     this.visible = initiallyVisible;
   }
@@ -43,16 +40,10 @@ export class InteractionDebugSystem implements GameSystem {
     this.root.name = 'Interaction debug visualization';
     this.root.renderOrder = 100;
     this.scene.add(this.root);
-    this.panel.className = 'interaction-debug-panel';
-    this.mount.append(this.panel);
     this.applyVisibility();
   }
 
   public update(): void {
-    if (this.input.wasPressed('toggleDebug')) {
-      this.visible = !this.visible;
-      this.applyVisibility();
-    }
     if (!this.visible) return;
     this.clearVisualization();
 
@@ -82,27 +73,22 @@ export class InteractionDebugSystem implements GameSystem {
         );
       }
     }
+  }
 
-    const selected = snapshot.selectedId ?? 'none';
-    const candidates = snapshot.candidates.length
-      ? snapshot.candidates
-          .map(
-            ({ target, distance, facing, score }) =>
-              `${target.id}: ${score.toFixed(2)}  d=${distance.toFixed(2)}  face=${facing.toFixed(2)}`,
-          )
-          .join('\n')
-      : 'none';
-    this.panel.textContent = `Interactions\nSelected ${selected}\nCandidates\n${candidates}`;
+  public setVisible(visible: boolean): void {
+    if (this.visible === visible) return;
+    this.visible = visible;
+    if (!visible) this.clearVisualization();
+    this.applyVisibility();
   }
 
   public dispose(): void {
     this.clearVisualization();
     this.scene.remove(this.root);
-    this.panel.remove();
   }
 
   private createRange(
-    location: WorldLocation,
+    location: WorldPosition,
     radius: number,
     color: number,
   ): LineLoop {
@@ -121,8 +107,8 @@ export class InteractionDebugSystem implements GameSystem {
   }
 
   private createLine(
-    from: WorldLocation,
-    to: WorldLocation,
+    from: WorldPosition,
+    to: WorldPosition,
     color: number,
   ): Line {
     const geometry = new BufferGeometry();
@@ -158,6 +144,5 @@ export class InteractionDebugSystem implements GameSystem {
 
   private applyVisibility(): void {
     this.root.visible = this.visible;
-    this.panel.hidden = !this.visible;
   }
 }

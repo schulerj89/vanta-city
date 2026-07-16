@@ -1,9 +1,9 @@
 import type {
   BoxVisualDefinition,
   LevelModule,
-  StaticBoxColliderDefinition,
   Vector3Tuple,
 } from '../LevelDefinition';
+import type { StaticColliderDefinition } from '../../physics/StaticCollider';
 
 const colors = {
   asphalt: 0x252b31,
@@ -74,7 +74,7 @@ const environment: readonly BoxVisualDefinition[] = [
   box('v.bollard-c', [-8.2, 0.6, 5], [0.35, 1.2, 0.35], colors.garageTrim),
 ];
 
-const staticCollision: readonly StaticBoxColliderDefinition[] = [
+const staticCollision: readonly StaticColliderDefinition[] = [
   collider('c.street', [0, -0.25, 0], [10, 0.5, 44], ['walkable']),
   collider('c.sidewalk-west', [-7, 0, 0], [4, 0.4, 44], ['walkable']),
   collider('c.sidewalk-east', [7, 0, 0], [4, 0.4, 44], ['walkable']),
@@ -230,6 +230,6 @@ function collider(
   size: Vector3Tuple,
   tags: readonly string[],
   rotation?: Vector3Tuple,
-): StaticBoxColliderDefinition {
-  return { id, kind: 'box', position, size, tags, rotation };
+): StaticColliderDefinition {
+  return { id, position, size, tags, rotation };
 }

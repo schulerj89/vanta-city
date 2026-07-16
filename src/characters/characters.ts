@@ -5,6 +5,7 @@ export const characterDefinitions = validateCharacterDefinitions([
   {
     id: 'vanta-placeholder',
     displayName: 'Vanta Placeholder',
+    transform: { scale: 0.6 },
     fallback: 'placeholder',
   },
   {

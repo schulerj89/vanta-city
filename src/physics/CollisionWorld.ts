@@ -1,4 +1,5 @@
 import { Vector3 } from 'three';
+import type { StaticColliderDefinition } from './StaticCollider';
 
 export interface CharacterShape {
   readonly radius: number;
@@ -8,13 +9,13 @@ export interface CharacterShape {
   readonly groundSnapDistance: number;
 }
 
-export interface StaticBoxCollider {
+interface StaticBoxCollider {
   readonly id: string;
   readonly min: Readonly<Vector3>;
   readonly max: Readonly<Vector3>;
 }
 
-export interface StaticRampCollider {
+interface StaticRampCollider {
   readonly id: string;
   readonly minX: number;
   readonly maxX: number;
@@ -72,6 +73,36 @@ export class StaticCollisionWorld implements CollisionWorld {
   private readonly ramps = new Map<string, StaticRampCollider>();
 
   public constructor(private readonly floorHeight = 0) {}
+
+  public addDefinition(collider: StaticColliderDefinition): void {
+    const [x, y, z] = collider.position;
+    const [width, height, depth] = collider.size;
+    if (collider.tags?.includes('ramp')) {
+      const angle = collider.rotation?.[0] ?? 0;
+      const run = depth * Math.cos(angle);
+      const rise = depth * Math.sin(angle);
+      this.addRamp({
+        id: collider.id,
+        minX: x - width / 2,
+        maxX: x + width / 2,
+        minZ: z - run / 2,
+        maxZ: z + run / 2,
+        baseHeight: y + rise / 2,
+        slopeX: 0,
+        slopeZ: -rise / run,
+      });
+      return;
+    }
+    this.addBox({
+      id: collider.id,
+      min: new Vector3(x - width / 2, y - height / 2, z - depth / 2),
+      max: new Vector3(x + width / 2, y + height / 2, z + depth / 2),
+    });
+  }
+
+  public addDefinitions(colliders: readonly StaticColliderDefinition[]): void {
+    for (const collider of colliders) this.addDefinition(collider);
+  }
 
   public addBox(collider: StaticBoxCollider): void {
     if (this.boxes.has(collider.id)) {

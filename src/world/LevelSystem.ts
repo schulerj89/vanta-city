@@ -21,13 +21,13 @@ import type { GameAssetLoader } from '../assets/AssetLoader';
 import type { EventBus } from '../core/events';
 import type { GameSystem } from '../core/lifecycle';
 import type { InputReader } from '../input/InputSystem';
+import type { StaticColliderDefinition } from '../physics/StaticCollider';
 import type {
   CinematicAnchorDefinition,
   EnvironmentVisualDefinition,
   LevelDefinition,
   NamedLocationDefinition,
   SpawnPointDefinition,
-  StaticBoxColliderDefinition,
   TransformDefinition,
   TriggerVolumeDefinition,
   Vector3Tuple,
@@ -45,11 +45,23 @@ interface LoadedLevel {
   readonly locations: DefinitionLevelLocations;
 }
 
+export type LevelDebugGroup =
+  'collision' | 'spawns' | 'triggers' | 'locations' | 'anchors';
+
+const debugGroupNames: Readonly<Record<LevelDebugGroup, string>> = {
+  collision: 'collision-geometry',
+  spawns: 'spawn-points',
+  triggers: 'trigger-volumes',
+  locations: 'location-markers',
+  anchors: 'cinematic-anchors',
+};
+
 /** Owns exactly one loaded level and all scene objects created for it. */
 export class LevelSystem implements GameSystem, LevelLocations {
   public readonly id = 'levels';
   private loaded: LoadedLevel | undefined;
   private debugVisible: boolean;
+  private readonly debugGroups = new Map<LevelDebugGroup, boolean>();
 
   public constructor(
     private readonly scene: Scene,
@@ -61,6 +73,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
     initiallyDebugVisible = false,
   ) {
     this.debugVisible = initiallyDebugVisible;
+    for (const group of Object.keys(debugGroupNames) as LevelDebugGroup[]) {
+      this.debugGroups.set(group, initiallyDebugVisible);
+    }
   }
 
   public async init(): Promise<void> {
@@ -79,7 +94,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
     const next = await this.build(definition);
     this.unload();
     this.loaded = next;
-    next.debug.visible = this.debugVisible;
+    this.applyDebugVisibility();
     this.scene.add(next.root);
     this.events.emit('level:loaded', { level: definition });
   }
@@ -100,7 +115,16 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   public setDebugVisible(visible: boolean): void {
     this.debugVisible = visible;
-    if (this.loaded) this.loaded.debug.visible = visible;
+    for (const group of this.debugGroups.keys()) {
+      this.debugGroups.set(group, visible);
+    }
+    this.applyDebugVisibility();
+  }
+
+  public setDebugGroupVisible(group: LevelDebugGroup, visible: boolean): void {
+    this.debugGroups.set(group, visible);
+    this.debugVisible = [...this.debugGroups.values()].some(Boolean);
+    this.applyDebugVisibility();
   }
 
   public get activeLevel(): LevelDefinition | undefined {
@@ -123,13 +147,22 @@ export class LevelSystem implements GameSystem, LevelLocations {
     return this.requireLocations().getCinematicAnchor(id);
   }
 
-  public getStaticColliders(): readonly StaticBoxColliderDefinition[] {
+  public getStaticColliders(): readonly StaticColliderDefinition[] {
     return this.requireLocations().getStaticColliders();
   }
 
   private requireLocations(): DefinitionLevelLocations {
     if (!this.loaded) throw new Error('No level is loaded');
     return this.loaded.locations;
+  }
+
+  private applyDebugVisibility(): void {
+    if (!this.loaded) return;
+    for (const [group, visible] of this.debugGroups) {
+      const object = this.loaded.debug.getObjectByName(debugGroupNames[group]);
+      if (object) object.visible = visible;
+    }
+    this.loaded.debug.visible = this.debugVisible;
   }
 
   private async build(definition: LevelDefinition): Promise<LoadedLevel> {

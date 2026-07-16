@@ -9,6 +9,10 @@ import { testDistrict } from '../../src/world/levels/testDistrict';
 const unusedAssets: GameAssetLoader = {
   loadTexture: () => Promise.reject(new Error('Unexpected texture load')),
   loadGltf: () => Promise.reject(new Error('Unexpected glTF load')),
+  instantiateModel: () =>
+    Promise.reject(new Error('Unexpected model instantiation')),
+  getStatus: (id) => ({ id, phase: 'idle', progress: 0 }),
+  onStatus: () => () => undefined,
   dispose: () => undefined,
 };
 
@@ -40,6 +44,11 @@ describe('LevelSystem', () => {
     expect(scene.getObjectByName('trigger-volumes')).toBeDefined();
     expect(scene.getObjectByName('cinematic-anchors')).toBeDefined();
     expect(scene.getObjectByName('debug-helpers')?.visible).toBe(true);
+    system.setDebugVisible(false);
+    system.setDebugGroupVisible('spawns', true);
+    expect(scene.getObjectByName('debug-helpers')?.visible).toBe(true);
+    expect(scene.getObjectByName('spawn-points')?.visible).toBe(true);
+    expect(scene.getObjectByName('collision-geometry')?.visible).toBe(false);
     expect(loaded).toHaveBeenCalledOnce();
 
     system.dispose();

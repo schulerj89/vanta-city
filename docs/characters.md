@@ -5,7 +5,7 @@
 1. Download the GLB/GLTF version of the [Ultimate Modular Men Pack](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ).
 2. Choose or assemble the desired model and export a browser-ready GLB as `public/assets/characters/ultimate-modular-men/model.glb`.
 3. Keep embedded animation names intact, or update the logical clip mappings in `src/characters/characters.ts`.
-4. Run the game and select **Modular Man**. The selector reports load state; missing models or clips produce development warnings and a visible placeholder rather than stopping the game.
+4. Run the game with `?debug=1` and execute **Select character** with `modular-man`. The panel reports the selected ID and whether the player visual uses the asset or placeholder; missing models or clips produce development warnings without stopping the game.
 
 The local asset directory is ignored. Do not commit downloaded files until their exact license and redistribution status have been reviewed.
 

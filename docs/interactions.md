@@ -30,7 +30,7 @@ Keep the returned unregister function with the target owner and invoke it before
 
 ## Player query and selection
 
-Inject a `PlayerInteractionQuery` that returns the player's current world position and forward direction. This keeps interaction detection independent from the player's entity, camera, physics implementation, and any interactable model.
+Inject a `WorldPoseSource` that returns the current world position and forward direction. This keeps interaction detection independent from the player's entity, camera, physics implementation, and any interactable model.
 
 The centralized system evaluates registrations once per simulation frame. It rejects unavailable, out-of-range, behind-the-player (dot product below `-0.25`), and invisible targets. An optional injected `InteractionVisibilityQuery` supplies line-of-sight decisions.
 
@@ -64,4 +64,4 @@ The prompt UI is only one subscriber. Dialogue, missions, analytics, audio, and 
 - Missions register or enable generic mission-object interactions and consume started/completed events by stable target id. Mission state stays outside the interactable and UI.
 - Pickups, doors, switches, and inspectable props use the same contract, placing inventory, animation, or inspection behavior in their injected handlers.
 
-The test scene uses a fixed demo pose because this foundation checkout has no player query implementation. Replace that adapter in `main.ts` with the player controller's world pose query when the player feature is integrated.
+The district runtime injects `PlayerControllerSystem` directly through the shared `getWorldPose()` contract. Level interaction markers provide positions; interaction code never searches the Three.js scene graph.

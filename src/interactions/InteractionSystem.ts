@@ -9,12 +9,14 @@ import type {
   InteractionCancelReason,
   InteractionDebugSnapshot,
   InteractionEvents,
-  InteractionPose,
   InteractionTargetSummary,
   InteractionVisibilityQuery,
-  PlayerInteractionQuery,
-  WorldLocation,
 } from './Interactable';
+import type {
+  WorldPose,
+  WorldPoseSource,
+  WorldPosition,
+} from '../world/Spatial';
 
 const DEFAULT_RANGE = 2.5;
 const MIN_FACING = -0.25;
@@ -35,20 +37,17 @@ interface RunningInteraction {
   readonly token: symbol;
 }
 
-function locationOf(interactable: Interactable): WorldLocation {
+function locationOf(interactable: Interactable): WorldPosition {
   return typeof interactable.location === 'function'
     ? interactable.location()
     : interactable.location;
 }
 
-function distanceBetween(a: WorldLocation, b: WorldLocation): number {
+function distanceBetween(a: WorldPosition, b: WorldPosition): number {
   return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
-function normalizedDotToTarget(
-  pose: InteractionPose,
-  target: WorldLocation,
-): number {
+function normalizedDotToTarget(pose: WorldPose, target: WorldPosition): number {
   const dx = target.x - pose.position.x;
   const dy = target.y - pose.position.y;
   const dz = target.z - pose.position.z;
@@ -77,13 +76,13 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
   private selected: RegisteredInteractable | undefined;
   private running: RunningInteraction | undefined;
   private candidates: readonly InteractionCandidate[] = [];
-  private pose: InteractionPose | undefined;
+  private pose: WorldPose | undefined;
   private unsubscribeState: (() => void) | undefined;
 
   public constructor(
     private readonly input: InputReader,
     private readonly state: GameStateMachine,
-    private readonly player: PlayerInteractionQuery,
+    private readonly player: WorldPoseSource,
     private readonly visibility?: InteractionVisibilityQuery,
   ) {}
 
@@ -170,7 +169,7 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
   }
 
   private refreshSelection(): void {
-    this.pose = this.player.getInteractionPose();
+    this.pose = this.player.getWorldPose();
     this.candidates = this.pose ? this.rankCandidates(this.pose) : [];
     if (this.running) {
       this.setSelected(undefined);
@@ -180,7 +179,7 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
     this.setSelected(best ? this.registrations.get(best.target.id) : undefined);
   }
 
-  private rankCandidates(pose: InteractionPose): InteractionCandidate[] {
+  private rankCandidates(pose: WorldPose): InteractionCandidate[] {
     const candidates: InteractionCandidate[] = [];
     for (const registration of this.registrations.values()) {
       if (!this.isAvailable(registration)) continue;
@@ -312,7 +311,7 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
       this.cancelRunning('unavailable');
       return;
     }
-    const pose = this.player.getInteractionPose();
+    const pose = this.player.getWorldPose();
     if (
       !pose ||
       distanceBetween(pose.position, locationOf(target)) >
