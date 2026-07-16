@@ -87,6 +87,31 @@ The default development actions pause/resume, reload the current level, and togg
 
 The debug district additionally registers **Activate debug sparring target** and **Reset debug sparring target** under `Commands / Actions`. Passive character, range/facing, response-count, and grounding diagnostics remain in their owning sections. Browser tests can drive the same generic registry toggle through the development-only bridge; the target owns no window listener or separate debug UI.
 
+## Diagnostic recorder
+
+Development builds include an opt-in rolling recorder for attaching the few seconds around a bug. It is idle by default and is not imported, initialized, or exposed by production builds. The default window is eight seconds sampled at 30 Hz: a fixed ring of 240 frames plus a fixed ring of 480 transition events. Enter another duration from 1–30 seconds when running **Start diagnostic recording**; capacity is recalculated as `duration × 30` frames. Recording work is limited to public snapshot reads at the sample rate and small event-object copies between samples.
+
+The recorder composes these public facts:
+
+- authoritative player position, velocity, grounding, movement, facing, and the public animation graph;
+- camera owner, mode, obstruction, distance, and handoff progress;
+- interaction selection/challenger/selection decision and relevant clear/blocked LOS results;
+- game, conversation, and dialogue state using IDs and line indexes;
+- game-state, interaction, conversation, dialogue, player-action impact/completion, and sanitized runtime-error events correlated to the most recent sample.
+
+It intentionally records no dialogue text, interaction prompt text, raw keyboard events, arbitrary text fields, storage values, URLs, production telemetry, or personal identifiers. Input ownership is omitted because `InputSystem` currently has no public ownership snapshot; do not bypass that boundary by reading its private key sets.
+
+The `Commands / Actions` section exposes `diagnostics.start`, `diagnostics.stop`, `diagnostics.freeze`, `diagnostics.clear`, `diagnostics.export`, and `diagnostics.readback`. Passive status, capacity, and the last eight-event compact timeline remain in `Runtime / State`. **Freeze** preserves a stable incident window. **Export diagnostic JSON** creates a local `vanta-city-diagnostic-trace.json` download only after the command is invoked, then removes its temporary link and revokes its object URL. The JSON uses schema `vanta-city.diagnostic-trace`, version `1`. **Read back diagnostic JSON** validates the schema/version and shows its compact timeline; `parseDiagnosticTrace` and `summarizeDiagnosticTrace` provide the same utility to development code and tests.
+
+To attach a trace to a bug:
+
+1. Reproduce locally with `pnpm dev`, open the panel with backtick, and run **Start diagnostic recording** shortly before the suspected path. Eight seconds is usually enough; enter `10` for a longer window.
+2. Immediately after the bad state appears, run **Freeze diagnostic recording** so later frames cannot roll over the evidence.
+3. Run **Export diagnostic JSON**. Optionally paste the JSON into **Read back diagnostic JSON** and verify its frame/event counts and final state.
+4. Attach `vanta-city-diagnostic-trace.json` to the issue with the exact build/commit, reproduction steps, expected behavior, and observed behavior. Review the JSON before sharing outside the project even though the schema excludes known personal and free-text fields.
+
+An exported trace is a bounded diagnostic fact record, not deterministic game replay: it does not contain asset payloads, NPC transforms, full collision casts, pointer deltas, raw input, screenshots, or enough state to resume simulation.
+
 ## Sandbox scenarios
 
 Run `pnpm sandbox`, or open `/?sandbox=foundation&debug=1` during `pnpm dev`. Sandbox selection is development-only and replaces the normal scene system, so a scenario can exercise one mechanic without loading story content.

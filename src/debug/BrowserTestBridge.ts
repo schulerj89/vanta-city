@@ -24,6 +24,8 @@ import type { LoadingScreen } from '../ui/LoadingScreen';
 import type { DevelopmentAssetFaults } from './DevelopmentAssetFaults';
 import type { InputOwnershipInspector } from './InputOwnershipInspector';
 import type { VirtualGamepadFixture } from '../input/GamepadInput';
+import type { DiagnosticRecorder } from './DiagnosticRecorder';
+import type { DiagnosticTraceSummary } from './DiagnosticTrace';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -127,6 +129,8 @@ export interface BrowserTestApi {
   executeDebugCommand(id: string, argument?: string): Promise<void>;
   setDebugToggle(id: string, enabled: boolean): void;
   setVirtualGamepad(fixture?: VirtualGamepadFixture): void;
+  exportDiagnosticTrace(): string;
+  readbackDiagnosticTrace(input: string): DiagnosticTraceSummary;
 }
 
 declare global {
@@ -159,6 +163,7 @@ export interface BrowserTestBridgeDependencies {
   readonly debug: DebugRegistry;
   readonly errors: RuntimeErrorReporter;
   readonly inputInspector: InputOwnershipInspector;
+  readonly diagnostics: DiagnosticRecorder;
 }
 
 /** Installs the opt-in development bridge used by Playwright smoke tests. */
@@ -198,6 +203,9 @@ export function installBrowserTestBridge(
     setDebugToggle: (id, enabled) => dependencies.debug.setToggle(id, enabled),
     setVirtualGamepad: (fixture) =>
       dependencies.inputInspector.setVirtualGamepad(fixture),
+    exportDiagnosticTrace: () => dependencies.diagnostics.serialize(),
+    readbackDiagnosticTrace: (input) =>
+      dependencies.diagnostics.readback(input),
   };
   target.__VANTA_TEST__ = api;
   return () => {

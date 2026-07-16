@@ -1,10 +1,12 @@
 import type { GameSystem } from '../core/lifecycle';
+import { EventBus } from '../core/events';
 import type { DebugUnregister } from './DebugRegistry';
 import { DebugRegistry, debugSections } from './DebugRegistry';
 
 export class RuntimeErrorReporter implements GameSystem {
   public readonly id = 'runtime-error-reporter';
   public readonly updateMode = 'always' as const;
+  public readonly events = new EventBus<RuntimeErrorEvents>();
 
   private errorCount = 0;
   private lastError = 'none';
@@ -38,6 +40,7 @@ export class RuntimeErrorReporter implements GameSystem {
     this.errorCount += 1;
     const detail = error instanceof Error ? error.message : String(error);
     this.lastError = `${scope}: ${detail}`;
+    this.events.emit('runtime-error:reported', { scope, message: detail });
     console.error(`[Vanta City] ${scope}`, error);
   }
 
@@ -53,6 +56,7 @@ export class RuntimeErrorReporter implements GameSystem {
     this.target.removeEventListener('unhandledrejection', this.onRejection);
     for (const unregister of this.unregisterValues) unregister();
     this.unregisterValues = [];
+    this.events.clear();
   }
 
   private readonly onError = (event: ErrorEvent): void => {
@@ -64,5 +68,12 @@ export class RuntimeErrorReporter implements GameSystem {
 
   private readonly onRejection = (event: PromiseRejectionEvent): void => {
     this.report('unhandled promise rejection', event.reason);
+  };
+}
+
+export interface RuntimeErrorEvents {
+  'runtime-error:reported': {
+    readonly scope: string;
+    readonly message: string;
   };
 }

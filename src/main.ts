@@ -52,6 +52,7 @@ import { LevelSystem } from './world/LevelSystem';
 import type { WorldEvents } from './world/WorldEvents';
 import { testDistrict } from './world/levels/testDistrict';
 import { AccessibilityPreferenceStore } from './accessibility/AccessibilityPreferences';
+import type { DiagnosticRecorder } from './debug/DiagnosticRecorder';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -381,6 +382,23 @@ async function bootstrap(): Promise<void> {
         )
       : [];
 
+  let diagnosticRecorder: DiagnosticRecorder | undefined;
+  if (development) {
+    const { DiagnosticRecorder } = await import('./debug/DiagnosticRecorder');
+    diagnosticRecorder = new DiagnosticRecorder({
+      debug: development.debug,
+      state: runtime.state,
+      stateEvents: runtime.events,
+      player,
+      character: characterVisual,
+      camera,
+      interactions,
+      conversations,
+      dialogue,
+      errors: development.errors,
+    });
+  }
+
   runtime.register(input);
   if (inputInspector) runtime.register(inputInspector);
   if (development) runtime.register(development.systems[0]!);
@@ -405,6 +423,7 @@ async function bootstrap(): Promise<void> {
   if (interactionDebug) runtime.register(interactionDebug);
   if (characterAlignmentDebug) runtime.register(characterAlignmentDebug);
   runtime.register(render);
+  if (diagnosticRecorder) runtime.register(diagnosticRecorder);
   for (const system of development?.systems.slice(1) ?? []) {
     runtime.register(system);
   }
@@ -427,7 +446,11 @@ async function bootstrap(): Promise<void> {
   }
 
   const disposeBrowserTestBridge =
-    browserTestModule && development && sparringTarget && inputInspector
+    browserTestModule &&
+    development &&
+    sparringTarget &&
+    inputInspector &&
+    diagnosticRecorder
       ? browserTestModule.installBrowserTestBridge({
           runtime,
           render,
@@ -452,6 +475,7 @@ async function bootstrap(): Promise<void> {
           debug: development.debug,
           errors: development.errors,
           inputInspector,
+          diagnostics: diagnosticRecorder,
         })
       : undefined;
 
