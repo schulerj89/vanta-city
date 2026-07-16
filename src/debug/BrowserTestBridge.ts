@@ -16,7 +16,7 @@ import type { LevelSystem } from '../world/LevelSystem';
 import type { DebugRegistry } from './DebugRegistry';
 import type { RuntimeErrorReporter } from './RuntimeErrorReporter';
 import type { CharacterPickerSystem } from '../ui/CharacterPickerSystem';
-import type { HelpOverlaySystem } from '../ui/HelpOverlaySystem';
+import type { HelpOverlayController } from '../ui/LazyHelpOverlaySystem';
 import { defaultBindings, helpControlEntries } from '../input/defaultBindings';
 import type { SparringTargetSystem } from './SparringTargetSystem';
 
@@ -77,7 +77,7 @@ export interface BrowserTestSnapshot {
   readonly controls: {
     readonly bindings: typeof defaultBindings;
     readonly helpEntries: typeof helpControlEntries;
-    readonly help: ReturnType<HelpOverlaySystem['getSnapshot']>;
+    readonly help: ReturnType<HelpOverlayController['getSnapshot']>;
   };
   readonly character: ReturnType<CharacterPlayerVisual['getDebugSnapshot']>;
   readonly selectedCharacterId: string;
@@ -135,7 +135,7 @@ export interface BrowserTestBridgeDependencies {
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
   readonly characterPicker: CharacterPickerSystem;
-  readonly help: HelpOverlaySystem;
+  readonly help: HelpOverlayController;
   readonly dialogue: DialogueSessionController;
   readonly dialogueUI: DialogueUISystem;
   readonly debug: DebugRegistry;

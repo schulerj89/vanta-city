@@ -13,6 +13,10 @@ export interface GameSystem<Context = unknown> {
   dispose?(): void;
 }
 
+export interface SystemInitializationObserver {
+  onSystemInitialized?(systemId: string): void;
+}
+
 export class SystemInitializationError extends Error {
   public constructor(
     public readonly systemId: string,
@@ -38,7 +42,10 @@ export class SystemRegistry<Context> {
     return this;
   }
 
-  public async init(context: Context): Promise<void> {
+  public async init(
+    context: Context,
+    observer?: SystemInitializationObserver,
+  ): Promise<void> {
     if (this.initialized)
       throw new Error('System registry is already initialized');
     const initializedSystems: GameSystem<Context>[] = [];
@@ -46,6 +53,7 @@ export class SystemRegistry<Context> {
       try {
         await system.init?.(context);
         initializedSystems.push(system);
+        observer?.onSystemInitialized?.(system.id);
       } catch (error) {
         system.dispose?.();
         for (const initialized of initializedSystems.reverse()) {

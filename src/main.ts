@@ -42,14 +42,18 @@ import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { resolveConversationCameraProfile } from './camera/ConversationCameraProfile';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
 import { CharacterPickerSystem } from './ui/CharacterPickerSystem';
-import { HelpOverlaySystem } from './ui/HelpOverlaySystem';
-import { SparringTargetSystem } from './debug/SparringTargetSystem';
+import { LazyHelpOverlaySystem } from './ui/LazyHelpOverlaySystem';
+import type { HelpOverlayController } from './ui/LazyHelpOverlaySystem';
+import { LoadingScreen } from './ui/LoadingScreen';
+import type { SparringTargetSystem } from './debug/SparringTargetSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
 import type { WorldEvents } from './world/WorldEvents';
 import { testDistrict } from './world/levels/testDistrict';
 import { AccessibilityPreferenceStore } from './accessibility/AccessibilityPreferences';
+
+let activeLoadingScreen: LoadingScreen | undefined;
 
 async function bootstrap(): Promise<void> {
   const mount = document.querySelector<HTMLElement>('#game');
@@ -63,6 +67,8 @@ async function bootstrap(): Promise<void> {
     ...levels.assetManifest,
   });
   const assets = new ThreeAssetLoader(assetCatalog);
+  const loading = new LoadingScreen(mount, assets);
+  activeLoadingScreen = loading;
   const runtime = new GameRuntime(input);
   const pageParameters = new URLSearchParams(window.location.search);
   const prefersReducedMotion =
@@ -109,7 +115,8 @@ async function bootstrap(): Promise<void> {
       for (const system of development.systems.slice(1))
         runtime.register(system);
       await runtime.init();
-      installHotDisposal(runtime, assets, development);
+      loading.complete();
+      installHotDisposal(runtime, assets, development, () => loading.dispose());
       return;
     }
   }
@@ -168,7 +175,7 @@ async function bootstrap(): Promise<void> {
   );
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
-  const help = new HelpOverlaySystem(
+  const help = new LazyHelpOverlaySystem(
     mount,
     runtime,
     helpControlEntries,
@@ -210,12 +217,17 @@ async function bootstrap(): Promise<void> {
     levelSystem,
     worldEvents,
   );
-  const sparringTarget = new SparringTargetSystem(
-    new CharacterLoader(assets),
-    objects,
-    player,
-    levelSystem,
-  );
+  let sparringTarget: SparringTargetSystem | undefined;
+  if (development) {
+    const { SparringTargetSystem } =
+      await import('./debug/SparringTargetSystem');
+    sparringTarget = new SparringTargetSystem(
+      new CharacterLoader(assets),
+      objects,
+      player,
+      levelSystem,
+    );
+  }
   let dialogueCamera:
     ReturnType<ThirdPersonCameraSystem['requestConversation']> | undefined;
   const dialogue = new DialogueSessionController(input, conversations, {
@@ -297,27 +309,28 @@ async function bootstrap(): Promise<void> {
     );
   }
 
-  const debugUnregister = development
-    ? registerVerticalSliceDebug(
-        development,
-        levelSystem,
-        collision,
-        player,
-        camera,
-        interactions,
-        characterSelection,
-        characterVisual,
-        characterPicker,
-        npcs,
-        sparringTarget,
-        conversations,
-        dialogue,
-        dialogueUI,
-        interactionDebug,
-        characterAlignmentDebug,
-        help,
-      )
-    : [];
+  const debugUnregister =
+    development && sparringTarget
+      ? registerVerticalSliceDebug(
+          development,
+          levelSystem,
+          collision,
+          player,
+          camera,
+          interactions,
+          characterSelection,
+          characterVisual,
+          characterPicker,
+          npcs,
+          sparringTarget,
+          conversations,
+          dialogue,
+          dialogueUI,
+          interactionDebug,
+          characterAlignmentDebug,
+          help,
+        )
+      : [];
 
   runtime.register(input);
   if (development) runtime.register(development.systems[0]!);
@@ -326,8 +339,9 @@ async function bootstrap(): Promise<void> {
     .register(levelSystem)
     .register(objects)
     .register(help)
-    .register(player)
-    .register(sparringTarget)
+    .register(player);
+  if (sparringTarget) runtime.register(sparringTarget);
+  runtime
     .register(camera)
     .register(interactions)
     .register(conversations)
@@ -346,15 +360,24 @@ async function bootstrap(): Promise<void> {
   }
 
   try {
-    await runtime.init();
+    await runtime.init({
+      onSystemInitialized: (systemId) => {
+        if (systemId === levelSystem.id) loading.markWorldReady();
+        if (systemId === player.id) {
+          loading.markCharacterReady(
+            characterVisual.getDebugSnapshot().fallbackActive,
+          );
+        }
+      },
+    });
   } catch (error) {
     development?.errors.report('runtime initialization', error);
-    showFatalError(mount, error);
+    loading.fail(error);
     throw error;
   }
 
   const disposeBrowserTestBridge =
-    browserTestModule && development
+    browserTestModule && development && sparringTarget
       ? browserTestModule.installBrowserTestBridge({
           runtime,
           renderer: render.renderer,
@@ -380,6 +403,7 @@ async function bootstrap(): Promise<void> {
 
   // Install opt-in browser observability before opening the initial picker so
   // tests cannot observe the dialog one microtask before the bridge exists.
+  loading.complete();
   if (pageParameters.get('skipPicker') !== '1') characterPicker.open();
 
   installHotDisposal(runtime, assets, development, () => {
@@ -387,6 +411,7 @@ async function bootstrap(): Promise<void> {
     disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
     worldEvents.clear();
+    loading.dispose();
   });
 }
 
@@ -407,7 +432,7 @@ function registerVerticalSliceDebug(
   dialogueUI: DialogueUISystem,
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
-  help?: HelpOverlaySystem,
+  help?: HelpOverlayController,
 ): (() => void)[] {
   const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
@@ -1179,15 +1204,7 @@ function installHotDisposal(
   });
 }
 
-function showFatalError(mount: HTMLElement, error: unknown): void {
-  const message = document.createElement('div');
-  message.className = 'fatal-error';
-  message.textContent = `Vanta City could not start: ${
-    error instanceof Error ? error.message : String(error)
-  }`;
-  mount.append(message);
-}
-
 void bootstrap().catch((error: unknown) => {
+  activeLoadingScreen?.fail(error);
   console.error('Failed to initialize Vanta City', error);
 });

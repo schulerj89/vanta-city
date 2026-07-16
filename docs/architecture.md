@@ -10,6 +10,8 @@ No third-party physics library is installed. The first vertical slice uses a det
 
 `GameRuntime` owns the animation frame, `GameClock`, `GameStateMachine`, event bus, and ordered `SystemRegistry`. `init()` initializes registered systems in registration order, transitions `booting` to `playing`, and starts the frame loop. `dispose()` stops the loop, disposes systems in reverse registration order, then clears events.
 
+An optional initialization observer reports each successfully initialized system without changing that order. Bootstrap uses it only for real world/character readiness presentation; systems do not depend on the observer and failure rollback remains reverse ordered.
+
 Every frame, the clock converts milliseconds to seconds and caps delta at 0.1 seconds. Its baseline resets after resume, preventing a backgrounded or paused tab from creating a large simulation step. The registry runs all `update` hooks, then all `lateUpdate` hooks. Systems default to simulation updates; systems declaring `updateMode = 'always'` continue while paused. Rendering, input edge cleanup, the follow camera, and the development panel use this mode.
 
 `pause()` and `resume()` transition state and notify every system through optional lifecycle hooks. The animation frame continues while paused so input, state UI, and rendering remain responsive, while simulation systems stop.
@@ -40,6 +42,8 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 `CharacterPickerSystem` presents those same definitions before gameplay and when reopened from the district. Focus and draft state are UI-local; confirmation writes through the existing `CharacterSelectionStore`. The `character-select` game state suspends simulation without reconstructing runtime systems. Lightweight local asset probes and registered portrait textures avoid eager model instantiation.
 
+`LoadingScreen` observes `GameAssetLoader` status plus ordered world/player readiness. It has explicit playable-fallback and fatal-error states and owns no timers or asset requests. `LazyHelpOverlaySystem` preserves the normal system lifecycle and public help controls while importing the full help dialog only on first use. See [Loading and production performance](loading-performance.md) for measurements and startup behavior.
+
 `RenderSystem` exclusively owns the Three.js renderer, scene, camera, canvas, resize observer, and render call. It caps device pixel ratio at two. Future third-person camera logic should update the injected camera from its own simulation system; it should not create another renderer or animation loop.
 
 `ThirdPersonCameraSystem` is the sole coordinator for that renderer camera. Gameplay is the default camera owner; conversations and future cinematics use priority-based request handles and release them on completion or cancellation. See [Camera system](camera-system.md) for ownership, restoration, settings, and authored-anchor integration.
@@ -64,7 +68,7 @@ Asset failures retain the logical ID, asset type, and resolved URL. System initi
 
 ## Development and sandbox APIs
 
-Development builds dynamically load a generic `DebugRegistry`, panel, error reporter, visual-helper registry, and optional sandbox scenario. Production builds take the normal scene path and do not initialize dangerous development commands. Systems contribute debug values, toggles, commands, and visual-helper visibility callbacks through public APIs; the panel never reaches into private system state.
+Development builds dynamically load a generic `DebugRegistry`, panel, error reporter, visual-helper registry, sparring target, browser-test bridge, and optional sandbox scenario. Production builds take the normal scene path and do not include or initialize those dangerous development commands and fixtures. Systems contribute debug values, toggles, commands, and visual-helper visibility callbacks through public APIs; the panel never reaches into private system state.
 
 Sandbox scenarios implement the normal `GameSystem` lifecycle and replace the normal scene only when a development URL supplies `?sandbox=<id>`. This keeps isolated mechanic experiments representative of runtime lifecycle behavior without introducing a separate editor or story dependency. See [Developer tooling](developer-tooling.md) for extension examples.
 

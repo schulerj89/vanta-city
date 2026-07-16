@@ -43,6 +43,8 @@ Standard gamepad bindings and persistent motion/dialogue preferences are documen
 
 Development builds can open the developer panel with the backtick key or `?debug=1`; production builds do not initialize the panel or its commands.
 
+Startup presents real local-asset progress and world/character readiness, with playable fallback and fatal-error states. The controls help dialog is loaded only when first opened, and development-only tools are excluded from production. See [Loading and production performance](docs/loading-performance.md) for bundle measurements and the startup contract.
+
 Run the isolated foundation sandbox without a story scene:
 
 ```sh

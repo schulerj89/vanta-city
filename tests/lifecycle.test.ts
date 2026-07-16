@@ -61,4 +61,17 @@ describe('SystemRegistry', () => {
     expect(disposeFailing).toHaveBeenCalledOnce();
     expect(disposeFirst).toHaveBeenCalledOnce();
   });
+
+  it('reports initialization readiness without changing lifecycle order', async () => {
+    const registry = new SystemRegistry<string>();
+    const initialized: string[] = [];
+    registry.register({ id: 'world' }).register({ id: 'player' });
+
+    await registry.init('game', {
+      onSystemInitialized: (systemId) => initialized.push(systemId),
+    });
+
+    expect(initialized).toEqual(['world', 'player']);
+    registry.dispose();
+  });
 });

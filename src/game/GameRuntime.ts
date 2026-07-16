@@ -3,6 +3,7 @@ import { GameStateMachine } from '../core/gameState';
 import type { StateEvents } from '../core/gameState';
 import { SystemRegistry } from '../core/lifecycle';
 import type { GameSystem } from '../core/lifecycle';
+import type { SystemInitializationObserver } from '../core/lifecycle';
 import { GameClock } from '../core/time';
 import type { InputReader } from '../input/InputSystem';
 
@@ -28,13 +29,16 @@ export class GameRuntime {
     return this;
   }
 
-  public async init(): Promise<void> {
+  public async init(observer?: SystemInitializationObserver): Promise<void> {
     if (this.running) return;
-    await this.systems.init({
-      events: this.events,
-      state: this.state,
-      input: this.input,
-    });
+    await this.systems.init(
+      {
+        events: this.events,
+        state: this.state,
+        input: this.input,
+      },
+      observer,
+    );
     this.running = true;
     this.state.transition('playing');
     this.clock.resetFrameDelta();
