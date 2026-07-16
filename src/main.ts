@@ -8,11 +8,14 @@ import { GameObjectWorld } from './entities/GameObjectWorld';
 import { GameRuntime } from './game/GameRuntime';
 import { InputSystem } from './input/InputSystem';
 import { defaultBindings } from './input/defaultBindings';
+import { InteractionDebugSystem } from './interactions/InteractionDebugSystem';
+import { InteractionSystem } from './interactions/InteractionSystem';
 import { StaticCollisionWorld } from './physics/CollisionWorld';
 import { PlayerControllerSystem } from './player/PlayerControllerSystem';
 import { RenderSystem } from './render/RenderSystem';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { DebugOverlaySystem } from './ui/DebugOverlaySystem';
+import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { LevelSystem } from './world/LevelSystem';
 import type { WorldEvents } from './world/WorldEvents';
@@ -82,6 +85,32 @@ const camera = new ThirdPersonCameraSystem(
 cameraReference.current = camera;
 input.setPointerTarget(render.renderer.domElement);
 const runtime = new GameRuntime(input);
+const interactions = new InteractionSystem(input, runtime.state, {
+  getInteractionPose: () => {
+    const transform = player.getPlayerTransform();
+    return {
+      position: transform.position,
+      forward: {
+        x: Math.sin(transform.facingYaw),
+        y: 0,
+        z: Math.cos(transform.facingYaw),
+      },
+    };
+  },
+});
+interactions.register({
+  id: 'interaction.garage-door',
+  prompt: 'Inspect garage door',
+  location: () => {
+    const [x, y, z] = levelSystem.getLocation(
+      'interaction.garage-door',
+    ).position;
+    return { x, y, z };
+  },
+  range: 2.75,
+  repeatable: false,
+  interact: () => undefined,
+});
 const debugData = {
   getPlayerPosition: (): ReturnType<typeof player.getPlayerPosition> =>
     player.getPlayerPosition(),
@@ -98,6 +127,11 @@ runtime
   .register(objects)
   .register(player)
   .register(camera)
+  .register(interactions)
+  .register(new InteractionPromptSystem(mount, interactions))
+  .register(
+    new InteractionDebugSystem(render.scene, mount, input, interactions),
+  )
   .register(render)
   .register(new DebugOverlaySystem(mount, runtime.state, input, debugData));
 

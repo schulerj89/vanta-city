@@ -27,7 +27,6 @@ export class TestSceneSystem implements GameSystem {
   public readonly id = 'test-scene';
   private readonly root = new Group();
   private spinner: Group | undefined;
-
   private readonly colliderIds: string[] = [];
 
   public constructor(

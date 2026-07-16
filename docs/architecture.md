@@ -46,6 +46,10 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 Rendered geometry, plain collision boxes, semantic locations, trigger definitions, and debug helpers are separate concerns. Player, NPC, interaction, mission, dialogue, and camera systems query the `LevelLocations` API rather than traverse scene nodes. The plain rotated-box collision convention is the first implementation of the previously reserved game-owned physics boundary; a future physics adapter can consume it without leaking a physics package into feature code.
 
+## Interactions
+
+`InteractionSystem` centrally registers plain `Interactable` definitions, queries one injected player pose, ranks valid candidates, and executes the single selected target through the named `interact` action. Interactables have no per-frame hook and do not depend on a visual model. Immediate and promise-based handlers share typed lifecycle events and abort-signal cancellation. See [Interaction API](./interactions.md) for scoring, availability, and integration details.
+
 ## Future integration
 
 - Player: implement a `GameObject` for presentation and a focused movement/controller system that reads `InputReader`, owns a physics abstraction body, and exposes a read-only position source to debugging/camera code.
