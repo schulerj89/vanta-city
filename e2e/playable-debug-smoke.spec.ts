@@ -145,6 +145,7 @@ test.describe('playable debug district', () => {
         'camera.set-shoulder',
         'player.reset',
         'player.play-character-action',
+        'sparring-target.reset',
         'ui.open-character-picker',
         'dialogue.start-mack',
         'dialogue.advance',
@@ -170,6 +171,7 @@ test.describe('playable debug district', () => {
       'visual.interactionRanges',
       'visual.navigation',
       'visual.characterAlignment',
+      'sparring-target.active',
       'camera.invert-y',
       'camera.automatic-recenter',
     ]);
@@ -492,20 +494,30 @@ test.describe('playable debug district', () => {
         expect(
           (await snapshot(page)).character.characterAction.lastAccepted,
         ).toBe(true);
+        await expect
+          .poll(
+            async () =>
+              (await snapshot(page)).character.characterAction.lastCompleted,
+          )
+          .toBe(expectedAction);
+        await expect
+          .poll(async () => (await snapshot(page)).player.actionBusy)
+          .toBe(false);
       }
-      await page.keyboard.down('w');
-      await expect
-        .poll(async () => (await snapshot(page)).character.animationState)
-        .toBe('walk');
-      await page.keyboard.press('j');
-      await expect
-        .poll(async () => (await snapshot(page)).character.animationState)
-        .toBe('action:punchLeft');
-      await expect
-        .poll(async () => (await snapshot(page)).character.animationState)
-        .toBe('walk');
-      await page.keyboard.up('w');
     }
+
+    await page.keyboard.down('w');
+    await expect
+      .poll(async () => (await snapshot(page)).character.animationState)
+      .toBe('walk');
+    await page.keyboard.press('j');
+    await expect
+      .poll(async () => (await snapshot(page)).character.animationState)
+      .toBe('action:punchLeft');
+    await expect
+      .poll(async () => (await snapshot(page)).character.animationState)
+      .toBe('walk');
+    await page.keyboard.up('w');
 
     const helpButton = page.getByRole('button', { name: 'Help', exact: true });
     await expect(helpButton).toBeVisible();
@@ -537,6 +549,124 @@ test.describe('playable debug district', () => {
     await expect(page.getByRole('dialog', { name: 'Controls' })).toBeVisible();
     await page.getByRole('button', { name: 'Close controls help' }).click();
     await expect(page.getByRole('dialog', { name: 'Controls' })).toBeHidden();
+    const final = await snapshot(page);
+    expect(final.runtimeErrors.count, final.runtimeErrors.last).toBe(0);
+    expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
+  });
+
+  test('locks action spam and drives the optional sparring target once per completion', async ({
+    page,
+  }, testInfo) => {
+    const runtimeFailures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+    await executeCommand(page, 'player.teleport', 'spawn.player-sparring');
+    await setDebugToggle(page, 'sparring-target.active', true);
+    await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.enabled)
+      .toBe(true);
+    const ready = await snapshot(page);
+    expect(ready.sparringTarget).toMatchObject({
+      loaded: true,
+      modelSource: 'asset',
+      animation: 'idle',
+      eligible: true,
+      responseSequence: 0,
+    });
+    expect(
+      Math.abs(ready.sparringTarget.groundedMinY ?? Infinity),
+      'sparring target feet should align to the street contact plane',
+    ).toBeLessThanOrEqual(0.005);
+    const authoritativePosition = ready.player.position;
+
+    await page.keyboard.press('j');
+    await expect
+      .poll(async () => (await snapshot(page)).character.characterAction.active)
+      .toBe('punchLeft');
+    const accepted = await snapshot(page);
+    const acceptedSequence = accepted.character.characterAction.sequence;
+    await page.keyboard.press('j');
+    await page.keyboard.press('l');
+    await page.waitForTimeout(50);
+    const spammed = await snapshot(page);
+    expect(spammed.character.characterAction).toMatchObject({
+      active: 'punchLeft',
+      busy: true,
+      sequence: acceptedSequence,
+      lastAccepted: false,
+      lastRejection: 'busy',
+    });
+    expect(spammed.character.characterAction.busyRejectionCount).toBe(2);
+    expect(spammed.sparringTarget.responseSequence).toBe(0);
+
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).character.characterAction.completedSequence,
+      )
+      .toBe(accepted.character.characterAction.completedSequence + 1);
+    await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.responseSequence)
+      .toBe(1);
+    const reacting = await snapshot(page);
+    expect(reacting.character.characterAction).toMatchObject({
+      busy: false,
+      lastCompleted: 'punchLeft',
+      completionRelease: 'mixer-finished',
+    });
+    expect(reacting.sparringTarget).toMatchObject({
+      busy: true,
+      animation: 'getHitRight',
+      lastAction: 'punchLeft',
+    });
+    expect(
+      horizontalDistance(reacting.player.position, authoritativePosition),
+      'actions and target reactions must not move the simulation transform',
+    ).toBeLessThan(0.02);
+    await attachScreenshot(page, testInfo, 'sparring-target-hit-reaction');
+    await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.animation)
+      .toBe('idle');
+    await expect
+      .poll(async () => (await snapshot(page)).character.animationState)
+      .toBe('idle');
+
+    // Rejected punch presses did not advance alternation; the next accepted
+    // punch is still the right-side clip.
+    await page.keyboard.press('j');
+    await expect
+      .poll(async () => (await snapshot(page)).character.characterAction.active)
+      .toBe('punchRight');
+    await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.responseSequence)
+      .toBe(2);
+    await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.animation)
+      .toBe('idle');
+
+    await setDebugToggle(page, 'sparring-target.active', false);
+    await page.keyboard.press('l');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).character.characterAction.lastCompleted,
+      )
+      .toBe('kickLeft');
+    const disabled = await snapshot(page);
+    expect(disabled.sparringTarget).toMatchObject({
+      enabled: false,
+      responseSequence: 2,
+      lastIgnoredReason: 'disabled',
+    });
+
+    await setDebugToggle(page, 'sparring-target.active', true);
+    await executeCommand(page, 'sparring-target.reset');
+    expect((await snapshot(page)).sparringTarget).toMatchObject({
+      enabled: true,
+      responseSequence: 0,
+      ignoredSequence: 0,
+      animation: 'idle',
+    });
+    await setDebugToggle(page, 'sparring-target.active', false);
     const final = await snapshot(page);
     expect(final.runtimeErrors.count, final.runtimeErrors.last).toBe(0);
     expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
@@ -938,6 +1068,21 @@ async function executeCommand(
       await api.executeDebugCommand(commandId, commandArgument);
     },
     { commandId: id, commandArgument: argument },
+  );
+}
+
+async function setDebugToggle(
+  page: Page,
+  id: string,
+  enabled: boolean,
+): Promise<void> {
+  await page.evaluate(
+    ({ toggleId, toggleEnabled }) => {
+      const api: BrowserTestApi | undefined = window.__VANTA_TEST__;
+      if (!api) throw new Error('Vanta browser test bridge is unavailable');
+      api.setDebugToggle(toggleId, toggleEnabled);
+    },
+    { toggleId: id, toggleEnabled: enabled },
   );
 }
 

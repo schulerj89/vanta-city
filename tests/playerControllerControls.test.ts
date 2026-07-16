@@ -1,5 +1,6 @@
 import { Group, Scene } from 'three';
 import type { CharacterActionName } from '../src/characters/CharacterActions';
+import type { CharacterActionRequestState } from '../src/characters/CharacterActions';
 import { EventBus } from '../src/core/events';
 import { GameStateMachine } from '../src/core/gameState';
 import type { StateEvents } from '../src/core/gameState';
@@ -35,6 +36,20 @@ class ActionVisual implements PlayerVisual {
   public readonly visualRoot = new Group();
   public readonly loadedModelRoot = new Group();
   public readonly actions: CharacterActionName[] = [];
+  private actionState: CharacterActionRequestState = {
+    active: undefined,
+    busy: false,
+    lastRequested: undefined,
+    lastSource: undefined,
+    lastAccepted: false,
+    lastRejection: undefined,
+    busyRejectionCount: 0,
+    sequence: 0,
+    lastCompleted: undefined,
+    lastCompletedSource: undefined,
+    completedSequence: 0,
+    completionRelease: undefined,
+  };
 
   public sync(movement: PlayerMovementSimulation): void {
     this.object3d.position.copy(movement.position);
@@ -42,6 +57,18 @@ class ActionVisual implements PlayerVisual {
   public triggerCharacterAction(action: CharacterActionName): boolean {
     this.actions.push(action);
     return true;
+  }
+  public getCharacterActionState(): CharacterActionRequestState {
+    return this.actionState;
+  }
+  public complete(action: CharacterActionName): void {
+    this.actionState = {
+      ...this.actionState,
+      lastCompleted: action,
+      lastCompletedSource: 'unit-test',
+      completedSequence: this.actionState.completedSequence + 1,
+      completionRelease: 'mixer-finished',
+    };
   }
   public getAlignmentReport(): undefined {
     return undefined;
@@ -110,5 +137,20 @@ describe('PlayerControllerSystem controls', () => {
     player.update(frame);
     expect(visual.actions).toEqual([]);
     expect(player.getDebugSnapshot().runMode).toBe(false);
+  });
+
+  it('publishes each presentation completion exactly once', async () => {
+    const { player, visual } = await harness();
+    const completed = vi.fn();
+    player.events.on('character-action:completed', completed);
+    visual.complete('punchLeft');
+    player.update(frame);
+    player.update(frame);
+    expect(completed).toHaveBeenCalledOnce();
+    expect(completed).toHaveBeenCalledWith({
+      action: 'punchLeft',
+      source: 'unit-test',
+      sequence: 1,
+    });
   });
 });

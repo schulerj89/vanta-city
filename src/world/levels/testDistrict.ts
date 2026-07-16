@@ -174,9 +174,23 @@ export const testDistrict = {
         rotation: [0, Math.PI, 0],
         tags: ['grounding', 'stairs', 'uphill'],
       },
+      {
+        id: 'spawn.player-sparring',
+        kind: 'player',
+        position: [3.5, 0.15, 14],
+        rotation: [0, Math.PI, 0],
+        tags: ['debug', 'sparring'],
+      },
       { id: 'spawn.npc-mechanic', kind: 'npc', position: [-10, 0.2, 4] },
       { id: 'spawn.npc-alley', kind: 'npc', position: [-19, 0.2, 12] },
       { id: 'spawn.npc-deck', kind: 'npc', position: [14, 3, -8] },
+      {
+        id: 'spawn.debug-sparring-target',
+        kind: 'npc',
+        position: [3.5, 0, 11.8],
+        rotation: [0, 0, 0],
+        tags: ['debug', 'sparring'],
+      },
     ],
     locations: [
       {

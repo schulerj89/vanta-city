@@ -1,4 +1,5 @@
 import { Vector3 } from 'three';
+import { EventBus } from '../core/events';
 import type { GameState } from '../core/gameState';
 import type { GameSystem } from '../core/lifecycle';
 import type { FrameTime } from '../core/time';
@@ -29,11 +30,26 @@ import type {
 
 const idleCharacterActionState: CharacterActionRequestState = {
   active: undefined,
+  busy: false,
   lastRequested: undefined,
   lastSource: undefined,
   lastAccepted: false,
+  lastRejection: undefined,
+  busyRejectionCount: 0,
   sequence: 0,
+  lastCompleted: undefined,
+  lastCompletedSource: undefined,
+  completedSequence: 0,
+  completionRelease: undefined,
 };
+
+export interface PlayerActionEvents {
+  'character-action:completed': {
+    readonly action: CharacterActionName;
+    readonly source: string | undefined;
+    readonly sequence: number;
+  };
+}
 
 export interface PlayerDebugSnapshot {
   readonly velocity: {
@@ -52,6 +68,7 @@ export interface PlayerDebugSnapshot {
   readonly blocked: boolean;
   readonly facingYaw: number;
   readonly runMode: boolean;
+  readonly actionBusy: boolean;
 }
 
 const controlledStates: readonly GameState[] = ['playing'];
@@ -59,6 +76,7 @@ const controlledStates: readonly GameState[] = ['playing'];
 export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   public readonly id = 'player-controller';
   public readonly movement: PlayerMovementSimulation;
+  public readonly events = new EventBus<PlayerActionEvents>();
 
   private readonly spawnPosition: Vector3;
   private input: InputReader | undefined;
@@ -68,6 +86,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   private runMode = false;
   private nextPunchSide: 'Left' | 'Right' = 'Left';
   private nextKickSide: 'Left' | 'Right' = 'Left';
+  private publishedCompletionSequence = 0;
 
   public constructor(
     private readonly objects: GameObjectWorld,
@@ -118,6 +137,18 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         : idlePlayerIntent;
     this.movement.simulate(intent, this.cameraYaw(), time.delta);
     this.visual.sync(this.movement, time.delta);
+    const actionState = this.getCharacterActionState();
+    if (
+      actionState.completedSequence > this.publishedCompletionSequence &&
+      actionState.lastCompleted
+    ) {
+      this.publishedCompletionSequence = actionState.completedSequence;
+      this.events.emit('character-action:completed', {
+        action: actionState.lastCompleted,
+        source: actionState.lastCompletedSource,
+        sequence: actionState.completedSequence,
+      });
+    }
   }
 
   public setControlEnabled(enabled: boolean): void {
@@ -171,6 +202,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       blocked: this.movement.blocked,
       facingYaw: this.movement.facingYaw,
       runMode: this.runMode,
+      actionBusy: this.getCharacterActionState().busy,
     };
   }
 
@@ -189,5 +221,6 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     this.visualAdded = false;
     this.input = undefined;
     this.state = undefined;
+    this.events.clear();
   }
 }

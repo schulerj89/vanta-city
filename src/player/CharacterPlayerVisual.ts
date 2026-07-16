@@ -114,11 +114,19 @@ export class CharacterPlayerVisual
   private activeActionRemaining = 0;
   private characterAction: CharacterActionRequestState = {
     active: undefined,
+    busy: false,
     lastRequested: undefined,
     lastSource: undefined,
     lastAccepted: false,
+    lastRejection: undefined,
+    busyRejectionCount: 0,
     sequence: 0,
+    lastCompleted: undefined,
+    lastCompletedSource: undefined,
+    completedSequence: 0,
+    completionRelease: undefined,
   };
+  private activeActionSource: string | undefined;
   private readonly modelOffset = new Vector3();
 
   public constructor(
@@ -197,18 +205,31 @@ export class CharacterPlayerVisual
     action: CharacterActionName,
     source = 'runtime',
   ): boolean {
+    if (this.characterAction.busy) {
+      this.characterAction = {
+        ...this.characterAction,
+        lastRequested: action,
+        lastSource: source,
+        lastAccepted: false,
+        lastRejection: 'busy',
+        busyRejectionCount: this.characterAction.busyRejectionCount + 1,
+      };
+      return false;
+    }
     const clip = this.loaded?.animationClips.get(action);
     const accepted = Boolean(this.mixer && clip);
     this.characterAction = {
+      ...this.characterAction,
       active: accepted ? action : this.characterAction.active,
+      busy: accepted,
       lastRequested: action,
       lastSource: source,
       lastAccepted: accepted,
+      lastRejection: accepted ? undefined : 'unavailable',
       sequence: this.characterAction.sequence + (accepted ? 1 : 0),
     };
     if (!accepted || !this.mixer || !clip) return false;
 
-    this.action?.fadeOut(0.1);
     this.action = this.mixer.clipAction(clip);
     this.action
       .reset()
@@ -217,7 +238,8 @@ export class CharacterPlayerVisual
       .fadeIn(0.1)
       .play();
     this.action.clampWhenFinished = true;
-    this.activeActionRemaining = Math.max(0.05, clip.duration);
+    this.activeActionRemaining = Math.max(0.05, clip.duration + 0.1);
+    this.activeActionSource = source;
     this.animationState = `action:${action}`;
     return true;
   }
@@ -263,6 +285,7 @@ export class CharacterPlayerVisual
     this.animationState = 'static';
     if (next.animationClips.size > 0) {
       this.mixer = new AnimationMixer(next.root);
+      this.mixer.addEventListener('finished', this.onMixerFinished);
     }
   }
 
@@ -270,18 +293,22 @@ export class CharacterPlayerVisual
     const loaded = this.loaded;
     const mixer = this.mixer;
     if (!loaded || !mixer) return;
+    let mixerAdvanced = false;
     if (this.characterAction.active) {
       mixer.update(Math.max(0, delta));
+      mixerAdvanced = true;
       loaded.root.position.copy(this.modelOffset);
-      this.activeActionRemaining = Math.max(
-        0,
-        this.activeActionRemaining - Math.max(0, delta),
-      );
-      if (this.activeActionRemaining > 0) return;
-      this.action?.fadeOut(0.1);
-      this.action = undefined;
-      this.animationState = 'static';
-      this.characterAction = { ...this.characterAction, active: undefined };
+      if (!this.characterAction.active) {
+        // Mixer completion is authoritative. Continue below so locomotion is
+        // restored in the same update that released the action lock.
+      } else {
+        this.activeActionRemaining = Math.max(
+          0,
+          this.activeActionRemaining - Math.max(0, delta),
+        );
+        if (this.activeActionRemaining > 0) return;
+        this.finishActiveAction('duration-fallback');
+      }
     }
     const requested = logicalAnimationFor(state);
     const clip =
@@ -297,7 +324,7 @@ export class CharacterPlayerVisual
       this.action?.reset().fadeIn(0.12).play();
       this.animationState = nextState;
     }
-    mixer.update(Math.max(0, delta));
+    if (!mixerAdvanced) mixer.update(Math.max(0, delta));
     // Authored root-motion tracks may animate the model root. The simulation
     // container remains authoritative, and the definition offset is restored.
     loaded.root.position.copy(this.modelOffset);
@@ -305,6 +332,7 @@ export class CharacterPlayerVisual
 
   private disposeLoaded(): void {
     if (this.mixer && this.loaded) {
+      this.mixer.removeEventListener('finished', this.onMixerFinished);
       this.mixer.stopAllAction();
       this.mixer.uncacheRoot(this.loaded.root);
     }
@@ -312,11 +340,44 @@ export class CharacterPlayerVisual
     this.action = undefined;
     this.animationState = 'static';
     this.activeActionRemaining = 0;
-    this.characterAction = { ...this.characterAction, active: undefined };
+    this.activeActionSource = undefined;
+    this.characterAction = {
+      ...this.characterAction,
+      active: undefined,
+      busy: false,
+    };
     this.loaded?.dispose();
     this.loaded = undefined;
     this.loadedModelRoot.clear();
     this.loadedModelRoot.position.set(0, 0, 0);
     this.alignment = undefined;
+  }
+
+  private readonly onMixerFinished = (event: {
+    readonly action: AnimationAction;
+  }): void => {
+    if (event.action !== this.action || !this.characterAction.active) return;
+    this.finishActiveAction('mixer-finished');
+  };
+
+  private finishActiveAction(
+    release: NonNullable<CharacterActionRequestState['completionRelease']>,
+  ): void {
+    const completed = this.characterAction.active;
+    if (!completed) return;
+    this.action?.fadeOut(0.1);
+    this.action = undefined;
+    this.activeActionRemaining = 0;
+    this.animationState = 'static';
+    this.characterAction = {
+      ...this.characterAction,
+      active: undefined,
+      busy: false,
+      lastCompleted: completed,
+      lastCompletedSource: this.activeActionSource,
+      completedSequence: this.characterAction.completedSequence + 1,
+      completionRelease: release,
+    };
+    this.activeActionSource = undefined;
   }
 }

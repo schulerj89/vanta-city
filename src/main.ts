@@ -42,6 +42,7 @@ import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
 import { CharacterPickerSystem } from './ui/CharacterPickerSystem';
 import { HelpOverlaySystem } from './ui/HelpOverlaySystem';
+import { SparringTargetSystem } from './debug/SparringTargetSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
@@ -175,6 +176,12 @@ async function bootstrap(): Promise<void> {
     levelSystem,
     worldEvents,
   );
+  const sparringTarget = new SparringTargetSystem(
+    new CharacterLoader(assets),
+    objects,
+    player,
+    levelSystem,
+  );
   let dialogueCamera:
     ReturnType<ThirdPersonCameraSystem['requestConversation']> | undefined;
   const dialogue = new DialogueSessionController(input, conversations, {
@@ -254,6 +261,7 @@ async function bootstrap(): Promise<void> {
         characterVisual,
         characterPicker,
         npcs,
+        sparringTarget,
         conversations,
         dialogue,
         dialogueUI,
@@ -271,6 +279,7 @@ async function bootstrap(): Promise<void> {
     .register(objects)
     .register(help)
     .register(player)
+    .register(sparringTarget)
     .register(camera)
     .register(interactions)
     .register(conversations)
@@ -306,6 +315,7 @@ async function bootstrap(): Promise<void> {
           interactions,
           npcs,
           npcDefinitions,
+          sparringTarget,
           conversations,
           characterSelection,
           characterVisual,
@@ -339,6 +349,7 @@ function registerVerticalSliceDebug(
   characterVisual: CharacterPlayerVisual,
   characterPicker: CharacterPickerSystem,
   npcs: NpcSystem,
+  sparringTarget: SparringTargetSystem,
   conversations: ConversationCoordinator,
   dialogue: DialogueSessionController,
   dialogueUI: DialogueUISystem,
@@ -518,7 +529,10 @@ function registerVerticalSliceDebug(
       id: 'player.character-action',
       label: 'Character action',
       group: sections.characters,
-      read: () => player.getCharacterActionState().active ?? 'none',
+      read: () => {
+        const action = player.getCharacterActionState();
+        return action.active ? `${action.active} · busy` : 'none · ready';
+      },
     }),
     debug.registerValue({
       id: 'player.character-action-last',
@@ -527,8 +541,67 @@ function registerVerticalSliceDebug(
       read: () => {
         const action = player.getCharacterActionState();
         if (!action.lastRequested) return 'none';
-        return `${action.lastRequested} · ${action.lastAccepted ? 'accepted' : 'unavailable'} · ${action.lastSource ?? 'unknown'}`;
+        return `${action.lastRequested} · ${action.lastAccepted ? 'accepted' : (action.lastRejection ?? 'rejected')} · ${action.lastSource ?? 'unknown'}`;
       },
+    }),
+    debug.registerValue({
+      id: 'player.character-action-completion',
+      label: 'Last action completion',
+      group: sections.characters,
+      read: () => {
+        const action = player.getCharacterActionState();
+        return action.lastCompleted
+          ? `${action.lastCompleted} · ${action.completionRelease ?? 'unknown'} · #${action.completedSequence}`
+          : 'none';
+      },
+    }),
+    debug.registerValue({
+      id: 'player.character-action-rejections',
+      label: 'Busy action rejections',
+      group: sections.characters,
+      read: () => player.getCharacterActionState().busyRejectionCount,
+    }),
+    debug.registerValue({
+      id: 'sparring-target.status',
+      label: 'Sparring target · status',
+      group: sections.characters,
+      read: () => {
+        const target = sparringTarget.getSnapshot();
+        return `${target.enabled ? 'active' : 'inactive'} · ${target.animation} · responses ${target.responseSequence}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'sparring-target.range',
+      label: 'Sparring target · range / facing',
+      group: sections.interactions,
+      read: () => {
+        const target = sparringTarget.getSnapshot();
+        return `${target.distance.toFixed(2)}m · ${target.facingDot.toFixed(2)} · ${target.eligible ? 'eligible' : 'out of position'}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'sparring-target.grounding',
+      label: 'Sparring target · ground / height',
+      group: sections.collision,
+      read: () => {
+        const target = sparringTarget.getSnapshot();
+        return target.groundedMinY === undefined || target.height === undefined
+          ? 'pending'
+          : `${target.groundedMinY.toFixed(3)} / ${target.height.toFixed(3)}`;
+      },
+    }),
+    debug.registerToggle({
+      id: 'sparring-target.active',
+      label: 'Activate debug sparring target',
+      group: sections.actions,
+      initialValue: false,
+      onChange: (enabled) => sparringTarget.setEnabled(enabled),
+    }),
+    debug.registerCommand({
+      id: 'sparring-target.reset',
+      label: 'Reset debug sparring target',
+      group: sections.actions,
+      run: () => sparringTarget.reset(),
     }),
     debug.registerValue({
       id: 'player.character-scale',
@@ -802,7 +875,10 @@ function registerVerticalSliceDebug(
           );
         }
         if (!player.triggerCharacterAction(action, 'debug-command')) {
-          throw new Error(`Character action "${action}" is unavailable`);
+          const reason = player.getCharacterActionState().lastRejection;
+          throw new Error(
+            `Character action "${action}" was rejected: ${reason ?? 'unavailable'}`,
+          );
         }
       },
     }),

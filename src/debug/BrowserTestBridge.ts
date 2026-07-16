@@ -18,6 +18,7 @@ import type { RuntimeErrorReporter } from './RuntimeErrorReporter';
 import type { CharacterPickerSystem } from '../ui/CharacterPickerSystem';
 import type { HelpOverlaySystem } from '../ui/HelpOverlaySystem';
 import { defaultBindings, helpControlEntries } from '../input/defaultBindings';
+import type { SparringTargetSystem } from './SparringTargetSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -69,6 +70,7 @@ export interface BrowserTestSnapshot {
     readonly movementState: string;
     readonly facingYaw: number;
     readonly runMode: boolean;
+    readonly actionBusy: boolean;
   };
   readonly controls: {
     readonly bindings: typeof defaultBindings;
@@ -89,6 +91,7 @@ export interface BrowserTestSnapshot {
       ReturnType<NpcSystem['getDebugSnapshot']>
     >[];
   };
+  readonly sparringTarget: ReturnType<SparringTargetSystem['getSnapshot']>;
   readonly conversation: {
     readonly npcId: string | undefined;
     readonly conversationId: string | undefined;
@@ -105,6 +108,7 @@ export interface BrowserTestSnapshot {
 export interface BrowserTestApi {
   snapshot(): BrowserTestSnapshot;
   executeDebugCommand(id: string, argument?: string): Promise<void>;
+  setDebugToggle(id: string, enabled: boolean): void;
 }
 
 declare global {
@@ -123,6 +127,7 @@ export interface BrowserTestBridgeDependencies {
   readonly interactions: InteractionSystem;
   readonly npcs: NpcSystem;
   readonly npcDefinitions: typeof npcDefinitions;
+  readonly sparringTarget: SparringTargetSystem;
   readonly conversations: ConversationCoordinator;
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
@@ -168,6 +173,7 @@ export function installBrowserTestBridge(
       ),
     executeDebugCommand: (id, argument) =>
       dependencies.debug.executeCommand(id, argument),
+    setDebugToggle: (id, enabled) => dependencies.debug.setToggle(id, enabled),
   };
   target.__VANTA_TEST__ = api;
   return () => {
@@ -226,6 +232,7 @@ function createSnapshot(
       movementState: movement.movementState,
       facingYaw: movement.facingYaw,
       runMode: movement.runMode,
+      actionBusy: movement.actionBusy,
     },
     controls: {
       bindings: defaultBindings,
@@ -247,6 +254,7 @@ function createSnapshot(
         return snapshot ? [snapshot] : [];
       }),
     },
+    sparringTarget: dependencies.sparringTarget.getSnapshot(),
     conversation: {
       npcId: dependencies.conversations.active?.npcId,
       conversationId: dependencies.conversations.active?.definition.id,

@@ -70,6 +70,8 @@ Standard helper categories are `collision`, `triggers`, `entityIds`, `spawnPoint
 
 The default development actions pause/resume, reload the current level, and toggle a helper by name. A mechanic may register `player.reset` or `player.teleport` through the same command API once it has a public reset or named-spawn operation. The foundation sandbox demonstrates both without coupling the panel to a player implementation.
 
+The debug district additionally registers **Activate debug sparring target** and **Reset debug sparring target** under `Commands / Actions`. Passive character, range/facing, response-count, and grounding diagnostics remain in their owning sections. Browser tests can drive the same generic registry toggle through the development-only bridge; the target owns no window listener or separate debug UI.
+
 ## Sandbox scenarios
 
 Run `pnpm sandbox`, or open `/?sandbox=foundation&debug=1` during `pnpm dev`. Sandbox selection is development-only and replaces the normal scene system, so a scenario can exercise one mechanic without loading story content.

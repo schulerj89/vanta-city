@@ -49,9 +49,12 @@ All three selected files contain the same inspected clips:
 | `HumanArmature      |    Man_SwordSlash` | 1.041667 |
 | `HumanArmature      |          Man_Walk` | 1.041667 |
 
-Runtime mappings deliberately use only `Man_Idle` and the non-combat
-`Man_Clapping` conversation gesture. Animation mixers target model subtrees;
-NPC simulation/world transforms remain authoritative and stationary.
+Normal NPC mappings deliberately use only `Man_Idle` and the non-combat
+`Man_Clapping` conversation gesture. The optional debug sparring target reuses
+the Long Sleeves model and idle, while compatible get-hit tracks are loaded
+from the separately attributed local Ultimate Modular Men animation asset.
+Animation mixers target model subtrees; NPC and target world transforms remain
+authoritative and stationary.
 
 ## Runtime transforms and validation
 

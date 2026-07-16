@@ -209,6 +209,67 @@ describe('CharacterPlayerVisual', () => {
     visual.dispose();
   });
 
+  it('locks one-shots until mixer completion and rejects rapid cross-action spam', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const punchLeft = new AnimationClip('Punch left', 0.8, []);
+    const punchRight = new AnimationClip('Punch right', 0.8, []);
+    const walk = new AnimationClip('Walk', 1, []);
+    const instance = loadedCharacter(
+      definitions[0],
+      'asset',
+      new Map([
+        ['punchLeft', punchLeft],
+        ['punchRight', punchRight],
+        ['walk', walk],
+      ]),
+    );
+    const visual = new CharacterPlayerVisual(selection, {
+      instantiate: vi.fn(async () => instance),
+    });
+    await visual.init();
+
+    expect(visual.triggerCharacterAction('punchLeft', 'keyboard:punch')).toBe(
+      true,
+    );
+    expect(visual.triggerCharacterAction('punchRight', 'keyboard:punch')).toBe(
+      false,
+    );
+    expect(visual.triggerCharacterAction('kickLeft', 'keyboard:kick')).toBe(
+      false,
+    );
+    expect(visual.getCharacterActionState()).toMatchObject({
+      active: 'punchLeft',
+      busy: true,
+      lastRequested: 'kickLeft',
+      lastAccepted: false,
+      lastRejection: 'busy',
+      busyRejectionCount: 2,
+      sequence: 1,
+      completedSequence: 0,
+    });
+
+    visual.sync(movement('walking'), 0.79);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'action:punchLeft',
+      characterAction: { busy: true, completedSequence: 0 },
+    });
+    visual.sync(movement('walking'), 0.02);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'walk',
+      characterAction: {
+        active: undefined,
+        busy: false,
+        lastCompleted: 'punchLeft',
+        completedSequence: 1,
+        completionRelease: 'mixer-finished',
+      },
+    });
+    expect(visual.triggerCharacterAction('punchRight', 'keyboard:punch')).toBe(
+      true,
+    );
+    visual.dispose();
+  });
+
   it('rejects actions that are unavailable on a fallback visual', async () => {
     const selection = new CharacterSelectionStore(definitions, 'first');
     const fallback = loadedCharacter(definitions[0], 'placeholder');

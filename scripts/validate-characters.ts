@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { assetManifest } from '../src/assets/catalog';
 import { characterDefinitionEntries } from '../src/characters/characters';
 import { npcCharacterDefinitions } from '../src/npcs/npcs';
+import { sparringTargetCharacterDefinition } from '../src/debug/sparringTarget';
 import type {
   CharacterValidationConfigInput,
   CharacterValidationIssue,
@@ -30,7 +31,11 @@ async function main(): Promise<void> {
   const config = mergeCharacterValidationConfig(override);
   const inspector = new NodeCharacterAssetInspector(projectRoot);
   const report = await validateCharacterCatalog(
-    [...characterDefinitionEntries, ...npcCharacterDefinitions],
+    [
+      ...characterDefinitionEntries,
+      ...npcCharacterDefinitions,
+      sparringTargetCharacterDefinition,
+    ],
     assetManifest,
     inspector,
     config,
