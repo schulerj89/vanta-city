@@ -37,6 +37,7 @@ export interface CharacterMoveResult {
   readonly position: Vector3;
   readonly grounded: boolean;
   readonly groundNormal: Vector3;
+  readonly groundColliderId: string;
   readonly blocked: boolean;
   readonly hitCeiling: boolean;
 }
@@ -81,13 +82,16 @@ export class StaticCollisionWorld implements CollisionWorld {
       const angle = collider.rotation?.[0] ?? 0;
       const run = depth * Math.cos(angle);
       const rise = depth * Math.sin(angle);
+      const topFaceZOffset = (height / 2) * Math.sin(angle);
       this.addRamp({
         id: collider.id,
         minX: x - width / 2,
         maxX: x + width / 2,
-        minZ: z - run / 2,
-        maxZ: z + run / 2,
-        baseHeight: y + rise / 2,
+        minZ: z - run / 2 + topFaceZOffset,
+        maxZ: z + run / 2 + topFaceZOffset,
+        // The simulation foot plane follows the visible upper face of the
+        // rotated box, not its centre plane.
+        baseHeight: y + rise / 2 + (height / 2) * Math.cos(angle),
         slopeX: 0,
         slopeZ: -rise / run,
       });
@@ -158,13 +162,11 @@ export class StaticCollisionWorld implements CollisionWorld {
       blocked ||= resolution.blocked;
       stepped ||= resolution.stepped;
 
-      const ground = this.groundAt(result.x, result.z, shape.radius);
+      const ground = this.groundAt(result.x, result.z);
       const walkable = ground.normal.y >= Math.cos(shape.maxSlopeAngle);
       if (!walkable && ground.height > previous.y + EPSILON) {
         result.copy(previous);
         blocked = true;
-      } else if (resolution.stepped) {
-        result.y = resolution.stepHeight;
       } else if (
         wasGrounded &&
         walkable &&
@@ -188,7 +190,7 @@ export class StaticCollisionWorld implements CollisionWorld {
       result.y = verticalTarget;
     }
 
-    const ground = this.groundAt(result.x, result.z, shape.radius * 0.75);
+    const ground = this.groundAt(result.x, result.z);
     const walkable = ground.normal.y >= Math.cos(shape.maxSlopeAngle);
     const snapDistance = wasGrounded || stepped ? shape.groundSnapDistance : 0;
     const crossingGround =
@@ -202,6 +204,7 @@ export class StaticCollisionWorld implements CollisionWorld {
       position: result,
       grounded,
       groundNormal: ground.normal.clone(),
+      groundColliderId: ground.colliderId,
       blocked,
       hitCeiling,
     };
@@ -229,10 +232,9 @@ export class StaticCollisionWorld implements CollisionWorld {
   private resolveHorizontal(
     position: Vector3,
     shape: CharacterShape,
-  ): { blocked: boolean; stepped: boolean; stepHeight: number } {
+  ): { blocked: boolean; stepped: boolean } {
     let blocked = false;
     let stepped = false;
-    let stepHeight = position.y;
 
     for (const box of this.boxes.values()) {
       if (position.y >= box.max.y - EPSILON) continue;
@@ -247,26 +249,25 @@ export class StaticCollisionWorld implements CollisionWorld {
         !this.hasHeadObstruction(position, box.max.y, shape, box.id)
       ) {
         stepped = true;
-        stepHeight = Math.max(stepHeight, box.max.y);
         continue;
       }
 
       blocked = true;
       pushCircleOutsideBox(position, shape.radius, box);
     }
-    return { blocked, stepped, stepHeight };
+    return { blocked, stepped };
   }
 
-  private groundAt(x: number, z: number, inset: number): GroundHit {
+  private groundAt(x: number, z: number): GroundHit {
     let height = this.floorHeight;
     let colliderId = 'world-floor';
     for (const box of this.boxes.values()) {
       if (
-        x >= box.min.x + inset &&
-        x <= box.max.x - inset &&
-        z >= box.min.z + inset &&
-        z <= box.max.z - inset &&
-        box.max.y > height
+        x >= box.min.x - EPSILON &&
+        x <= box.max.x + EPSILON &&
+        z >= box.min.z - EPSILON &&
+        z <= box.max.z + EPSILON &&
+        box.max.y >= height - EPSILON
       ) {
         height = box.max.y;
         colliderId = box.id;
@@ -275,10 +276,10 @@ export class StaticCollisionWorld implements CollisionWorld {
     let normal: Readonly<Vector3> = UP;
     for (const ramp of this.ramps.values()) {
       if (
-        x < ramp.minX + inset ||
-        x > ramp.maxX - inset ||
-        z < ramp.minZ + inset ||
-        z > ramp.maxZ - inset
+        x < ramp.minX - EPSILON ||
+        x > ramp.maxX + EPSILON ||
+        z < ramp.minZ - EPSILON ||
+        z > ramp.maxZ + EPSILON
       ) {
         continue;
       }

@@ -30,6 +30,12 @@ export interface PlayerDebugSnapshot {
     readonly z: number;
   };
   readonly grounded: boolean;
+  readonly groundColliderId: string;
+  readonly groundNormal: {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+  };
   readonly movementState: PlayerMovementState;
   readonly blocked: boolean;
 }
@@ -109,6 +115,12 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     return {
       velocity: { x, y, z },
       grounded: this.movement.grounded,
+      groundColliderId: this.movement.groundColliderId,
+      groundNormal: {
+        x: this.movement.groundNormal.x,
+        y: this.movement.groundNormal.y,
+        z: this.movement.groundNormal.z,
+      },
       movementState: this.movement.state,
       blocked: this.movement.blocked,
     };

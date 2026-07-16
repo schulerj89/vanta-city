@@ -190,6 +190,63 @@ test.describe('playable debug district', () => {
       .toContain('interaction.garage-door');
   });
 
+  test('keeps feet grounded at named curb, ramp, stair, and elevation transitions', async ({
+    page,
+  }) => {
+    await openReadyApp(page);
+    const footTolerance = 0.02;
+    const locations = [
+      ['spawn.grounding-curb-west', 'c.curb-west'],
+      ['spawn.grounding-ramp-low', 'c.deck-ramp'],
+      ['spawn.grounding-ramp-high', 'c.loading-deck'],
+      ['spawn.grounding-stairs-low', 'c.stair-1'],
+    ] as const;
+
+    for (const [spawnId, supportId] of locations) {
+      await executeCommand(page, 'player.teleport', spawnId);
+      await expect
+        .poll(async () => (await snapshot(page)).player.grounded, {
+          message: `${spawnId} should remain grounded`,
+        })
+        .toBe(true);
+      const state = await snapshot(page);
+      expect(state.player.groundColliderId).toBe(supportId);
+      expect(
+        Math.abs(state.player.footClearance ?? Number.POSITIVE_INFINITY),
+        `${spawnId} rendered feet should stay within ${footTolerance}m of the simulation foot plane`,
+      ).toBeLessThanOrEqual(footTolerance);
+    }
+
+    await executeCommand(page, 'player.teleport', 'spawn.grounding-ramp-low');
+    await page.keyboard.down('s');
+    await expect
+      .poll(async () => (await snapshot(page)).player.position.y, {
+        message: 'forward walking should climb the loading ramp',
+      })
+      .toBeGreaterThan(0.6);
+    await page.keyboard.up('s');
+    const uphill = await snapshot(page);
+    expect(uphill.player.grounded).toBe(true);
+    expect(uphill.player.groundColliderId).toBe('c.deck-ramp');
+    expect(
+      Math.abs(uphill.player.footClearance ?? Infinity),
+    ).toBeLessThanOrEqual(footTolerance);
+
+    await page.keyboard.down('w');
+    await expect
+      .poll(async () => (await snapshot(page)).player.position.y, {
+        message: 'reverse walking should descend the loading ramp',
+      })
+      .toBeLessThan(0.2);
+    await page.keyboard.up('w');
+    const downhill = await snapshot(page);
+    expect(downhill.player.grounded).toBe(true);
+    expect(downhill.player.groundNormal.y).toBeGreaterThan(0.95);
+    expect(
+      Math.abs(downhill.player.footClearance ?? Infinity),
+    ).toBeLessThanOrEqual(footTolerance);
+  });
+
   test('uses a fallback for an invalid character and persists a valid selection', async ({
     page,
   }, testInfo) => {

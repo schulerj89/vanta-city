@@ -63,6 +63,7 @@ export class PlayerMovementSimulation {
   public readonly velocity = new Vector3();
   public readonly groundNormal = new Vector3(0, 1, 0);
   public grounded = false;
+  public groundColliderId = 'world-floor';
   public state: PlayerMovementState = 'idle';
   public facingYaw = 0;
   public blocked = false;
@@ -94,8 +95,17 @@ export class PlayerMovementSimulation {
     const desiredSpeed = intent.sprint
       ? this.config.runSpeed
       : this.config.walkSpeed;
-    const targetX = desiredDirection.x * desiredSpeed;
-    const targetZ = desiredDirection.z * desiredSpeed;
+    // Preserve authored speed along a slope rather than applying the full
+    // speed horizontally and gaining extra distance from the vertical rise.
+    const slopeRise = this.grounded
+      ? -(
+          this.groundNormal.x * desiredDirection.x +
+          this.groundNormal.z * desiredDirection.z
+        ) / Math.max(this.groundNormal.y, 1e-5)
+      : 0;
+    const slopeSpeedScale = 1 / Math.hypot(1, slopeRise);
+    const targetX = desiredDirection.x * desiredSpeed * slopeSpeedScale;
+    const targetZ = desiredDirection.z * desiredSpeed * slopeSpeedScale;
     const hasMovementIntent = desiredDirection.lengthSq() > 0;
     const acceleration = this.grounded
       ? hasMovementIntent
@@ -138,6 +148,7 @@ export class PlayerMovementSimulation {
     this.position.copy(result.position);
     this.grounded = result.grounded;
     this.groundNormal.copy(result.groundNormal);
+    this.groundColliderId = result.groundColliderId;
     this.blocked = result.blocked;
     if (result.hitCeiling && this.velocity.y > 0) this.velocity.y = 0;
     if (this.grounded && this.velocity.y < 0) this.velocity.y = 0;
@@ -166,6 +177,7 @@ export class PlayerMovementSimulation {
     this.position.copy(position);
     this.velocity.set(0, 0, 0);
     this.groundNormal.set(0, 1, 0);
+    this.groundColliderId = 'world-floor';
     this.grounded = false;
     this.blocked = false;
     this.landingTimeRemaining = 0;
@@ -180,6 +192,7 @@ export class PlayerMovementSimulation {
     this.position.copy(settled.position);
     this.grounded = settled.grounded;
     this.groundNormal.copy(settled.groundNormal);
+    this.groundColliderId = settled.groundColliderId;
     this.state = this.grounded ? 'idle' : 'airborne';
   }
 }

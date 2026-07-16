@@ -19,11 +19,14 @@ const colors = {
 
 const rampAngle = Math.atan2(2.8, 9);
 const rampLength = Math.hypot(2.8, 9);
+const rampThickness = 0.35;
+const rampCenterY = 1.4 - (rampThickness / 2) * Math.cos(rampAngle);
+const rampCenterZ = 1.5 - (rampThickness / 2) * Math.sin(rampAngle);
 
-const stairs = Array.from({ length: 6 }, (_, index) => {
-  const height = (index + 1) * 0.5;
-  const position: Vector3Tuple = [9.5, height / 2, -8.5 - index * 0.8];
-  const size: Vector3Tuple = [3, height, 0.85];
+const stairs = Array.from({ length: 8 }, (_, index) => {
+  const height = (index + 1) * 0.35;
+  const position: Vector3Tuple = [9.5, height / 2, 1.2 - index * 0.6];
+  const size: Vector3Tuple = [3, height, 0.65];
   return {
     visual: box(`v.stair-${index + 1}`, position, size, colors.concrete),
     collider: collider(`c.stair-${index + 1}`, position, size, ['walkable']),
@@ -34,8 +37,8 @@ const environment: readonly BoxVisualDefinition[] = [
   box('v.street', [0, -0.25, 0], [10, 0.5, 44], colors.asphalt),
   box('v.sidewalk-west', [-7, 0, 0], [4, 0.4, 44], colors.concrete),
   box('v.sidewalk-east', [7, 0, 0], [4, 0.4, 44], colors.concrete),
-  box('v.curb-west', [-5.15, 0.3, 0], [0.3, 0.6, 44], colors.curb),
-  box('v.curb-east', [5.15, 0.3, 0], [0.3, 0.6, 44], colors.curb),
+  box('v.curb-west', [-5.15, 0.1, 0], [0.3, 0.2, 44], colors.curb),
+  box('v.curb-east', [5.15, 0.1, 0], [0.3, 0.2, 44], colors.curb),
   box('v.center-line', [0, 0.025, 0], [0.18, 0.04, 36], colors.marking),
   box('v.west-lot', [-15, -0.15, 0], [12, 0.3, 44], colors.asphalt),
   box('v.east-lot', [15, -0.15, 0], [12, 0.3, 44], colors.asphalt),
@@ -57,11 +60,13 @@ const environment: readonly BoxVisualDefinition[] = [
   // Raised east loading deck, with both a ramp and a stair route.
   box('v.loading-deck', [13.5, 1.4, -8], [9, 2.8, 10], colors.concrete),
   box('v.deck-wall', [18, 4.5, -8], [0.5, 6, 10], colors.brick),
-  box('v.deck-ramp', [13.5, 1.4, 1.5], [4, 0.35, rampLength], colors.concrete, [
-    rampAngle,
-    0,
-    0,
-  ]),
+  box(
+    'v.deck-ramp',
+    [13.5, rampCenterY, rampCenterZ],
+    [4, rampThickness, rampLength],
+    colors.concrete,
+    [rampAngle, 0, 0],
+  ),
   ...stairs.map(({ visual }) => visual),
 
   // Movement/camera obstacles at street and alley scale.
@@ -80,8 +85,8 @@ const staticCollision: readonly StaticColliderDefinition[] = [
   collider('c.sidewalk-east', [7, 0, 0], [4, 0.4, 44], ['walkable']),
   collider('c.west-lot', [-15, -0.15, 0], [12, 0.3, 44], ['walkable']),
   collider('c.east-lot', [15, -0.15, 0], [12, 0.3, 44], ['walkable']),
-  collider('c.curb-west', [-5.15, 0.3, 0], [0.3, 0.6, 44], ['curb']),
-  collider('c.curb-east', [5.15, 0.3, 0], [0.3, 0.6, 44], ['curb']),
+  collider('c.curb-west', [-5.15, 0.1, 0], [0.3, 0.2, 44], ['curb']),
+  collider('c.curb-east', [5.15, 0.1, 0], [0.3, 0.2, 44], ['curb']),
   collider('c.garage-back', [-13, 3, -13], [10, 6, 0.5], ['building']),
   collider('c.garage-left', [-17.75, 3, -6], [0.5, 6, 14], ['building']),
   collider('c.garage-right', [-8.25, 3, -6], [0.5, 6, 14], ['building']),
@@ -101,8 +106,8 @@ const staticCollision: readonly StaticColliderDefinition[] = [
   collider('c.deck-wall', [18, 4.5, -8], [0.5, 6, 10], ['wall']),
   collider(
     'c.deck-ramp',
-    [13.5, 1.4, 1.5],
-    [4, 0.35, rampLength],
+    [13.5, rampCenterY, rampCenterZ],
+    [4, rampThickness, rampLength],
     ['walkable', 'ramp'],
     [rampAngle, 0, 0],
   ),
@@ -140,6 +145,34 @@ export const testDistrict = {
         kind: 'player',
         position: [-13, 0.15, 4],
         rotation: [0, Math.PI, 0],
+      },
+      {
+        id: 'spawn.grounding-curb-west',
+        kind: 'player',
+        position: [-5.15, 0.2, 8],
+        rotation: [0, Math.PI / 2, 0],
+        tags: ['grounding', 'curb'],
+      },
+      {
+        id: 'spawn.grounding-ramp-low',
+        kind: 'player',
+        position: [13.5, 0.02, 5.9],
+        rotation: [0, Math.PI, 0],
+        tags: ['grounding', 'ramp', 'downhill'],
+      },
+      {
+        id: 'spawn.grounding-ramp-high',
+        kind: 'player',
+        position: [13.5, 2.8, -3],
+        rotation: [0, 0, 0],
+        tags: ['grounding', 'ramp', 'uphill'],
+      },
+      {
+        id: 'spawn.grounding-stairs-low',
+        kind: 'player',
+        position: [9.5, 0.35, 1.2],
+        rotation: [0, Math.PI, 0],
+        tags: ['grounding', 'stairs', 'uphill'],
       },
       { id: 'spawn.npc-mechanic', kind: 'npc', position: [-10, 0.2, 4] },
       { id: 'spawn.npc-alley', kind: 'npc', position: [-19, 0.2, 12] },

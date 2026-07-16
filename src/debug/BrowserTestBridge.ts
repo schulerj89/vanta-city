@@ -56,6 +56,14 @@ export interface BrowserTestSnapshot {
       readonly z: number;
     };
     readonly grounded: boolean;
+    readonly groundColliderId: string;
+    readonly groundNormal: {
+      readonly x: number;
+      readonly y: number;
+      readonly z: number;
+    };
+    /** Lowest rendered point relative to the authoritative foot plane. */
+    readonly footClearance: number | undefined;
     readonly movementState: string;
   };
   readonly character: ReturnType<CharacterPlayerVisual['getDebugSnapshot']>;
@@ -169,6 +177,7 @@ function createSnapshot(
   const activeLevel = dependencies.level.activeLevel;
   const movement = dependencies.player.getDebugSnapshot();
   const position = dependencies.player.getPlayerPosition();
+  const character = dependencies.characterVisual.getDebugSnapshot();
   const canvas = dependencies.renderer.domElement;
   let defaultSpawnId: string | undefined;
   try {
@@ -198,9 +207,15 @@ function createSnapshot(
       position,
       velocity: movement.velocity,
       grounded: movement.grounded,
+      groundColliderId: movement.groundColliderId,
+      groundNormal: movement.groundNormal,
+      footClearance:
+        character.bounds?.min.y === undefined
+          ? undefined
+          : character.bounds.min.y - position.y,
       movementState: movement.movementState,
     },
-    character: dependencies.characterVisual.getDebugSnapshot(),
+    character,
     selectedCharacterId: dependencies.characterSelection.getSelectedId(),
     picker: dependencies.characterPicker.getSnapshot(),
     camera: dependencies.camera.getDebugSnapshot(),
