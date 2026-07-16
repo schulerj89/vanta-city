@@ -17,6 +17,7 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:install": "playwright install chromium",
     "sandbox": "vite --open '/?sandbox=foundation&debug=1'",
+    "camera-lab": "vite --open '/?sandbox=camera-composition&debug=1'",
     "size": "node scripts/report-bundle-size.mjs",
     "validate:characters": "tsx scripts/validate-characters.ts"
   },

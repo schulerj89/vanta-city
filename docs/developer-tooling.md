@@ -91,6 +91,8 @@ The debug district additionally registers **Activate debug sparring target** and
 
 Run `pnpm sandbox`, or open `/?sandbox=foundation&debug=1` during `pnpm dev`. Sandbox selection is development-only and replaces the normal scene system, so a scenario can exercise one mechanic without loading story content.
 
+Run `pnpm camera-lab`, or open `/?sandbox=camera-composition&debug=1`, for the deterministic [Camera Composition Lab](camera-composition-lab.md). It uses the existing camera owner/profile and collision-cast APIs to tune participant framing, obstructions, viewport composition, and exact gameplay restoration without creating another camera controller.
+
 To add a scenario:
 
 1. Add `src/sandbox/scenarios/<name>Sandbox.ts` and export a `SandboxScenario` with a stable URL-safe `id`, title, and `create(context)` function.

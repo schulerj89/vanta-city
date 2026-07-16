@@ -55,6 +55,8 @@ See [Developer tooling](docs/developer-tooling.md) for the debug extension API, 
 
 See [Camera system](docs/camera-system.md) for camera controls, persistent settings, conversation framing, and ownership priorities.
 
+Run `pnpm camera-lab` for the development-only [Camera Composition Lab](docs/camera-composition-lab.md), including deterministic obstruction, viewport, safe-frame, ownership, and restoration fixtures.
+
 See [Dialogue system](docs/dialogue.md) for conversation data, session APIs, portraits, input, and browser-test hooks.
 
 See [Conversation-slice integration decisions](docs/conversation-slice-integration.md) for the authoritative identity, dialogue, interaction, and camera contracts selected while combining the worker branches.

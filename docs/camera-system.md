@@ -16,6 +16,8 @@ Gameplay preferences are stored in local storage under `vanta-city:camera-prefer
 
 Development builds expose passive camera diagnostics in the `Camera` section: mode, owner, yaw/pitch, desired and actual distances, shoulder, target, anchor, obstruction, transition progress, and current sensitivities. Mutating sensitivity, distance, invert-Y, automatic-recenter, and shoulder controls are collected under `Commands / Actions`, consistent with the developer panel's state-versus-action convention.
 
+The development-only [Camera Composition Lab](camera-composition-lab.md) also exposes the unobstructed desired position, obstruction-adjusted position, sweep start, blocker ID, saved gameplay camera, and restoration path. These are passive snapshots from the same camera and collision systems; the lab never writes the renderer camera.
+
 ## Modes and ownership
 
 Gameplay is the implicit owner at priority `0`. Temporary owners request the same camera through `requestCamera()` or `requestConversation()`:

@@ -148,6 +148,12 @@ export interface ThirdPersonCameraDebugSnapshot {
   readonly obstructed: boolean;
   readonly gameplayReturnPosition: WorldPosition | undefined;
   readonly gameplayReturnTarget: WorldPosition | undefined;
+  /** Requested pose before the shared collision query shortens its sweep. */
+  readonly unobstructedPosition: WorldPosition;
+  /** Requested pose after the shared collision query, before smoothing. */
+  readonly adjustedPosition: WorldPosition;
+  readonly sweepStart: WorldPosition;
+  readonly obstructionColliderId: string | undefined;
 }
 
 interface InternalRequest extends CameraControlRequest {
@@ -189,6 +195,8 @@ export class ThirdPersonCameraSystem implements GameSystem {
   private readonly target = new Vector3();
   private readonly desiredPosition = new Vector3();
   private readonly desiredTarget = new Vector3();
+  private readonly unobstructedPosition = new Vector3();
+  private obstructionColliderId: string | undefined;
   private readonly transitionStartPosition = new Vector3();
   private readonly transitionStartTarget = new Vector3();
   private transitionStartFov: number;
@@ -357,6 +365,10 @@ export class ThirdPersonCameraSystem implements GameSystem {
       gameplayReturnTarget: gameplayReturnTarget
         ? vectorSnapshot(gameplayReturnTarget)
         : undefined,
+      unobstructedPosition: vectorSnapshot(this.unobstructedPosition),
+      adjustedPosition: vectorSnapshot(this.desiredPosition),
+      sweepStart: vectorSnapshot(this.desiredTarget),
+      obstructionColliderId: this.obstructionColliderId,
     };
   }
 
@@ -591,6 +603,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
         Math.cos(this.yaw) * horizontalDistance +
         rightZ * this.shoulderOffset,
     );
+    this.unobstructedPosition.copy(this.desiredPosition);
     this.applyCollision(target, this.desiredPosition, delta);
   }
 
@@ -608,6 +621,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
         request.conversationProfile ?? resolveConversationCameraProfile(),
       );
     }
+    this.unobstructedPosition.copy(this.desiredPosition);
     this.applyDirectedCollision(this.desiredTarget, this.desiredPosition);
     this.actualDistance = this.desiredPosition.distanceTo(this.desiredTarget);
     const desiredFov =
@@ -694,6 +708,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
       desired,
       this.config.collisionRadius,
     );
+    this.obstructionColliderId = cast.colliderId;
     const minimum = this.config.collisionRadius + this.config.collisionPadding;
     const collisionDistance = Math.max(
       minimum,
@@ -747,6 +762,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
       desired,
       this.config.collisionRadius,
     );
+    this.obstructionColliderId = cast.colliderId;
     this.obstructed = cast.obstructed;
     if (!cast.obstructed) return;
     const fullDistance = from.distanceTo(desired);
