@@ -11,6 +11,11 @@ import { ConversationCoordinator } from './conversations/ConversationCoordinator
 import { conversationCatalog } from './conversations/conversations';
 import type { GameSystem } from './core/lifecycle';
 import { EventBus } from './core/events';
+import { DialoguePortraitResolver } from './dialogue/DialoguePortraitResolver';
+import { DialogueSessionController } from './dialogue/DialogueSessionController';
+import { DialogueUISystem } from './dialogue/DialogueUISystem';
+import { mackIntroduction } from './dialogue/conversations/mackIntroduction';
+import { dialogueSpeakers } from './dialogue/speakers';
 import { GameObjectWorld } from './entities/GameObjectWorld';
 import { GameRuntime } from './game/GameRuntime';
 import type { GameContext } from './game/GameRuntime';
@@ -47,8 +52,9 @@ async function bootstrap(): Promise<void> {
   });
   const assets = new ThreeAssetLoader(assetCatalog);
   const runtime = new GameRuntime(input);
+  const pageParameters = new URLSearchParams(window.location.search);
   const developmentParameters = import.meta.env.DEV
-    ? new URLSearchParams(window.location.search)
+    ? pageParameters
     : undefined;
   let development:
     import('./debug/setupDevelopmentTools').DevelopmentTools | undefined;
@@ -123,6 +129,17 @@ async function bootstrap(): Promise<void> {
     assetCatalog,
     new ManifestCharacterAvailabilityProbe(assetCatalog),
   );
+  const dialogue = new DialogueSessionController(input, runtime.state, {
+    typewriterEnabled:
+      pageParameters.get('dialogueTypewriter') !== '0' &&
+      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+  });
+  const dialoguePortraits = new DialoguePortraitResolver(dialogueSpeakers, {
+    getSelectedIdentity: () => ({
+      displayName: characterSelection.getSelectedDefinition().displayName,
+    }),
+  });
+  const dialogueUI = new DialogueUISystem(mount, dialogue, dialoguePortraits);
   const cameraReference: { current?: ThirdPersonCameraSystem } = {};
   const player = new PlayerControllerSystem(
     objects,
@@ -171,6 +188,21 @@ async function bootstrap(): Promise<void> {
     repeatable: false,
     interact: () => undefined,
   });
+  interactions.register({
+    id: 'interaction.mack-conversation',
+    prompt: 'Talk to Mack',
+    location: () => {
+      const [x, y, z] = levelSystem.getSpawn('spawn.npc-mechanic').position;
+      return { x, y, z };
+    },
+    range: 4,
+    priority: -1,
+    requiredStates: ['playing', 'dialogue'],
+    repeatable: true,
+    interact: async () => {
+      await dialogue.start(mackIntroduction);
+    },
+  });
   let interactionDebug:
     | import('./interactions/InteractionDebugSystem').InteractionDebugSystem
     | undefined;
@@ -202,6 +234,8 @@ async function bootstrap(): Promise<void> {
         characterPicker,
         npcs,
         conversations,
+        dialogue,
+        dialogueUI,
         interactionDebug,
         characterAlignmentDebug,
       )
@@ -218,6 +252,8 @@ async function bootstrap(): Promise<void> {
     .register(interactions)
     .register(conversations)
     .register(npcs)
+    .register(dialogue)
+    .register(dialogueUI)
     .register(new InteractionPromptSystem(mount, interactions))
     .register(characterPicker);
   if (interactionDebug) runtime.register(interactionDebug);
@@ -253,6 +289,8 @@ async function bootstrap(): Promise<void> {
           characterSelection,
           characterVisual,
           characterPicker,
+          dialogue,
+          dialogueUI,
           debug: development.debug,
           errors: development.errors,
         })
@@ -276,6 +314,8 @@ function registerVerticalSliceDebug(
   characterPicker: CharacterPickerSystem,
   npcs: NpcSystem,
   conversations: ConversationCoordinator,
+  dialogue: DialogueSessionController,
+  dialogueUI: DialogueUISystem,
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
 ): (() => void)[] {
@@ -621,6 +661,36 @@ function registerVerticalSliceDebug(
       group: 'World',
       read: () => level.activeLevel?.spawns.length,
     }),
+    debug.registerValue({
+      id: 'dialogue.conversation',
+      label: 'Active conversation',
+      group: 'Dialogue',
+      read: () => dialogue.getSnapshot().conversationId ?? 'none',
+    }),
+    debug.registerValue({
+      id: 'dialogue.line-index',
+      label: 'Line index',
+      group: 'Dialogue',
+      read: () => dialogue.getSnapshot().lineIndex ?? 'none',
+    }),
+    debug.registerValue({
+      id: 'dialogue.speaker',
+      label: 'Speaker',
+      group: 'Dialogue',
+      read: () => dialogue.getSnapshot().speakerId ?? 'none',
+    }),
+    debug.registerValue({
+      id: 'dialogue.portrait',
+      label: 'Portrait',
+      group: 'Dialogue',
+      read: () => dialogueUI.getDebugSnapshot().portraitResolution,
+    }),
+    debug.registerValue({
+      id: 'dialogue.state',
+      label: 'Dialogue state',
+      group: 'Dialogue',
+      read: () => dialogue.getSnapshot().state,
+    }),
     debug.registerCommand({
       id: 'player.reset',
       label: 'Reset player',
@@ -632,6 +702,32 @@ function registerVerticalSliceDebug(
       label: 'Open character picker',
       group: 'Actions',
       run: () => characterPicker.open(),
+    }),
+    debug.registerCommand({
+      id: 'dialogue.start-mack',
+      label: 'Start Mack dialogue',
+      group: 'Actions',
+      run: () => {
+        void dialogue.start(mackIntroduction);
+      },
+    }),
+    debug.registerCommand({
+      id: 'dialogue.advance',
+      label: 'Advance dialogue',
+      group: 'Actions',
+      run: () => dialogue.advance(),
+    }),
+    debug.registerCommand({
+      id: 'dialogue.set-typewriter',
+      label: 'Set typewriter',
+      group: 'Actions',
+      argumentLabel: 'on / off',
+      run: (value) => {
+        if (value !== 'on' && value !== 'off') {
+          throw new Error('Expected "on" or "off"');
+        }
+        dialogue.setTypewriterEnabled(value === 'on');
+      },
     }),
     debug.registerCommand({
       id: 'player.select-character',

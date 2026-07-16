@@ -276,6 +276,91 @@ test.describe('playable debug district', () => {
       .toBe('playing');
     expect((await snapshot(page)).conversation.npcId).toBeUndefined();
   });
+
+  test('runs the Mack conversation deterministically through the dialogue UI', async ({
+    page,
+  }, testInfo) => {
+    const runtimeFailures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+    await executeCommand(page, 'dialogue.set-typewriter', 'off');
+    await executeCommand(page, 'dialogue.start-mack');
+
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.state)
+      .toBe('ready');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.ui.renderedText)
+      .toBe('You’re late.');
+    const first = await snapshot(page);
+    expect(first.gameState).toBe('dialogue');
+    expect(first.dialogue.session).toMatchObject({
+      conversationId: 'mack.introduction',
+      lineIndex: 0,
+      speakerId: 'mack',
+      fullText: 'You’re late.',
+    });
+    expect(first.dialogue.ui).toMatchObject({
+      visible: true,
+      speakerName: 'Mack',
+      renderedText: 'You’re late.',
+      portraitResolution: 'fallback:speaker-fallback',
+    });
+
+    const stoppedAt = first.player.position;
+    await page.keyboard.down('w');
+    await page.waitForTimeout(250);
+    const duringDialogue = await snapshot(page);
+    await page.keyboard.up('w');
+    expect(
+      horizontalDistance(duringDialogue.player.position, stoppedAt),
+      'dialogue game state should suppress normal player movement',
+    ).toBeLessThan(0.02);
+
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+      .toBe(1);
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.ui.renderedText)
+      .toBe('Your nephew was supposed to meet me.');
+    const rook = await snapshot(page);
+    expect(rook.dialogue.ui).toMatchObject({
+      speakerName: 'Rook',
+      renderedText: 'Your nephew was supposed to meet me.',
+      portraitResolution: 'fallback:player-identity-fallback',
+    });
+
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+      .toBe(2);
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+      .toBe(3);
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.ui.renderedText)
+      .toBe(
+        'Walk around the block. If anyone follows you, don’t bring them back here.',
+      );
+    const warning = await snapshot(page);
+    expect(warning.dialogue.ui.renderedText).toBe(
+      'Walk around the block. If anyone follows you, don’t bring them back here.',
+    );
+    await attachScreenshot(page, testInfo, 'mack-dialogue');
+
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
+    const completed = await snapshot(page);
+    expect(completed.dialogue.session.state).toBe('idle');
+    expect(completed.dialogue.ui.visible).toBe(false);
+    expect(completed.dialogue.completedConversationIds).toContain(
+      'mack.introduction',
+    );
+    expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
+  });
 });
 
 async function openReadyApp(page: Page): Promise<void> {

@@ -1,6 +1,8 @@
 import type { WebGLRenderer } from 'three';
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
 import type { CharacterSelectionReader } from '../characters/CharacterSelection';
+import type { DialogueSessionController } from '../dialogue/DialogueSessionController';
+import type { DialogueUISystem } from '../dialogue/DialogueUISystem';
 import type { GameRuntime } from '../game/GameRuntime';
 import type { InteractionSystem } from '../interactions/InteractionSystem';
 import type { ConversationCoordinator } from '../conversations/ConversationCoordinator';
@@ -73,6 +75,12 @@ export interface BrowserTestSnapshot {
     readonly npcId: string | undefined;
     readonly conversationId: string | undefined;
   };
+  readonly dialogue: {
+    readonly session: ReturnType<DialogueSessionController['getSnapshot']>;
+    readonly ui: ReturnType<DialogueUISystem['getDebugSnapshot']>;
+    readonly completedConversationIds: readonly string[];
+    readonly cancelledConversationIds: readonly string[];
+  };
   readonly runtimeErrors: ReturnType<RuntimeErrorReporter['getDebugSnapshot']>;
 }
 
@@ -101,6 +109,8 @@ export interface BrowserTestBridgeDependencies {
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
   readonly characterPicker: CharacterPickerSystem;
+  readonly dialogue: DialogueSessionController;
+  readonly dialogueUI: DialogueUISystem;
   readonly debug: DebugRegistry;
   readonly errors: RuntimeErrorReporter;
 }
@@ -114,19 +124,37 @@ export function installBrowserTestBridge(
     throw new Error('Browser test instrumentation is development-only');
   }
   const completedTargetIds: string[] = [];
-  const unsubscribe = dependencies.interactions.events.on(
+  const completedConversationIds: string[] = [];
+  const cancelledConversationIds: string[] = [];
+  const unsubscribeInteraction = dependencies.interactions.events.on(
     'interaction:completed',
     ({ target: completedTarget }) =>
       completedTargetIds.push(completedTarget.id),
   );
+  const unsubscribeCompleted = dependencies.dialogue.events.on(
+    'dialogue:completed',
+    ({ conversationId }) => completedConversationIds.push(conversationId),
+  );
+  const unsubscribeCancelled = dependencies.dialogue.events.on(
+    'dialogue:cancelled',
+    ({ conversationId }) => cancelledConversationIds.push(conversationId),
+  );
   const api: BrowserTestApi = {
-    snapshot: () => createSnapshot(dependencies, completedTargetIds),
+    snapshot: () =>
+      createSnapshot(
+        dependencies,
+        completedTargetIds,
+        completedConversationIds,
+        cancelledConversationIds,
+      ),
     executeDebugCommand: (id, argument) =>
       dependencies.debug.executeCommand(id, argument),
   };
   target.__VANTA_TEST__ = api;
   return () => {
-    unsubscribe();
+    unsubscribeInteraction();
+    unsubscribeCompleted();
+    unsubscribeCancelled();
     if (target.__VANTA_TEST__ === api) delete target.__VANTA_TEST__;
   };
 }
@@ -134,6 +162,8 @@ export function installBrowserTestBridge(
 function createSnapshot(
   dependencies: BrowserTestBridgeDependencies,
   completedTargetIds: readonly string[],
+  completedConversationIds: readonly string[],
+  cancelledConversationIds: readonly string[],
 ): BrowserTestSnapshot {
   const activeLevel = dependencies.level.activeLevel;
   const movement = dependencies.player.getDebugSnapshot();
@@ -187,6 +217,12 @@ function createSnapshot(
     conversation: {
       npcId: dependencies.conversations.active?.npcId,
       conversationId: dependencies.conversations.active?.definition.id,
+    },
+    dialogue: {
+      session: dependencies.dialogue.getSnapshot(),
+      ui: dependencies.dialogueUI.getDebugSnapshot(),
+      completedConversationIds: [...completedConversationIds],
+      cancelledConversationIds: [...cancelledConversationIds],
     },
     runtimeErrors: dependencies.errors.getDebugSnapshot(),
   };

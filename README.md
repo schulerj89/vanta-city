@@ -47,6 +47,8 @@ See [Developer tooling](docs/developer-tooling.md) for the debug extension API, 
 
 See [Camera system](docs/camera-system.md) for camera controls, persistent settings, conversation framing, and ownership priorities.
 
+See [Dialogue system](docs/dialogue.md) for conversation data, session APIs, portraits, input, and browser-test hooks.
+
 Quality and production commands:
 
 ```sh
