@@ -439,19 +439,19 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.run-mode',
       label: 'Run mode',
-      group: 'Player',
+      group: sections.player,
       read: () => player.getDebugSnapshot().runMode,
     }),
     debug.registerValue({
       id: 'controls.bindings',
       label: 'Bindings',
-      group: 'Player',
+      group: sections.player,
       read: () => characterControlSummary,
     }),
     debug.registerValue({
       id: 'controls.help-open',
       label: 'Help open',
-      group: 'Player',
+      group: sections.player,
       read: () => help?.getSnapshot().open ?? false,
     }),
     debug.registerValue({

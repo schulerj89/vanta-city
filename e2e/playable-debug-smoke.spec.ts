@@ -761,15 +761,18 @@ test.describe('playable debug district', () => {
       .toBe('playing');
     expect((await snapshot(page)).conversation.npcId).toBeUndefined();
 
-    for (const [spawnId, npcId] of [
-      ['spawn.npc-alley', 'nox'],
-      ['spawn.npc-deck', 'raze'],
+    for (const [spawnId, npcId, conversationId] of [
+      ['spawn.npc-alley', 'nox', 'conversation.nox.check-in'],
+      ['spawn.npc-deck', 'raze', 'conversation.raze.check-in'],
     ] as const) {
       await executeCommand(page, 'player.teleport', spawnId);
       await expect
         .poll(async () => (await snapshot(page)).interaction.activeTargetId)
         .toBe(`interaction.npc.${npcId}`);
-      await page.keyboard.press('e');
+      await page.keyboard.press('g');
+      await expect
+        .poll(async () => (await snapshot(page)).gameState)
+        .toBe('dialogue');
       await expect
         .poll(
           async () =>
@@ -778,19 +781,22 @@ test.describe('playable debug district', () => {
             )?.gestureSequence,
         )
         .toBe(1);
-      const placeholderInteraction = await snapshot(page);
-      expect(placeholderInteraction.gameState).toBe('playing');
-      expect(placeholderInteraction.camera.mode).toBe('gameplay');
-      expect(placeholderInteraction.conversation.npcId).toBeUndefined();
+      const conversation = await snapshot(page);
+      expect(conversation.camera.mode).toBe('conversation');
+      expect(conversation.conversation).toEqual({ npcId, conversationId });
       expect(
-        placeholderInteraction.npcs.snapshots.find(
+        conversation.npcs.snapshots.find(
           ({ definitionId }) => definitionId === npcId,
         ),
       ).toMatchObject({
         currentAnimation: 'gesture',
-        lastGestureSource: `interaction:${npcId}`,
+        lastGestureSource: `conversation:${conversationId}`,
         lastGestureAccepted: true,
       });
+      await executeCommand(page, 'conversation.end');
+      await expect
+        .poll(async () => (await snapshot(page)).gameState)
+        .toBe('playing');
     }
   });
 
