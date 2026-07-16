@@ -279,10 +279,10 @@ describe('NPC foundation', () => {
       expect(system.getDebugSnapshot(expected.npcId)).toMatchObject({
         interactionState: 'conversation',
         conversationState: 'active',
-        currentAnimation: 'gesture',
-        gestureActive: true,
-        lastGestureSource: `conversation:${expected.conversationId}`,
-        lastGestureAccepted: true,
+        currentAnimation: 'idle',
+        gestureActive: false,
+        lastGestureSource: undefined,
+        lastGestureAccepted: false,
       });
       conversations.end();
       expect(state.current).toBe('playing');

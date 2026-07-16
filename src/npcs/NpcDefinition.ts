@@ -17,6 +17,8 @@ export interface NpcDefinition {
   readonly idleYaw?: number;
   readonly ambientYaw?: number;
   readonly conversationCameraProfileId?: ConversationCameraProfileId;
+  /** Whether the authored one-shot plays when this NPC starts speaking. */
+  readonly conversationGesture?: boolean;
 }
 
 const idPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;

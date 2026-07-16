@@ -77,11 +77,13 @@ describe('NPC definition validation', () => {
           characterId,
           gestureAnimation,
           conversationCameraProfileId,
+          conversationGesture,
         }) => ({
           id,
           characterId,
           gestureAnimation,
           conversationCameraProfileId,
+          conversationGesture,
         }),
       ),
     ).toEqual([
@@ -90,18 +92,21 @@ describe('NPC definition validation', () => {
         characterId: 'npc-worker',
         gestureAnimation: 'gesture',
         conversationCameraProfileId: 'close',
+        conversationGesture: undefined,
       },
       {
         id: 'nox',
         characterId: 'npc-hoodie',
         gestureAnimation: 'gesture',
         conversationCameraProfileId: undefined,
+        conversationGesture: false,
       },
       {
         id: 'raze',
         characterId: 'npc-punk',
         gestureAnimation: 'gesture',
         conversationCameraProfileId: 'wide',
+        conversationGesture: false,
       },
     ]);
     expect(npcCharacterDefinitions.map(({ id }) => id)).toEqual([

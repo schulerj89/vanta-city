@@ -56,4 +56,37 @@ describe('conversation camera profiles', () => {
       -(left.position.z - left.lookAt.z),
     );
   });
+
+  it('backs up within the profile limit for narrow portrait viewports', () => {
+    const player = pose(-1, 2, 0);
+    const npc = pose(3, 2, Math.PI);
+    const profile = resolveConversationCameraProfile('close');
+    const desktop = calculateConversationFraming(
+      player,
+      npc,
+      profile,
+      'right',
+      16 / 9,
+    );
+    const portrait = calculateConversationFraming(
+      player,
+      npc,
+      profile,
+      'right',
+      390 / 844,
+    );
+
+    expect(portrait.lookAt).toEqual(desktop.lookAt);
+    expect(portrait.position.distanceTo(portrait.lookAt)).toBeGreaterThan(
+      desktop.position.distanceTo(desktop.lookAt),
+    );
+    expect(
+      horizontalDistance(portrait.position, portrait.lookAt) /
+        horizontalDistance(desktop.position, desktop.lookAt),
+    ).toBeCloseTo(profile.narrowAspectMaxScale);
+  });
 });
+
+function horizontalDistance(a: Vector3, b: Vector3): number {
+  return Math.hypot(a.x - b.x, a.z - b.z);
+}

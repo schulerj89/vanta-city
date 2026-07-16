@@ -12,6 +12,7 @@ export interface ConversationCameraProfile {
   readonly minDistance: number;
   readonly maxDistance: number;
   readonly elevation: number;
+  readonly narrowAspectMaxScale: number;
   readonly fieldOfView?: number;
 }
 
@@ -31,6 +32,7 @@ const profiles: Readonly<
     minDistance: 3,
     maxDistance: 6,
     elevation: 1.1,
+    narrowAspectMaxScale: 1.7,
   }),
   close: Object.freeze({
     id: 'close',
@@ -40,6 +42,7 @@ const profiles: Readonly<
     minDistance: 2.8,
     maxDistance: 5.2,
     elevation: 1,
+    narrowAspectMaxScale: 1.8,
     fieldOfView: 46,
   }),
   wide: Object.freeze({
@@ -50,6 +53,7 @@ const profiles: Readonly<
     minDistance: 3.5,
     maxDistance: 6.5,
     elevation: 1.2,
+    narrowAspectMaxScale: 1.55,
     fieldOfView: 54,
   }),
 });
@@ -72,6 +76,7 @@ export function calculateConversationFraming(
   npcPose: WorldPose,
   profile: ConversationCameraProfile,
   shoulderSide: CameraShoulderSide,
+  viewportAspect = 16 / 9,
 ): ConversationFramingPose {
   const playerFocus = asVector(playerPose.position).add(
     new Vector3(0, profile.focusHeight, 0),
@@ -95,11 +100,18 @@ export function calculateConversationFraming(
     0,
     participantAxis.x,
   ).multiplyScalar(sideSign);
-  const distance = MathUtils.clamp(
+  const profileDistance = MathUtils.clamp(
     profile.baseDistance + Math.max(0.5, separation) * profile.separationScale,
     profile.minDistance,
     profile.maxDistance,
   );
+  const safeAspect =
+    Number.isFinite(viewportAspect) && viewportAspect > 0
+      ? viewportAspect
+      : 16 / 9;
+  const distance =
+    profileDistance *
+    MathUtils.clamp(1 / safeAspect, 1, profile.narrowAspectMaxScale);
   return {
     lookAt,
     position: lookAt

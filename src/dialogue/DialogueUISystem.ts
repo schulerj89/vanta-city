@@ -37,7 +37,6 @@ export class DialogueUISystem implements GameSystem {
     this.element.setAttribute('aria-label', 'Dialogue');
 
     this.portrait.className = 'dialogue-box__portrait';
-    this.portrait.setAttribute('aria-hidden', 'true');
     this.speakerName.className = 'dialogue-box__speaker';
     this.speakerName.dataset.testid = 'dialogue-speaker';
     this.text.className = 'dialogue-box__text';
@@ -127,6 +126,8 @@ export class DialogueUISystem implements GameSystem {
 
   private renderPortrait(resolution: ResolvedDialoguePortrait): void {
     this.portrait.replaceChildren();
+    this.portrait.removeAttribute('role');
+    this.portrait.removeAttribute('aria-label');
     this.portraitResolution = `${resolution.kind}:${resolution.source}`;
     this.element.dataset.portraitResolution = this.portraitResolution;
     if (resolution.kind === 'image' && resolution.src) {
@@ -134,19 +135,34 @@ export class DialogueUISystem implements GameSystem {
       image.src = resolution.src;
       image.alt = resolution.alt;
       image.addEventListener('error', () => {
-        this.renderFallback(resolution.initials, 'fallback:image-error');
+        this.renderFallback(
+          resolution.initials,
+          'fallback:image-error',
+          resolution.alt,
+        );
       });
       this.portrait.append(image);
       return;
     }
-    this.renderFallback(resolution.initials, this.portraitResolution);
+    this.renderFallback(
+      resolution.initials,
+      this.portraitResolution,
+      resolution.alt,
+    );
   }
 
-  private renderFallback(initials: string, result: string): void {
+  private renderFallback(
+    initials: string,
+    result: string,
+    accessibleLabel: string,
+  ): void {
     this.portrait.replaceChildren();
+    this.portrait.setAttribute('role', 'img');
+    this.portrait.setAttribute('aria-label', accessibleLabel);
     const fallback = document.createElement('span');
     fallback.className = 'dialogue-box__portrait-fallback';
     fallback.textContent = initials;
+    fallback.setAttribute('aria-hidden', 'true');
     this.portrait.append(fallback);
     this.portraitResolution = result;
     this.element.dataset.portraitResolution = result;

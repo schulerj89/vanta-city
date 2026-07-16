@@ -51,9 +51,10 @@ export class NpcSystem implements GameSystem {
   public async init(): Promise<void> {
     this.unsubscribeWorld.push(
       this.conversations.events.on('conversation:started', ({ session }) => {
-        this.spawned
-          .get(session.npcId)
-          ?.entity.triggerGesture(`conversation:${session.definition.id}`);
+        const npc = this.spawned.get(session.npcId)?.entity;
+        if (npc && npc.definition.conversationGesture !== false) {
+          npc.triggerGesture(`conversation:${session.definition.id}`);
+        }
       }),
       this.worldEvents.on('level:unloaded', () => this.clear()),
       this.worldEvents.on('level:loaded', ({ level }) => {

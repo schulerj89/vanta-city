@@ -4,11 +4,11 @@ NPCs are data-defined static district actors. `NpcSystem` listens to level load/
 
 ## Debug district roster
 
-| NPC  | NPC character definition | Poly Pizza model                                       |   Scale | Portrait asset      | Spawn                | Conversation                     |
-| ---- | ------------------------ | ------------------------------------------------------ | ------: | ------------------- | -------------------- | -------------------------------- |
-| Mack | `npc-worker`             | [Man in Long Sleeves](https://poly.pizza/m/DLptRuewTn) | `0.370` | `portrait.npc-mack` | `spawn.npc-mechanic` | `conversation.mack.introduction` |
-| Nox  | `npc-hoodie`             | [Man (layered shirt)](https://poly.pizza/m/fjHyMd5Wxw) | `0.368` | `portrait.npc-nox`  | `spawn.npc-alley`    | `conversation.nox.check-in`      |
-| Raze | `npc-punk`               | [Man in Suit](https://poly.pizza/m/mQnGoME1ez)         | `0.369` | `portrait.npc-raze` | `spawn.npc-deck`     | `conversation.raze.check-in`     |
+| NPC  | NPC character definition | Poly Pizza model                                       |   Scale | Portrait asset      | Camera profile | Spawn                | Conversation                     |
+| ---- | ------------------------ | ------------------------------------------------------ | ------: | ------------------- | -------------- | -------------------- | -------------------------------- |
+| Mack | `npc-worker`             | [Man in Long Sleeves](https://poly.pizza/m/DLptRuewTn) | `0.370` | `portrait.npc-mack` | `close`        | `spawn.npc-mechanic` | `conversation.mack.introduction` |
+| Nox  | `npc-hoodie`             | [Man (layered shirt)](https://poly.pizza/m/fjHyMd5Wxw) | `0.368` | `portrait.npc-nox`  | `default`      | `spawn.npc-alley`    | `conversation.nox.check-in`      |
+| Raze | `npc-punk`               | [Man in Suit](https://poly.pizza/m/mQnGoME1ez)         | `0.369` | `portrait.npc-raze` | `wide`         | `spawn.npc-deck`     | `conversation.raze.check-in`     |
 
 All three are selected from Quaternius's [Animated Men Pack](https://poly.pizza/bundle/Animated-Men-Pack-DAC9SDgMQT), a CC0/Public Domain source distinct from the playable Casual/Punk **Ultimate Modular Men Pack**. The three self-contained GLBs, CC0 legal text, archive hash, individual hashes, sizes, and full clip inventory are committed under `public/assets/characters/animated-men/`. No model conversion was needed.
 
@@ -21,7 +21,7 @@ Each NPC maps exact inspected embedded clips:
 - logical `idle` → `HumanArmature|Man_Idle` (4.166667 seconds, looping);
 - logical `gesture` → `HumanArmature|Man_Clapping` (1.666667 seconds, one shot).
 
-Idle runs during gameplay. A conversation start triggers the matching NPC gesture through the coordinator event, including conversations started from debug tooling. When a gesture finishes, the entity cross-fades back to idle.
+Idle runs during gameplay. Mack's longer introduction triggers the matching non-combat clapping gesture through the coordinator event, including sessions started from debug tooling, then cross-fades back to idle. Nox and Raze keep their neutral idle presentation for their terse one-line warnings; their authoritative metadata disables the celebratory one-shot rather than substituting a combat clip.
 
 Animation mixers target only the loaded character subtree. Every update restores the authored model-root offset, and no animation or alignment code mutates the NPC world/simulation transform. Bounds are measured after the definition scale/rotation correction; a dedicated visual alignment root places the transformed minimum Y on the actor contact plane. Validated heights are approximately `1.780m`, `1.782m`, and `1.782m`, respectively.
 
@@ -56,4 +56,4 @@ Missing portraits resolve through the dialogue UI's initials fallback.
 
 `ConversationCoordinator.start(conversationId, npcId)` synchronously publishes `conversation:started`, locks every NPC interaction, and transitions the existing game state to `dialogue` after the initiating interaction completes only when the referenced definition contains dialogue lines. Mack has a short demonstration exchange; Nox and Raze each use a one-line check-in through the same catalog, coordinator, session, portrait, camera, and interaction contracts. Empty placeholders and missing IDs are rejected before acquiring dialogue ownership.
 
-During Mack's active session, the NPC smoothly faces the player through `WorldPoseSource`. Ending returns it toward authored idle yaw plus ambient variation. `GameObjectWorld` owns scene attachment and per-frame updates; `NpcSystem` owns interaction registrations, conversation gesture routing, and level synchronization. Unloading unregisters Talk targets, removes entities, stops/uncaches mixers, disposes instances, and cancels a conversation belonging to the unloaded roster.
+During any roster NPC's active session, the NPC smoothly faces the player through `WorldPoseSource`, while the playable visual root faces the NPC without mutating simulation yaw. Ending returns the NPC toward authored idle yaw plus ambient variation. `GameObjectWorld` owns scene attachment and per-frame updates; `NpcSystem` owns interaction registrations, metadata-gated conversation gesture routing, and level synchronization. Unloading unregisters Talk targets, removes entities, stops/uncaches mixers, disposes instances, and cancels a conversation belonging to the unloaded roster.

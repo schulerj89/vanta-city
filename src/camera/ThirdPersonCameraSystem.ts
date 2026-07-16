@@ -611,12 +611,14 @@ export class ThirdPersonCameraSystem implements GameSystem {
         targetPose,
         profile,
         this.preferences.current.shoulderSide,
+        this.camera.aspect,
       );
       const alternate = calculateConversationFraming(
         playerPose,
         targetPose,
         profile,
         this.preferences.current.shoulderSide === 'right' ? 'left' : 'right',
+        this.camera.aspect,
       );
       const preferredClearance = this.collision.castCamera(
         framing.lookAt,

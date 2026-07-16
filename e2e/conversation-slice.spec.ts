@@ -413,24 +413,40 @@ test('Nox and Raze complete and repeat their registered Talk conversations', asy
   ).toEqual([]);
 });
 
-test('dialogue panel remains stable while text and speakers change responsively', async ({
+test('dialogue panel remains stable and portraits stay clear responsively', async ({
   page,
-}) => {
+}, testInfo) => {
   const consoleIssues = monitorConsoleIssues(page);
-  for (const viewport of [
-    { width: 1280, height: 720 },
-    { width: 390, height: 844 },
-    { width: 568, height: 320 },
+  for (const presentation of [
+    { name: 'desktop-casual', width: 1280, height: 720, character: 'casual' },
+    { name: 'mobile-punk', width: 390, height: 844, character: 'punk' },
+    {
+      name: 'short-landscape-casual',
+      width: 568,
+      height: 320,
+      character: 'casual',
+    },
   ]) {
-    await page.setViewportSize(viewport);
+    await page.setViewportSize({
+      width: presentation.width,
+      height: presentation.height,
+    });
     await page.goto('/?e2e=1&skipPicker=1');
     await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
+    await command(page, 'player.select-character', presentation.character);
+    await command(page, 'player.teleport-position', '-11.5,0.2,5.5,0.785');
     await command(page, 'dialogue.set-typewriter', 'on');
     await command(page, 'dialogue.start-mack');
     await expect
       .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
       .toBe(0);
+    await expect
+      .poll(async () => (await snapshot(page)).camera.transitionProgress)
+      .toBe(1);
     await expect(page.getByTestId('dialogue-box')).toBeVisible();
+    await expect(
+      page.getByRole('img', { name: 'Mack portrait fallback' }),
+    ).toBeVisible();
 
     const layouts = [await dialogueLayout(page)];
     await command(page, 'dialogue.set-typewriter', 'off');
@@ -444,6 +460,14 @@ test('dialogue panel remains stable while text and speakers change responsively'
       await expect
         .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
         .toBe(lineIndex);
+      if (lineIndex === 1) {
+        await expect(
+          page.getByRole('img', { name: 'Rook portrait fallback' }),
+        ).toBeVisible();
+        await expect(
+          page.locator('.dialogue-box__portrait-fallback'),
+        ).toHaveText(presentation.character === 'punk' ? 'P' : 'C');
+      }
       layouts.push(await dialogueLayout(page));
     }
 
@@ -452,11 +476,19 @@ test('dialogue panel remains stable while text and speakers change responsively'
       expect(layout.top).toBeCloseTo(baseline.top, 0);
       expect(layout.height).toBeCloseTo(baseline.height, 0);
       expect(layout.top).toBeGreaterThanOrEqual(0);
-      expect(layout.bottom).toBeLessThanOrEqual(viewport.height);
+      expect(layout.bottom).toBeLessThanOrEqual(presentation.height);
       expect(layout.textScrollHeight).toBeLessThanOrEqual(
         layout.textClientHeight + 1,
       );
     }
+    if (presentation.name === 'short-landscape-casual') {
+      expect(baseline.height).toBeLessThanOrEqual(144);
+      expect(baseline.top).toBeGreaterThanOrEqual(168);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`${presentation.name}.png`),
+      fullPage: true,
+    });
   }
   expect(
     consoleIssues.filter(({ text }) => !isKnownBrowserDiagnostic(text)),

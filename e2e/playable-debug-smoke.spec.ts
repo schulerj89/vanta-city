@@ -990,14 +990,6 @@ test.describe('playable debug district', () => {
       await expect
         .poll(async () => (await snapshot(page)).gameState)
         .toBe('dialogue');
-      await expect
-        .poll(
-          async () =>
-            (await snapshot(page)).npcs.snapshots.find(
-              ({ definitionId }) => definitionId === npcId,
-            )?.gestureSequence,
-        )
-        .toBe(1);
       const conversation = await snapshot(page);
       expect(conversation.camera.mode).toBe('conversation');
       expect(conversation.conversation).toEqual({ npcId, conversationId });
@@ -1006,9 +998,10 @@ test.describe('playable debug district', () => {
           ({ definitionId }) => definitionId === npcId,
         ),
       ).toMatchObject({
-        currentAnimation: 'gesture',
-        lastGestureSource: `conversation:${conversationId}`,
-        lastGestureAccepted: true,
+        currentAnimation: 'idle',
+        gestureActive: false,
+        lastGestureSource: undefined,
+        lastGestureAccepted: false,
       });
       await executeCommand(page, 'conversation.end');
       await expect

@@ -63,6 +63,14 @@ describe('DialogueUISystem', () => {
       mount.querySelector('.dialogue-box__portrait-fallback')?.textContent,
     ).toBe('?');
     expect(
+      mount
+        .querySelector('.dialogue-box__portrait')
+        ?.getAttribute('aria-label'),
+    ).toBe('Unknown speaker portrait fallback');
+    expect(
+      mount.querySelector('.dialogue-box__portrait')?.getAttribute('role'),
+    ).toBe('img');
+    expect(
       mount.querySelector('[data-testid="dialogue-text"]')?.textContent,
     ).toBe(longText);
     ui.dispose();
@@ -86,6 +94,11 @@ describe('DialogueUISystem', () => {
     expect(
       mount.querySelector('.dialogue-box__portrait-fallback')?.textContent,
     ).toBe('VP');
+    expect(
+      mount
+        .querySelector('.dialogue-box__portrait')
+        ?.getAttribute('aria-label'),
+    ).toBe('Rook portrait fallback');
     expect(ui.getDebugSnapshot().portraitResolution).toBe(
       'fallback:player-identity-fallback',
     );
