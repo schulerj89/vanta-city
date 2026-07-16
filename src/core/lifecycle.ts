@@ -17,6 +17,13 @@ export interface SystemInitializationObserver {
   onSystemInitialized?(systemId: string): void;
 }
 
+export type SystemUpdatePhase = 'update' | 'lateUpdate';
+
+export interface SystemTimingSink {
+  now(): number;
+  record(systemId: string, phase: SystemUpdatePhase, durationMs: number): void;
+}
+
 export class SystemInitializationError extends Error {
   public constructor(
     public readonly systemId: string,
@@ -31,6 +38,11 @@ export class SystemInitializationError extends Error {
 export class SystemRegistry<Context> {
   private readonly systems: GameSystem<Context>[] = [];
   private initialized = false;
+  private timing: SystemTimingSink | undefined;
+
+  public setTimingSink(timing?: SystemTimingSink): void {
+    this.timing = timing;
+  }
 
   public register(system: GameSystem<Context>): this {
     if (this.initialized)
@@ -67,6 +79,10 @@ export class SystemRegistry<Context> {
   }
 
   public update(time: FrameTime, simulationEnabled: boolean): void {
+    if (this.timing) {
+      this.updateTimed(time, simulationEnabled, this.timing);
+      return;
+    }
     for (const system of this.systems) {
       if (simulationEnabled || system.updateMode === 'always')
         system.update?.(time);
@@ -74,6 +90,33 @@ export class SystemRegistry<Context> {
     for (const system of this.systems) {
       if (simulationEnabled || system.updateMode === 'always')
         system.lateUpdate?.(time);
+    }
+  }
+
+  private updateTimed(
+    time: FrameTime,
+    simulationEnabled: boolean,
+    timing: SystemTimingSink,
+  ): void {
+    for (const system of this.systems) {
+      if (
+        (!simulationEnabled && system.updateMode !== 'always') ||
+        !system.update
+      )
+        continue;
+      const started = timing.now();
+      system.update(time);
+      timing.record(system.id, 'update', timing.now() - started);
+    }
+    for (const system of this.systems) {
+      if (
+        (!simulationEnabled && system.updateMode !== 'always') ||
+        !system.lateUpdate
+      )
+        continue;
+      const started = timing.now();
+      system.lateUpdate(time);
+      timing.record(system.id, 'lateUpdate', timing.now() - started);
     }
   }
 

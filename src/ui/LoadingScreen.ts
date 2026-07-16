@@ -8,6 +8,12 @@ export interface LoadingScreenSnapshot {
   readonly fallbackAssetIds: readonly string[];
   readonly fatal: boolean;
   readonly disposed: boolean;
+  readonly durationsMs: {
+    readonly preparingWorld: number | undefined;
+    readonly preparingCharacter: number | undefined;
+    readonly finalizing: number | undefined;
+    readonly total: number | undefined;
+  };
 }
 
 /** Accessible bootstrap presentation driven only by real lifecycle and asset events. */
@@ -22,11 +28,17 @@ export class LoadingScreen {
   private readiness: LoadingReadiness = 'starting';
   private fatal = false;
   private disposed = false;
+  private readonly startedAt: number;
+  private worldReadyAt: number | undefined;
+  private characterReadyAt: number | undefined;
+  private finishedAt: number | undefined;
 
   public constructor(
     private readonly mount: HTMLElement,
     assets: GameAssetLoader,
+    private readonly now: () => number = () => performance.now(),
   ) {
+    this.startedAt = this.now();
     this.element.className = 'loading-screen';
     this.element.setAttribute('role', 'status');
     this.element.setAttribute('aria-live', 'polite');
@@ -43,12 +55,14 @@ export class LoadingScreen {
 
   public markWorldReady(): void {
     if (!this.canUpdate()) return;
+    this.worldReadyAt ??= this.now();
     this.readiness = 'world';
     this.render();
   }
 
   public markCharacterReady(fallback: boolean): void {
     if (!this.canUpdate()) return;
+    this.characterReadyAt ??= this.now();
     this.readiness = 'character';
     if (fallback) this.fallbackAssets.add('player character');
     this.render();
@@ -56,6 +70,7 @@ export class LoadingScreen {
 
   public complete(): void {
     if (!this.canUpdate()) return;
+    this.finishedAt ??= this.now();
     this.readiness = 'ready';
     this.progress.value = 1;
     if (this.fallbackAssets.size === 0) {
@@ -76,6 +91,7 @@ export class LoadingScreen {
 
   public fail(error: unknown): void {
     if (!this.canUpdate()) return;
+    this.finishedAt ??= this.now();
     this.fatal = true;
     this.element.className = 'loading-screen loading-screen--error';
     this.element.setAttribute('role', 'alert');
@@ -97,6 +113,24 @@ export class LoadingScreen {
       fallbackAssetIds: [...this.fallbackAssets],
       fatal: this.fatal,
       disposed: this.disposed,
+      durationsMs: {
+        preparingWorld:
+          this.worldReadyAt === undefined
+            ? undefined
+            : this.worldReadyAt - this.startedAt,
+        preparingCharacter:
+          this.worldReadyAt === undefined || this.characterReadyAt === undefined
+            ? undefined
+            : this.characterReadyAt - this.worldReadyAt,
+        finalizing:
+          this.characterReadyAt === undefined || this.finishedAt === undefined
+            ? undefined
+            : this.finishedAt - this.characterReadyAt,
+        total:
+          this.finishedAt === undefined
+            ? undefined
+            : this.finishedAt - this.startedAt,
+      },
     };
   }
 

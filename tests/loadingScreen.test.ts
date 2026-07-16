@@ -45,7 +45,8 @@ describe('LoadingScreen', () => {
   it('presents real asset progress and world/character readiness', () => {
     const mount = document.createElement('main');
     const assets = new ObservableAssets();
-    const screen = new LoadingScreen(mount, assets);
+    let now = 10;
+    const screen = new LoadingScreen(mount, assets, () => now);
 
     expect(mount.querySelector('progress')?.hasAttribute('value')).toBe(false);
     assets.emit({ id: 'district.model', phase: 'loading', progress: 0.4 });
@@ -53,16 +54,25 @@ describe('LoadingScreen', () => {
     expect(screen.getSnapshot().assetProgress).toBe(0.4);
 
     assets.emit({ id: 'district.model', phase: 'loaded', progress: 1 });
+    now = 30;
     screen.markWorldReady();
     expect(mount.textContent).toContain('District ready');
+    now = 55;
     screen.markCharacterReady(false);
     expect(mount.textContent).toContain('Character ready');
 
+    now = 65;
     screen.complete();
     expect(screen.getSnapshot()).toMatchObject({
       readiness: 'ready',
       disposed: true,
       fatal: false,
+      durationsMs: {
+        preparingWorld: 20,
+        preparingCharacter: 25,
+        finalizing: 10,
+        total: 55,
+      },
     });
     expect(mount.querySelector('.loading-screen')).toBeNull();
   });

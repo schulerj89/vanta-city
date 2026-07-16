@@ -12,6 +12,8 @@ No third-party physics library is installed. The first vertical slice uses a det
 
 An optional initialization observer reports each successfully initialized system without changing that order. Bootstrap uses it only for real world/character readiness presentation; systems do not depend on the observer and failure rollback remains reverse ordered.
 
+Development bootstrap dynamically attaches renderer and runtime timing collectors. Without a collector, `SystemRegistry` executes the original untimed loops; with one, it records bounded per-system update/late-update windows. Renderer, runtime, asset-loader, and loading snapshots are public read-only queries, while fault controls remain development-only. See [Loading and production performance](loading-performance.md) for the metrics and overhead contract.
+
 Every frame, the clock converts milliseconds to seconds and caps delta at 0.1 seconds. Its baseline resets after resume, preventing a backgrounded or paused tab from creating a large simulation step. The registry runs all `update` hooks, then all `lateUpdate` hooks. Systems default to simulation updates; systems declaring `updateMode = 'always'` continue while paused. Rendering, input edge cleanup, the follow camera, and the development panel use this mode.
 
 `pause()` and `resume()` transition state and notify every system through optional lifecycle hooks. The animation frame continues while paused so input, state UI, and rendering remain responsive, while simulation systems stop.

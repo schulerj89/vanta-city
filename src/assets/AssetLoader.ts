@@ -38,7 +38,27 @@ export interface GameAssetLoader {
   instantiateModel(id: string): Promise<ModelInstance>;
   getStatus(id: string): AssetLoadStatus;
   onStatus(listener: AssetStatusListener): () => void;
+  getPerformanceSnapshot?(): AssetLoaderPerformanceSnapshot;
   dispose(): void;
+}
+
+export interface AssetLoaderPerformanceSnapshot {
+  readonly cacheEntries: number;
+  readonly loaded: number;
+  readonly inFlight: number;
+  readonly failures: number;
+  readonly disposed: boolean;
+}
+
+export interface AssetLoadInterceptor {
+  run<Value>(
+    id: string,
+    load: () => Promise<Value>,
+    onProgress: (progress: number) => void,
+  ): Promise<Value>;
+  getSnapshot(): unknown;
+  reset(): void;
+  dispose?(): void;
 }
 
 export interface AssetBackend {
@@ -145,6 +165,7 @@ export class ThreeAssetLoader implements GameAssetLoader {
   public constructor(
     catalog: AssetCatalog | AssetManifest,
     private readonly backend: AssetBackend = new BrowserAssetBackend(),
+    private readonly interceptor?: AssetLoadInterceptor,
   ) {
     this.catalog =
       catalog instanceof AssetCatalog ? catalog : new AssetCatalog(catalog);
@@ -194,6 +215,17 @@ export class ThreeAssetLoader implements GameAssetLoader {
     return () => this.listeners.delete(listener);
   }
 
+  public getPerformanceSnapshot(): AssetLoaderPerformanceSnapshot {
+    const statuses = [...this.statuses.values()];
+    return {
+      cacheEntries: this.cache.size,
+      loaded: statuses.filter(({ phase }) => phase === 'loaded').length,
+      inFlight: statuses.filter(({ phase }) => phase === 'loading').length,
+      failures: statuses.filter(({ phase }) => phase === 'error').length,
+      disposed: this.disposed,
+    };
+  }
+
   public dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
@@ -203,6 +235,7 @@ export class ThreeAssetLoader implements GameAssetLoader {
     this.cache.clear();
     this.statuses.clear();
     this.listeners.clear();
+    this.interceptor?.dispose?.();
   }
 
   private resolve(
@@ -228,9 +261,13 @@ export class ThreeAssetLoader implements GameAssetLoader {
     if (existing) return existing;
 
     this.publish({ id, phase: 'loading', progress: 0 });
-    const pending = load((progress) => {
+    const onProgress = (progress: number): void => {
       if (!this.disposed) this.publish({ id, phase: 'loading', progress });
-    })
+    };
+    const begin = (): Promise<LoadedAsset> => load(onProgress);
+    const pending = (
+      this.interceptor ? this.interceptor.run(id, begin, onProgress) : begin()
+    )
       .then((value) => {
         if (this.disposed) {
           disposeLoadedAsset(value);

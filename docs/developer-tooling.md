@@ -90,4 +90,6 @@ Do not import sandbox modules from production systems. Do not use the sandbox as
 
 System initialization failures include the failing system ID and dispose already initialized systems. Asset load failures include the logical asset ID, expected type, and resolved URL. Development builds also report uncaught errors and unhandled promise rejections in the panel and console.
 
-After `pnpm build`, run `pnpm size` to print raw and gzip totals for emitted JavaScript and CSS. It emits a CI warning above the informational `BUNDLE_WARN_KB` threshold (1536 KiB by default) but does not fail the build.
+After `pnpm build`, run `pnpm size` to print raw and gzip totals for emitted JavaScript and CSS, label index-referenced files as initial and deferred files as lazy, and show initial and overall totals. It emits a CI warning above the informational `BUNDLE_WARN_KB` threshold (1536 KiB by default) but does not fail the build.
+
+Development-only renderer/runtime/loading metrics use bounded rolling windows so the panel does not present noisy single-frame timings. The public snapshots and controlled logical-asset fault URLs/commands are documented in [Loading and production performance](loading-performance.md). Never enable the timing collectors or loading fault controller in a production build.

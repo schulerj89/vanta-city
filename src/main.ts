@@ -61,16 +61,23 @@ async function bootstrap(): Promise<void> {
 
   const input = new InputSystem(defaultBindings);
   const render = new RenderSystem(mount);
+  const pageParameters = new URLSearchParams(window.location.search);
+  let assetFaults:
+    import('./debug/DevelopmentAssetFaults').DevelopmentAssetFaults | undefined;
+  if (import.meta.env.DEV) {
+    const { DevelopmentAssetFaults } =
+      await import('./debug/DevelopmentAssetFaults');
+    assetFaults = DevelopmentAssetFaults.from(pageParameters);
+  }
   const levels = new LevelRegistry([testDistrict]);
   const assetCatalog = new AssetCatalog({
     ...assetManifest,
     ...levels.assetManifest,
   });
-  const assets = new ThreeAssetLoader(assetCatalog);
+  const assets = new ThreeAssetLoader(assetCatalog, undefined, assetFaults);
   const loading = new LoadingScreen(mount, assets);
   activeLoadingScreen = loading;
   const runtime = new GameRuntime(input);
-  const pageParameters = new URLSearchParams(window.location.search);
   const prefersReducedMotion =
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   const accessibility = new AccessibilityPreferenceStore(window.localStorage, {
@@ -83,15 +90,34 @@ async function bootstrap(): Promise<void> {
   let development:
     import('./debug/setupDevelopmentTools').DevelopmentTools | undefined;
   let browserTestModule: typeof import('./debug/BrowserTestBridge') | undefined;
+  let performanceUnregister: (() => void)[] = [];
 
   if (import.meta.env.DEV) {
-    const { setupDevelopmentTools } =
-      await import('./debug/setupDevelopmentTools');
+    const [{ setupDevelopmentTools }, performance] = await Promise.all([
+      import('./debug/setupDevelopmentTools'),
+      import('./debug/PerformanceDiagnostics'),
+    ]);
     development = setupDevelopmentTools(
       mount,
       runtime,
       input,
       developmentParameters?.get('debug') === '1',
+    );
+    const runtimeTiming = new performance.DevelopmentRuntimeDiagnostics();
+    const rendererTiming = new performance.DevelopmentRendererDiagnostics();
+    runtime.setPerformanceDiagnostics(runtimeTiming);
+    render.setPerformanceDiagnostics(rendererTiming);
+    performanceUnregister = performance.registerPerformanceDiagnostics(
+      development.debug,
+      {
+        render,
+        runtime,
+        assets,
+        loading,
+        faults: assetFaults!,
+        rendererTiming,
+        runtimeTiming,
+      },
     );
 
     if (developmentParameters?.get('e2e') === '1') {
@@ -116,7 +142,10 @@ async function bootstrap(): Promise<void> {
         runtime.register(system);
       await runtime.init();
       loading.complete();
-      installHotDisposal(runtime, assets, development, () => loading.dispose());
+      installHotDisposal(runtime, assets, development, () => {
+        for (const unregister of performanceUnregister) unregister();
+        loading.dispose();
+      });
       return;
     }
   }
@@ -380,7 +409,10 @@ async function bootstrap(): Promise<void> {
     browserTestModule && development && sparringTarget
       ? browserTestModule.installBrowserTestBridge({
           runtime,
-          renderer: render.renderer,
+          render,
+          assets,
+          loading,
+          assetFaults,
           level: levelSystem,
           collision,
           player,
@@ -410,6 +442,7 @@ async function bootstrap(): Promise<void> {
     unsubscribeAccessibility();
     disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
+    for (const unregister of performanceUnregister) unregister();
     worldEvents.clear();
     loading.dispose();
   });

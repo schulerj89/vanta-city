@@ -51,6 +51,12 @@ describe('ThreeAssetLoader', () => {
       phase: 'loaded',
       progress: 1,
     });
+    expect(loader.getPerformanceSnapshot()).toMatchObject({
+      cacheEntries: 1,
+      loaded: 1,
+      inFlight: 0,
+      failures: 0,
+    });
     first.dispose();
     second.dispose();
     loader.dispose();
@@ -88,6 +94,11 @@ describe('ThreeAssetLoader', () => {
     expect(backend.loadGltf).toHaveBeenCalledTimes(2);
     expect(statuses).toContain('loading:0.5');
     expect(statuses.at(-1)).toBe('error:0');
+    expect(loader.getPerformanceSnapshot()).toMatchObject({
+      cacheEntries: 0,
+      inFlight: 0,
+      failures: 1,
+    });
     loader.dispose();
   });
 

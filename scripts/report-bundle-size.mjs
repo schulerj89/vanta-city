@@ -8,6 +8,12 @@ const gzipAsync = promisify(gzip);
 const outputDirectory = fileURLToPath(new URL('../dist/', import.meta.url));
 const warningKilobytes = Number(process.env.BUNDLE_WARN_KB ?? 1536);
 const reportableExtensions = new Set(['.js', '.css']);
+const indexHtml = await readFile(join(outputDirectory, 'index.html'), 'utf8');
+const initialFiles = new Set(
+  [...indexHtml.matchAll(/(?:src|href)="\/?([^"?#]+\.(?:js|css))/g)].map(
+    ([, file]) => file,
+  ),
+);
 
 async function collect(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -27,6 +33,7 @@ const rows = await Promise.all(
     const contents = await readFile(file);
     return {
       file: relative(outputDirectory, file),
+      initial: initialFiles.has(relative(outputDirectory, file)),
       bytes,
       gzipBytes: (await gzipAsync(contents)).byteLength,
     };
@@ -35,14 +42,23 @@ const rows = await Promise.all(
 
 const totalBytes = rows.reduce((total, row) => total + row.bytes, 0);
 const totalGzipBytes = rows.reduce((total, row) => total + row.gzipBytes, 0);
+const initialBytes = rows
+  .filter(({ initial }) => initial)
+  .reduce((total, row) => total + row.bytes, 0);
+const initialGzipBytes = rows
+  .filter(({ initial }) => initial)
+  .reduce((total, row) => total + row.gzipBytes, 0);
 const format = (bytes) => `${(bytes / 1024).toFixed(1)} KiB`;
 
 console.log('Bundle size report (JavaScript and CSS)');
 for (const row of rows.sort((left, right) => right.bytes - left.bytes)) {
   console.log(
-    `  ${row.file.padEnd(36)} ${format(row.bytes).padStart(10)} (${format(row.gzipBytes)} gzip)`,
+    `  ${row.file.padEnd(36)} ${format(row.bytes).padStart(10)} (${format(row.gzipBytes)} gzip) ${row.initial ? 'initial' : 'lazy'}`,
   );
 }
+console.log(
+  `  ${'initial'.padEnd(36)} ${format(initialBytes).padStart(10)} (${format(initialGzipBytes)} gzip)`,
+);
 console.log(
   `  ${'total'.padEnd(36)} ${format(totalBytes).padStart(10)} (${format(totalGzipBytes)} gzip)`,
 );

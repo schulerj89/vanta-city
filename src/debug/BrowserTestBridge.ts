@@ -1,4 +1,3 @@
-import type { WebGLRenderer } from 'three';
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
 import type { CharacterSelectionReader } from '../characters/CharacterSelection';
 import type { DialogueSessionController } from '../dialogue/DialogueSessionController';
@@ -19,6 +18,10 @@ import type { CharacterPickerSystem } from '../ui/CharacterPickerSystem';
 import type { HelpOverlayController } from '../ui/LazyHelpOverlaySystem';
 import { defaultBindings, helpControlEntries } from '../input/defaultBindings';
 import type { SparringTargetSystem } from './SparringTargetSystem';
+import type { RenderSystem } from '../render/RenderSystem';
+import type { ThreeAssetLoader } from '../assets/AssetLoader';
+import type { LoadingScreen } from '../ui/LoadingScreen';
+import type { DevelopmentAssetFaults } from './DevelopmentAssetFaults';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -106,6 +109,14 @@ export interface BrowserTestSnapshot {
     readonly cancelledConversationIds: readonly string[];
   };
   readonly runtimeErrors: ReturnType<RuntimeErrorReporter['getDebugSnapshot']>;
+  readonly performance: {
+    readonly renderer: ReturnType<RenderSystem['getPerformanceSnapshot']>;
+    readonly runtime: ReturnType<GameRuntime['getPerformanceSnapshot']>;
+    readonly assets: ReturnType<ThreeAssetLoader['getPerformanceSnapshot']>;
+    readonly loading: ReturnType<LoadingScreen['getSnapshot']>;
+    readonly assetFaults:
+      ReturnType<DevelopmentAssetFaults['getSnapshot']> | undefined;
+  };
 }
 
 export interface BrowserTestApi {
@@ -122,7 +133,10 @@ declare global {
 
 export interface BrowserTestBridgeDependencies {
   readonly runtime: GameRuntime;
-  readonly renderer: WebGLRenderer;
+  readonly render: RenderSystem;
+  readonly assets: ThreeAssetLoader;
+  readonly loading: LoadingScreen;
+  readonly assetFaults?: DevelopmentAssetFaults;
   readonly level: LevelSystem;
   readonly collision: StaticCollisionWorld;
   readonly player: PlayerControllerSystem;
@@ -197,7 +211,8 @@ function createSnapshot(
   const movement = dependencies.player.getDebugSnapshot();
   const position = dependencies.player.getPlayerPosition();
   const character = dependencies.characterVisual.getDebugSnapshot();
-  const canvas = dependencies.renderer.domElement;
+  const renderer = dependencies.render.renderer;
+  const canvas = renderer.domElement;
   let defaultSpawnId: string | undefined;
   try {
     defaultSpawnId = dependencies.level.getSpawn().id;
@@ -208,11 +223,10 @@ function createSnapshot(
     ready: true,
     gameState: dependencies.runtime.state.current,
     renderer: {
-      initialized:
-        canvas.isConnected && dependencies.renderer.info.render.frame > 0,
+      initialized: canvas.isConnected && renderer.info.render.frame > 0,
       width: canvas.width,
       height: canvas.height,
-      renderedFrames: dependencies.renderer.info.render.frame,
+      renderedFrames: renderer.info.render.frame,
     },
     world: {
       levelId: activeLevel?.id,
@@ -272,5 +286,12 @@ function createSnapshot(
       cancelledConversationIds: [...cancelledConversationIds],
     },
     runtimeErrors: dependencies.errors.getDebugSnapshot(),
+    performance: {
+      renderer: dependencies.render.getPerformanceSnapshot(),
+      runtime: dependencies.runtime.getPerformanceSnapshot(),
+      assets: dependencies.assets.getPerformanceSnapshot(),
+      loading: dependencies.loading.getSnapshot(),
+      assetFaults: dependencies.assetFaults?.getSnapshot(),
+    },
   };
 }
