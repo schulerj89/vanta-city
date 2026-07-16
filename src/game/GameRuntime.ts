@@ -1,0 +1,78 @@
+import { EventBus } from '../core/events';
+import { GameStateMachine } from '../core/gameState';
+import type { StateEvents } from '../core/gameState';
+import { SystemRegistry } from '../core/lifecycle';
+import type { GameSystem } from '../core/lifecycle';
+import { GameClock } from '../core/time';
+import type { InputReader } from '../input/InputSystem';
+
+export interface GameContext {
+  readonly events: EventBus<StateEvents>;
+  readonly state: GameStateMachine;
+  readonly input: InputReader;
+}
+
+export class GameRuntime {
+  public readonly events = new EventBus<StateEvents>();
+  public readonly state = new GameStateMachine(this.events);
+
+  private readonly systems = new SystemRegistry<GameContext>();
+  private readonly clock = new GameClock(0.1);
+  private animationFrame: number | undefined;
+  private running = false;
+
+  public constructor(private readonly input: InputReader) {}
+
+  public register(system: GameSystem<GameContext>): this {
+    this.systems.register(system);
+    return this;
+  }
+
+  public async init(): Promise<void> {
+    if (this.running) return;
+    await this.systems.init({
+      events: this.events,
+      state: this.state,
+      input: this.input,
+    });
+    this.running = true;
+    this.state.transition('playing');
+    this.clock.resetFrameDelta();
+    this.animationFrame = requestAnimationFrame(this.frame);
+  }
+
+  public pause(): void {
+    if (this.state.current !== 'playing') return;
+    this.state.transition('paused');
+    this.systems.pause();
+  }
+
+  public resume(): void {
+    if (this.state.current !== 'paused') return;
+    this.state.transition('playing');
+    this.clock.resetFrameDelta();
+    this.systems.resume();
+  }
+
+  public dispose(): void {
+    this.running = false;
+    if (this.animationFrame !== undefined)
+      cancelAnimationFrame(this.animationFrame);
+    this.animationFrame = undefined;
+    this.systems.dispose();
+    this.events.clear();
+  }
+
+  private readonly frame = (timestamp: number): void => {
+    if (!this.running) return;
+    const time = this.clock.tick(timestamp);
+
+    if (this.input.wasPressed('pause')) {
+      if (this.state.current === 'paused') this.resume();
+      else if (this.state.current === 'playing') this.pause();
+    }
+
+    this.systems.update(time, this.state.current !== 'paused');
+    this.animationFrame = requestAnimationFrame(this.frame);
+  };
+}
