@@ -4,6 +4,8 @@ import { AssetCatalog } from './assets/AssetCatalog';
 import { ThreeAssetLoader } from './assets/AssetLoader';
 import { assetManifest } from './assets/catalog';
 import { CharacterLoader } from './characters/CharacterLoader';
+import { CharacterPreviewSystem } from './characters/CharacterPreviewSystem';
+import { isCharacterActionName } from './characters/CharacterActions';
 import {
   ManifestCharacterAvailabilityProbe,
   resolveCharacterPortrait,
@@ -128,8 +130,8 @@ async function bootstrap(): Promise<void> {
   const characterPicker = new CharacterPickerSystem(
     mount,
     characterSelection,
-    assetCatalog,
     new ManifestCharacterAvailabilityProbe(assetCatalog),
+    new CharacterPreviewSystem(new CharacterLoader(assets)),
   );
   const cameraReference: { current?: ThirdPersonCameraSystem } = {};
   const player = new PlayerControllerSystem(
@@ -212,7 +214,9 @@ async function bootstrap(): Promise<void> {
     },
     range: 2.75,
     repeatable: false,
-    interact: () => undefined,
+    interact: () => {
+      player.triggerCharacterAction('interact', 'interaction:garage-door');
+    },
   });
   let interactionDebug:
     | import('./interactions/InteractionDebugSystem').InteractionDebugSystem
@@ -450,6 +454,22 @@ function registerVerticalSliceDebug(
       label: 'Animation',
       group: 'Player',
       read: () => characterVisual.getDebugSnapshot().animationState,
+    }),
+    debug.registerValue({
+      id: 'player.character-action',
+      label: 'Character action',
+      group: 'Player',
+      read: () => player.getCharacterActionState().active ?? 'none',
+    }),
+    debug.registerValue({
+      id: 'player.character-action-last',
+      label: 'Last action request',
+      group: 'Player',
+      read: () => {
+        const action = player.getCharacterActionState();
+        if (!action.lastRequested) return 'none';
+        return `${action.lastRequested} · ${action.lastAccepted ? 'accepted' : 'unavailable'} · ${action.lastSource ?? 'unknown'}`;
+      },
     }),
     debug.registerValue({
       id: 'player.character-scale',
@@ -709,6 +729,22 @@ function registerVerticalSliceDebug(
       label: 'Reset player',
       group: 'Actions',
       run: () => player.reset(),
+    }),
+    debug.registerCommand({
+      id: 'player.play-character-action',
+      label: 'Play character action',
+      group: 'Actions',
+      argumentLabel: 'wave, interact, or punch',
+      run: (action) => {
+        if (!isCharacterActionName(action)) {
+          throw new Error(
+            'Expected character action: wave, interact, or punch',
+          );
+        }
+        if (!player.triggerCharacterAction(action, 'debug-command')) {
+          throw new Error(`Character action "${action}" is unavailable`);
+        }
+      },
     }),
     debug.registerCommand({
       id: 'ui.open-character-picker',

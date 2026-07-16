@@ -195,6 +195,12 @@ test.describe('playable debug district', () => {
     await expect
       .poll(async () => (await snapshot(page)).interaction.completedTargetIds)
       .toContain('interaction.garage-door');
+    const action = (await snapshot(page)).character.characterAction;
+    expect(action).toMatchObject({
+      lastRequested: 'interact',
+      lastSource: 'interaction:garage-door',
+      lastAccepted: true,
+    });
   });
 
   test('keeps WASD, Down, character facing, sprint, and orbit controls independent', async ({
@@ -422,11 +428,22 @@ test.describe('playable debug district', () => {
     expect(opened.picker.availableCharacterIds).toEqual(
       expect.arrayContaining(['casual', 'punk']),
     );
+    expect(opened.picker.preview.requestedCharacterId).toBe('casual');
+    expect(opened.picker.preview.availableAnimations).toEqual([
+      'previewIdle',
+      'wave',
+      'interact',
+    ]);
+    await expect(page.locator('.character-picker__preview')).toHaveCount(1);
+    await expect(page.locator('.character-card')).toHaveCount(0);
     await attachScreenshot(page, testInfo, 'two-character-picker');
 
     await page.keyboard.press('ArrowRight');
     await expect
       .poll(async () => (await snapshot(page)).picker.focusedCharacterId)
+      .toBe('punk');
+    await expect
+      .poll(async () => (await snapshot(page)).picker.preview.loadedCharacterId)
       .toBe('punk');
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('Space');

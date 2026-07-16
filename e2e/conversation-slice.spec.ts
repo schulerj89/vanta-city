@@ -26,16 +26,22 @@ test('character picker through repeatable Mack conversation', async ({
     .toBeGreaterThanOrEqual(2);
   const picker = await snapshot(page);
   expect(picker.gameState).toBe('character-select');
-  expect(picker.picker.registeredCharacterIds.length).toBeGreaterThan(0);
+  expect(picker.picker.registeredCharacterIds).toEqual(['casual', 'punk']);
+  expect(picker.picker.preview.requestedCharacterId).toBe('casual');
 
   await page.keyboard.press('ArrowRight');
   await expect
     .poll(async () => (await snapshot(page)).picker.focusedCharacterId)
     .toBe('punk');
+  await expect
+    .poll(async () => (await snapshot(page)).picker.preview.loadedCharacterId)
+    .toBe('punk');
+  const playerBeforePose = (await snapshot(page)).player.position;
   await page.keyboard.press('Space');
   await expect
-    .poll(async () => (await snapshot(page)).picker.selectedCharacterId)
-    .toBe('punk');
+    .poll(async () => (await snapshot(page)).picker.preview.animation)
+    .not.toBe('previewIdle');
+  expect((await snapshot(page)).player.position).toEqual(playerBeforePose);
   await page.keyboard.press('Enter');
   await expect
     .poll(async () => (await snapshot(page)).gameState)

@@ -1,7 +1,12 @@
-import { AnimationMixer, Box3, Group, Vector3 } from 'three';
+import { AnimationMixer, Box3, Group, LoopOnce, Vector3 } from 'three';
 import type { AnimationAction } from 'three';
 import type { LoadedCharacter } from '../characters/CharacterLoader';
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
+import type {
+  CharacterActionName,
+  CharacterActionRequestState,
+  CharacterActionSink,
+} from '../characters/CharacterActions';
 import type { CharacterSelectionReader } from '../characters/CharacterSelection';
 import type {
   PlayerMovementSimulation,
@@ -45,6 +50,7 @@ export interface CharacterPlayerVisualDebugSnapshot {
   readonly fallbackActive: boolean;
   readonly loadStatus: CharacterVisualLoadStatus;
   readonly animationState: string;
+  readonly characterAction: CharacterActionRequestState;
   readonly appliedScale: string;
   readonly appliedRotation: string;
   readonly verticalOffset: number;
@@ -89,7 +95,9 @@ export interface CharacterVisualDebugSnapshot {
 }
 
 /** Player presentation backed by the selected character with guaranteed fallback. */
-export class CharacterPlayerVisual implements PlayerVisual {
+export class CharacterPlayerVisual
+  implements PlayerVisual, CharacterActionSink
+{
   public readonly id = 'player';
   public readonly object3d = new Group();
   public readonly visualRoot = new Group();
@@ -103,6 +111,14 @@ export class CharacterPlayerVisual implements PlayerVisual {
   private mixer: AnimationMixer | undefined;
   private action: AnimationAction | undefined;
   private animationState = 'static';
+  private activeActionRemaining = 0;
+  private characterAction: CharacterActionRequestState = {
+    active: undefined,
+    lastRequested: undefined,
+    lastSource: undefined,
+    lastAccepted: false,
+    sequence: 0,
+  };
   private readonly modelOffset = new Vector3();
 
   public constructor(
@@ -162,6 +178,7 @@ export class CharacterPlayerVisual implements PlayerVisual {
       fallbackActive: this.loaded?.source === 'placeholder',
       loadStatus: this.loadStatus,
       animationState: this.animationState,
+      characterAction: this.getCharacterActionState(),
       appliedScale: root
         ? formatVector(root.scale.x, root.scale.y, root.scale.z)
         : 'pending',
@@ -175,6 +192,40 @@ export class CharacterPlayerVisual implements PlayerVisual {
   public getAlignmentReport(): CharacterAlignmentReport | undefined {
     return this.alignment;
   }
+
+  public triggerCharacterAction(
+    action: CharacterActionName,
+    source = 'runtime',
+  ): boolean {
+    const clip = this.loaded?.animationClips.get(action);
+    const accepted = Boolean(this.mixer && clip);
+    this.characterAction = {
+      active: accepted ? action : this.characterAction.active,
+      lastRequested: action,
+      lastSource: source,
+      lastAccepted: accepted,
+      sequence: this.characterAction.sequence + (accepted ? 1 : 0),
+    };
+    if (!accepted || !this.mixer || !clip) return false;
+
+    this.action?.fadeOut(0.1);
+    this.action = this.mixer.clipAction(clip);
+    this.action
+      .reset()
+      .setLoop(LoopOnce, 1)
+      .setEffectiveTimeScale(1)
+      .fadeIn(0.1)
+      .play();
+    this.action.clampWhenFinished = true;
+    this.activeActionRemaining = Math.max(0.05, clip.duration);
+    this.animationState = `action:${action}`;
+    return true;
+  }
+
+  public getCharacterActionState(): CharacterActionRequestState {
+    return { ...this.characterAction };
+  }
+
   public dispose(): void {
     this.loadVersion += 1;
     this.unsubscribe?.();
@@ -219,6 +270,19 @@ export class CharacterPlayerVisual implements PlayerVisual {
     const loaded = this.loaded;
     const mixer = this.mixer;
     if (!loaded || !mixer) return;
+    if (this.characterAction.active) {
+      mixer.update(Math.max(0, delta));
+      loaded.root.position.copy(this.modelOffset);
+      this.activeActionRemaining = Math.max(
+        0,
+        this.activeActionRemaining - Math.max(0, delta),
+      );
+      if (this.activeActionRemaining > 0) return;
+      this.action?.fadeOut(0.1);
+      this.action = undefined;
+      this.animationState = 'static';
+      this.characterAction = { ...this.characterAction, active: undefined };
+    }
     const requested = logicalAnimationFor(state);
     const clip =
       loaded.animationClips.get(requested) ?? loaded.animationClips.get('idle');
@@ -247,6 +311,8 @@ export class CharacterPlayerVisual implements PlayerVisual {
     this.mixer = undefined;
     this.action = undefined;
     this.animationState = 'static';
+    this.activeActionRemaining = 0;
+    this.characterAction = { ...this.characterAction, active: undefined };
     this.loaded?.dispose();
     this.loaded = undefined;
     this.loadedModelRoot.clear();

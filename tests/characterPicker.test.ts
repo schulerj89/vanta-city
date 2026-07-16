@@ -5,6 +5,10 @@ import type {
 } from '../src/characters/CharacterAvailability';
 import { ManifestCharacterAvailabilityProbe } from '../src/characters/CharacterAvailability';
 import type { CharacterDefinition } from '../src/characters/CharacterDefinition';
+import type {
+  CharacterPreviewSnapshot,
+  CharacterPreviewSurface,
+} from '../src/characters/CharacterPreviewSystem';
 import { CharacterSelectionStore } from '../src/characters/CharacterSelection';
 import { EventBus } from '../src/core/events';
 import { GameStateMachine } from '../src/core/gameState';
@@ -16,6 +20,64 @@ const definitions = [
   { id: 'first', displayName: 'First Resident', fallback: 'placeholder' },
   { id: 'second', displayName: 'Second Resident', fallback: 'placeholder' },
 ] as const satisfies readonly CharacterDefinition[];
+
+class FakePreview implements CharacterPreviewSurface {
+  public readonly element = document.createElement('div');
+  public readonly shown: string[] = [];
+  private snapshot: CharacterPreviewSnapshot = {
+    status: 'idle',
+    requestedCharacterId: undefined,
+    loadedCharacterId: undefined,
+    source: 'none',
+    animation: 'previewIdle',
+    availableAnimations: ['previewIdle', 'wave', 'interact'],
+    disposalCount: 0,
+  };
+
+  public async show(definition: CharacterDefinition): Promise<void> {
+    this.shown.push(definition.id);
+    this.snapshot = {
+      ...this.snapshot,
+      status: 'ready',
+      requestedCharacterId: definition.id,
+      loadedCharacterId: definition.id,
+      source: 'asset',
+    };
+  }
+
+  public update(): void {}
+
+  public nextAnimation(): boolean {
+    const current = this.snapshot.availableAnimations.indexOf(
+      this.snapshot.animation,
+    );
+    const animation =
+      this.snapshot.availableAnimations[
+        (current + 1) % this.snapshot.availableAnimations.length
+      ]!;
+    this.snapshot = { ...this.snapshot, animation };
+    return true;
+  }
+
+  public clear(): void {
+    this.snapshot = {
+      ...this.snapshot,
+      status: 'idle',
+      loadedCharacterId: undefined,
+      source: 'none',
+      disposalCount: this.snapshot.disposalCount + 1,
+    };
+  }
+
+  public getSnapshot(): CharacterPreviewSnapshot {
+    return this.snapshot;
+  }
+
+  public dispose(): void {
+    this.clear();
+    this.element.remove();
+  }
+}
 
 describe('CharacterPickerSystem', () => {
   it('excludes internal load fixtures from the choice surface', async () => {
@@ -44,11 +106,11 @@ describe('CharacterPickerSystem', () => {
     ]);
     expect(
       harness.mount.querySelectorAll('[data-action="character"]'),
-    ).toHaveLength(2);
+    ).toHaveLength(0);
     harness.dispose();
   });
 
-  it('renders every registered character and exposes unavailable state', async () => {
+  it('renders one focused preview and exposes unavailable state', async () => {
     const harness = createHarness({
       first: { status: 'available' },
       second: { status: 'unavailable', reason: 'Model missing.' },
@@ -70,12 +132,13 @@ describe('CharacterPickerSystem', () => {
     });
     expect(
       harness.mount.querySelectorAll('[data-action="character"]'),
-    ).toHaveLength(2);
+    ).toHaveLength(0);
     expect(
-      harness.mount
-        .querySelector('[data-character-id="second"]')
-        ?.getAttribute('aria-disabled'),
-    ).toBe('true');
+      harness.mount.querySelectorAll('[data-character-preview-canvas]'),
+    ).toHaveLength(0);
+    expect(
+      harness.mount.querySelectorAll('.character-picker__preview'),
+    ).toHaveLength(1);
     harness.dispose();
   });
 
@@ -89,9 +152,11 @@ describe('CharacterPickerSystem', () => {
 
     harness.press('pickerNext');
     expect(harness.picker.getSnapshot().focusedCharacterId).toBe('second');
-    expect(harness.selection.getSelectedId()).toBe('first');
-    harness.press('pickerSelect');
     expect(harness.picker.getSnapshot().selectedCharacterId).toBe('second');
+    expect(harness.selection.getSelectedId()).toBe('first');
+    const beforePose = harness.picker.getSnapshot().preview.animation;
+    harness.press('pickerSelect');
+    expect(harness.picker.getSnapshot().preview.animation).not.toBe(beforePose);
     expect(harness.selection.getSelectedId()).toBe('first');
     harness.press('pickerConfirm');
 
@@ -123,10 +188,12 @@ describe('CharacterPickerSystem', () => {
       'first',
     ]);
     harness.picker.next();
-    harness.picker.selectFocused();
+    await vi.waitFor(() => {
+      expect(harness.picker.getSnapshot().previewState).toBe('fallback');
+    });
     expect(harness.picker.getSnapshot()).toMatchObject({
       selectedCharacterId: 'second',
-      previewState: 'ready',
+      previewState: 'fallback',
     });
     expect(
       harness.mount.querySelector('[data-picker-preview-status]')?.textContent,
@@ -136,7 +203,7 @@ describe('CharacterPickerSystem', () => {
     harness.dispose();
   });
 
-  it('supports mouse selection, cancellation, and reopening without recreating state', async () => {
+  it('supports mouse arrows, cancellation, and reopening without recreating state', async () => {
     const harness = createHarness({
       first: { status: 'available' },
       second: { status: 'available' },
@@ -144,10 +211,9 @@ describe('CharacterPickerSystem', () => {
     harness.picker.open();
     await waitForAvailability(harness.picker, 2);
 
-    const second = harness.mount.querySelector<HTMLButtonElement>(
-      'button[data-character-id="second"]',
-    );
-    second?.click();
+    harness.mount
+      .querySelector<HTMLButtonElement>('button[data-action="next"]')
+      ?.click();
     expect(harness.picker.getSnapshot().selectedCharacterId).toBe('second');
     harness.picker.cancel();
     expect(harness.selection.getSelectedId()).toBe('first');
@@ -160,41 +226,21 @@ describe('CharacterPickerSystem', () => {
     harness.dispose();
   });
 
-  it('ignores stale portrait completion after rapid selection changes', async () => {
-    const portraitDefinitions = [
-      { ...definitions[0], portraitAssetId: 'portrait.first' },
-      { ...definitions[1], portraitAssetId: 'portrait.second' },
-    ] satisfies readonly CharacterDefinition[];
-    const catalog = new AssetCatalog({
-      'portrait.first': { type: 'texture', url: '/first.png' },
-      'portrait.second': { type: 'texture', url: '/second.png' },
+  it('cycles only the two visible definitions in both directions', async () => {
+    const harness = createHarness({
+      first: { status: 'available' },
+      second: { status: 'available' },
     });
-    const harness = createHarness(
-      {
-        first: { status: 'available' },
-        second: { status: 'available' },
-      },
-      portraitDefinitions,
-      catalog,
-    );
     harness.picker.open();
     await waitForAvailability(harness.picker, 2);
-    const staleImage = harness.mount.querySelector<HTMLImageElement>(
-      '.character-picker__preview img',
-    );
 
+    harness.picker.previous();
+    expect(harness.picker.getSnapshot().selectedCharacterId).toBe('second');
     harness.picker.next();
-    harness.picker.selectFocused();
-    const currentImage = harness.mount.querySelector<HTMLImageElement>(
-      '.character-picker__preview img',
+    expect(harness.picker.getSnapshot().selectedCharacterId).toBe('first');
+    expect(harness.preview.shown).toEqual(
+      expect.arrayContaining(['first', 'second']),
     );
-    staleImage?.dispatchEvent(new Event('load'));
-    expect(harness.picker.getSnapshot()).toMatchObject({
-      selectedCharacterId: 'second',
-      previewState: 'loading',
-    });
-    currentImage?.dispatchEvent(new Event('load'));
-    expect(harness.picker.getSnapshot().previewState).toBe('ready');
     harness.dispose();
   });
 });
@@ -269,12 +315,13 @@ describe('ManifestCharacterAvailabilityProbe', () => {
 function createHarness(
   results: Readonly<Record<string, CharacterAvailabilityResult>>,
   entries: readonly CharacterDefinition[] = definitions,
-  catalog = new AssetCatalog({}),
+  preview = new FakePreview(),
 ): {
   readonly mount: HTMLElement;
   readonly picker: CharacterPickerSystem;
   readonly selection: CharacterSelectionStore;
   readonly state: GameStateMachine;
+  readonly preview: FakePreview;
   press(action: string): void;
   dispose(): void;
 } {
@@ -294,16 +341,17 @@ function createHarness(
       async (definition: CharacterDefinition) => results[definition.id]!,
     ),
   };
-  const picker = new CharacterPickerSystem(mount, selection, catalog, probe);
+  const picker = new CharacterPickerSystem(mount, selection, probe, preview);
   picker.init({ events: new EventBus<StateEvents>(), state, input });
   return {
     mount,
     picker,
     selection,
     state,
+    preview,
     press: (action) => {
       pressed.add(action);
-      picker.update();
+      picker.update({ delta: 1 / 60, elapsed: 0, frame: 1 });
       pressed.clear();
     },
     dispose: () => {

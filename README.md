@@ -18,7 +18,7 @@ Open the URL printed by Vite. The Foundry test district and its two CC0 playable
 
 The selected session-persistent character is used by the playable player. Choose Casual or Punk in the picker; a generated primitive remains available only as an emergency load-failure fallback. See [Character assets and registration](docs/characters.md).
 
-The character picker opens before entering the district and can be reopened with `K`. It supports keyboard and mouse navigation, local portrait assets, generated portrait fallbacks, and unavailable-model states. See [Character picker](docs/character-picker.md).
+The character picker opens before entering the district and can be reopened with `K`. It presents one local live 3D preview at a time, supports keyboard and mouse navigation, and surfaces emergency fallback or unavailable-model states. See [Character picker](docs/character-picker.md).
 
 ## On-foot controls
 

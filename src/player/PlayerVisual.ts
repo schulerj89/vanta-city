@@ -7,6 +7,10 @@ import {
 } from '../characters/CharacterVisualAlignment';
 import type { CharacterAlignmentReport } from '../characters/CharacterVisualAlignment';
 import type { PlayerMovementSimulation } from './PlayerMovement';
+import type {
+  CharacterActionName,
+  CharacterActionRequestState,
+} from '../characters/CharacterActions';
 
 export interface PlayerVisual extends GameObject {
   /** Rotates presentation without changing the simulation transform. */
@@ -15,6 +19,11 @@ export interface PlayerVisual extends GameObject {
   readonly loadedModelRoot: Group;
   init?(): void | Promise<void>;
   sync(movement: PlayerMovementSimulation, delta?: number): void;
+  triggerCharacterAction?(
+    action: CharacterActionName,
+    source?: string,
+  ): boolean;
+  getCharacterActionState?(): CharacterActionRequestState;
   getAlignmentReport(): CharacterAlignmentReport | undefined;
 }
 

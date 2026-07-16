@@ -22,6 +22,18 @@ import type {
 } from './PlayerMovement';
 import { PlaceholderPlayerVisual } from './PlayerVisual';
 import type { PlayerVisual } from './PlayerVisual';
+import type {
+  CharacterActionName,
+  CharacterActionRequestState,
+} from '../characters/CharacterActions';
+
+const idleCharacterActionState: CharacterActionRequestState = {
+  active: undefined,
+  lastRequested: undefined,
+  lastSource: undefined,
+  lastAccepted: false,
+  sequence: 0,
+};
 
 export interface PlayerDebugSnapshot {
   readonly velocity: {
@@ -94,6 +106,18 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
 
   public isControlEnabled(): boolean {
     return this.controlEnabled;
+  }
+
+  /** Authoritative entry point for short, presentation-only character actions. */
+  public triggerCharacterAction(
+    action: CharacterActionName,
+    source = 'player-controller',
+  ): boolean {
+    return this.visual.triggerCharacterAction?.(action, source) ?? false;
+  }
+
+  public getCharacterActionState(): CharacterActionRequestState {
+    return this.visual.getCharacterActionState?.() ?? idleCharacterActionState;
   }
 
   public getPlayerPosition(): WorldPosition {

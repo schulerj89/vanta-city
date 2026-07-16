@@ -166,4 +166,64 @@ describe('CharacterPlayerVisual', () => {
     });
     visual.dispose();
   });
+
+  it('runs authoritative one-shot actions and returns to locomotion', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const wave = new AnimationClip('Wave', 0.8, [
+      new VectorKeyframeTrack('.position', [0, 0.8], [0, 0.2, 0, 8, 0.2, 0]),
+    ]);
+    const idle = new AnimationClip('Idle', 1, []);
+    const instance = loadedCharacter(
+      definitions[0],
+      'asset',
+      new Map([
+        ['wave', wave],
+        ['idle', idle],
+      ]),
+    );
+    instance.root.position.set(0, 0.2, 0);
+    const visual = new CharacterPlayerVisual(selection, {
+      instantiate: vi.fn(async () => instance),
+    });
+    await visual.init();
+
+    expect(visual.triggerCharacterAction('wave', 'unit-test')).toBe(true);
+    visual.sync(movement('idle'), 0.4);
+    expect(instance.root.position.toArray()).toEqual([0, 0.2, 0]);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'action:wave',
+      characterAction: {
+        active: 'wave',
+        lastRequested: 'wave',
+        lastSource: 'unit-test',
+        lastAccepted: true,
+        sequence: 1,
+      },
+    });
+
+    visual.sync(movement('idle'), 0.5);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'idle',
+      characterAction: { active: undefined, sequence: 1 },
+    });
+    visual.dispose();
+  });
+
+  it('rejects actions that are unavailable on a fallback visual', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const fallback = loadedCharacter(definitions[0], 'placeholder');
+    const visual = new CharacterPlayerVisual(selection, {
+      instantiate: vi.fn(async () => fallback),
+    });
+    await visual.init();
+
+    expect(visual.triggerCharacterAction('punch', 'unit-test')).toBe(false);
+    expect(visual.getCharacterActionState()).toMatchObject({
+      active: undefined,
+      lastRequested: 'punch',
+      lastAccepted: false,
+      sequence: 0,
+    });
+    visual.dispose();
+  });
 });

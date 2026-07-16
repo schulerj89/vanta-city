@@ -21,6 +21,7 @@ export class RenderSystem implements GameSystem {
       antialias: true,
       powerPreference: 'high-performance',
     });
+    this.renderer.domElement.className = 'game-render-canvas';
     this.resizeObserver = new ResizeObserver(() => this.resize());
   }
 

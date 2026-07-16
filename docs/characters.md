@@ -15,15 +15,15 @@ Casual and Punk are the only selectable definitions, and both use committed loca
 
 `CharacterPlayerVisual` maps player movement to logical `idle`, `walk`, and `run` clips. Airborne and landing states use idle when available. A missing requested clip falls back to idle, then to a valid static pose. `CharacterLoader` reports every missing authored mapping. After each mixer update the definition's root offset is restored, so authored root-motion tracks cannot translate the visual away from the simulation transform.
 
+`PlayerControllerSystem.triggerCharacterAction(action, source)` is the small authoritative presentation hook for world interactions. It currently accepts `wave`, `interact`, and `punch`, plays the selected definition's mapped one-shot above locomotion, restores the model root on every update, and returns to locomotion when complete. It reports whether the mapping was accepted plus active/last action, source, and sequence through `getCharacterActionState()` and browser/debug snapshots. The garage-door interaction calls `interact`; development command `player.play-character-action wave|interact|punch` exercises the same API. This hook does not implement missions, combat effects, or NPC AI.
+
 With `?debug=1`, the Player group reports selected and loaded IDs, fallback state, load status, logical animation, scale, rotation, and vertical offset. **Cycle character** and **Reload character** exercise replacement without restarting the district.
 
 ## Included character pack subset
 
 The repository includes only `Casual Character.glb` and `Punk.glb` from the [Ultimate Modular Men Pack](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ), renamed to stable local URLs. Both are self-contained glTF 2.0 binaries with embedded buffers, color materials, skeletons, and 24 clips; they contain no images or external resource URLs. The adjacent asset README records the download archive, hashes, and CC0 verification.
 
-Logical `idle`, `walk`, and `run` bindings resolve the exact embedded names `CharacterArmature|Idle`, `CharacterArmature|Walk`, and `CharacterArmature|Run` and are required. The asset validator also exercises three clone/disposal preview cycles for each character.
-
-The local asset directory is ignored. Do not commit downloaded files until their exact license and redistribution status have been reviewed.
+Logical `idle`, `walk`, and `run` bindings resolve the exact embedded names `CharacterArmature|Idle`, `CharacterArmature|Walk`, and `CharacterArmature|Run` and are required. Preview/action mappings use inspected embedded names: `previewIdle` → `CharacterArmature|Idle_Neutral`, `wave` → `CharacterArmature|Wave`, `interact` → `CharacterArmature|Interact`, and `punch` → `CharacterArmature|Punch_Right`. Their measured model-root XZ displacement is at most `0.000356` units (validator tolerance `0.05`). The asset validator also exercises three clone/disposal preview cycles for each character.
 
 ## Register a model asset
 
@@ -59,7 +59,7 @@ Add a `CharacterDefinition` to `src/characters/characters.ts`:
 
 `animations` maps game-facing names to candidate clip names. An `assetId` on a binding may point to a separate catalog entry of type `animation`. Attachments and material variations are descriptive data for later systems; this task does not apply them.
 
-`portraitAssetId` may reference a registered local texture for the character picker. When omitted or when the image fails, the picker uses its generated silhouette treatment. See [Character picker](./character-picker.md) for the registration example and UI behavior.
+`portraitAssetId` remains optional definition metadata but is not used by the focused live 3D picker. See [Character picker](./character-picker.md) for current UI and lifecycle behavior.
 
 ## Transform and foot-alignment corrections
 

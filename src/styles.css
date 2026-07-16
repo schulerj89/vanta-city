@@ -47,7 +47,7 @@ canvas {
   backdrop-filter: blur(6px);
 }
 
-.character-picker-open canvas {
+.character-picker-open > .game-render-canvas {
   filter: blur(10px) saturate(0.65) brightness(0.42);
   transform: scale(1.02);
 }
@@ -70,7 +70,10 @@ canvas {
 }
 
 .character-picker__shell {
-  width: min(76rem, 100%);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(66rem, 100%);
+  height: min(52rem, calc(100vh - clamp(2rem, 6vw, 6rem)));
   margin: auto;
   border: 1px solid rgb(155 240 216 / 18%);
   border-radius: 1.25rem;
@@ -96,7 +99,6 @@ canvas {
 .character-picker__header p,
 .character-picker__preview h2,
 .character-picker__preview p,
-.character-picker__browser h2,
 .character-picker__footer p {
   margin: 0;
 }
@@ -124,19 +126,22 @@ canvas {
 
 .character-picker__content {
   display: grid;
-  grid-template-columns: minmax(16rem, 0.85fr) minmax(21rem, 1.65fr);
-  gap: clamp(1rem, 2.5vw, 2rem);
+  grid-template-columns: auto minmax(18rem, 1fr) auto;
+  align-items: center;
+  gap: clamp(0.65rem, 2vw, 1.5rem);
+  min-height: 0;
   padding: clamp(1rem, 2.5vw, 2rem);
 }
 
 .character-picker__preview {
   display: grid;
-  align-content: start;
-  gap: 1.1rem;
+  grid-template-rows: minmax(12rem, 1fr) auto;
+  gap: 0;
+  height: 100%;
   min-width: 0;
-  padding: 1rem;
   border: 1px solid rgb(116 225 196 / 18%);
   border-radius: 1rem;
+  overflow: hidden;
   background: linear-gradient(160deg, rgb(45 104 91 / 22%), rgb(8 17 22 / 75%));
 }
 
@@ -145,8 +150,9 @@ canvas {
 }
 
 .character-picker__preview h2 {
-  margin-top: 0.25rem;
-  font-size: clamp(1.35rem, 3vw, 2.1rem);
+  margin-top: 0.15rem;
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+  letter-spacing: -0.04em;
 }
 
 .character-picker__preview code {
@@ -157,18 +163,12 @@ canvas {
 }
 
 .character-picker__preview-status {
-  min-height: 2.5em;
-  margin-top: 0.75rem !important;
+  min-height: 1.4em;
+  margin-top: 0.55rem !important;
   color: #aec2bb;
   font-size: 0.82rem;
 }
 
-.character-picker__browser {
-  min-width: 0;
-}
-
-.character-picker__browser-heading,
-.character-picker__browse-controls,
 .character-picker__footer > div {
   display: flex;
   align-items: center;
@@ -176,179 +176,41 @@ canvas {
   gap: 0.65rem;
 }
 
-.character-picker__browser-heading {
-  margin-bottom: 0.75rem;
-}
-
-.character-picker__browser-heading h2 {
-  font-size: 1rem;
-}
-
-.character-picker__browser-heading span {
-  color: #8ca49d;
-  font-size: 0.75rem;
-}
-
-.character-picker__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
-  gap: 0.75rem;
-  max-height: min(42vh, 29rem);
-  overflow: auto;
-  padding: 0.2rem;
-}
-
-.character-picker__card {
+.character-picker__viewport {
   position: relative;
-  display: grid;
-  gap: 0.65rem;
-  min-width: 0;
-  padding: 0.65rem;
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 0.8rem;
-  color: inherit;
-  background: rgb(255 255 255 / 3%);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease,
-    transform 120ms ease;
-}
-
-.character-picker__card:hover {
-  border-color: rgb(116 225 196 / 42%);
-  background: rgb(116 225 196 / 7%);
-  transform: translateY(-2px);
-}
-
-.character-picker__card.is-focused {
-  border-color: #74e1c4;
-  box-shadow: 0 0 0 1px rgb(116 225 196 / 32%);
-}
-
-.character-picker__card.is-selected::after {
-  position: absolute;
-  top: 0.55rem;
-  right: 0.55rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 999px;
-  color: #082019;
-  background: #74e1c4;
-  content: 'Selected';
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.character-picker__card.is-unavailable {
-  color: #8f9996;
-  background: rgb(255 255 255 / 2%);
-  cursor: not-allowed;
-  filter: saturate(0.3);
-}
-
-.character-picker__card-copy {
-  display: grid;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.character-picker__card-copy strong,
-.character-picker__card-copy small {
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.character-picker__card-copy small {
-  color: #91aaa2;
-  font-size: 0.7rem;
-}
-
-.character-picker__portrait {
-  --portrait-hue: 165;
-  position: relative;
-  display: block;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  border-radius: 0.6rem;
   background:
-    radial-gradient(
-      circle at 50% 30%,
-      hsl(var(--portrait-hue) 44% 42% / 55%),
-      transparent 32%
-    ),
-    linear-gradient(160deg, hsl(var(--portrait-hue) 30% 22%), #0a1318 75%);
+    radial-gradient(circle at 50% 34%, rgb(81 195 166 / 20%), transparent 35%),
+    linear-gradient(180deg, #0a1b21, #061015);
 }
 
-.character-picker__portrait--large {
-  max-height: 43vh;
-  min-height: 15rem;
-}
-
-.character-picker__portrait img,
-.character-picker__portrait-generated {
-  position: absolute;
-  inset: 0;
+.character-preview-surface,
+.character-preview-surface__canvas {
   width: 100%;
   height: 100%;
 }
 
-.character-picker__portrait img {
-  z-index: 2;
-  display: none;
-  object-fit: cover;
+.character-picker__identity {
+  position: relative;
+  padding: 1rem 1.25rem 1.15rem;
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  text-align: center;
 }
 
-.character-picker__portrait.has-image img {
-  display: block;
-}
-
-.character-picker__portrait-generated {
-  display: grid;
-  place-items: center;
-}
-
-.character-picker__silhouette::before,
-.character-picker__silhouette::after {
+.character-picker__position {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 1px solid rgb(255 255 255 / 18%);
-  background: hsl(var(--portrait-hue) 22% 73% / 80%);
-  content: '';
-}
-
-.character-picker__silhouette::before {
-  top: 21%;
-  width: 24%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-}
-
-.character-picker__silhouette::after {
-  bottom: 14%;
-  width: 55%;
-  height: 46%;
-  border-radius: 48% 48% 16% 16%;
-}
-
-.character-picker__initials {
-  position: absolute;
-  right: 0.55rem;
-  bottom: 0.45rem;
-  z-index: 1;
-  color: rgb(255 255 255 / 72%);
-  font-size: 0.67rem;
+  top: 1rem;
+  right: 1.1rem;
+  color: #74e1c4;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
 }
 
-.character-picker__browse-controls {
-  margin-top: 0.9rem;
+.character-picker__animation {
+  margin-top: 0.35rem !important;
+  color: #74e1c4;
+  font-size: 0.75rem;
 }
 
 .character-picker__button {
@@ -370,9 +232,21 @@ canvas {
   background: #74e1c4;
 }
 
-.character-picker__button--secondary {
-  border-color: rgb(116 225 196 / 45%);
-  background: rgb(116 225 196 / 12%);
+.character-picker__button--arrow {
+  width: clamp(3rem, 7vw, 4.5rem);
+  height: clamp(5rem, 14vw, 8rem);
+  padding: 0;
+  border-color: rgb(116 225 196 / 34%);
+  border-radius: 999px;
+  color: #74e1c4;
+  background: rgb(8 28 29 / 78%);
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  line-height: 1;
+}
+
+.character-picker__button--arrow:hover {
+  border-color: #74e1c4;
+  background: rgb(30 84 72 / 55%);
 }
 
 .character-picker__button:disabled {
@@ -400,35 +274,14 @@ canvas {
   }
 
   .character-picker__shell {
+    height: 100%;
     min-height: 100%;
     border: 0;
     border-radius: 0;
   }
 
   .character-picker__content {
-    grid-template-columns: 1fr;
-  }
-
-  .character-picker__preview {
-    grid-template-columns: minmax(8rem, 0.65fr) 1fr;
-    align-items: center;
-  }
-
-  .character-picker__portrait--large {
-    min-height: 10rem;
-    max-height: 14rem;
-  }
-
-  .character-picker__grid {
-    display: flex;
-    max-height: none;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-  }
-
-  .character-picker__card {
-    flex: 0 0 min(11rem, 52vw);
-    scroll-snap-align: center;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .character-picker__footer {
@@ -436,15 +289,9 @@ canvas {
     flex-direction: column;
   }
 
-  .character-picker__footer > div,
-  .character-picker__browse-controls {
+  .character-picker__footer > div {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .character-picker__browse-controls .character-picker__button--secondary {
-    grid-column: 1 / -1;
-    grid-row: 1;
   }
 }
 
@@ -460,15 +307,6 @@ canvas {
 
   .character-picker__content {
     padding: 0.75rem;
-  }
-
-  .character-picker__preview {
-    grid-template-columns: 6.5rem 1fr;
-    padding: 0.7rem;
-  }
-
-  .character-picker__portrait--large {
-    min-height: 8rem;
   }
 
   .character-picker__hints {

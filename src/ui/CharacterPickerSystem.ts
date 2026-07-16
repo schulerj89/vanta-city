@@ -1,6 +1,6 @@
-import type { AssetCatalog } from '../assets/AssetCatalog';
 import type { GameState, GameStateMachine } from '../core/gameState';
 import type { GameSystem } from '../core/lifecycle';
+import type { FrameTime } from '../core/time';
 import type { GameContext } from '../game/GameRuntime';
 import type { InputReader } from '../input/InputSystem';
 import type {
@@ -8,12 +8,21 @@ import type {
   CharacterAvailabilityResult,
   CharacterAvailabilityStatus,
 } from '../characters/CharacterAvailability';
-import { resolveCharacterPortrait } from '../characters/CharacterAvailability';
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
+import type {
+  CharacterPreviewSnapshot,
+  CharacterPreviewSurface,
+} from '../characters/CharacterPreviewSystem';
 import type { CharacterSelectionStore } from '../characters/CharacterSelection';
 
 export type CharacterPickerPreviewState =
-  'idle' | 'checking' | 'loading' | 'ready' | 'unavailable' | 'failed';
+  | 'idle'
+  | 'checking'
+  | 'loading'
+  | 'ready'
+  | 'fallback'
+  | 'unavailable'
+  | 'failed';
 
 export interface CharacterPickerSnapshot {
   readonly open: boolean;
@@ -25,6 +34,7 @@ export interface CharacterPickerSnapshot {
   readonly selectedCharacterId: string;
   readonly confirmedCharacterId: string;
   readonly previewState: CharacterPickerPreviewState;
+  readonly preview: CharacterPreviewSnapshot;
 }
 
 interface AvailabilityEntry {
@@ -32,6 +42,7 @@ interface AvailabilityEntry {
   readonly reason?: string;
 }
 
+/** A single focused live preview; arrows change only the draft choice. */
 export class CharacterPickerSystem implements GameSystem {
   public readonly id = 'character-picker';
   public readonly updateMode = 'always' as const;
@@ -39,10 +50,6 @@ export class CharacterPickerSystem implements GameSystem {
   private readonly element = document.createElement('section');
   private readonly definitions: readonly CharacterDefinition[];
   private readonly availability = new Map<string, AvailabilityEntry>();
-  private readonly portraitStatus = new Map<
-    string,
-    'unknown' | 'ready' | 'failed'
-  >();
   private input: InputReader | undefined;
   private state: GameStateMachine | undefined;
   private unsubscribeSelection: (() => void) | undefined;
@@ -58,8 +65,8 @@ export class CharacterPickerSystem implements GameSystem {
   public constructor(
     private readonly mount: HTMLElement,
     private readonly selection: CharacterSelectionStore,
-    private readonly catalog: AssetCatalog,
     private readonly availabilityProbe: CharacterAvailabilityProbe,
+    private readonly preview: CharacterPreviewSurface,
   ) {
     this.definitions = selection.definitions.filter(
       ({ pickerVisible }) => pickerVisible !== false,
@@ -72,7 +79,6 @@ export class CharacterPickerSystem implements GameSystem {
     this.selectedId = initial.id;
     for (const definition of this.definitions) {
       this.availability.set(definition.id, { status: 'checking' });
-      this.portraitStatus.set(definition.id, 'unknown');
     }
   }
 
@@ -87,27 +93,26 @@ export class CharacterPickerSystem implements GameSystem {
     this.element.addEventListener('click', this.onClick);
     this.mount.append(this.element);
     this.unsubscribeSelection = this.selection.onSelectionChanged(() => {
-      if (!this.openState) {
-        const selected = this.definitionById(this.selection.getSelectedId());
-        if (selected) {
-          this.focusedId = selected.id;
-          this.selectedId = selected.id;
-        }
-      }
-      if (this.openState) this.render();
+      if (this.openState) return;
+      const selected = this.definitionById(this.selection.getSelectedId());
+      if (!selected) return;
+      this.focusedId = selected.id;
+      this.selectedId = selected.id;
     });
     this.startAvailabilityChecks();
   }
 
-  public update(): void {
+  public update(time: FrameTime): void {
     if (!this.input) return;
     if (!this.openState) {
       if (this.input.wasPressed('openCharacterPicker')) this.open();
       return;
     }
+    this.preview.update(time.delta);
+    this.updateAnimationLabel();
     if (this.input.wasPressed('pickerPrevious')) this.previous();
     if (this.input.wasPressed('pickerNext')) this.next();
-    if (this.input.wasPressed('pickerSelect')) this.selectFocused();
+    if (this.input.wasPressed('pickerSelect')) this.playNextPreviewAnimation();
     if (this.input.wasPressed('pickerConfirm')) this.confirm();
     if (this.input.wasPressed('pickerCancel')) this.cancel();
   }
@@ -126,7 +131,8 @@ export class CharacterPickerSystem implements GameSystem {
     this.state.transition('character-select');
     void document.exitPointerLock?.();
     this.render();
-    this.focusCard();
+    void this.loadFocusedPreview();
+    this.focusAction('confirm');
   }
 
   public previous(): void {
@@ -138,28 +144,34 @@ export class CharacterPickerSystem implements GameSystem {
   }
 
   public focusCharacter(id: string): void {
-    if (!this.definitionById(id)) return;
-    this.focusedId = id;
+    const definition = this.definitionById(id);
+    if (!definition) return;
+    this.focusedId = definition.id;
+    if (this.isSelectable(definition.id)) this.selectedId = definition.id;
     this.render();
-    this.focusCard();
+    void this.loadFocusedPreview();
   }
 
+  /** Existing named input compatibility: Space now advances the live emote. */
   public selectFocused(): void {
-    if (!this.isAvailable(this.focusedId)) return;
-    this.selectedId = this.focusedId;
-    this.render();
-    this.focusCard();
+    this.playNextPreviewAnimation();
+  }
+
+  public playNextPreviewAnimation(): void {
+    if (!this.openState || !this.preview.nextAnimation()) return;
+    this.updateAnimationLabel();
   }
 
   public confirm(): void {
-    if (!this.openState || !this.isAvailable(this.selectedId)) return;
+    if (!this.openState || !this.isSelectable(this.selectedId)) return;
     this.selection.select(this.selectedId);
     this.close();
   }
 
   public cancel(): void {
     if (!this.openState) return;
-    this.selectedId = this.selection.getSelectedId();
+    const selected = this.definitionById(this.selection.getSelectedId());
+    this.selectedId = selected?.id ?? this.definitions[0]!.id;
     this.focusedId = this.selectedId;
     this.close();
   }
@@ -169,19 +181,14 @@ export class CharacterPickerSystem implements GameSystem {
     return {
       open: this.openState,
       registeredCharacterIds: this.definitions.map(({ id }) => id),
-      availableCharacterIds: entries
-        .filter(([, value]) => value.status === 'available')
-        .map(([id]) => id),
-      fallbackCharacterIds: entries
-        .filter(([, value]) => value.status === 'fallback')
-        .map(([id]) => id),
-      unavailableCharacterIds: entries
-        .filter(([, value]) => value.status === 'unavailable')
-        .map(([id]) => id),
+      availableCharacterIds: idsWithStatus(entries, 'available'),
+      fallbackCharacterIds: idsWithStatus(entries, 'fallback'),
+      unavailableCharacterIds: idsWithStatus(entries, 'unavailable'),
       focusedCharacterId: this.focusedId,
       selectedCharacterId: this.selectedId,
       confirmedCharacterId: this.selection.getSelectedId(),
       previewState: this.previewState,
+      preview: this.preview.getSnapshot(),
     };
   }
 
@@ -190,6 +197,7 @@ export class CharacterPickerSystem implements GameSystem {
     this.previewVersion += 1;
     this.unsubscribeSelection?.();
     this.element.removeEventListener('click', this.onClick);
+    this.preview.dispose();
     this.element.remove();
     this.mount.classList.remove('character-picker-open');
     this.input = undefined;
@@ -210,6 +218,16 @@ export class CharacterPickerSystem implements GameSystem {
     result: CharacterAvailabilityResult,
   ): void {
     this.availability.set(id, result);
+    if (result.status === 'unavailable' && this.selectedId === id) {
+      const replacement = this.definitions.find((definition) =>
+        this.isSelectable(definition.id),
+      );
+      if (replacement) {
+        this.focusedId = replacement.id;
+        this.selectedId = replacement.id;
+        void this.loadFocusedPreview();
+      }
+    }
     if (this.openState) this.render();
   }
 
@@ -217,6 +235,7 @@ export class CharacterPickerSystem implements GameSystem {
     if (!this.openState || !this.state) return;
     this.openState = false;
     this.previewVersion += 1;
+    this.preview.clear();
     this.previewState = 'idle';
     this.element.hidden = true;
     this.mount.classList.remove('character-picker-open');
@@ -224,22 +243,46 @@ export class CharacterPickerSystem implements GameSystem {
   }
 
   private moveFocus(step: number): void {
-    const definitions = this.definitions;
-    const index = definitions.findIndex(({ id }) => id === this.focusedId);
+    const index = this.definitions.findIndex(({ id }) => id === this.focusedId);
     const nextIndex =
-      (index + (step % definitions.length) + definitions.length) %
-      definitions.length;
-    this.focusedId = definitions[nextIndex]!.id;
+      (index + (step % this.definitions.length) + this.definitions.length) %
+      this.definitions.length;
+    const next = this.definitions[nextIndex]!;
+    this.focusedId = next.id;
+    if (this.availability.get(next.id)?.status !== 'unavailable') {
+      this.selectedId = next.id;
+    }
     this.render();
-    this.focusCard();
+    void this.loadFocusedPreview();
+  }
+
+  private async loadFocusedPreview(): Promise<void> {
+    if (!this.openState) return;
+    const definition = this.definitionById(this.focusedId);
+    if (!definition) return;
+    const version = ++this.previewVersion;
+    this.previewState = 'loading';
+    this.render();
+    try {
+      await this.preview.show(definition);
+      if (version !== this.previewVersion || !this.openState) return;
+      const snapshot = this.preview.getSnapshot();
+      this.previewState =
+        snapshot.status === 'fallback' ||
+        this.availability.get(definition.id)?.status === 'fallback'
+          ? 'fallback'
+          : 'ready';
+    } catch {
+      if (version !== this.previewVersion || !this.openState) return;
+      this.previewState = 'failed';
+    }
+    this.render();
   }
 
   private render(): void {
     if (!this.openState) return;
-    const version = ++this.previewVersion;
-    const selected = this.definitionById(this.selectedId)!;
-    const focused = this.definitionById(this.focusedId)!;
-    const selectedAvailability = this.availability.get(selected.id)!;
+    const definition = this.definitionById(this.focusedId)!;
+    const availability = this.availability.get(definition.id)!;
 
     this.element.replaceChildren();
     const shell = document.createElement('div');
@@ -247,7 +290,7 @@ export class CharacterPickerSystem implements GameSystem {
 
     const header = document.createElement('header');
     header.className = 'character-picker__header';
-    const titleGroup = document.createElement('div');
+    const heading = document.createElement('div');
     const eyebrow = document.createElement('p');
     eyebrow.className = 'character-picker__eyebrow';
     eyebrow.textContent = 'Vanta City resident registry';
@@ -255,91 +298,60 @@ export class CharacterPickerSystem implements GameSystem {
     title.id = 'character-picker-title';
     title.textContent = 'Choose your character';
     const intro = document.createElement('p');
-    intro.textContent =
-      'Pick a registered resident before entering the debug district.';
-    titleGroup.append(eyebrow, title, intro);
+    intro.textContent = 'One resident. One live preview. Confirm when ready.';
+    heading.append(eyebrow, title, intro);
     const closeButton = this.actionButton('Cancel', 'cancel', 'quiet');
     closeButton.setAttribute('aria-label', 'Close character picker');
-    header.append(titleGroup, closeButton);
+    header.append(heading, closeButton);
 
-    const content = document.createElement('div');
+    const content = document.createElement('main');
     content.className = 'character-picker__content';
-    const preview = this.createPreview(selected, selectedAvailability, version);
-    const browser = document.createElement('div');
-    browser.className = 'character-picker__browser';
-    const browserHeading = document.createElement('div');
-    browserHeading.className = 'character-picker__browser-heading';
-    const heading = document.createElement('h2');
-    heading.textContent = 'Registered characters';
-    const count = document.createElement('span');
-    count.textContent = `${this.definitions.length} options`;
-    browserHeading.append(heading, count);
-
-    const grid = document.createElement('div');
-    grid.className = 'character-picker__grid';
-    grid.setAttribute('role', 'group');
-    grid.setAttribute('aria-label', 'Registered characters');
-    for (const definition of this.definitions) {
-      grid.append(this.createCard(definition));
-    }
-
-    const browseControls = document.createElement('div');
-    browseControls.className = 'character-picker__browse-controls';
-    browseControls.append(
-      this.actionButton('← Previous', 'previous', 'quiet'),
-      this.actionButton(
-        focused.id === selected.id
-          ? 'Selected'
-          : `Select ${focused.displayName}`,
-        'select',
-        'secondary',
-        !this.isAvailable(focused.id) || focused.id === selected.id,
-      ),
-      this.actionButton('Next →', 'next', 'quiet'),
-    );
-    browser.append(browserHeading, grid, browseControls);
-    content.append(preview, browser);
+    const previous = this.arrowButton('←', 'previous', 'Previous character');
+    const next = this.arrowButton('→', 'next', 'Next character');
+    const previewPanel = this.createFocusedPreview(definition, availability);
+    content.append(previous, previewPanel, next);
 
     const footer = document.createElement('footer');
     footer.className = 'character-picker__footer';
     const hints = document.createElement('p');
     hints.className = 'character-picker__hints';
     hints.textContent =
-      '← → browse  ·  Space select  ·  Enter confirm  ·  Esc cancel';
-    const footerActions = document.createElement('div');
-    footerActions.append(
-      this.actionButton('Return to district', 'cancel', 'quiet'),
+      '← → switch character  ·  Space change pose  ·  Enter confirm  ·  Esc cancel';
+    const actions = document.createElement('div');
+    actions.append(
+      this.actionButton('Preview next pose', 'preview-animation', 'quiet'),
       this.actionButton(
-        `Enter as ${selected.displayName}`,
+        `Enter as ${this.definitionById(this.selectedId)!.displayName}`,
         'confirm',
         'primary',
-        !this.isSelectable(selected.id),
+        !this.isSelectable(this.selectedId),
       ),
     );
-    footer.append(hints, footerActions);
+    footer.append(hints, actions);
     shell.append(header, content, footer);
     this.element.append(shell);
   }
 
-  private createPreview(
+  private createFocusedPreview(
     definition: CharacterDefinition,
     availability: AvailabilityEntry,
-    version: number,
   ): HTMLElement {
     const panel = document.createElement('article');
     panel.className = 'character-picker__preview';
     panel.dataset.characterId = definition.id;
-    const portrait = this.createPortrait(
-      definition,
-      this.isSelectable(definition.id),
-      version,
-    );
-    portrait.classList.add('character-picker__portrait--large');
+    if (availability.status === 'unavailable') {
+      panel.classList.add('is-unavailable');
+    }
+
+    const viewport = document.createElement('div');
+    viewport.className = 'character-picker__viewport';
+    viewport.append(this.preview.element);
 
     const copy = document.createElement('div');
-    const label = document.createElement('p');
-    label.className = 'character-picker__eyebrow';
-    label.textContent = 'Current selection';
+    copy.className = 'character-picker__identity';
+    const position = document.createElement('span');
+    position.className = 'character-picker__position';
+    position.textContent = `${this.definitions.findIndex(({ id }) => id === definition.id) + 1} / ${this.definitions.length}`;
     const name = document.createElement('h2');
     name.textContent = definition.displayName;
     const id = document.createElement('code');
@@ -348,155 +360,49 @@ export class CharacterPickerSystem implements GameSystem {
     status.className = 'character-picker__preview-status';
     status.dataset.pickerPreviewStatus = '';
     status.setAttribute('aria-live', 'polite');
-    copy.append(label, name, id, status);
-    panel.append(portrait, copy);
-
-    if (availability.status === 'checking') {
-      this.previewState = 'checking';
-      status.textContent = 'Checking local character files…';
-      panel.setAttribute('aria-busy', 'true');
-    } else if (availability.status === 'unavailable') {
-      this.previewState = 'unavailable';
-      status.textContent = availability.reason ?? 'Character unavailable.';
-      panel.classList.add('is-unavailable');
-    } else if (availability.status === 'fallback') {
-      this.previewState = 'ready';
-      status.textContent =
-        availability.reason ?? 'Placeholder character will be used.';
-      panel.classList.add('is-fallback');
-    } else {
-      const portraitSource = resolveCharacterPortrait(definition, this.catalog);
-      const portraitStatus = this.portraitStatus.get(definition.id);
-      if (portraitSource.kind === 'asset' && portraitStatus !== 'ready') {
-        this.previewState = portraitStatus === 'failed' ? 'failed' : 'loading';
-        status.textContent =
-          portraitStatus === 'failed'
-            ? 'Portrait failed to load — using generated treatment.'
-            : 'Loading portrait…';
-      } else {
-        this.previewState = 'ready';
-        status.textContent =
-          portraitSource.kind === 'asset'
-            ? 'Portrait ready · character available'
-            : 'Generated portrait · character available';
-      }
-    }
+    status.textContent = this.statusText(availability);
+    const animation = document.createElement('p');
+    animation.className = 'character-picker__animation';
+    animation.dataset.previewAnimation = '';
+    animation.textContent = `Pose · ${displayAnimation(this.preview.getSnapshot().animation)}`;
+    copy.append(position, name, id, status, animation);
+    panel.append(viewport, copy);
     return panel;
   }
 
-  private createCard(definition: CharacterDefinition): HTMLButtonElement {
-    const availability = this.availability.get(definition.id)!;
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'character-picker__card';
-    card.dataset.action = 'character';
-    card.dataset.characterId = definition.id;
-    card.setAttribute('aria-label', this.cardLabel(definition, availability));
-    card.setAttribute(
-      'aria-current',
-      definition.id === this.selectedId ? 'true' : 'false',
-    );
-    card.setAttribute(
-      'aria-pressed',
-      definition.id === this.selectedId ? 'true' : 'false',
-    );
-    card.setAttribute(
-      'aria-disabled',
-      availability.status === 'unavailable' ? 'true' : 'false',
-    );
-    if (availability.status === 'checking')
-      card.setAttribute('aria-busy', 'true');
-    card.classList.toggle('is-focused', definition.id === this.focusedId);
-    card.classList.toggle('is-selected', definition.id === this.selectedId);
-    card.classList.toggle(
-      'is-unavailable',
-      availability.status === 'unavailable',
-    );
-
-    const portrait = this.createPortrait(
-      definition,
-      false,
-      this.previewVersion,
-    );
-    const copy = document.createElement('span');
-    copy.className = 'character-picker__card-copy';
-    const name = document.createElement('strong');
-    name.textContent = definition.displayName;
-    const status = document.createElement('small');
-    status.textContent =
-      availability.status === 'checking'
-        ? 'Checking files…'
-        : availability.status === 'unavailable'
-          ? 'Unavailable'
-          : availability.status === 'fallback'
-            ? definition.id === this.selectedId
-              ? 'Selected · placeholder'
-              : 'Placeholder available'
-            : definition.id === this.selectedId
-              ? 'Selected'
-              : 'Available';
-    copy.append(name, status);
-    card.append(portrait, copy);
-    return card;
+  private statusText(availability: AvailabilityEntry): string {
+    if (availability.status === 'checking') {
+      return 'Checking local model · loading live preview…';
+    }
+    if (availability.status === 'unavailable') {
+      this.previewState = 'unavailable';
+      return availability.reason ?? 'Character unavailable.';
+    }
+    if (this.previewState === 'loading') return 'Loading live 3D preview…';
+    if (this.previewState === 'failed') return 'Preview failed to load.';
+    if (
+      this.previewState === 'fallback' ||
+      availability.status === 'fallback'
+    ) {
+      return availability.reason ?? 'Emergency fallback preview active.';
+    }
+    return 'Local model ready · 24 embedded animations';
   }
 
-  private createPortrait(
-    definition: CharacterDefinition,
-    trackPreview: boolean,
-    version: number,
-  ): HTMLElement {
-    const frame = document.createElement('span');
-    frame.className = 'character-picker__portrait';
-    frame.style.setProperty('--portrait-hue', String(hueFor(definition.id)));
-
-    const generated = document.createElement('span');
-    generated.className = 'character-picker__portrait-generated';
-    generated.setAttribute('aria-hidden', 'true');
-    const silhouette = document.createElement('span');
-    silhouette.className = 'character-picker__silhouette';
-    const initials = document.createElement('span');
-    initials.className = 'character-picker__initials';
-    initials.textContent = initialsFor(definition.displayName);
-    generated.append(silhouette, initials);
-    frame.append(generated);
-
-    const source = resolveCharacterPortrait(definition, this.catalog);
-    if (
-      source.kind !== 'asset' ||
-      this.portraitStatus.get(definition.id) === 'failed'
-    ) {
-      return frame;
-    }
-    const image = document.createElement('img');
-    image.alt = `${definition.displayName} portrait`;
-    image.loading = trackPreview ? 'eager' : 'lazy';
-    image.src = source.url!;
-    image.addEventListener('load', () => {
-      this.portraitStatus.set(definition.id, 'ready');
-      frame.classList.add('has-image');
-      if (trackPreview && version === this.previewVersion) {
-        this.previewState = 'ready';
-        this.updatePreviewStatus('Portrait ready · character available');
-      }
-    });
-    image.addEventListener('error', () => {
-      this.portraitStatus.set(definition.id, 'failed');
-      frame.classList.remove('has-image');
-      if (trackPreview && version === this.previewVersion) {
-        this.previewState = 'failed';
-        this.updatePreviewStatus(
-          'Portrait failed to load — using generated treatment.',
-        );
-      }
-    });
-    frame.append(image);
-    return frame;
+  private arrowButton(
+    label: string,
+    action: 'previous' | 'next',
+    accessibleName: string,
+  ): HTMLButtonElement {
+    const button = this.actionButton(label, action, 'arrow');
+    button.setAttribute('aria-label', accessibleName);
+    return button;
   }
 
   private actionButton(
     label: string,
     action: string,
-    style: 'primary' | 'secondary' | 'quiet',
+    style: 'primary' | 'quiet' | 'arrow',
     disabled = false,
   ): HTMLButtonElement {
     const button = document.createElement('button');
@@ -508,24 +414,8 @@ export class CharacterPickerSystem implements GameSystem {
     return button;
   }
 
-  private cardLabel(
-    definition: CharacterDefinition,
-    availability: AvailabilityEntry,
-  ): string {
-    const state =
-      availability.status === 'checking'
-        ? 'checking availability'
-        : availability.status;
-    const selected = definition.id === this.selectedId ? ', selected' : '';
-    return `${definition.displayName}, ${state}${selected}`;
-  }
-
   private definitionById(id: string): CharacterDefinition | undefined {
     return this.definitions.find((definition) => definition.id === id);
-  }
-
-  private isAvailable(id: string): boolean {
-    return this.isSelectable(id);
   }
 
   private isSelectable(id: string): boolean {
@@ -533,44 +423,37 @@ export class CharacterPickerSystem implements GameSystem {
     return status === 'available' || status === 'fallback';
   }
 
-  private focusCard(): void {
-    const card = this.element.querySelector<HTMLButtonElement>(
-      `button[data-character-id="${this.focusedId}"]`,
-    );
-    card?.focus({ preventScroll: true });
+  private focusAction(action: string): void {
+    this.element
+      .querySelector<HTMLButtonElement>(`button[data-action="${action}"]`)
+      ?.focus({ preventScroll: true });
   }
 
-  private updatePreviewStatus(message: string): void {
-    const status = this.element.querySelector<HTMLElement>(
-      '[data-picker-preview-status]',
+  private updateAnimationLabel(): void {
+    const label = this.element.querySelector<HTMLElement>(
+      '[data-preview-animation]',
     );
-    if (status) status.textContent = message;
+    if (label) {
+      label.textContent = `Pose · ${displayAnimation(this.preview.getSnapshot().animation)}`;
+    }
   }
 
   private readonly onClick = (event: MouseEvent): void => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    const control = target.closest<HTMLElement>('[data-action]');
-    const action = control?.dataset.action;
-    if (!action) return;
+    const action = target.closest<HTMLElement>('[data-action]')?.dataset.action;
     switch (action) {
-      case 'character': {
-        const id = control.dataset.characterId;
-        if (!id) return;
-        this.focusedId = id;
-        if (this.isAvailable(id)) this.selectedId = id;
-        this.render();
-        this.focusCard();
-        break;
-      }
       case 'previous':
         this.previous();
+        this.focusAction('previous');
         break;
       case 'next':
         this.next();
+        this.focusAction('next');
         break;
-      case 'select':
-        this.selectFocused();
+      case 'preview-animation':
+        this.playNextPreviewAnimation();
+        this.focusAction('preview-animation');
         break;
       case 'confirm':
         this.confirm();
@@ -582,17 +465,16 @@ export class CharacterPickerSystem implements GameSystem {
   };
 }
 
-function initialsFor(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+function idsWithStatus(
+  entries: readonly [string, AvailabilityEntry][],
+  status: CharacterAvailabilityStatus,
+): string[] {
+  return entries
+    .filter(([, value]) => value.status === status)
+    .map(([id]) => id);
 }
 
-function hueFor(id: string): number {
-  let hash = 0;
-  for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) | 0;
-  return Math.abs(hash) % 360;
+function displayAnimation(name: string): string {
+  if (name === 'previewIdle') return 'Neutral idle';
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
