@@ -199,6 +199,65 @@ describe('ThirdPersonCameraSystem', () => {
     );
   });
 
+  it('focuses gameplay distance without changing preference or orientation and restores it exactly', () => {
+    const harness = createHarness();
+    harness.system.setPreferences({
+      followDistance: 7,
+      automaticRecenter: false,
+      shoulderSide: 'left',
+    });
+    harness.input.pointerLocked = true;
+    harness.input.delta = { x: 30, y: -12, wheel: 0 };
+    update(harness, 120);
+    const before = harness.system.getDebugSnapshot();
+    const focus = harness.system.requestGameplayFocus({
+      owner: 'debug-sparring-target',
+      maxDistance: 4.1,
+    });
+    update(harness, 120);
+    const focused = harness.system.getDebugSnapshot();
+    expect(focus.active).toBe(true);
+    expect(focused.mode).toBe('gameplay');
+    expect(focused.owner).toBe('gameplay');
+    expect(focused.gameplayFocusOwner).toBe('debug-sparring-target');
+    expect(focused.gameplayFocusDistance).toBe(4.1);
+    expect(focused.desiredDistance).toBe(7);
+    expect(focused.actualDistance).toBeCloseTo(4.1, 2);
+    expect(focused.yaw).toBe(before.yaw);
+    expect(focused.pitch).toBe(before.pitch);
+    expect(focused.shoulderSide).toBe(before.shoulderSide);
+
+    focus.release();
+    update(harness, 120);
+    const restored = harness.system.getDebugSnapshot();
+    expect(focus.active).toBe(false);
+    expect(restored.gameplayFocusOwner).toBeUndefined();
+    expect(restored.desiredDistance).toBe(7);
+    expect(restored.actualDistance).toBeCloseTo(7, 2);
+    expect(restored.yaw).toBe(before.yaw);
+    expect(restored.pitch).toBe(before.pitch);
+    expect(restored.shoulderSide).toBe(before.shoulderSide);
+  });
+
+  it('applies gameplay focus after a directed-camera return completes', () => {
+    const harness = createHarness();
+    harness.system.setPreferences({ followDistance: 6.5 });
+    const conversation = harness.system.requestConversation('dialogue');
+    update(harness, 60);
+    conversation.release();
+    const focus = harness.system.requestGameplayFocus({
+      owner: 'debug-sparring-target',
+      maxDistance: 4.1,
+    });
+    update(harness, 120);
+    const snapshot = harness.system.getDebugSnapshot();
+    expect(snapshot.mode).toBe('gameplay');
+    expect(snapshot.gameplayFocusOwner).toBe('debug-sparring-target');
+    expect(snapshot.desiredDistance).toBe(6.5);
+    expect(snapshot.actualDistance).toBeCloseTo(4.1, 2);
+    focus.release();
+  });
+
   it('orbits left and right from held keyboard actions at a frame-rate-independent speed', () => {
     const harness = createHarness();
     harness.system.setPreferences({ automaticRecenter: false });

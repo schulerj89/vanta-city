@@ -119,6 +119,18 @@ export interface CameraControlHandle {
   cancel(): void;
 }
 
+export interface GameplayCameraFocusRequest {
+  readonly owner: string;
+  /** Upper bound only: a user's already-closer preference is never widened. */
+  readonly maxDistance: number;
+}
+
+export interface GameplayCameraFocusHandle {
+  readonly owner: string;
+  readonly active: boolean;
+  release(): void;
+}
+
 export class CameraOwnershipError extends Error {
   public constructor(message: string) {
     super(message);
@@ -135,6 +147,8 @@ export interface ThirdPersonCameraDebugSnapshot {
   readonly yaw: number;
   readonly pitch: number;
   readonly desiredDistance: number;
+  readonly gameplayFocusOwner: string | undefined;
+  readonly gameplayFocusDistance: number | undefined;
   readonly actualDistance: number;
   /** Backward-compatible alias used by the browser smoke bridge. */
   readonly distance: number;
@@ -159,6 +173,10 @@ export interface ThirdPersonCameraDebugSnapshot {
 interface InternalRequest extends CameraControlRequest {
   readonly token: symbol;
   readonly priority: number;
+}
+
+interface InternalGameplayFocusRequest extends GameplayCameraFocusRequest {
+  readonly token: symbol;
 }
 
 interface GameplayViewState {
@@ -202,6 +220,10 @@ export class ThirdPersonCameraSystem implements GameSystem {
   private transitionStartFov: number;
   private gameplayFieldOfView: number;
   private readonly requests = new Map<symbol, InternalRequest>();
+  private readonly gameplayFocusRequests = new Map<
+    symbol,
+    InternalGameplayFocusRequest
+  >();
   private activeRequest: InternalRequest | undefined;
   private savedGameplayView: GameplayViewState | undefined;
   private restoringGameplayView: GameplayViewState | undefined;
@@ -328,6 +350,41 @@ export class ThirdPersonCameraSystem implements GameSystem {
     });
   }
 
+  /**
+   * Requests a gameplay-distance upper bound without taking renderer-camera
+   * ownership. Yaw, pitch, shoulder, obstruction, and the saved preference
+   * remain owned by this camera system.
+   */
+  public requestGameplayFocus(
+    request: GameplayCameraFocusRequest,
+  ): GameplayCameraFocusHandle {
+    if (request.owner.trim().length === 0) {
+      throw new CameraOwnershipError('Gameplay focus requires a named owner');
+    }
+    if (!Number.isFinite(request.maxDistance) || request.maxDistance <= 0) {
+      throw new CameraOwnershipError(
+        'Gameplay focus distance must be a positive finite number',
+      );
+    }
+    for (const [token, existing] of this.gameplayFocusRequests) {
+      if (existing.owner === request.owner) {
+        this.gameplayFocusRequests.delete(token);
+      }
+    }
+    const token = Symbol(request.owner);
+    this.gameplayFocusRequests.set(token, { ...request, token });
+    const isActive = (): boolean => this.gameplayFocusRequests.has(token);
+    return {
+      owner: request.owner,
+      get active(): boolean {
+        return isActive();
+      },
+      release: () => {
+        this.gameplayFocusRequests.delete(token);
+      },
+    };
+  }
+
   public getDebugSnapshot(): ThirdPersonCameraDebugSnapshot {
     const playerFocus = this.getPlayerFocus();
     const gameplayReturnPosition = this.savedGameplayView
@@ -336,6 +393,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
     const gameplayReturnTarget = this.savedGameplayView
       ? playerFocus.clone().add(this.savedGameplayView.targetOffset)
       : undefined;
+    const gameplayFocus = this.resolveGameplayFocus();
     return {
       active: this.initializedTarget,
       mode: this.mode,
@@ -345,6 +403,8 @@ export class ThirdPersonCameraSystem implements GameSystem {
       yaw: this.yaw,
       pitch: this.pitch,
       desiredDistance: this.preferences.current.followDistance,
+      gameplayFocusOwner: gameplayFocus?.owner,
+      gameplayFocusDistance: gameplayFocus?.maxDistance,
       actualDistance: this.actualDistance,
       distance: this.actualDistance,
       safetyMinDistance:
@@ -409,6 +469,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
   public dispose(): void {
     this.pointer.releasePointerLock?.();
     this.requests.clear();
+    this.gameplayFocusRequests.clear();
     this.activeRequest = undefined;
     this.savedGameplayView = undefined;
     this.restoringGameplayView = undefined;
@@ -428,18 +489,19 @@ export class ThirdPersonCameraSystem implements GameSystem {
     const switchShoulderRequested =
       acceptsInput && this.input?.wasPressed('cameraSwitchShoulder') === true;
     const restoreInterrupted =
-      acceptsInput &&
-      (pointerDelta.x !== 0 ||
-        pointerDelta.y !== 0 ||
-        pointerDelta.wheel !== 0 ||
-        this.input?.isDown('cameraOrbitLeft') === true ||
-        this.input?.isDown('cameraOrbitRight') === true ||
-        this.input?.isDown('cameraRecenter') === true ||
-        switchShoulderRequested ||
-        Math.hypot(
-          this.player.movement.velocity.x,
-          this.player.movement.velocity.z,
-        ) > 0.05);
+      this.gameplayFocusRequests.size > 0 ||
+      (acceptsInput &&
+        (pointerDelta.x !== 0 ||
+          pointerDelta.y !== 0 ||
+          pointerDelta.wheel !== 0 ||
+          this.input?.isDown('cameraOrbitLeft') === true ||
+          this.input?.isDown('cameraOrbitRight') === true ||
+          this.input?.isDown('cameraRecenter') === true ||
+          switchShoulderRequested ||
+          Math.hypot(
+            this.player.movement.velocity.x,
+            this.player.movement.velocity.z,
+          ) > 0.05));
     if (
       this.restoringGameplayView &&
       (this.transitionProgress < 1 || !restoreInterrupted)
@@ -532,8 +594,12 @@ export class ThirdPersonCameraSystem implements GameSystem {
 
     const reducedMotion =
       this.accessibility?.current.reducedCameraMotion === true;
+    const gameplayFocus = this.resolveGameplayFocus();
     const followDistance = clampZoom(
-      currentPreferences.followDistance,
+      Math.min(
+        currentPreferences.followDistance,
+        gameplayFocus?.maxDistance ?? Infinity,
+      ),
       this.config,
     );
     const shoulderOffset =
@@ -888,6 +954,12 @@ export class ThirdPersonCameraSystem implements GameSystem {
       position.y + this.config.targetHeight,
       position.z,
     );
+  }
+
+  private resolveGameplayFocus(): InternalGameplayFocusRequest | undefined {
+    return [...this.gameplayFocusRequests.values()].sort(
+      (a, b) => a.maxDistance - b.maxDistance,
+    )[0];
   }
 }
 

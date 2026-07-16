@@ -14,7 +14,7 @@ The model selector is assembled from the authoritative registries:
 
 - playable `casual` and `punk` definitions;
 - Animated Men `npc-worker`, `npc-hoodie`, and `npc-punk` definitions;
-- `debug-sparring-target`, including its external get-hit mappings.
+- `debug-sparring-target`, including its native Ultimate Modular Men get-hit mapping.
 
 Each switch calls `CharacterLoader.instantiate()`. Stale asynchronous results and the previous live instance are disposed. The mixer is stopped, detached from its `finished` listener, and uncached before the model instance is released. The emergency placeholder remains observable through the source and warning diagnostics.
 

@@ -10,6 +10,7 @@ import { evaluateActionTarget } from '../src/actions/ActionTarget';
 import type { LoadedCharacter } from '../src/characters/CharacterLoader';
 import { EventBus } from '../src/core/events';
 import { SparringTargetSystem } from '../src/debug/SparringTargetSystem';
+import { sparringTargetConfig } from '../src/debug/sparringTarget';
 import type { PlayerActionEvents } from '../src/player/PlayerControllerSystem';
 import { GameObjectWorld } from '../src/entities/GameObjectWorld';
 import { testDistrict } from '../src/world/levels/testDistrict';
@@ -47,14 +48,10 @@ function loader() {
         definition,
         root,
         animationClips: new Map([
-          ['idle', new AnimationClip('HumanArmature|Man_Idle', 1, [])],
+          ['idle', new AnimationClip('CharacterArmature|Idle', 1, [])],
           [
-            'getHitLeft',
+            'getHit',
             new AnimationClip('CharacterArmature|HitRecieve', 0.54, []),
-          ],
-          [
-            'getHitRight',
-            new AnimationClip('CharacterArmature|HitRecieve_2', 0.54, []),
           ],
         ]),
         discoveredClipNames: [],
@@ -74,26 +71,59 @@ function impact(
 }
 
 describe('action target foundation', () => {
-  it('evaluates horizontal range and facing deterministically', () => {
+  it('evaluates sweep, hurt cylinder, vertical overlap, facing, and state deterministically', () => {
+    const actor = {
+      position: { x: 0, y: 0, z: 0 },
+      forward: { x: 0, y: 0, z: 1 },
+    };
+    const target = (x: number, y: number, z: number) => ({
+      position: { x, y, z },
+      forward: { x: 0, y: 0, z: -1 },
+    });
     expect(
       evaluateActionTarget(
-        {
-          position: { x: 0, y: 0, z: 0 },
-          forward: { x: 0, y: 0, z: 1 },
-        },
-        {
-          position: { x: 0, y: 10, z: 2 },
-          forward: { x: 0, y: 0, z: -1 },
-        },
-        { maxDistance: 2.6, minimumFacingDot: 0.55 },
+        actor,
+        target(0, 0, 1.7),
+        'punchLeft',
+        sparringTargetConfig.volumes,
+        { enabled: true, targetBusy: false },
       ),
     ).toMatchObject({
-      distance: 2,
+      distance: 1.7,
       facingDot: 1,
-      inRange: true,
       facing: true,
+      horizontalContact: true,
+      verticalContact: true,
       eligible: true,
+      rejectionReason: undefined,
     });
+    expect(
+      evaluateActionTarget(
+        actor,
+        target(0, 4, 1.7),
+        'kickLeft',
+        sparringTargetConfig.volumes,
+        { enabled: true, targetBusy: false },
+      ).rejectionReason,
+    ).toBe('vertical-miss');
+    expect(
+      evaluateActionTarget(
+        actor,
+        target(0, 0, -1),
+        'punchRight',
+        sparringTargetConfig.volumes,
+        { enabled: true, targetBusy: false },
+      ).rejectionReason,
+    ).toBe('not-facing');
+    expect(
+      evaluateActionTarget(
+        actor,
+        target(0, 0, 1),
+        'kickRight',
+        sparringTargetConfig.volumes,
+        { enabled: true, targetBusy: true },
+      ).rejectionReason,
+    ).toBe('target-busy');
   });
 
   it('reacts once per eligible impact, reports feedback, and resets', async () => {
@@ -101,9 +131,24 @@ describe('action target foundation', () => {
     const objects = new GameObjectWorld(scene);
     const actor = player();
     const characterLoader = loader();
-    const system = new SparringTargetSystem(characterLoader, objects, actor, {
-      activeLevel: testDistrict.definition,
-    });
+    let gameplayAvailable = true;
+    const focusRelease = vi.fn();
+    const requestGameplayFocus = vi.fn(() => ({
+      active: true,
+      release: focusRelease,
+    }));
+    const system = new SparringTargetSystem(
+      characterLoader,
+      objects,
+      actor,
+      {
+        activeLevel: testDistrict.definition,
+      },
+      {
+        camera: { requestGameplayFocus },
+        gameplayAvailable: () => gameplayAvailable,
+      },
+    );
     await system.init();
 
     const initial = system.getSnapshot();
@@ -125,12 +170,26 @@ describe('action target foundation', () => {
 
     system.setEnabled(true);
     system.update({ delta: 0, elapsed: 0, frame: 0 });
+    expect(system.getSnapshot()).toMatchObject({
+      eligible: false,
+      rejectionReason: 'out-of-range',
+      engagement: { engaged: true, cameraRequested: true },
+    });
+    expect(requestGameplayFocus).toHaveBeenCalledWith({
+      owner: 'debug-sparring-target',
+      maxDistance: 4.1,
+    });
+    actor.setPose({
+      position: { x: 3.5, y: 0.15, z: 13.5 },
+      forward: { x: 0, y: 0, z: -1 },
+    });
     actor.events.emit('character-action:impact', impact('punchLeft', 2));
     expect(system.getSnapshot()).toMatchObject({
       enabled: true,
-      eligible: true,
+      eligible: false,
+      rejectionReason: 'target-busy',
       visualizationVisible: true,
-      animation: 'reaction:getHitRight',
+      animation: 'reaction:getHit',
       animationGraph: { phase: 'reaction' },
       busy: true,
       responseSequence: 1,
@@ -163,7 +222,7 @@ describe('action target foundation', () => {
       feedback: 'ignored-out-of-range',
     });
     actor.setPose({
-      position: { x: 3.5, y: 0.15, z: 14 },
+      position: { x: 3.5, y: 0.15, z: 13.5 },
       forward: { x: 0, y: 0, z: 1 },
     });
     actor.events.emit('character-action:impact', impact('kickRight', 5));
@@ -171,6 +230,26 @@ describe('action target foundation', () => {
       lastIgnoredReason: 'not-facing',
       feedback: 'ignored-not-facing',
     });
+    actor.setPose({
+      position: { x: 3.5, y: 4, z: 13.5 },
+      forward: { x: 0, y: 0, z: -1 },
+    });
+    actor.events.emit('character-action:impact', impact('punchRight', 6));
+    expect(system.getSnapshot()).toMatchObject({
+      lastIgnoredReason: 'vertical-miss',
+      feedback: 'ignored-vertical-miss',
+    });
+
+    gameplayAvailable = false;
+    system.update({ delta: 0, elapsed: 1, frame: 2 });
+    expect(system.getSnapshot().engagement).toMatchObject({
+      engaged: false,
+      gameplayAvailable: false,
+      cameraRequested: false,
+    });
+    expect(focusRelease).toHaveBeenCalledOnce();
+    actor.events.emit('character-action:impact', impact('kickLeft', 7));
+    expect(system.getSnapshot().lastIgnoredReason).toBe('game-state');
 
     system.reset();
     expect(system.getSnapshot()).toMatchObject({

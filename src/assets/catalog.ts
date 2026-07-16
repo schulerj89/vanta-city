@@ -28,19 +28,6 @@ export const assetManifest = {
     },
     metadata: { intendedUse: 'playable-character', embeddedAnimations: 24 },
   },
-  'animation.debug-sparring-hits': {
-    type: 'animation',
-    url: '/assets/characters/ultimate-modular-men/casual-character.glb',
-    attribution: {
-      title: 'Casual Character animations — Ultimate Modular Men Pack',
-      creator: 'Quaternius',
-      sourceUrl:
-        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
-      license: 'CC0 1.0 Universal',
-      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
-    },
-    metadata: { intendedUse: 'debug-sparring-hit-reactions' },
-  },
   'character.npc-worker.model': {
     type: 'model',
     url: '/assets/characters/animated-men/mack-long-sleeves.glb',

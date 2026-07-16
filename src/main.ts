@@ -260,6 +260,11 @@ async function bootstrap(): Promise<void> {
       objects,
       player,
       levelSystem,
+      {
+        camera,
+        gameplayAvailable: () =>
+          runtime.state.current === 'playing' && !input.isUiFocused(),
+      },
     );
   }
   let dialogueCamera:
@@ -761,7 +766,16 @@ function registerVerticalSliceDebug(
       group: sections.interactions,
       read: () => {
         const target = sparringTarget.getSnapshot();
-        return `${target.distance.toFixed(2)}m ${target.inRange ? 'in range' : 'out of range'} · ${target.facingDot.toFixed(2)} ${target.facing ? 'facing' : 'not facing'} · ${target.eligible ? 'eligible' : 'blocked'}`;
+        return `${target.distance.toFixed(2)}m · sweep ${target.horizontalSeparation.toFixed(2)}/${target.combinedRadius.toFixed(2)}m · vertical ${target.verticalOverlap.toFixed(2)}m · ${target.facingDot.toFixed(2)} facing · ${target.eligible ? 'contact' : (target.rejectionReason ?? 'blocked')}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'sparring-target.engagement',
+      label: 'Sparring target · camera engagement',
+      group: sections.interactions,
+      read: () => {
+        const engagement = sparringTarget.getSnapshot().engagement;
+        return `${engagement.engaged ? 'engaged' : 'disengaged'} · ${engagement.distance.toFixed(2)}/${engagement.distanceLimit.toFixed(2)}m · focus ${engagement.cameraRequested ? engagement.cameraDistance.toFixed(2) : 'off'}`;
       },
     }),
     debug.registerValue({

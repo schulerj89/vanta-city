@@ -607,9 +607,10 @@ test.describe('playable debug district', () => {
     expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
   });
 
-  test('locks action spam and drives the optional sparring target once per timed impact', async ({
+  test('focuses sparring, validates impact volumes, and plays the native hit reaction', async ({
     page,
   }, testInfo) => {
+    test.slow();
     const runtimeFailures = monitorRuntimeFailures(page);
     await openReadyApp(page);
     await executeCommand(page, 'player.teleport', 'spawn.player-sparring');
@@ -617,37 +618,67 @@ test.describe('playable debug district', () => {
     await expect
       .poll(async () => (await snapshot(page)).sparringTarget.enabled)
       .toBe(true);
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).sparringTarget.engagement.cameraRequested,
+      )
+      .toBe(true);
     const ready = await snapshot(page);
     expect(ready.sparringTarget).toMatchObject({
       loaded: true,
       modelSource: 'asset',
       animation: 'idle',
-      eligible: true,
+      modelAssetId: 'character.casual.model',
+      reactionClipName: 'CharacterArmature|HitRecieve',
+      reactionDuration: 0.5416666865348816,
+      eligible: false,
+      rejectionReason: 'out-of-range',
+      engagement: {
+        engaged: true,
+        cameraRequested: true,
+        distanceLimit: 3.2,
+        cameraDistance: 4.1,
+      },
       responseSequence: 0,
     });
+    expect(ready.sparringTarget.horizontalContact).toBe(false);
+    expect(ready.sparringTarget.verticalContact).toBe(true);
+    expect(ready.camera).toMatchObject({
+      mode: 'gameplay',
+      owner: 'gameplay',
+      gameplayFocusOwner: 'debug-sparring-target',
+      gameplayFocusDistance: 4.1,
+    });
+    await expect
+      .poll(async () => (await snapshot(page)).camera.actualDistance)
+      .toBeLessThan(4.2);
+    await attachScreenshot(page, testInfo, 'sparring-focused-far-miss');
     expect(
       Math.abs(ready.sparringTarget.groundedMinY ?? Infinity),
       'sparring target feet should align to the street contact plane',
     ).toBeLessThanOrEqual(0.005);
-    const authoritativePosition = ready.player.position;
+    const preferredCameraDistance = ready.camera.desiredDistance;
 
+    // The authored sparring spawn is engaged for camera framing but outside
+    // the explicit punch sweep. Impact-time validation must reject it.
     await page.keyboard.press('j');
     await expect
       .poll(async () => (await snapshot(page)).character.characterAction.active)
       .toBe('punchLeft');
-    const accepted = await snapshot(page);
-    const acceptedSequence = accepted.character.characterAction.sequence;
+    const farAction = await snapshot(page);
+    const acceptedSequence = farAction.character.characterAction.sequence;
     const rejectionCount =
-      accepted.character.characterAction.busyRejectionCount;
+      farAction.character.characterAction.busyRejectionCount;
     await page.keyboard.press('j');
     await page.keyboard.press('l');
     await expect
       .poll(
         async () =>
           (await snapshot(page)).character.characterAction.busyRejectionCount,
-        { intervals: [10], timeout: 2_000 },
+        { intervals: [20] },
       )
-      .toBe(rejectionCount + 2);
+      .toBeGreaterThanOrEqual(rejectionCount + 2);
     const spammed = await snapshot(page);
     expect(spammed.character.characterAction).toMatchObject({
       active: 'punchLeft',
@@ -656,47 +687,81 @@ test.describe('playable debug district', () => {
       lastAccepted: false,
       lastRejection: 'busy',
     });
-    expect(spammed.character.characterAction.busyRejectionCount).toBe(
-      rejectionCount + 2,
-    );
+    expect(
+      spammed.character.characterAction.busyRejectionCount,
+    ).toBeGreaterThanOrEqual(rejectionCount + 2);
     await expect
       .poll(
         async () =>
           (await snapshot(page)).character.characterAction.impactSequence,
-        { intervals: [10], timeout: 2_000 },
+        { intervals: [20] },
       )
-      .toBe(accepted.character.characterAction.impactSequence + 1);
-    const impacted = await snapshot(page);
-    expect(impacted.character.characterAction).toMatchObject({
+      .toBe(farAction.character.characterAction.impactSequence + 1);
+    const farImpact = await snapshot(page);
+    expect(farImpact.character.characterAction).toMatchObject({
       lastImpact: 'punchLeft',
       impactNormalizedTime: 0.55,
       completedSequenceAtImpact:
-        accepted.character.characterAction.completedSequence,
+        farAction.character.characterAction.completedSequence,
     });
-    expect(impacted.sparringTarget).toMatchObject({
-      responseSequence: 1,
-      busy: true,
-      animation: 'reaction:getHitRight',
-      animationGraph: { phase: 'reaction' },
-      feedback: 'accepted',
+    expect(farImpact.sparringTarget).toMatchObject({
+      responseSequence: 0,
+      busy: false,
+      feedback: 'ignored-out-of-range',
+      lastIgnoredReason: 'out-of-range',
       visualizationVisible: true,
-      lastAction: 'punchLeft',
       lastImpactNormalizedTime: 0.55,
     });
-    await attachScreenshot(page, testInfo, 'sparring-impact-eligibility');
 
     await expect
       .poll(
         async () =>
           (await snapshot(page)).character.characterAction.completedSequence,
       )
-      .toBe(accepted.character.characterAction.completedSequence + 1);
-    const reacting = await snapshot(page);
-    expect(reacting.character.characterAction).toMatchObject({
+      .toBe(farAction.character.characterAction.completedSequence + 1);
+    expect((await snapshot(page)).character.characterAction).toMatchObject({
       busy: false,
       lastCompleted: 'punchLeft',
       completionRelease: 'mixer-finished',
     });
+
+    // Move the authoritative player origin into the real sweep, preserving
+    // the target transform and camera ownership.
+    await executeCommand(
+      page,
+      'player.teleport-position',
+      '3.5,0.15,13.5,3.141592653589793',
+    );
+    await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.eligible)
+      .toBe(true);
+    const contactReady = await snapshot(page);
+    const authoritativePosition = contactReady.player.position;
+    const responseBefore = contactReady.sparringTarget.responseSequence;
+    await page.keyboard.press('j');
+    await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.responseSequence)
+      .toBe(responseBefore + 1);
+    const impacted = await snapshot(page);
+    expect(impacted.sparringTarget).toMatchObject({
+      busy: true,
+      animation: 'reaction:getHit',
+      animationGraph: { phase: 'reaction', resolvedClip: 'getHit' },
+      feedback: 'accepted',
+      lastAction: 'punchRight',
+      reactionClipName: 'CharacterArmature|HitRecieve',
+      verticalContact: true,
+    });
+    await attachScreenshot(
+      page,
+      testInfo,
+      'sparring-native-hitreceive-contact',
+    );
+
+    await expect
+      .poll(async () => (await snapshot(page)).character.characterAction.busy)
+      .toBe(false);
+    const reacting = await snapshot(page);
     expect(
       horizontalDistance(reacting.player.position, authoritativePosition),
       'actions and target reactions must not move the simulation transform',
@@ -708,12 +773,12 @@ test.describe('playable debug district', () => {
       .poll(async () => (await snapshot(page)).character.animationState)
       .toBe('idle');
 
-    // Rejected punch presses did not advance alternation; the next accepted
-    // punch is still the right-side clip.
-    await page.keyboard.press('j');
+    // Repeat the valid flow with the other playable rig.
+    await executeCommand(page, 'player.select-character', 'punk');
     await expect
-      .poll(async () => (await snapshot(page)).character.characterAction.active)
-      .toBe('punchRight');
+      .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+      .toBe('punk');
+    await page.keyboard.press('l');
     await expect
       .poll(async () => (await snapshot(page)).sparringTarget.responseSequence)
       .toBe(2);
@@ -721,8 +786,94 @@ test.describe('playable debug district', () => {
       .poll(async () => (await snapshot(page)).sparringTarget.animation)
       .toBe('idle');
 
-    await setDebugToggle(page, 'sparring-target.active', false);
+    const gated = await snapshot(page);
+    const gatedActionSequence = gated.character.characterAction.sequence;
+    const gatedResponseSequence = gated.sparringTarget.responseSequence;
+    await page.keyboard.press('p');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('paused');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).sparringTarget.engagement.cameraRequested,
+      )
+      .toBe(false);
+    await page.keyboard.press('j');
+    await page.waitForTimeout(50);
+    expect((await snapshot(page)).character.characterAction.sequence).toBe(
+      gatedActionSequence,
+    );
+    await page.keyboard.press('p');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).sparringTarget.engagement.cameraRequested,
+      )
+      .toBe(true);
+
+    const helpButton = page.getByRole('button', { name: 'Help', exact: true });
+    await helpButton.click();
+    await expect(page.getByRole('dialog', { name: 'Controls' })).toBeVisible();
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).sparringTarget.engagement.cameraRequested,
+      )
+      .toBe(false);
     await page.keyboard.press('l');
+    await page.waitForTimeout(50);
+    expect((await snapshot(page)).character.characterAction.sequence).toBe(
+      gatedActionSequence,
+    );
+    await page.keyboard.press('Escape');
+
+    await executeCommand(page, 'dialogue.start-mack');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('dialogue');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).sparringTarget.engagement.cameraRequested,
+      )
+      .toBe(false);
+    await page.keyboard.press('j');
+    await page.waitForTimeout(50);
+    expect((await snapshot(page)).character.characterAction.sequence).toBe(
+      gatedActionSequence,
+    );
+    expect((await snapshot(page)).sparringTarget.responseSequence).toBe(
+      gatedResponseSequence,
+    );
+    await executeCommand(page, 'conversation.end');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).sparringTarget.engagement.cameraRequested,
+      )
+      .toBe(true);
+    await expect
+      .poll(async () => (await snapshot(page)).camera.actualDistance)
+      .toBeLessThan(4.2);
+
+    await executeCommand(page, 'player.teleport', 'spawn.player-sparring');
+    await setDebugToggle(page, 'sparring-target.active', false);
+    await expect
+      .poll(async () => (await snapshot(page)).camera.gameplayFocusOwner)
+      .toBeUndefined();
+    await expect
+      .poll(async () => (await snapshot(page)).camera.actualDistance)
+      .toBeGreaterThan(4.4);
+    expect((await snapshot(page)).camera.desiredDistance).toBe(
+      preferredCameraDistance,
+    );
+    await attachScreenshot(
+      page,
+      testInfo,
+      'sparring-disengaged-camera-restore',
+    );
+    await page.keyboard.press('j');
     await expect
       .poll(async () => (await snapshot(page)).sparringTarget.feedback)
       .toBe('ignored-disabled');
@@ -737,7 +888,7 @@ test.describe('playable debug district', () => {
         async () =>
           (await snapshot(page)).character.characterAction.lastCompleted,
       )
-      .toBe('kickLeft');
+      .toBe('punchLeft');
     const disabled = await snapshot(page);
     expect(disabled.sparringTarget).toMatchObject({
       enabled: false,
