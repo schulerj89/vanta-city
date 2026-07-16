@@ -103,7 +103,7 @@ describe('CharacterPlayerVisual', () => {
     };
     const visual = new CharacterPlayerVisual(selection, loader);
     await visual.init();
-    const first = visual.object3d.children[0];
+    const first = visual.loadedModelRoot.children[0];
 
     selection.select('second');
     await Promise.resolve();
@@ -115,7 +115,7 @@ describe('CharacterPlayerVisual', () => {
       loadStatus: 'loaded',
     });
 
-    const beforeReload = visual.object3d.children[0];
+    const beforeReload = visual.loadedModelRoot.children[0];
     await visual.reload();
     expect(beforeReload?.parent).toBeNull();
     expect(loader.instantiate).toHaveBeenCalledTimes(3);

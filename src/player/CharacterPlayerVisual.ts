@@ -8,6 +8,11 @@ import type {
   PlayerMovementState,
 } from './PlayerMovement';
 import type { PlayerVisual } from './PlayerVisual';
+import {
+  calculateCharacterVisualAlignment,
+  measureModelBounds,
+} from '../characters/CharacterVisualAlignment';
+import type { CharacterAlignmentReport } from '../characters/CharacterVisualAlignment';
 
 export interface CharacterInstanceLoader {
   instantiate(definition: CharacterDefinition): Promise<LoadedCharacter>;
@@ -48,8 +53,11 @@ function formatVector(x: number, y: number, z: number, digits = 2): string {
 export class CharacterPlayerVisual implements PlayerVisual {
   public readonly id = 'player';
   public readonly object3d = new Group();
+  public readonly visualRoot = new Group();
+  public readonly loadedModelRoot = new Group();
 
   private loaded: LoadedCharacter | undefined;
+  private alignment: CharacterAlignmentReport | undefined;
   private unsubscribe: (() => void) | undefined;
   private loadVersion = 0;
   private loadStatus: CharacterVisualLoadStatus = 'idle';
@@ -62,7 +70,11 @@ export class CharacterPlayerVisual implements PlayerVisual {
     private readonly selection: CharacterSelectionReader,
     private readonly loader: CharacterInstanceLoader,
   ) {
-    this.object3d.name = 'Player character';
+    this.object3d.name = 'Player simulation transform';
+    this.visualRoot.name = 'Player visual root';
+    this.loadedModelRoot.name = 'Loaded character alignment root';
+    this.visualRoot.add(this.loadedModelRoot);
+    this.object3d.add(this.visualRoot);
   }
 
   public async init(): Promise<void> {
@@ -74,7 +86,7 @@ export class CharacterPlayerVisual implements PlayerVisual {
 
   public sync(movement: PlayerMovementSimulation, delta = 0): void {
     this.object3d.position.copy(movement.position);
-    this.object3d.rotation.y = movement.facingYaw;
+    this.visualRoot.rotation.y = movement.facingYaw;
     this.updateAnimation(movement.state, delta);
   }
 
@@ -105,8 +117,13 @@ export class CharacterPlayerVisual implements PlayerVisual {
       appliedRotation: root
         ? formatVector(root.rotation.x, root.rotation.y, root.rotation.z)
         : 'pending',
-      verticalOffset: root?.position.y ?? 0,
+      verticalOffset:
+        this.loadedModelRoot.position.y + (root?.position.y ?? 0),
     };
+  }
+
+  public getAlignmentReport(): CharacterAlignmentReport | undefined {
+    return this.alignment;
   }
 
   public dispose(): void {
@@ -115,6 +132,8 @@ export class CharacterPlayerVisual implements PlayerVisual {
     this.unsubscribe = undefined;
     this.disposeLoaded();
     this.loadStatus = 'idle';
+    this.alignment = undefined;
+    this.object3d.clear();
   }
 
   private async replace(definition: CharacterDefinition): Promise<void> {
@@ -125,10 +144,21 @@ export class CharacterPlayerVisual implements PlayerVisual {
       next.dispose();
       return;
     }
+    const bounds = measureModelBounds(next.root);
+    const calculated = calculateCharacterVisualAlignment(
+      { minY: bounds.min.y, maxY: bounds.max.y },
+      definition.transform?.verticalOffset,
+    );
     this.disposeLoaded();
     this.loaded = next;
     this.modelOffset.copy(next.root.position);
-    this.object3d.add(next.root);
+    this.loadedModelRoot.position.set(0, calculated.appliedVisualOffset, 0);
+    this.alignment = {
+      characterId: definition.id,
+      modelBounds: bounds,
+      ...calculated,
+    };
+    this.loadedModelRoot.add(next.root);
     this.loadStatus = next.source === 'asset' ? 'loaded' : 'fallback';
     this.animationState = 'static';
     if (next.animationClips.size > 0) {
@@ -170,6 +200,8 @@ export class CharacterPlayerVisual implements PlayerVisual {
     this.animationState = 'static';
     this.loaded?.dispose();
     this.loaded = undefined;
-    this.object3d.clear();
+    this.loadedModelRoot.clear();
+    this.loadedModelRoot.position.set(0, 0, 0);
+    this.alignment = undefined;
   }
 }

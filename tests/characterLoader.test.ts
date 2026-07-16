@@ -1,4 +1,4 @@
-import { AnimationClip, Group } from 'three';
+import { AnimationClip, Group, NumberKeyframeTrack } from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type {
   AssetLoadStatus,
@@ -7,6 +7,7 @@ import type {
 } from '../src/assets/AssetLoader';
 import {
   CharacterLoader,
+  removeSceneRootMotion,
   validateAnimationBindings,
 } from '../src/characters/CharacterLoader';
 import type { CharacterDefinition } from '../src/characters/CharacterDefinition';
@@ -80,7 +81,13 @@ describe('CharacterLoader', () => {
     const definition: CharacterDefinition = {
       ...character,
       animations: {},
-      transform: { scale: 2, rotation: [0, 1, 0], offset: [1, 2, 3] },
+      transform: {
+        scale: 2,
+        rotation: [0, 1, 0],
+        forwardAxisCorrection: 0.5,
+        verticalOffset: 0.25,
+        offset: [1, 2, 3],
+      },
     };
     const loader = new CharacterLoader(
       assetLoader({
@@ -98,8 +105,29 @@ describe('CharacterLoader', () => {
     expect(loaded.source).toBe('asset');
     expect(scene.scale.toArray()).toEqual([2, 2, 2]);
     expect(scene.position.toArray()).toEqual([1, 2, 3]);
-    expect(scene.rotation.y).toBe(1);
+    expect(scene.rotation.y).toBe(1.5);
+    // Alignment owns verticalOffset; it must not move the loaded model itself.
+    expect(scene.position.y).toBe(2);
     loaded.dispose();
     expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it('removes scene-root translation without stripping child animation', () => {
+    const root = new Group();
+    root.name = 'CharacterScene';
+    const clip = new AnimationClip('Walk', 1, [
+      new NumberKeyframeTrack('CharacterScene.position', [0, 1], [0, 1]),
+      new NumberKeyframeTrack('Hips.position', [0, 1], [0, 0.1]),
+    ]);
+
+    const protectedClips = removeSceneRootMotion(
+      new Map([['walk', clip]]),
+      root,
+    );
+
+    expect(
+      protectedClips.get('walk')?.tracks.map((track) => track.name),
+    ).toEqual(['Hips.position']);
+    expect(clip.tracks).toHaveLength(2);
   });
 });

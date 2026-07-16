@@ -1,7 +1,12 @@
 export interface CharacterTransform {
   readonly scale?: number | readonly [number, number, number];
-  /** Euler angles in radians, applied in XYZ order. */
+  /** Model-authoring rotation correction in radians, applied in XYZ order. */
   readonly rotation?: readonly [number, number, number];
+  /** Extra yaw correction when the authored forward axis is not local +Z. */
+  readonly forwardAxisCorrection?: number;
+  /** Overrides bounds-derived foot alignment. Use only for a known authored contact plane. */
+  readonly verticalOffset?: number;
+  /** Optional authored local translation. Its Y component is included in measured bounds. */
   readonly offset?: readonly [number, number, number];
 }
 
@@ -51,6 +56,12 @@ export function validateCharacterDefinitions(
       throw new Error(`Duplicate character id: ${definition.id}`);
     if (definition.displayName.trim().length === 0) {
       throw new Error(`Character "${definition.id}" needs a display name`);
+    }
+    const verticalOffset = definition.transform?.verticalOffset;
+    if (verticalOffset !== undefined && !Number.isFinite(verticalOffset)) {
+      throw new Error(
+        `Character "${definition.id}" has a non-finite vertical offset`,
+      );
     }
     ids.add(definition.id);
   }

@@ -130,10 +130,20 @@ async function bootstrap(): Promise<void> {
   let interactionDebug:
     | import('./interactions/InteractionDebugSystem').InteractionDebugSystem
     | undefined;
+  let characterAlignmentDebug:
+    | import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem
+    | undefined;
   if (development) {
     const { InteractionDebugSystem } =
       await import('./interactions/InteractionDebugSystem');
     interactionDebug = new InteractionDebugSystem(render.scene, interactions);
+    const { CharacterAlignmentDebugSystem } =
+      await import('./debug/CharacterAlignmentDebugSystem');
+    characterAlignmentDebug = new CharacterAlignmentDebugSystem(
+      render.scene,
+      player,
+      characterVisual,
+    );
   }
 
   const debugUnregister = development
@@ -146,6 +156,7 @@ async function bootstrap(): Promise<void> {
         characterSelection,
         characterVisual,
         interactionDebug,
+        characterAlignmentDebug,
       )
     : [];
 
@@ -161,6 +172,7 @@ async function bootstrap(): Promise<void> {
     .register(new InteractionPromptSystem(mount, interactions))
     .register(new CharacterSelectorSystem(mount, characterSelection, assets));
   if (interactionDebug) runtime.register(interactionDebug);
+  if (characterAlignmentDebug) runtime.register(characterAlignmentDebug);
   runtime.register(render);
   for (const system of development?.systems.slice(1) ?? []) {
     runtime.register(system);
@@ -189,6 +201,7 @@ function registerVerticalSliceDebug(
   characterSelection: CharacterSelectionStore,
   characterVisual: CharacterPlayerVisual,
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
+  characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
 ): (() => void)[] {
   const { debug, visualHelpers } = development;
   return [
@@ -239,6 +252,33 @@ function registerVerticalSliceDebug(
       label: 'Vertical offset',
       group: 'Player',
       read: () => characterVisual.getDebugSnapshot().verticalOffset,
+    }),
+    debug.registerValue({
+      id: 'player.character-height',
+      label: 'Character height',
+      group: 'Player',
+      read: () =>
+        formatOptionalNumber(
+          characterVisual.getAlignmentReport()?.computedHeight,
+        ),
+    }),
+    debug.registerValue({
+      id: 'player.character-min-y',
+      label: 'Character minimum Y',
+      group: 'Player',
+      read: () =>
+        formatOptionalNumber(
+          characterVisual.getAlignmentReport()?.computedMinimumY,
+        ),
+    }),
+    debug.registerValue({
+      id: 'player.character-visual-offset',
+      label: 'Applied visual offset',
+      group: 'Player',
+      read: () =>
+        formatOptionalNumber(
+          characterVisual.getAlignmentReport()?.appliedVisualOffset,
+        ),
     }),
     debug.registerValue({
       id: 'player.position',
@@ -356,7 +396,14 @@ function registerVerticalSliceDebug(
     ...(interactionDebug
       ? [visualHelpers.register('interactionRanges', interactionDebug)]
       : []),
+    ...(characterAlignmentDebug
+      ? [visualHelpers.register('characterAlignment', characterAlignmentDebug)]
+      : []),
   ];
+}
+
+function formatOptionalNumber(value: number | undefined): string {
+  return value === undefined ? 'loading' : value.toFixed(3);
 }
 
 function formatVector(value: {

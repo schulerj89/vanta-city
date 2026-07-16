@@ -40,10 +40,14 @@ export class CharacterLoader {
       );
       for (const warning of validation.warnings) this.warn(warning);
       applyTransform(model.scene, definition);
+      const animationClips = removeSceneRootMotion(
+        validation.clips,
+        model.scene,
+      );
       return {
         definition,
         root: model.scene,
-        animationClips: validation.clips,
+        animationClips,
         discoveredClipNames: validation.discoveredClipNames,
         source: 'asset',
         warnings: validation.warnings,
@@ -74,6 +78,31 @@ export class CharacterLoader {
       dispose,
     };
   }
+}
+
+/**
+ * Root motion is not a supported movement source. Remove only tracks that move
+ * the instantiated scene root; bone and child translations remain untouched.
+ */
+export function removeSceneRootMotion(
+  clips: ReadonlyMap<string, AnimationClip>,
+  sceneRoot: Object3D,
+): ReadonlyMap<string, AnimationClip> {
+  const protectedClips = new Map<string, AnimationClip>();
+  for (const [logicalName, source] of clips) {
+    const tracks = source.tracks.filter(
+      (track) => !isSceneRootPositionTrack(track.name, sceneRoot.name),
+    );
+    if (tracks.length === source.tracks.length) {
+      protectedClips.set(logicalName, source);
+      continue;
+    }
+    const clip = source.clone();
+    clip.tracks = tracks.map((track) => track.clone());
+    clip.resetDuration();
+    protectedClips.set(logicalName, clip);
+  }
+  return protectedClips;
 }
 
 export async function validateAnimationBindings(
@@ -131,7 +160,23 @@ function applyTransform(root: Object3D, definition: CharacterDefinition): void {
     root.scale.setScalar(transform.scale);
   else if (transform.scale) root.scale.set(...transform.scale);
   if (transform.rotation) root.rotation.set(...transform.rotation);
+  if (transform.forwardAxisCorrection) {
+    root.rotation.y += transform.forwardAxisCorrection;
+  }
   if (transform.offset) root.position.set(...transform.offset);
+  root.updateMatrixWorld(true);
+}
+
+function isSceneRootPositionTrack(
+  trackName: string,
+  rootName: string,
+): boolean {
+  if (trackName === '.position' || trackName === 'position') return true;
+  if (!rootName) return false;
+  return (
+    trackName === `${rootName}.position` ||
+    trackName === `${rootName}/.position`
+  );
 }
 
 function toMessage(error: unknown): string {

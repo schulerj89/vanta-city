@@ -36,7 +36,7 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 `AssetCatalog` validates logical IDs for models, animations, and textures. `GameAssetLoader` exposes cached source loads, progress/error status, and independent model instances. `ThreeAssetLoader` deduplicates concurrent and completed loads, evicts failed requests so they can be retried, and owns disposal of cached GPU resources. Cached glTF scenes are source data and must never be inserted into the live scene; consumers use `instantiateModel()` or `CharacterLoader.instantiate()` and dispose the returned instance. Gameplay code supplies asset IDs and must not scatter URLs through feature code.
 
-`CharacterDefinition` separates identity, display name, model/animation asset IDs, clip mappings, transform corrections, and optional attachment/material variation metadata. `CharacterSelectionStore` persists a small versioned preference in local storage and repairs stale IDs to the registered default. `CharacterPlayerVisual` consumes the read-only selection and `CharacterLoader`, replacing only presentation when selection changes, rejecting stale asynchronous results, driving logical animation from player movement state, and guaranteeing the primitive fallback path. The selector edits that same store in the playable district; it does not spawn a preview actor there.
+`CharacterDefinition` separates identity, display name, model/animation asset IDs, clip mappings, transform corrections, and optional attachment/material variation metadata. `CharacterSelectionStore` persists a small versioned preference in local storage and repairs stale IDs to the registered default. `CharacterPlayerVisual` consumes the read-only selection and `CharacterLoader`, replacing only presentation when selection changes, rejecting stale asynchronous results, driving logical animation from player movement state, and guaranteeing the primitive fallback path. Player presentation is nested under simulation, visual, and alignment roots; transformed bounds align the model's lowest visible point without moving the authoritative body, and bounds are recomputed only for a new model instance. The selector edits that same store in the playable district; it does not spawn a preview actor there.
 
 `RenderSystem` exclusively owns the Three.js renderer, scene, camera, canvas, resize observer, and render call. It caps device pixel ratio at two. Future third-person camera logic should update the injected camera from its own simulation system; it should not create another renderer or animation loop.
 
@@ -79,6 +79,7 @@ Parallel work may rely on these APIs:
 - `GameAssetLoader`, `AssetManifest`, and logical asset IDs
 - `AssetCatalog`, `AssetLoadStatus`, `ModelInstance`, and `CharacterLoader`
 - `CharacterDefinition`, `CharacterSelectionReader`, and `LoadedCharacter`
+- `calculateCharacterVisualAlignment` and `CharacterAlignmentReport`
 - `WorldPosition`, `WorldPose`, and `WorldPoseSource`
 - `PlayerControllerSystem.getPlayerPosition/getWorldPose`
 - `PlayerControllerSystem.teleport/reset/setControlEnabled/getDebugSnapshot`

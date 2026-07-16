@@ -8,6 +8,7 @@ export const standardVisualHelpers = {
   spawnPoints: 'Spawn points',
   interactionRanges: 'Interaction ranges',
   navigation: 'Navigation / movement',
+  characterAlignment: 'Character grounding / alignment',
 } as const;
 
 export type StandardVisualHelper = keyof typeof standardVisualHelpers;

@@ -20,7 +20,6 @@ export const characterDefinitions = validateCharacterDefinitions([
     transform: {
       scale: 1,
       rotation: [0, Math.PI, 0],
-      offset: [0, 0, 0],
     },
     materialVariations: [{ id: 'default', displayName: 'Default materials' }],
     fallback: 'placeholder',

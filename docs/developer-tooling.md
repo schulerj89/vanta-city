@@ -45,7 +45,7 @@ const unregisterCollision = visualHelpers.register('collision', {
 });
 ```
 
-Standard helper categories are `collision`, `triggers`, `entityIds`, `spawnPoints`, `interactionRanges`, and `navigation`. The navigation category is ready for a movement or navigation system to register later. Providers registered after a toggle is enabled immediately receive the current state.
+Standard helper categories are `collision`, `triggers`, `entityIds`, `spawnPoints`, `interactionRanges`, `navigation`, and `characterAlignment`. Character alignment shows the player simulation origin, collision body, visual root, measured model bounds, lowest point, and ground-contact plane. Providers registered after a toggle is enabled immediately receive the current state.
 
 The default development actions pause/resume, reload the current level, and toggle a helper by name. A mechanic may register `player.reset` or `player.teleport` through the same command API once it has a public reset or named-spawn operation. The foundation sandbox demonstrates both without coupling the panel to a player implementation.
 
