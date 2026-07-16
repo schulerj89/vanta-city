@@ -46,6 +46,7 @@ Quality and production commands:
 
 ```sh
 pnpm test
+pnpm test:e2e
 pnpm lint
 pnpm typecheck
 pnpm format:check
@@ -54,4 +55,4 @@ pnpm size
 pnpm preview
 ```
 
-See [Architecture](docs/architecture.md) and [First-wave integration decisions](docs/first-wave-integration.md) for design decisions, and [World levels](docs/world-levels.md) for level APIs and environment GLB registration.
+See [Architecture](docs/architecture.md) and [First-wave integration decisions](docs/first-wave-integration.md) for design decisions, [World levels](docs/world-levels.md) for level APIs and environment GLB registration, and [Browser smoke tests](docs/browser-smoke-tests.md) for deterministic playable-slice validation.

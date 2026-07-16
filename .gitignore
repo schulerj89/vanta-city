@@ -2,6 +2,9 @@ node_modules/
 dist/
 coverage/
 reports/character-validation.json
+playwright-report/
+test-results/
+blob-report/
 .DS_Store
 *.local
 

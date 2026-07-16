@@ -41,6 +41,13 @@ export class RuntimeErrorReporter implements GameSystem {
     console.error(`[Vanta City] ${scope}`, error);
   }
 
+  public getDebugSnapshot(): {
+    readonly count: number;
+    readonly last: string;
+  } {
+    return { count: this.errorCount, last: this.lastError };
+  }
+
   public dispose(): void {
     this.target.removeEventListener('error', this.onError);
     this.target.removeEventListener('unhandledrejection', this.onRejection);

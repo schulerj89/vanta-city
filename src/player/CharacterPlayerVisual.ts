@@ -1,4 +1,4 @@
-import { AnimationMixer, Group, Vector3 } from 'three';
+import { AnimationMixer, Box3, Group, Vector3 } from 'three';
 import type { AnimationAction } from 'three';
 import type { LoadedCharacter } from '../characters/CharacterLoader';
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
@@ -22,8 +22,26 @@ export type CharacterVisualLoadStatus =
   'idle' | 'loading' | 'loaded' | 'fallback';
 
 export interface CharacterPlayerVisualDebugSnapshot {
+  readonly selectedDefinitionId: string;
+  readonly loadedDefinitionId: string | undefined;
   readonly selectedCharacterId: string;
   readonly loadedVisualId: string | undefined;
+  readonly source: LoadedCharacter['source'] | 'loading';
+  readonly attached: boolean;
+  readonly bounds:
+    | {
+        readonly min: {
+          readonly x: number;
+          readonly y: number;
+          readonly z: number;
+        };
+        readonly max: {
+          readonly x: number;
+          readonly y: number;
+          readonly z: number;
+        };
+      }
+    | undefined;
   readonly fallbackActive: boolean;
   readonly loadStatus: CharacterVisualLoadStatus;
   readonly animationState: string;
@@ -47,6 +65,27 @@ function logicalAnimationFor(state: PlayerMovementState): string {
 
 function formatVector(x: number, y: number, z: number, digits = 2): string {
   return `${x.toFixed(digits)}, ${y.toFixed(digits)}, ${z.toFixed(digits)}`;
+}
+
+export interface CharacterVisualDebugSnapshot {
+  readonly selectedDefinitionId: string;
+  readonly loadedDefinitionId: string | undefined;
+  readonly source: LoadedCharacter['source'] | 'loading';
+  readonly attached: boolean;
+  readonly bounds:
+    | {
+        readonly min: {
+          readonly x: number;
+          readonly y: number;
+          readonly z: number;
+        };
+        readonly max: {
+          readonly x: number;
+          readonly y: number;
+          readonly z: number;
+        };
+      }
+    | undefined;
 }
 
 /** Player presentation backed by the selected character with guaranteed fallback. */
@@ -100,7 +139,11 @@ export class CharacterPlayerVisual implements PlayerVisual {
 
   public getDebugSnapshot(): CharacterPlayerVisualDebugSnapshot {
     const root = this.loaded?.root;
+    this.object3d.updateWorldMatrix(true, true);
+    const bounds = new Box3().setFromObject(this.object3d);
     return {
+      selectedDefinitionId: this.selection.getSelectedId(),
+      loadedDefinitionId: this.loaded?.definition.id,
       selectedCharacterId: this.selection.getSelectedId(),
       loadedVisualId:
         this.loaded === undefined
@@ -108,6 +151,14 @@ export class CharacterPlayerVisual implements PlayerVisual {
           : this.loaded.source === 'asset'
             ? this.loaded.definition.id
             : 'placeholder',
+      source: this.source,
+      attached: root?.parent === this.loadedModelRoot,
+      bounds: bounds.isEmpty()
+        ? undefined
+        : {
+            min: { x: bounds.min.x, y: bounds.min.y, z: bounds.min.z },
+            max: { x: bounds.max.x, y: bounds.max.y, z: bounds.max.z },
+          },
       fallbackActive: this.loaded?.source === 'placeholder',
       loadStatus: this.loadStatus,
       animationState: this.animationState,
@@ -124,7 +175,6 @@ export class CharacterPlayerVisual implements PlayerVisual {
   public getAlignmentReport(): CharacterAlignmentReport | undefined {
     return this.alignment;
   }
-
   public dispose(): void {
     this.loadVersion += 1;
     this.unsubscribe?.();

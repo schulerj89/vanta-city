@@ -47,6 +47,24 @@ export const defaultThirdPersonCameraConfig: ThirdPersonCameraConfig = {
   teleportSnapDistance: 12,
 };
 
+export interface ThirdPersonCameraDebugSnapshot {
+  readonly active: boolean;
+  readonly position: {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+  };
+  readonly target: {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+  };
+  readonly distance: number;
+  readonly safetyMinDistance: number;
+  readonly safetyMaxDistance: number;
+  readonly obstructed: boolean;
+}
+
 export class ThirdPersonCameraSystem implements GameSystem {
   public readonly id = 'third-person-camera';
   public readonly updateMode = 'always' as const;
@@ -84,6 +102,23 @@ export class ThirdPersonCameraSystem implements GameSystem {
 
   public getYaw(): number {
     return this.yaw;
+  }
+
+  public getDebugSnapshot(): ThirdPersonCameraDebugSnapshot {
+    return {
+      active: this.initializedTarget,
+      position: {
+        x: this.camera.position.x,
+        y: this.camera.position.y,
+        z: this.camera.position.z,
+      },
+      target: { x: this.target.x, y: this.target.y, z: this.target.z },
+      distance: this.camera.position.distanceTo(this.target),
+      safetyMinDistance:
+        this.config.collisionRadius + this.config.collisionPadding,
+      safetyMaxDistance: this.config.maxDistance,
+      obstructed: this.obstructed,
+    };
   }
 
   public update(time: FrameTime): void {

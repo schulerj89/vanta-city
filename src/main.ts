@@ -39,21 +39,28 @@ async function bootstrap(): Promise<void> {
     new AssetCatalog({ ...assetManifest, ...levels.assetManifest }),
   );
   const runtime = new GameRuntime(input);
+  const developmentParameters = import.meta.env.DEV
+    ? new URLSearchParams(window.location.search)
+    : undefined;
   let development:
     import('./debug/setupDevelopmentTools').DevelopmentTools | undefined;
+  let browserTestModule: typeof import('./debug/BrowserTestBridge') | undefined;
 
   if (import.meta.env.DEV) {
     const { setupDevelopmentTools } =
       await import('./debug/setupDevelopmentTools');
-    const parameters = new URLSearchParams(window.location.search);
     development = setupDevelopmentTools(
       mount,
       runtime,
       input,
-      parameters.get('debug') === '1',
+      developmentParameters?.get('debug') === '1',
     );
 
-    const sandboxId = parameters.get('sandbox');
+    if (developmentParameters?.get('e2e') === '1') {
+      browserTestModule = await import('./debug/BrowserTestBridge');
+    }
+
+    const sandboxId = developmentParameters?.get('sandbox');
     if (sandboxId) {
       const { loadSandboxScenario } =
         await import('./sandbox/loadSandboxScenario');
@@ -87,8 +94,14 @@ async function bootstrap(): Promise<void> {
   const worldCollision = new WorldCollisionSystem(collision, worldEvents);
   const spawn = findSpawn(testDistrict.definition);
   const objects = new GameObjectWorld(render.scene);
+  const availableCharacters = browserTestModule
+    ? [
+        ...characterDefinitions,
+        ...browserTestModule.browserTestCharacterDefinitions,
+      ]
+    : characterDefinitions;
   const characterSelection = new CharacterSelectionStore(
-    characterDefinitions,
+    availableCharacters,
     'vanta-placeholder',
     window.localStorage,
   );
@@ -186,7 +199,25 @@ async function bootstrap(): Promise<void> {
     throw error;
   }
 
+  const disposeBrowserTestBridge =
+    browserTestModule && development
+      ? browserTestModule.installBrowserTestBridge({
+          runtime,
+          renderer: render.renderer,
+          level: levelSystem,
+          collision,
+          player,
+          camera,
+          interactions,
+          characterSelection,
+          characterVisual,
+          debug: development.debug,
+          errors: development.errors,
+        })
+      : undefined;
+
   installHotDisposal(runtime, assets, development, () => {
+    disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
     worldEvents.clear();
   });

@@ -131,6 +131,10 @@ export class StaticCollisionWorld implements CollisionWorld {
     this.ramps.clear();
   }
 
+  public getColliderCount(): number {
+    return this.boxes.size + this.ramps.size;
+  }
+
   public moveCharacter(
     position: Readonly<Vector3>,
     displacement: Readonly<Vector3>,
