@@ -14,9 +14,9 @@ pnpm install
 pnpm dev
 ```
 
-Open the URL printed by Vite. The Foundry test district uses only generated primitives, so no external assets are required. Press `Escape` or `P` to pause/resume and the backtick key to open the developer panel. Its toggles expose collision, spawn, trigger, and interaction helpers.
+Open the URL printed by Vite. The Foundry test district and its two CC0 playable character GLBs are fully local. Press `Escape` or `P` to pause/resume and the backtick key to open the developer panel. Its toggles expose collision, spawn, trigger, and interaction helpers.
 
-The selected session-persistent character is used by the playable player. In development, use the `Select character` command to change it; missing external files automatically fall back to the primitive character. See [Character assets and registration](docs/characters.md).
+The selected session-persistent character is used by the playable player. Choose Casual or Punk in the picker; a generated primitive remains available only as an emergency load-failure fallback. See [Character assets and registration](docs/characters.md).
 
 The character picker opens before entering the district and can be reopened with `K`. It supports keyboard and mouse navigation, local portrait assets, generated portrait fallbacks, and unavailable-model states. See [Character picker](docs/character-picker.md).
 
@@ -32,7 +32,7 @@ The character picker opens before entering the district and can be reopened with
 - `Escape` or `P`: pause/resume
 - Backtick: toggle movement and camera diagnostics
 
-The scene guarantees a generated placeholder and requires no character asset. See
+The scene keeps an emergency generated placeholder behind the two local character assets. See
 [Player controller](docs/player-controller.md) for tuning and integration APIs.
 
 Development builds can open the developer panel with the backtick key or `?debug=1`; production builds do not initialize the panel or its commands.

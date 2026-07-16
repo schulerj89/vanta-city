@@ -22,6 +22,7 @@ export const browserTestCharacterDefinitions = [
     id: 'test-invalid-asset',
     displayName: 'Invalid asset smoke fixture',
     modelAssetId: 'test.missing-character.model',
+    pickerVisible: false,
     fallback: 'placeholder',
   },
 ] as const satisfies readonly CharacterDefinition[];

@@ -37,6 +37,7 @@ export class CharacterPickerSystem implements GameSystem {
   public readonly updateMode = 'always' as const;
 
   private readonly element = document.createElement('section');
+  private readonly definitions: readonly CharacterDefinition[];
   private readonly availability = new Map<string, AvailabilityEntry>();
   private readonly portraitStatus = new Map<
     string,
@@ -60,9 +61,16 @@ export class CharacterPickerSystem implements GameSystem {
     private readonly catalog: AssetCatalog,
     private readonly availabilityProbe: CharacterAvailabilityProbe,
   ) {
-    this.focusedId = selection.getSelectedId();
-    this.selectedId = selection.getSelectedId();
-    for (const definition of selection.definitions) {
+    this.definitions = selection.definitions.filter(
+      ({ pickerVisible }) => pickerVisible !== false,
+    );
+    const initial =
+      this.definitions.find(({ id }) => id === selection.getSelectedId()) ??
+      this.definitions[0];
+    if (!initial) throw new Error('Character picker needs a visible character');
+    this.focusedId = initial.id;
+    this.selectedId = initial.id;
+    for (const definition of this.definitions) {
       this.availability.set(definition.id, { status: 'checking' });
       this.portraitStatus.set(definition.id, 'unknown');
     }
@@ -80,8 +88,11 @@ export class CharacterPickerSystem implements GameSystem {
     this.mount.append(this.element);
     this.unsubscribeSelection = this.selection.onSelectionChanged(() => {
       if (!this.openState) {
-        this.focusedId = this.selection.getSelectedId();
-        this.selectedId = this.selection.getSelectedId();
+        const selected = this.definitionById(this.selection.getSelectedId());
+        if (selected) {
+          this.focusedId = selected.id;
+          this.selectedId = selected.id;
+        }
       }
       if (this.openState) this.render();
     });
@@ -106,8 +117,9 @@ export class CharacterPickerSystem implements GameSystem {
     const current = this.state.current;
     if (current === 'booting' || current === 'character-select') return;
     this.returnState = current;
-    this.focusedId = this.selection.getSelectedId();
-    this.selectedId = this.selection.getSelectedId();
+    const selected = this.definitionById(this.selection.getSelectedId());
+    this.focusedId = selected?.id ?? this.definitions[0]!.id;
+    this.selectedId = this.focusedId;
     this.openState = true;
     this.element.hidden = false;
     this.mount.classList.add('character-picker-open');
@@ -156,7 +168,7 @@ export class CharacterPickerSystem implements GameSystem {
     const entries = [...this.availability.entries()];
     return {
       open: this.openState,
-      registeredCharacterIds: this.selection.definitions.map(({ id }) => id),
+      registeredCharacterIds: this.definitions.map(({ id }) => id),
       availableCharacterIds: entries
         .filter(([, value]) => value.status === 'available')
         .map(([id]) => id),
@@ -185,7 +197,7 @@ export class CharacterPickerSystem implements GameSystem {
   }
 
   private startAvailabilityChecks(): void {
-    for (const definition of this.selection.definitions) {
+    for (const definition of this.definitions) {
       void this.availabilityProbe.check(definition).then((result) => {
         if (this.disposed) return;
         this.applyAvailability(definition.id, result);
@@ -212,7 +224,7 @@ export class CharacterPickerSystem implements GameSystem {
   }
 
   private moveFocus(step: number): void {
-    const definitions = this.selection.definitions;
+    const definitions = this.definitions;
     const index = definitions.findIndex(({ id }) => id === this.focusedId);
     const nextIndex =
       (index + (step % definitions.length) + definitions.length) %
@@ -260,14 +272,14 @@ export class CharacterPickerSystem implements GameSystem {
     const heading = document.createElement('h2');
     heading.textContent = 'Registered characters';
     const count = document.createElement('span');
-    count.textContent = `${this.selection.definitions.length} options`;
+    count.textContent = `${this.definitions.length} options`;
     browserHeading.append(heading, count);
 
     const grid = document.createElement('div');
     grid.className = 'character-picker__grid';
     grid.setAttribute('role', 'group');
     grid.setAttribute('aria-label', 'Registered characters');
-    for (const definition of this.selection.definitions) {
+    for (const definition of this.definitions) {
       grid.append(this.createCard(definition));
     }
 
@@ -509,9 +521,7 @@ export class CharacterPickerSystem implements GameSystem {
   }
 
   private definitionById(id: string): CharacterDefinition | undefined {
-    return this.selection.definitions.find(
-      (definition) => definition.id === id,
-    );
+    return this.definitions.find((definition) => definition.id === id);
   }
 
   private isAvailable(id: string): boolean {

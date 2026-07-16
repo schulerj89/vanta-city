@@ -41,6 +41,7 @@ test.describe('playable debug district', () => {
     expect(Math.abs(state.player.velocity.y)).toBeLessThan(0.05);
 
     expect(state.character.loadedDefinitionId).toBe(state.selectedCharacterId);
+    expect(state.character.source).toBe('asset');
     expect(state.character.attached).toBe(true);
     expect(
       state.character.bounds,
@@ -50,6 +51,9 @@ test.describe('playable debug district', () => {
     if (!bounds) throw new Error('Character bounds were unavailable');
     expectFiniteVector(bounds.min, 'character bounds minimum');
     expectFiniteVector(bounds.max, 'character bounds maximum');
+    expect(bounds.max.y - bounds.min.y).toBeLessThanOrEqual(1.82);
+    expect(bounds.max.x - bounds.min.x).toBeLessThanOrEqual(0.78);
+    expect(bounds.max.z - bounds.min.z).toBeLessThanOrEqual(0.78);
     expect(
       Math.abs(bounds.min.y - state.player.position.y),
       'visual bottom should align with the player ground-contact plane',
@@ -113,6 +117,26 @@ test.describe('playable debug district', () => {
       )
       .toBeGreaterThan(0.5);
     await page.keyboard.up('w');
+    await expect
+      .poll(async () => (await snapshot(page)).character.animationState)
+      .toBe('idle');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.down('w');
+    await expect
+      .poll(async () => (await snapshot(page)).character.animationState)
+      .toBe('run');
+    await page.keyboard.up('w');
+    await page.keyboard.up('Shift');
+    await expect
+      .poll(async () => (await snapshot(page)).character.animationState)
+      .toBe('idle');
+    const afterRun = await snapshot(page);
+    expect(afterRun.character.bounds).toBeDefined();
+    expect(
+      Math.abs(afterRun.character.bounds!.min.y - afterRun.player.position.y),
+      'animation root translation must not pull the visual off the ground plane',
+    ).toBeLessThanOrEqual(0.2);
     await expect
       .poll(
         async () => horizontalSpeed((await snapshot(page)).player.velocity),
@@ -185,20 +209,21 @@ test.describe('playable debug district', () => {
     expect(fallback.runtimeErrors.count, fallback.runtimeErrors.last).toBe(0);
     await attachScreenshot(page, testInfo, 'character-fallback-debug');
 
-    await executeCommand(page, 'player.select-character', 'vanta-placeholder');
+    await executeCommand(page, 'player.select-character', 'casual');
     await expect
       .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
-      .toBe('vanta-placeholder');
+      .toBe('casual');
     await page.reload();
     await waitForReadyState(page);
     const reloaded = await snapshot(page);
-    expect(reloaded.selectedCharacterId).toBe('vanta-placeholder');
-    expect(reloaded.character.loadedDefinitionId).toBe('vanta-placeholder');
+    expect(reloaded.selectedCharacterId).toBe('casual');
+    expect(reloaded.character.loadedDefinitionId).toBe('casual');
+    expect(reloaded.character.source).toBe('asset');
   });
 
   test('opens the picker in-place and supports keyboard-only confirmation', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await openReadyApp(page);
     await executeCommand(page, 'ui.open-character-picker');
     await expect
@@ -206,14 +231,16 @@ test.describe('playable debug district', () => {
       .toBe(true);
     const opened = await snapshot(page);
     expect(opened.gameState).toBe('character-select');
-    expect(opened.picker.registeredCharacterIds).toEqual(
-      expect.arrayContaining(['vanta-placeholder', 'modular-man']),
+    expect(opened.picker.registeredCharacterIds).toEqual(['casual', 'punk']);
+    expect(opened.picker.availableCharacterIds).toEqual(
+      expect.arrayContaining(['casual', 'punk']),
     );
+    await attachScreenshot(page, testInfo, 'two-character-picker');
 
     await page.keyboard.press('ArrowRight');
     await expect
       .poll(async () => (await snapshot(page)).picker.focusedCharacterId)
-      .toBe('modular-man');
+      .toBe('punk');
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('Space');
     await page.keyboard.press('Enter');
@@ -222,7 +249,7 @@ test.describe('playable debug district', () => {
       .toBe(false);
     const confirmed = await snapshot(page);
     expect(confirmed.gameState).toBe('playing');
-    expect(confirmed.picker.confirmedCharacterId).toBe('vanta-placeholder');
+    expect(confirmed.picker.confirmedCharacterId).toBe('casual');
 
     await page.keyboard.press('k');
     await expect

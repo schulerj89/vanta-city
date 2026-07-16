@@ -19,4 +19,4 @@ Missing local GLBs remain selectable when a definition explicitly declares the g
 
 ## Current limitations
 
-The optional Quaternius GLBs and portrait WebP files are not committed. Mack, Nox, Raze, and Modular Man therefore use generated character visuals; portrait image failures resolve to deterministic initials. Conversation framing currently uses the camera system's generated two-shot rather than an authored per-conversation shot list.
+The optional NPC-specific Quaternius GLBs and portrait WebP files are not committed, so Mack, Nox, and Raze use generated character visuals and portrait image failures resolve to deterministic initials. The two playable Quaternius GLBs, Casual and Punk, are committed and load as real models. Conversation framing currently uses the camera system's generated two-shot rather than an authored per-conversation shot list.

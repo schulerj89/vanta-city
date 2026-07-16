@@ -2,19 +2,31 @@ import { AssetCatalog } from './AssetCatalog';
 import type { AssetManifest } from './AssetCatalog';
 
 export const assetManifest = {
-  'character.modular-man.model': {
+  'character.casual.model': {
     type: 'model',
-    url: '/assets/characters/ultimate-modular-men/model.glb',
-    optional: true,
+    url: '/assets/characters/ultimate-modular-men/casual-character.glb',
     attribution: {
-      title: 'Ultimate Modular Men Pack',
+      title: 'Casual Character — Ultimate Modular Men Pack',
       creator: 'Quaternius',
       sourceUrl:
         'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
       license: 'CC0 1.0 Universal',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     },
-    metadata: { intendedUse: 'playable-character' },
+    metadata: { intendedUse: 'playable-character', embeddedAnimations: 24 },
+  },
+  'character.punk.model': {
+    type: 'model',
+    url: '/assets/characters/ultimate-modular-men/punk-character.glb',
+    attribution: {
+      title: 'Punk — Ultimate Modular Men Pack',
+      creator: 'Quaternius',
+      sourceUrl:
+        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: { intendedUse: 'playable-character', embeddedAnimations: 24 },
   },
   'character.npc-worker.model': {
     type: 'model',

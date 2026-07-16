@@ -18,6 +18,36 @@ const definitions = [
 ] as const satisfies readonly CharacterDefinition[];
 
 describe('CharacterPickerSystem', () => {
+  it('excludes internal load fixtures from the choice surface', async () => {
+    const entries = [
+      ...definitions,
+      {
+        id: 'internal-fixture',
+        displayName: 'Internal fixture',
+        pickerVisible: false,
+        fallback: 'placeholder',
+      },
+    ] as const satisfies readonly CharacterDefinition[];
+    const harness = createHarness(
+      {
+        first: { status: 'available' },
+        second: { status: 'available' },
+      },
+      entries,
+    );
+    harness.picker.open();
+    await waitForAvailability(harness.picker, 2);
+
+    expect(harness.picker.getSnapshot().registeredCharacterIds).toEqual([
+      'first',
+      'second',
+    ]);
+    expect(
+      harness.mount.querySelectorAll('[data-action="character"]'),
+    ).toHaveLength(2);
+    harness.dispose();
+  });
+
   it('renders every registered character and exposes unavailable state', async () => {
     const harness = createHarness({
       first: { status: 'available' },

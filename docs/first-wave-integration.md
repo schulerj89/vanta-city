@@ -8,7 +8,7 @@ The first-wave feature branches all began at the same foundation commit and were
 - `StaticColliderDefinition` is the authored collision contract. `WorldCollisionSystem` listens to level load/unload facts and rebuilds the game-owned `StaticCollisionWorld`; player and camera share that query backend.
 - `WorldPosition`, `WorldPose`, and `WorldPoseSource` replace the separate player-transform and interaction-location abstractions. `PlayerControllerSystem` supplies the pose directly to `InteractionSystem`.
 - The default player spawn comes from the loaded level definition. Reset and debug teleport use the same named spawn API.
-- `CharacterPlayerVisual` is presentation owned by the player controller. It loads the selected character through `CharacterLoader` and retains the placeholder guarantee when licensed files are absent.
+- `CharacterPlayerVisual` is presentation owned by the player controller. It loads the selected local character through `CharacterLoader` and retains the emergency placeholder guarantee if a licensed file becomes unreadable.
 - Level interaction markers are metadata, while `InteractionSystem` owns availability, ranking, input, execution, cancellation, and events. The test garage-door interaction is registered from its named level location.
 - `GameRuntime` and `GameStateMachine` remain the only pause/state authorities. Simulation stops only while paused; player and camera input additionally require `playing`.
 - The production bootstrap contains no developer commands. Development dynamically imports one generic `DebugRegistry`/panel; mechanics contribute public values, commands, and visibility callbacks.

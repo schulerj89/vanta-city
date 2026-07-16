@@ -11,18 +11,17 @@ The debug district uses one player simulation and one replaceable presentation p
 5. The loaded scene is attached beneath the existing player transform. The controller continues to own movement, collision, spawning, facing, and camera tracking.
 6. When a newer selection wins, the old `LoadedCharacter` is disposed. A monotonically increasing request version disposes late results instead of attaching them.
 
-The placeholder is the selected visual for definitions without a model asset and the guaranteed fallback for missing or failed assets. While a replacement loads, the current visual remains attached and the selector/debug panel reports loading. Reloading or changing a character never recreates `GameRuntime` or `PlayerControllerSystem`.
+Casual and Punk are the only selectable definitions, and both use committed local GLBs. The generated placeholder is not registered in character selection; `CharacterLoader` creates it only if a real model fails to load. While a replacement loads, the current visual remains attached and the selector/debug panel reports loading. Reloading or changing a character never recreates `GameRuntime` or `PlayerControllerSystem`.
 
 `CharacterPlayerVisual` maps player movement to logical `idle`, `walk`, and `run` clips. Airborne and landing states use idle when available. A missing requested clip falls back to idle, then to a valid static pose. `CharacterLoader` reports every missing authored mapping. After each mixer update the definition's root offset is restored, so authored root-motion tracks cannot translate the visual away from the simulation transform.
 
 With `?debug=1`, the Player group reports selected and loaded IDs, fallback state, load status, logical animation, scale, rotation, and vertical offset. **Cycle character** and **Reload character** exercise replacement without restarting the district.
 
-## Install the intended character pack
+## Included character pack subset
 
-1. Download the GLB/GLTF version of the [Ultimate Modular Men Pack](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ).
-2. Choose or assemble the desired model and export a browser-ready GLB as `public/assets/characters/ultimate-modular-men/model.glb`.
-3. Keep embedded animation names intact, or update the logical clip mappings in `src/characters/characters.ts`.
-4. Run the game with `?debug=1` and choose **Modular Man** or execute **Select character** with `modular-man`. The panel reports the complete visual state; missing models or clips produce development warnings without stopping the game.
+The repository includes only `Casual Character.glb` and `Punk.glb` from the [Ultimate Modular Men Pack](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ), renamed to stable local URLs. Both are self-contained glTF 2.0 binaries with embedded buffers, color materials, skeletons, and 24 clips; they contain no images or external resource URLs. The adjacent asset README records the download archive, hashes, and CC0 verification.
+
+Logical `idle`, `walk`, and `run` bindings resolve the exact embedded names `CharacterArmature|Idle`, `CharacterArmature|Walk`, and `CharacterArmature|Run` and are required. The asset validator also exercises three clone/disposal preview cycles for each character.
 
 The local asset directory is ignored. Do not commit downloaded files until their exact license and redistribution status have been reviewed.
 
@@ -34,7 +33,6 @@ Add one entry to `assetManifest` in `src/assets/catalog.ts`:
 'character.example.model': {
   type: 'model',
   url: '/assets/characters/example/model.glb',
-  optional: true,
   attribution: { title: 'Example', creator: 'Artist', license: 'License' },
 },
 ```
@@ -54,7 +52,7 @@ Add a `CharacterDefinition` to `src/characters/characters.ts`:
     idle: { clipNames: ['Idle'], required: false },
     walk: { clipNames: ['Walk', 'Walking'], required: false },
   },
-  transform: { scale: 1, rotation: [0, Math.PI, 0] },
+  transform: { scale: 0.98, rotation: [0, Math.PI, 0] },
   fallback: 'placeholder',
 }
 ```
@@ -85,7 +83,9 @@ transform: {
 
 After the model and its corrections are fully loaded, the player visual measures its visible `Box3` once. With no explicit override, it applies `-bounds.min.y` to the dedicated alignment root, placing the lowest transformed point on the visual ground-contact plane. Bounds are measured again only when character selection produces a new model instance. Scale and rotation therefore affect the result correctly, and reset/teleport never accumulate alignment offsets.
 
-The current generated placeholder measures approximately `2.280` units tall after its `0.6` scale, with minimum Y `-0.342` and automatic offset `+0.342`. Because the optional Modular Man GLB is not committed, its runtime fallback currently measures `3.800` units tall, minimum Y `-0.570`, and automatic offset `+0.570`; the installed GLB reports its own transformed values in the debug panel at runtime.
+The authored Casual model is `1.8235` units tall and uses scale `0.98`, producing a `1.7869`-unit visual with approximately `+0.0016` automatic foot offset. Punk is `1.9362` units tall and uses scale `0.92`, producing a `1.7813`-unit visual with approximately `+0.0040` automatic foot offset. Both therefore fit the player's `1.8`-unit-high, `0.38`-radius capsule while their transformed footprints remain within its `0.76`-unit diameter. Both use yaw rotation `[0, π, 0]` to match the player's local `+Z` facing convention; no manual vertical offset is needed.
+
+The generated emergency placeholder remains covered by the same automatic bounds alignment path, but it is never presented as a picker choice.
 
 ## Player transform hierarchy
 

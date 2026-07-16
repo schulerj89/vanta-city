@@ -1,13 +1,22 @@
 # Asset attributions and licenses
 
-## Intended external character source
+| Runtime asset    | Creator    | Source                                                                                      | License                                                                 | Repository status                  |
+| ---------------- | ---------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------- |
+| Casual Character | Quaternius | [Ultimate Modular Men Pack](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) | Included as `casual-character.glb` |
+| Punk             | Quaternius | [Ultimate Modular Men Pack](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) | Included as `punk-character.glb`   |
 
-| Asset                     | Creator    | Source                                                                       | License                                                                                         | Repository status |
-| ------------------------- | ---------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------- |
-| Ultimate Modular Men Pack | Quaternius | [Poly Pizza](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) as listed by Poly Pizza | Not included      |
+Poly Pizza's bundle and individual model records list both selected files as
+CC0 1.0. The downloaded GLB ZIP passed integrity testing but did not contain a
+license document; the official CC0 legal code is therefore committed as
+`public/assets/characters/ultimate-modular-men/LICENSE-CC0-1.0.txt`. Detailed
+archive and file hashes are recorded in the adjacent asset README.
 
-Mack maps to the pack's Worker model, Nox to Hoodie Character, and Raze to Punk. Poly Pizza describes the pack as 11 characters with 24 animations. The runtime files are optional and not currently included.
+The same source pack remains registered for optional Worker, Hoodie Character,
+and Punk NPC models, but those separate NPC paths are not included by this
+change and retain their generated fallback behavior.
 
-The primitive fallback character is generated entirely from Three.js geometry and project-authored material settings; it has no external asset dependency. NPC portrait IDs currently point to optional project paths with no committed third-party images.
-
-Before committing any downloaded asset, verify the license attached to that exact download and record any required attribution here. The current ignore rule deliberately prevents accidental inclusion of the character pack.
+The primitive fallback character is generated entirely from Three.js geometry
+and project-authored material settings; it has no external asset dependency.
+It is not a selectable character and exists only to keep startup and model-load
+failure paths safe. NPC portrait IDs point to optional project paths with no
+committed third-party images.

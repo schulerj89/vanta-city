@@ -1,5 +1,6 @@
 import { CharacterSelectionStore } from '../src/characters/CharacterSelection';
 import type { CharacterDefinition } from '../src/characters/CharacterDefinition';
+import { characterDefinitions } from '../src/characters/characters';
 
 const definitions = [
   { id: 'placeholder', displayName: 'Placeholder', fallback: 'placeholder' },
@@ -24,6 +25,19 @@ function storedPreference(id: string): string {
 }
 
 describe('CharacterSelectionStore', () => {
+  it('registers exactly the two reviewed model-backed playable characters', () => {
+    expect(characterDefinitions.map(({ id }) => id)).toEqual([
+      'casual',
+      'punk',
+    ]);
+    expect(
+      characterDefinitions.every(
+        ({ modelAssetId, fallback }) =>
+          modelAssetId !== undefined && fallback === 'placeholder',
+      ),
+    ).toBe(true);
+  });
+
   it('exposes the selected definition and notifies readers', () => {
     const selection = new CharacterSelectionStore(definitions, 'placeholder');
     const changed = vi.fn();

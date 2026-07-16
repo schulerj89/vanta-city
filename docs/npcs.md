@@ -10,7 +10,7 @@ NPCs are data-defined static district actors. `NpcSystem` listens to level load/
 | Nox  | `npc-hoodie`         | Hoodie Character, Ultimate Modular Men Pack | `portrait.npc-nox`  | `spawn.npc-alley`    | `conversation.nox.placeholder`   |
 | Raze | `npc-punk`           | Punk, Ultimate Modular Men Pack             | `portrait.npc-raze` | `spawn.npc-deck`     | `conversation.raze.placeholder`  |
 
-The source pack is [Ultimate Modular Men Pack by Quaternius on Poly Pizza](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ), listed as CC0 and containing 11 characters with 24 animations. Runtime files and portraits are intentionally not committed. Missing GLBs use the generated character placeholder and a static valid pose; missing portraits are harmless because this branch has no dialogue UI.
+The source pack is [Ultimate Modular Men Pack by Quaternius on Poly Pizza](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ), listed as CC0 and containing 11 characters with 24 animations. The separate NPC model paths and portraits are intentionally not committed; the two committed playable GLBs do not change that NPC contract. Missing NPC GLBs use the generated character placeholder and a static valid pose, while missing portraits resolve through the dialogue UI's initials fallback.
 
 Expected optional files are:
 

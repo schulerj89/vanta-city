@@ -57,7 +57,11 @@ export class ManifestCharacterAvailabilityProbe implements CharacterAvailability
         };
       }
 
-      const response = await this.request(url, { method: 'HEAD' });
+      // Do not pass the probe instance as browser-native fetch's receiver;
+      // some engines reject that as an illegal invocation before the local
+      // HEAD request is sent.
+      const request = this.request;
+      const response = await request(url, { method: 'HEAD' });
       const contentType = response.headers.get('content-type') ?? '';
       if (!response.ok || contentType.includes('text/html')) {
         return {

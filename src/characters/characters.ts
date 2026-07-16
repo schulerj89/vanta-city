@@ -3,25 +3,35 @@ import { validateCharacterDefinitions } from './CharacterDefinition';
 
 export const characterDefinitionEntries = [
   {
-    id: 'vanta-placeholder',
-    displayName: 'Vanta Placeholder',
-    transform: { scale: 0.6 },
+    id: 'casual',
+    displayName: 'Casual',
+    modelAssetId: 'character.casual.model',
+    animations: {
+      idle: { clipNames: ['CharacterArmature|Idle'], required: true },
+      walk: { clipNames: ['CharacterArmature|Walk'], required: true },
+      run: { clipNames: ['CharacterArmature|Run'], required: true },
+    },
+    transform: {
+      // 1.823 m authored height -> 1.787 m, inside the 1.8 m capsule.
+      scale: 0.98,
+      rotation: [0, Math.PI, 0],
+    },
     fallback: 'placeholder',
   },
   {
-    id: 'modular-man',
-    displayName: 'Modular Man',
-    modelAssetId: 'character.modular-man.model',
+    id: 'punk',
+    displayName: 'Punk',
+    modelAssetId: 'character.punk.model',
     animations: {
-      idle: { clipNames: ['Idle', 'idle'], required: false },
-      walk: { clipNames: ['Walk', 'Walking', 'walk'], required: false },
-      run: { clipNames: ['Run', 'Running', 'run'], required: false },
+      idle: { clipNames: ['CharacterArmature|Idle'], required: true },
+      walk: { clipNames: ['CharacterArmature|Walk'], required: true },
+      run: { clipNames: ['CharacterArmature|Run'], required: true },
     },
     transform: {
-      scale: 1,
+      // 1.936 m authored height -> 1.781 m, inside the 1.8 m capsule.
+      scale: 0.92,
       rotation: [0, Math.PI, 0],
     },
-    materialVariations: [{ id: 'default', displayName: 'Default materials' }],
     fallback: 'placeholder',
   },
 ] satisfies readonly CharacterDefinition[];

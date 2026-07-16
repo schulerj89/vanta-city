@@ -45,7 +45,7 @@ export class PlaceholderPlayerVisual implements PlayerVisual {
     this.visualRoot.add(this.loadedModelRoot);
     this.object3d.add(this.visualRoot);
     this.alignment = {
-      characterId: 'vanta-placeholder',
+      characterId: 'emergency-placeholder',
       modelBounds: bounds,
       ...calculated,
     };

@@ -22,21 +22,23 @@ These are named actions in `defaultBindings`; a future gamepad implementation ca
 
 ## Availability and previews
 
-Every validated definition in `characterDefinitions` appears. Definitions without external models are immediately available. Model-backed definitions receive a local-only `HEAD` probe against their registered model asset. Missing optional files and HTML development-server fallbacks are labeled as selectable placeholder fallbacks; wrong catalog types and remote URLs remain unavailable. The probe never downloads the full model or crashes the picker.
+Every validated definition in `characterDefinitions` appears. The production registry contains exactly two entries, Casual and Punk. Both receive a local-only `HEAD` probe against their committed model assets. Wrong catalog types, missing files, HTML development-server fallbacks, and remote URLs are surfaced without downloading a full model or crashing the picker.
 
 Only portraits are displayed in the grid and selected preview. No runtime screenshots are generated and the picker does not instantiate every model. Explicit portrait textures use normal browser caching; characters without one receive a deterministic generated silhouette and initials. The existing player visual and asset cache load only the confirmed character model.
 
-The current catalog contains:
+The playable catalog contains:
 
-- `vanta-placeholder`: available, generated portrait.
-- `modular-man`: generated portrait; available when its locally registered GLB is installed, otherwise explicitly labeled as a selectable placeholder fallback.
+- `casual`: committed `casual-character.glb`, generated portrait treatment.
+- `punk`: committed `punk-character.glb`, generated portrait treatment.
+
+There is no selectable placeholder card. A generated 3D fallback exists only inside the character loader for startup or unexpected asset-load failure.
 
 ## Registering a portrait
 
 First register a local texture in `src/assets/catalog.ts`:
 
 ```ts
-'character.modular-man.portrait': {
+'character.casual.portrait': {
   type: 'texture',
   url: '/assets/characters/ultimate-modular-men/portrait.webp',
 },
@@ -46,9 +48,9 @@ Then reference its logical ID from the existing definition in `src/characters/ch
 
 ```ts
 {
-  id: 'modular-man',
-  displayName: 'Modular Man',
-  portraitAssetId: 'character.modular-man.portrait',
+  id: 'casual',
+  displayName: 'Casual',
+  portraitAssetId: 'character.casual.portrait',
   // existing model, animation, and transform fields…
 }
 ```

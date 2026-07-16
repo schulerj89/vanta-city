@@ -12,6 +12,7 @@ test('character picker through repeatable Mack conversation', async ({
   const consoleIssues = monitorConsoleIssues(page);
   page.on('pageerror', (error) => uncaught.push(error.message));
   await page.goto('/?e2e=1&debug=1&dialogueTypewriter=0');
+  await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
 
   await expect.poll(async () => (await snapshot(page)).picker.open).toBe(true);
   await expect
@@ -30,11 +31,11 @@ test('character picker through repeatable Mack conversation', async ({
   await page.keyboard.press('ArrowRight');
   await expect
     .poll(async () => (await snapshot(page)).picker.focusedCharacterId)
-    .toBe('modular-man');
+    .toBe('punk');
   await page.keyboard.press('Space');
   await expect
     .poll(async () => (await snapshot(page)).picker.selectedCharacterId)
-    .toBe('modular-man');
+    .toBe('punk');
   await page.keyboard.press('Enter');
   await expect
     .poll(async () => (await snapshot(page)).gameState)
@@ -43,15 +44,19 @@ test('character picker through repeatable Mack conversation', async ({
     .poll(async () => (await snapshot(page)).character.source)
     .not.toBe('loading');
   const entered = await snapshot(page);
-  expect(entered.selectedCharacterId).toBe('modular-man');
-  expect(entered.character.loadedDefinitionId).toBe('modular-man');
-  // The source field is the explicit fallback contract. A missing optional
-  // model may resolve to a placeholder, but it must not surface as a loader or
-  // HTML-parsing warning in the browser console.
-  expect(['asset', 'placeholder']).toContain(entered.character.source);
-  if (entered.character.source === 'placeholder') {
-    expect(picker.picker.fallbackCharacterIds).toContain('modular-man');
-  }
+  expect(entered.selectedCharacterId).toBe('punk');
+  expect(entered.character.loadedDefinitionId).toBe('punk');
+  expect(entered.character.source).toBe('asset');
+  expect(entered.character.bounds).toBeDefined();
+  expect(
+    entered.character.bounds!.max.y - entered.character.bounds!.min.y,
+  ).toBeLessThanOrEqual(1.82);
+  expect(
+    Math.abs(entered.character.bounds!.min.y - entered.player.position.y),
+  ).toBeLessThanOrEqual(0.2);
+  expect(picker.picker.availableCharacterIds).toEqual(
+    expect.arrayContaining(['casual', 'punk']),
+  );
   expect(entered.player.grounded).toBe(true);
   expect(entered.world.levelId).toBe('test-district');
   expect(

@@ -118,7 +118,7 @@ async function bootstrap(): Promise<void> {
     : characterDefinitions;
   const characterSelection = new CharacterSelectionStore(
     availableCharacters,
-    'vanta-placeholder',
+    'casual',
     window.localStorage,
   );
   const characterVisual = new CharacterPlayerVisual(
@@ -281,8 +281,6 @@ async function bootstrap(): Promise<void> {
     throw error;
   }
 
-  if (pageParameters.get('skipPicker') !== '1') characterPicker.open();
-
   const disposeBrowserTestBridge =
     browserTestModule && development
       ? browserTestModule.installBrowserTestBridge({
@@ -305,6 +303,10 @@ async function bootstrap(): Promise<void> {
           errors: development.errors,
         })
       : undefined;
+
+  // Install opt-in browser observability before opening the initial picker so
+  // tests cannot observe the dialog one microtask before the bridge exists.
+  if (pageParameters.get('skipPicker') !== '1') characterPicker.open();
 
   installHotDisposal(runtime, assets, development, () => {
     disposeBrowserTestBridge?.();

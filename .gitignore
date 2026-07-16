@@ -8,6 +8,11 @@ blob-report/
 .DS_Store
 *.local
 
-# Downloaded character packs are local inputs unless redistribution is reviewed.
+# The reviewed CC0 runtime subset is committed. Other files extracted from the
+# source archive remain ignored so the playable catalog stays intentionally at
+# exactly two models.
 public/assets/characters/ultimate-modular-men/*
 !public/assets/characters/ultimate-modular-men/README.md
+!public/assets/characters/ultimate-modular-men/LICENSE-CC0-1.0.txt
+!public/assets/characters/ultimate-modular-men/casual-character.glb
+!public/assets/characters/ultimate-modular-men/punk-character.glb

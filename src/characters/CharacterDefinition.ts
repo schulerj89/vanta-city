@@ -34,6 +34,8 @@ export interface CharacterMaterialVariation {
 export interface CharacterDefinition {
   readonly id: string;
   readonly displayName: string;
+  /** Defaults to true. False is reserved for internal/test-only load fixtures. */
+  readonly pickerVisible?: boolean;
   /** Optional local texture asset used by character-selection UI. */
   readonly portraitAssetId?: string;
   readonly modelAssetId?: string;
