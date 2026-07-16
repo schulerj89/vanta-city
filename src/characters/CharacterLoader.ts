@@ -9,14 +9,24 @@ import { createPlaceholderCharacter } from './PlaceholderCharacter';
 
 export interface AnimationValidation {
   readonly clips: ReadonlyMap<string, AnimationClip>;
+  readonly availableClips: ReadonlyMap<string, AnimationClip>;
   readonly discoveredClipNames: readonly string[];
   readonly warnings: readonly string[];
+}
+
+export interface RootMotionDiagnostic {
+  readonly clip: string;
+  readonly tracks: readonly string[];
+  readonly samples: readonly (readonly [number, number, number])[];
 }
 
 export interface LoadedCharacter {
   readonly definition: CharacterDefinition;
   readonly root: Object3D;
   readonly animationClips: ReadonlyMap<string, AnimationClip>;
+  /** Named authored clips, protected by the same root-motion policy as gameplay. */
+  readonly availableAnimationClips?: ReadonlyMap<string, AnimationClip>;
+  readonly rootMotionDiagnostics?: readonly RootMotionDiagnostic[];
   readonly discoveredClipNames: readonly string[];
   readonly source: 'asset' | 'placeholder';
   readonly warnings: readonly string[];
@@ -48,10 +58,19 @@ export class CharacterLoader {
         validation.clips,
         model.scene,
       );
+      const availableAnimationClips = removeSceneRootMotion(
+        validation.availableClips,
+        model.scene,
+      );
       return {
         definition,
         root: model.scene,
         animationClips,
+        availableAnimationClips,
+        rootMotionDiagnostics: inspectSceneRootMotion(
+          validation.availableClips,
+          model.scene,
+        ),
         discoveredClipNames: validation.discoveredClipNames,
         source: 'asset',
         warnings: validation.warnings,
@@ -81,6 +100,8 @@ export class CharacterLoader {
       definition,
       root: placeholder.root,
       animationClips: new Map(),
+      availableAnimationClips: new Map(),
+      rootMotionDiagnostics: [],
       discoveredClipNames: [],
       source: 'placeholder',
       warnings,
@@ -114,16 +135,48 @@ export function removeSceneRootMotion(
   return protectedClips;
 }
 
+/** Reports authored scene-root translation without ever applying it. */
+export function inspectSceneRootMotion(
+  clips: ReadonlyMap<string, AnimationClip>,
+  sceneRoot: Object3D,
+): readonly RootMotionDiagnostic[] {
+  const diagnostics: RootMotionDiagnostic[] = [];
+  for (const [clipName, clip] of clips) {
+    const tracks = clip.tracks.filter((track) =>
+      isSceneRootPositionTrack(track.name, sceneRoot.name),
+    );
+    if (tracks.length === 0) continue;
+    const samples: [number, number, number][] = [];
+    for (const track of tracks) {
+      for (let index = 0; index + 2 < track.values.length; index += 3) {
+        samples.push([
+          Number(track.values[index]),
+          Number(track.values[index + 1]),
+          Number(track.values[index + 2]),
+        ]);
+      }
+    }
+    diagnostics.push({
+      clip: clipName,
+      tracks: tracks.map(({ name }) => name),
+      samples,
+    });
+  }
+  return diagnostics;
+}
+
 export async function validateAnimationBindings(
   definition: CharacterDefinition,
   embeddedClips: readonly AnimationClip[],
   assets: GameAssetLoader,
 ): Promise<AnimationValidation> {
   const clips = new Map<string, AnimationClip>();
+  const availableClips = new Map<string, AnimationClip>();
   const warnings: string[] = [];
   const discovered = new Set<string>();
   const sourceClips = new Map<string, readonly AnimationClip[]>();
   sourceClips.set('embedded', embeddedClips);
+  addAvailableClips(availableClips, embeddedClips);
   for (const clip of embeddedClips) if (clip.name) discovered.add(clip.name);
 
   for (const [logicalName, binding] of Object.entries(
@@ -136,6 +189,7 @@ export async function validateAnimationBindings(
         try {
           external = (await assets.loadGltf(binding.assetId)).animations;
           sourceClips.set(binding.assetId, external);
+          addAvailableClips(availableClips, external, binding.assetId);
           for (const clip of external) if (clip.name) discovered.add(clip.name);
         } catch (error: unknown) {
           const warning = `Character "${definition.id}" animation asset "${binding.assetId}" failed: ${toMessage(error)}`;
@@ -159,7 +213,27 @@ export async function validateAnimationBindings(
     }
   }
 
-  return { clips, discoveredClipNames: [...discovered].sort(), warnings };
+  return {
+    clips,
+    availableClips,
+    discoveredClipNames: [...discovered].sort(),
+    warnings,
+  };
+}
+
+function addAvailableClips(
+  destination: Map<string, AnimationClip>,
+  clips: readonly AnimationClip[],
+  source?: string,
+): void {
+  for (const clip of clips) {
+    if (!clip.name) continue;
+    const key =
+      destination.has(clip.name) && source
+        ? `${source}:${clip.name}`
+        : clip.name;
+    destination.set(key, clip);
+  }
 }
 
 function applyTransform(root: Object3D, definition: CharacterDefinition): void {

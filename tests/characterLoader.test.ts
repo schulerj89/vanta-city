@@ -8,6 +8,7 @@ import type {
 import { AssetLoadError } from '../src/assets/AssetLoader';
 import {
   CharacterLoader,
+  inspectSceneRootMotion,
   removeSceneRootMotion,
   validateAnimationBindings,
 } from '../src/characters/CharacterLoader';
@@ -157,5 +158,43 @@ describe('CharacterLoader', () => {
       protectedClips.get('walk')?.tracks.map((track) => track.name),
     ).toEqual(['Hips.position']);
     expect(clip.tracks).toHaveLength(2);
+  });
+
+  it('reports stripped root-motion samples without changing source clips', () => {
+    const root = new Group();
+    root.name = 'CharacterScene';
+    const clip = new AnimationClip('Run', 1, [
+      new NumberKeyframeTrack(
+        'CharacterScene.position',
+        [0, 0.5, 1],
+        [0, 0, 0, 0, 0, 1, 0, 0, 2],
+      ),
+    ]);
+
+    expect(inspectSceneRootMotion(new Map([['Run', clip]]), root)).toEqual([
+      {
+        clip: 'Run',
+        tracks: ['CharacterScene.position'],
+        samples: [
+          [0, 0, 0],
+          [0, 0, 1],
+          [0, 0, 2],
+        ],
+      },
+    ]);
+    expect(clip.tracks).toHaveLength(1);
+  });
+
+  it('catalogs authored clips separately from logical graph bindings', async () => {
+    const idle = new AnimationClip('Idle', 1, []);
+    const unused = new AnimationClip('Dance', 2, []);
+    const result = await validateAnimationBindings(
+      character,
+      [idle, unused],
+      assetLoader(),
+    );
+
+    expect([...result.clips.keys()]).toEqual(['idle']);
+    expect([...result.availableClips.keys()]).toEqual(['Idle', 'Dance']);
   });
 });

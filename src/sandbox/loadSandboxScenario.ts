@@ -1,10 +1,12 @@
 import type { SandboxContext, SandboxScenario } from './SandboxScenario';
+import { characterAnimationLab } from './scenarios/characterAnimationLab';
 import { foundationSandbox } from './scenarios/foundationSandbox';
 import { cameraCompositionLab } from './scenarios/cameraCompositionLab';
 
 const scenarios = new Map<string, SandboxScenario>([
   [foundationSandbox.id, foundationSandbox],
   [cameraCompositionLab.id, cameraCompositionLab],
+  [characterAnimationLab.id, characterAnimationLab],
 ]);
 
 export function loadSandboxScenario(

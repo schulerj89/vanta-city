@@ -51,6 +51,16 @@ Run the isolated foundation sandbox without a story scene:
 pnpm sandbox
 ```
 
+Inspect registered character models, animation clips, graph state, and visual
+alignment in the development-only lab:
+
+```sh
+pnpm lab:characters
+```
+
+See [Character and Animation Lab](docs/character-animation-lab.md) for the URL,
+controls, diagnostics, browser bridge, and capture policy.
+
 See [Developer tooling](docs/developer-tooling.md) for the debug extension API, visual-helper providers, commands, and adding sandbox scenarios.
 
 See [Camera system](docs/camera-system.md) for camera controls, persistent settings, conversation framing, and ownership priorities.

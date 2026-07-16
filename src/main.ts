@@ -129,10 +129,11 @@ async function bootstrap(): Promise<void> {
       const { loadSandboxScenario } =
         await import('./sandbox/loadSandboxScenario');
       const sandbox: GameSystem<GameContext> = loadSandboxScenario(sandboxId, {
+        mount,
         scene: render.scene,
         camera: render.camera,
         input,
-        mount,
+        assets,
         debug: development.debug,
         visualHelpers: development.visualHelpers,
       });

@@ -74,6 +74,8 @@ Development builds dynamically load a generic `DebugRegistry`, panel, error repo
 
 Sandbox scenarios implement the normal `GameSystem` lifecycle and replace the normal scene only when a development URL supplies `?sandbox=<id>`. This keeps isolated mechanic experiments representative of runtime lifecycle behavior without introducing a separate editor or story dependency. See [Developer tooling](developer-tooling.md) for extension examples.
 
+The Character and Animation Lab is one such scenario, not another bootstrap. It receives the existing mount, renderer scene/camera, asset loader, debug registry, and visual-helper registry through `SandboxContext`; it loads independent instances through `CharacterLoader` and disposes mixers before character instances. `LoadedCharacter.availableAnimationClips` exposes root-motion-protected authored clips alongside logical graph mappings, while `rootMotionDiagnostics` preserves read-only samples from stripped scene-root position tracks for inspection. See [Character and Animation Lab](character-animation-lab.md).
+
 ## Future integration
 
 - Player: implement a `GameObject` for presentation and a focused movement/controller system that reads `InputReader`, owns a physics abstraction body, and exposes a read-only position source to debugging/camera code.
