@@ -46,3 +46,68 @@ canvas {
   pointer-events: none;
   backdrop-filter: blur(6px);
 }
+
+.character-selector {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: min(18rem, calc(100% - 2rem));
+  padding: 1rem;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 0.55rem;
+  color: #effff8;
+  background: rgb(5 12 18 / 84%);
+  box-shadow: 0 0.8rem 2rem rgb(0 0 0 / 20%);
+  backdrop-filter: blur(8px);
+}
+
+.character-selector h1 {
+  margin: 0 0 0.8rem;
+  color: #7ce2c6;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.character-selector label {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  color: #bdd0c9;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.character-selector select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #456159;
+  border-radius: 0.35rem;
+  color: #effff8;
+  background: #16241f;
+  font: inherit;
+}
+
+.character-selector input[type='range'] {
+  width: 100%;
+  accent-color: #66d5b7;
+}
+
+.character-selector .character-selector__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-transform: none;
+}
+
+.character-selector__toggle input {
+  accent-color: #66d5b7;
+}
+
+.character-selector__status {
+  min-height: 1.25rem;
+  margin: 0.8rem 0 0;
+  color: #94aaa2;
+  font-size: 0.74rem;
+}

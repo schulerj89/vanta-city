@@ -23,6 +23,10 @@ export default tseslint.config(
   {
     files: ['**/*.test.ts'],
     languageOptions: { globals: globals.vitest },
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+    },
   },
   prettier,
 );

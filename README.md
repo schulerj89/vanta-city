@@ -16,6 +16,8 @@ pnpm dev
 
 Open the URL printed by Vite. The foundation test scene uses only generated primitives, so no external assets are required. Press `Escape` or `P` to pause/resume and the backtick key to toggle the debug overlay.
 
+Use the character panel to select a session-persistent character, inspect it with the rotation control, or disable automatic rotation. External character files are optional; see [Character assets and registration](docs/characters.md).
+
 Quality and production commands:
 
 ```sh

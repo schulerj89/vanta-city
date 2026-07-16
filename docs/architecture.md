@@ -34,7 +34,9 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 ## Assets and rendering
 
-`GameAssetLoader` exposes logical-ID texture and glTF loads. `ThreeAssetLoader` resolves those IDs through one injected manifest, deduplicates concurrent loads, and evicts failed requests. Gameplay code supplies asset IDs; it must not scatter URLs through feature code. Asset definitions can later be split into authored manifests without changing consumers.
+`AssetCatalog` validates logical IDs for models, animations, and textures. `GameAssetLoader` exposes cached source loads, progress/error status, and independent model instances. `ThreeAssetLoader` deduplicates concurrent and completed loads, evicts failed requests so they can be retried, and owns disposal of cached GPU resources. Cached glTF scenes are source data and must never be inserted into the live scene; consumers use `instantiateModel()` or `CharacterLoader.instantiate()` and dispose the returned instance. Gameplay code supplies asset IDs and must not scatter URLs through feature code.
+
+`CharacterDefinition` separates identity, display name, model/animation asset IDs, clip mappings, transform corrections, and optional attachment/material variation metadata. `CharacterSelectionReader` is the read-only selection contract for a future player spawner. The current `CharacterSelectionStore` persists its choice in session storage, while `CharacterPreviewSystem` and `CharacterSelectorSystem` provide a development preview without coupling the runtime to UI details. `CharacterLoader` validates animation discovery and guarantees the primitive fallback path.
 
 `RenderSystem` exclusively owns the Three.js renderer, scene, camera, canvas, resize observer, and render call. It caps device pixel ratio at two. Future third-person camera logic should update the injected camera from its own simulation system; it should not create another renderer or animation loop.
 
@@ -57,6 +59,8 @@ Parallel work may rely on these APIs:
 - `GameState` and `GameStateMachine.transition/current`
 - `GameObject` and `GameObjectWorld.add/get/remove`
 - `GameAssetLoader`, `AssetManifest`, and logical asset IDs
+- `AssetCatalog`, `AssetLoadStatus`, `ModelInstance`, and `CharacterLoader`
+- `CharacterDefinition`, `CharacterSelectionReader`, and `LoadedCharacter`
 - `DebugDataSource.getPlayerPosition`
 - `RenderSystem.scene`, `.camera`, and `.renderer` (renderer configuration only; do not start another loop)
 

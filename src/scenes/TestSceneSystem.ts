@@ -12,7 +12,6 @@ import {
 } from 'three';
 import type { Scene } from 'three';
 import type { GameSystem } from '../core/lifecycle';
-import type { FrameTime } from '../core/time';
 import type { BufferGeometry, Material, Object3D } from 'three';
 
 function isMesh(
@@ -24,8 +23,6 @@ function isMesh(
 export class TestSceneSystem implements GameSystem {
   public readonly id = 'test-scene';
   private readonly root = new Group();
-  private spinner: Group | undefined;
-
   public constructor(private readonly scene: Scene) {}
 
   public init(): void {
@@ -63,20 +60,7 @@ export class TestSceneSystem implements GameSystem {
     }
     this.root.add(blocks);
 
-    this.spinner = new Group();
-    const marker = new Mesh(
-      new BoxGeometry(1.4, 1.4, 1.4),
-      new MeshStandardMaterial({ color: 0xffce45, flatShading: true }),
-    );
-    marker.rotation.set(0.4, 0.3, 0.2);
-    this.spinner.position.set(0, 2.2, 4);
-    this.spinner.add(marker);
-    this.root.add(this.spinner);
     this.scene.add(this.root);
-  }
-
-  public update(time: FrameTime): void {
-    if (this.spinner) this.spinner.rotation.y += time.delta * 0.8;
   }
 
   public dispose(): void {

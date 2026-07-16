@@ -3,3 +3,7 @@ dist/
 coverage/
 .DS_Store
 *.local
+
+# Downloaded character packs are local inputs unless redistribution is reviewed.
+public/assets/characters/ultimate-modular-men/*
+!public/assets/characters/ultimate-modular-men/README.md
