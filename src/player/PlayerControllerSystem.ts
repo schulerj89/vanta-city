@@ -77,6 +77,7 @@ export interface PlayerDebugSnapshot {
     readonly z: number;
   };
   readonly movementState: PlayerMovementState;
+  readonly localMovementDirection: { readonly x: number; readonly y: number };
   readonly blocked: boolean;
   readonly facingYaw: number;
   readonly presentationFacingYaw: number;
@@ -236,6 +237,10 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         z: this.movement.groundNormal.z,
       },
       movementState: this.movement.state,
+      localMovementDirection: {
+        x: this.movement.localMovementDirection.x,
+        y: this.movement.localMovementDirection.y,
+      },
       blocked: this.movement.blocked,
       facingYaw: this.movement.facingYaw,
       presentationFacingYaw: this.presentationFacingYaw,

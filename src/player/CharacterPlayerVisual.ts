@@ -135,6 +135,7 @@ export class CharacterPlayerVisual
   private activeActionDuration = 0;
   private activeActionImpacted = false;
   private movementState: PlayerMovementState = 'idle';
+  private lastLocalMovementX = 0;
   private readonly animationGraph = new CharacterAnimationStateMachine();
   private readonly modelOffset = new Vector3();
 
@@ -159,6 +160,7 @@ export class CharacterPlayerVisual
   public sync(movement: PlayerMovementSimulation, delta = 0): void {
     this.object3d.position.copy(movement.position);
     this.visualRoot.rotation.y = movement.facingYaw;
+    this.lastLocalMovementX = movement.localMovementDirection.x;
     this.updateAnimation(movement.state, delta);
   }
 
@@ -342,6 +344,7 @@ export class CharacterPlayerVisual
     this.activeActionDuration = 0;
     this.activeActionImpacted = false;
     this.activeActionSource = undefined;
+    this.lastLocalMovementX = 0;
     this.animationGraph.reset();
     this.characterAction = {
       ...this.characterAction,
@@ -430,6 +433,7 @@ export class CharacterPlayerVisual
     const transition = this.animationGraph.transition(
       {
         movement: this.movementState,
+        localMovementX: this.lastLocalMovementX,
         action: this.characterAction.active,
       },
       (logicalName) => loaded.animationClips.has(logicalName),

@@ -450,6 +450,92 @@ test.describe('playable debug district', () => {
     }
   });
 
+  test('cross-fades directional runs through arcs, reversals, and pause restoration', async ({
+    page,
+  }) => {
+    const runtimeFailures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+
+    for (const characterId of ['casual', 'punk']) {
+      await executeCommand(page, 'player.select-character', characterId);
+      await expect
+        .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+        .toBe(characterId);
+      await executeCommand(page, 'player.teleport', 'spawn.player-default');
+      await page.keyboard.press('r');
+      await page.keyboard.down('w');
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('run');
+
+      const forward = await snapshot(page);
+      await page.keyboard.down('a');
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('runLeft');
+      const leftArc = await snapshot(page);
+      expect(leftArc.character.animationGraph).toMatchObject({
+        requestedClip: 'runLeft',
+        resolvedClip: 'runLeft',
+        fallback: 'none',
+        directionalLocomotion: 'left',
+      });
+      expect(leftArc.player.localMovementDirection.x).toBeLessThan(-0.5);
+      expect(
+        horizontalDistance(leftArc.player.position, forward.player.position),
+      ).toBeGreaterThan(0.15);
+
+      await page.keyboard.up('a');
+      await page.keyboard.down('d');
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('runRight');
+      const rightArc = await snapshot(page);
+      expect(rightArc.character.animationGraph).toMatchObject({
+        requestedClip: 'runRight',
+        resolvedClip: 'runRight',
+        fallback: 'none',
+        directionalLocomotion: 'right',
+      });
+      expect(rightArc.player.localMovementDirection.x).toBeGreaterThan(0.5);
+
+      await page.keyboard.press('p');
+      await expect
+        .poll(async () => (await snapshot(page)).gameState)
+        .toBe('paused');
+      const paused = await snapshot(page);
+      await page.waitForTimeout(180);
+      const heldPaused = await snapshot(page);
+      expect(
+        horizontalDistance(heldPaused.player.position, paused.player.position),
+      ).toBeLessThan(0.02);
+      expect(heldPaused.character.animationState).toBe('runRight');
+
+      await page.keyboard.press('p');
+      await expect
+        .poll(async () => (await snapshot(page)).gameState)
+        .toBe('playing');
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('runRight');
+      const resumed = await snapshot(page);
+      expect(resumed.player.grounded).toBe(true);
+      expect(
+        Math.abs(resumed.character.bounds!.min.y - resumed.player.position.y),
+      ).toBeLessThanOrEqual(0.2);
+
+      await page.keyboard.up('d');
+      await page.keyboard.up('w');
+      await page.keyboard.press('r');
+      await expect
+        .poll(async () => (await snapshot(page)).player.runMode)
+        .toBe(false);
+    }
+    expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
+    const final = await snapshot(page);
+    expect(final.runtimeErrors.count, final.runtimeErrors.last).toBe(0);
+  });
+
   test('supports keyboard orbit, alternating actions, and accessible help without leaking input', async ({
     page,
   }, testInfo) => {

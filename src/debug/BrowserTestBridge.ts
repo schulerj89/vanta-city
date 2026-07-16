@@ -76,6 +76,7 @@ export interface BrowserTestSnapshot {
     /** Lowest rendered point relative to the authoritative foot plane. */
     readonly footClearance: number | undefined;
     readonly movementState: string;
+    readonly localMovementDirection: { readonly x: number; readonly y: number };
     readonly facingYaw: number;
     readonly presentationFacingYaw: number;
     readonly runMode: boolean;
@@ -263,6 +264,7 @@ function createSnapshot(
           ? undefined
           : character.bounds.min.y - position.y,
       movementState: movement.movementState,
+      localMovementDirection: movement.localMovementDirection,
       facingYaw: movement.facingYaw,
       presentationFacingYaw: movement.presentationFacingYaw,
       runMode: movement.runMode,

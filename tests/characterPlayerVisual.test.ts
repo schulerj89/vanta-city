@@ -1,4 +1,10 @@
-import { AnimationClip, Group, Vector3, VectorKeyframeTrack } from 'three';
+import {
+  AnimationClip,
+  Group,
+  Vector2,
+  Vector3,
+  VectorKeyframeTrack,
+} from 'three';
 import type { LoadedCharacter } from '../src/characters/CharacterLoader';
 import { CharacterSelectionStore } from '../src/characters/CharacterSelection';
 import type { CharacterDefinition } from '../src/characters/CharacterDefinition';
@@ -50,11 +56,13 @@ function loadedCharacter(
 
 function movement(
   state: PlayerMovementSimulation['state'],
+  localMovementX = 0,
 ): PlayerMovementSimulation {
   return {
     position: new Vector3(4, 0, 7),
     facingYaw: 1.25,
     state,
+    localMovementDirection: new Vector2(localMovementX, 1),
   } as PlayerMovementSimulation;
 }
 
@@ -205,6 +213,44 @@ describe('CharacterPlayerVisual', () => {
     expect(visual.getDebugSnapshot()).toMatchObject({
       animationState: 'idle',
       characterAction: { active: undefined, sequence: 1 },
+    });
+    visual.dispose();
+  });
+
+  it('does not restart a stable directional run and restores it after an action', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const clips = new Map([
+      ['run', new AnimationClip('Run', 1, [])],
+      ['runLeft', new AnimationClip('Run left', 1, [])],
+      ['runRight', new AnimationClip('Run right', 1, [])],
+      ['kickLeft', new AnimationClip('Kick left', 0.2, [])],
+    ]);
+    const visual = new CharacterPlayerVisual(selection, {
+      instantiate: vi.fn(async () =>
+        loadedCharacter(definitions[0], 'asset', clips),
+      ),
+    });
+    await visual.init();
+
+    visual.sync(movement('running', -1), 0.1);
+    const initialSequence =
+      visual.getDebugSnapshot().animationGraph.transitionSequence;
+    visual.sync(movement('running', -0.4), 0.1);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'runLeft',
+      animationGraph: { transitionSequence: initialSequence },
+    });
+
+    expect(visual.triggerCharacterAction('kickLeft', 'unit-test')).toBe(true);
+    visual.sync(movement('running', 1), 0.1);
+    expect(visual.getDebugSnapshot().animationState).toBe('action:kickLeft');
+    visual.sync(movement('running', 1), 0.2);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'runRight',
+      animationGraph: {
+        directionalLocomotion: 'right',
+        transitionReason: 'restoration',
+      },
     });
     visual.dispose();
   });

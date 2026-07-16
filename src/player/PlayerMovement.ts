@@ -1,4 +1,4 @@
-import { MathUtils, Vector3 } from 'three';
+import { MathUtils, Vector2, Vector3 } from 'three';
 import type { CollisionWorld, CharacterShape } from '../physics/CollisionWorld';
 import type { PlayerIntent } from './PlayerIntent';
 
@@ -61,6 +61,8 @@ export function decideMovementState(
 export class PlayerMovementSimulation {
   public readonly position = new Vector3();
   public readonly velocity = new Vector3();
+  /** Last camera-relative movement input, used only by presentation policy. */
+  public readonly localMovementDirection = new Vector2();
   public readonly groundNormal = new Vector3(0, 1, 0);
   public grounded = false;
   public groundColliderId = 'world-floor';
@@ -81,6 +83,7 @@ export class PlayerMovementSimulation {
     delta: number,
   ): void {
     if (delta <= 0) return;
+    this.localMovementDirection.copy(intent.move);
     const forwardX = -Math.sin(cameraYaw);
     const forwardZ = -Math.cos(cameraYaw);
     const rightX = Math.cos(cameraYaw);
@@ -176,6 +179,7 @@ export class PlayerMovementSimulation {
   ): void {
     this.position.copy(position);
     this.velocity.set(0, 0, 0);
+    this.localMovementDirection.set(0, 0);
     this.groundNormal.set(0, 1, 0);
     this.groundColliderId = 'world-floor';
     this.grounded = false;

@@ -1,4 +1,8 @@
-import { CharacterAnimationStateMachine } from '../src/characters/CharacterAnimationStateMachine';
+import {
+  CharacterAnimationStateMachine,
+  directionalRunThresholds,
+  selectDirectionalLocomotion,
+} from '../src/characters/CharacterAnimationStateMachine';
 
 describe('CharacterAnimationStateMachine', () => {
   it('prioritizes reactions, actions, and movement then records restoration', () => {
@@ -64,6 +68,111 @@ describe('CharacterAnimationStateMachine', () => {
       resolvedClip: 'idle',
       fallback: 'idle',
       label: 'idle (fallback for landing)',
+    });
+  });
+
+  it('selects directional runs with stable enter and exit hysteresis', () => {
+    expect(
+      selectDirectionalLocomotion(
+        'running',
+        -directionalRunThresholds.enter,
+        'forward',
+      ),
+    ).toBe('left');
+    expect(
+      selectDirectionalLocomotion(
+        'running',
+        -directionalRunThresholds.exit,
+        'left',
+      ),
+    ).toBe('left');
+    expect(
+      selectDirectionalLocomotion(
+        'running',
+        -directionalRunThresholds.exit + 0.01,
+        'left',
+      ),
+    ).toBe('forward');
+    expect(
+      selectDirectionalLocomotion(
+        'running',
+        directionalRunThresholds.enter,
+        'left',
+      ),
+    ).toBe('right');
+    expect(selectDirectionalLocomotion('walking', 1, 'right')).toBe('forward');
+  });
+
+  it('crosses among forward, left, and right without per-frame restarts', () => {
+    const graph = new CharacterAnimationStateMachine();
+    const hasClip = (name: string) =>
+      ['idle', 'run', 'runLeft', 'runRight'].includes(name);
+    const left = graph.transition(
+      { movement: 'running', localMovementX: -0.8 },
+      hasClip,
+    );
+    expect(left).toMatchObject({
+      changed: true,
+      state: {
+        requestedClip: 'runLeft',
+        resolvedClip: 'runLeft',
+        directionalLocomotion: 'left',
+        transitionSequence: 1,
+      },
+    });
+    const stable = graph.transition(
+      { movement: 'running', localMovementX: -0.48 },
+      hasClip,
+    );
+    expect(stable.changed).toBe(false);
+    expect(stable.state.transitionSequence).toBe(1);
+    expect(
+      graph.transition({ movement: 'running', localMovementX: 0.8 }, hasClip)
+        .state,
+    ).toMatchObject({
+      requestedClip: 'runRight',
+      directionalLocomotion: 'right',
+      transitionSequence: 2,
+    });
+  });
+
+  it('falls back from a missing directional clip to normal run', () => {
+    const graph = new CharacterAnimationStateMachine();
+    graph.transition(
+      { movement: 'running', localMovementX: 0 },
+      (name) => name === 'run' || name === 'idle',
+    );
+    const state = graph.transition(
+      { movement: 'running', localMovementX: 1 },
+      (name) => name === 'run' || name === 'idle',
+    );
+    expect(state.changed).toBe(false);
+    expect(state.state).toMatchObject({
+      requestedClip: 'runRight',
+      resolvedClip: 'run',
+      fallback: 'run',
+      label: 'run (fallback for runRight)',
+      directionalLocomotion: 'right',
+    });
+  });
+
+  it('restores the latest directional run after an action', () => {
+    const graph = new CharacterAnimationStateMachine();
+    const hasClip = (name: string) =>
+      ['idle', 'run', 'runLeft', 'runRight', 'punchLeft'].includes(name);
+    graph.transition({ movement: 'running', localMovementX: -1 }, hasClip);
+    graph.transition(
+      { movement: 'running', localMovementX: 1, action: 'punchLeft' },
+      hasClip,
+    );
+    expect(
+      graph.transition({ movement: 'running', localMovementX: 1 }, hasClip)
+        .state,
+    ).toMatchObject({
+      requestedClip: 'runRight',
+      resolvedClip: 'runRight',
+      directionalLocomotion: 'right',
+      transitionReason: 'restoration',
     });
   });
 });
