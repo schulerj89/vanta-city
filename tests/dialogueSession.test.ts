@@ -38,6 +38,12 @@ const conversation: ConversationDefinition = {
   onComplete: { id: 'test.completed' },
 };
 
+const placeholderConversation: ConversationDefinition = {
+  id: 'test.placeholder',
+  placeholder: true,
+  lines: [],
+};
+
 function createHarness(
   typewriterEnabled = false,
   cameraHooks?: DialogueCameraHooks,
@@ -47,7 +53,7 @@ function createHarness(
   state.transition('playing');
   const input = new TestInput();
   const conversations = new ConversationCoordinator(
-    new ConversationCatalog([conversation]),
+    new ConversationCatalog([conversation, placeholderConversation]),
     state,
   );
   const controller = new DialogueSessionController(input, conversations, {
@@ -78,6 +84,59 @@ describe('DialogueSessionController', () => {
       fullText: 'First line.',
       state: 'ready',
     });
+  });
+
+  it('rejects empty placeholders before session, camera, or state ownership', async () => {
+    const cameraStarted = vi.fn();
+    const harness = createHarness(false, {
+      onDialogueStarted: cameraStarted,
+    });
+    const started = vi.fn();
+    harness.conversations.events.on('conversation:started', started);
+
+    expect(harness.conversations.start(placeholderConversation.id, 'nox')).toBe(
+      false,
+    );
+    await Promise.resolve();
+
+    expect(harness.conversations.active).toBeUndefined();
+    expect(harness.controller.getSnapshot().state).toBe('idle');
+    expect(harness.state.current).toBe('playing');
+    expect(started).not.toHaveBeenCalled();
+    expect(cameraStarted).not.toHaveBeenCalled();
+  });
+
+  it('leaves ownership untouched when a conversation id is missing', async () => {
+    const harness = createHarness();
+    expect(() =>
+      harness.conversations.start('test.missing', 'missing'),
+    ).toThrow('Unknown conversation');
+    await Promise.resolve();
+    expect(harness.conversations.active).toBeUndefined();
+    expect(harness.controller.getSnapshot().state).toBe('idle');
+    expect(harness.state.current).toBe('playing');
+  });
+
+  it('rolls back initialized dialogue owners when a start observer fails', async () => {
+    const cameraOrder: string[] = [];
+    const harness = createHarness(false, {
+      onDialogueStarted: () => cameraOrder.push('started'),
+      onDialogueEnded: (_conversationId, reason) =>
+        cameraOrder.push(`ended:${reason}`),
+    });
+    harness.conversations.events.on('conversation:started', () => {
+      throw new Error('presentation failed');
+    });
+
+    expect(() => harness.conversations.start(conversation.id, 'mack')).toThrow(
+      'presentation failed',
+    );
+    await Promise.resolve();
+
+    expect(harness.conversations.active).toBeUndefined();
+    expect(harness.controller.getSnapshot().state).toBe('idle');
+    expect(harness.state.current).toBe('playing');
+    expect(cameraOrder).toEqual(['started', 'ended:cancelled']);
   });
 
   it('completes partial text before advancing and preserves line order', () => {

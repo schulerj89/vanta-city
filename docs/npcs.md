@@ -36,7 +36,7 @@ public/assets/portraits/npcs/raze.webp
 
 ## Conversation boundary
 
-`ConversationCoordinator.start(conversationId, npcId)` synchronously publishes `conversation:started`, locks every NPC interaction, and transitions the existing game state to `dialogue` after the initiating interaction completes. A future dialogue UI subscribes to the coordinator's typed events, renders the supplied `ConversationDefinition`, and calls `end()` when finished. Mack's definition contains a complete short demonstration exchange; Nox and Raze intentionally point to validated placeholders.
+`ConversationCoordinator.start(conversationId, npcId)` synchronously publishes `conversation:started`, locks every NPC interaction, and transitions the existing game state to `dialogue` after the initiating interaction completes only when the referenced definition contains dialogue lines. Mack's definition contains a complete short demonstration exchange. Nox and Raze intentionally point to validated empty placeholders; their Talk interactions remain harmless in `playing` and acquire no conversation, camera, or input ownership.
 
 During the active session, the matching NPC smoothly faces `PlayerControllerSystem.getWorldPose()` through the public `WorldPoseSource` contract. Ending returns it toward authored idle yaw plus a small ambient variation. No player transform is mutated. The development panel exposes session IDs and an **End conversation** command until dialogue UI exists.
 

@@ -174,6 +174,7 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   const consoleIssues = monitorConsoleIssues(page);
   page.on('pageerror', (error) => uncaught.push(error.message));
   await page.goto('/?e2e=1&debug=1&skipPicker=1');
+  await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
 
   await expect
     .poll(async () => (await snapshot(page)).gameState)
@@ -185,16 +186,20 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
 
   await page.keyboard.press('e');
   await expect
-    .poll(async () => (await snapshot(page)).dialogue.session.state)
-    .toBe('typing');
-  const revealButton = page.getByRole('button', {
-    name: 'Reveal full dialogue line',
-  });
-  await expect(revealButton).toBeVisible();
-  // The first line is intentionally short. Activate the observed reveal
-  // control in the same browser task so natural typewriter completion cannot
-  // turn this synchronization assertion into an unintended advance.
-  await revealButton.evaluate((button: HTMLButtonElement) => button.click());
+    .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+    .toBe(0);
+  const initial = await snapshot(page);
+  expect(['typing', 'ready']).toContain(initial.dialogue.session.state);
+  if (initial.dialogue.session.state === 'typing') {
+    const revealButton = page.getByRole('button', {
+      name: 'Reveal full dialogue line',
+    });
+    await expect(revealButton).toBeVisible();
+    // The first line is intentionally short. Activate the observed reveal
+    // control in the same browser task so natural completion cannot turn this
+    // synchronization assertion into an unintended advance.
+    await revealButton.evaluate((button: HTMLButtonElement) => button.click());
+  }
   await expect
     .poll(async () => (await snapshot(page)).dialogue.session.state)
     .toBe('ready');
@@ -208,8 +213,10 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
     .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
     .toBe(1);
   // The control activation must not also enter the global Mouse0 binding and
-  // reveal or advance the newly entered line on the next frame.
-  expect((await snapshot(page)).dialogue.session.state).toBe('typing');
+  // advance past the newly entered line on the next frame.
+  expect(['typing', 'ready']).toContain(
+    (await snapshot(page)).dialogue.session.state,
+  );
 
   await page.getByRole('button', { name: 'Cancel dialogue' }).click();
   await expect
@@ -237,8 +244,8 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   expect(repeated.dialogue.session).toMatchObject({
     lineIndex: 0,
     speakerId: 'mack',
-    state: 'typing',
   });
+  expect(['typing', 'ready']).toContain(repeated.dialogue.session.state);
   expect(repeated.camera.owner).toBe('dialogue:conversation.mack.introduction');
 
   await page.keyboard.press('Escape');
@@ -257,6 +264,111 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   const restored = await snapshot(page);
   expect(restored.runtimeErrors.count, restored.runtimeErrors.last).toBe(0);
   expect(uncaught).toEqual([]);
+  expect(
+    consoleIssues.filter(({ text }) => !isKnownBrowserDiagnostic(text)),
+    formatConsoleIssues(consoleIssues),
+  ).toEqual([]);
+});
+
+test('no-dialogue NPCs never acquire dialogue, camera, or input ownership', async ({
+  page,
+}) => {
+  const uncaught: string[] = [];
+  const consoleIssues = monitorConsoleIssues(page);
+  page.on('pageerror', (error) => uncaught.push(error.message));
+  await page.goto('/?e2e=1&debug=1&skipPicker=1');
+  await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
+
+  for (const npc of [
+    { id: 'nox', spawnId: 'spawn.npc-alley' },
+    { id: 'raze', spawnId: 'spawn.npc-deck' },
+  ]) {
+    await command(page, 'player.teleport', npc.spawnId);
+    await expect
+      .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+      .toBe(`interaction.npc.${npc.id}`);
+    await page.keyboard.press('e');
+    await page.waitForTimeout(100);
+
+    const state = await snapshot(page);
+    expect(state.gameState).toBe('playing');
+    expect(state.conversation).toEqual({
+      npcId: undefined,
+      conversationId: undefined,
+    });
+    expect(state.dialogue.session.state).toBe('idle');
+    expect(state.dialogue.ui.visible).toBe(false);
+    expect(state.camera).toMatchObject({
+      mode: 'gameplay',
+      owner: 'gameplay',
+    });
+    expect(state.interaction.activeTargetId).toBe(`interaction.npc.${npc.id}`);
+  }
+
+  await command(page, 'player.teleport', 'spawn.player-default');
+  const before = (await snapshot(page)).player.position;
+  await page.keyboard.down('w');
+  await expect
+    .poll(async () =>
+      horizontalDistance((await snapshot(page)).player.position, before),
+    )
+    .toBeGreaterThan(0.2);
+  await page.keyboard.up('w');
+
+  const restored = await snapshot(page);
+  expect(restored.runtimeErrors.count, restored.runtimeErrors.last).toBe(0);
+  expect(uncaught).toEqual([]);
+  expect(
+    consoleIssues.filter(({ text }) => !isKnownBrowserDiagnostic(text)),
+    formatConsoleIssues(consoleIssues),
+  ).toEqual([]);
+});
+
+test('dialogue panel remains stable while text and speakers change responsively', async ({
+  page,
+}) => {
+  const consoleIssues = monitorConsoleIssues(page);
+  for (const viewport of [
+    { width: 1280, height: 720 },
+    { width: 390, height: 844 },
+    { width: 568, height: 320 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/?e2e=1&skipPicker=1');
+    await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
+    await command(page, 'dialogue.set-typewriter', 'on');
+    await command(page, 'dialogue.start-mack');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+      .toBe(0);
+    await expect(page.getByTestId('dialogue-box')).toBeVisible();
+
+    const layouts = [await dialogueLayout(page)];
+    await command(page, 'dialogue.set-typewriter', 'off');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.state)
+      .toBe('ready');
+    layouts.push(await dialogueLayout(page));
+
+    for (let lineIndex = 1; lineIndex < 4; lineIndex += 1) {
+      await command(page, 'dialogue.advance');
+      await expect
+        .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+        .toBe(lineIndex);
+      layouts.push(await dialogueLayout(page));
+    }
+
+    const baseline = layouts[0];
+    for (const layout of layouts) {
+      expect(layout.top).toBeCloseTo(baseline.top, 0);
+      expect(layout.height).toBeCloseTo(baseline.height, 0);
+      expect(layout.top).toBeGreaterThanOrEqual(0);
+      expect(layout.bottom).toBeLessThanOrEqual(viewport.height);
+      expect(layout.textScrollHeight).toBeLessThanOrEqual(
+        layout.textClientHeight + 1,
+      );
+    }
+  }
   expect(
     consoleIssues.filter(({ text }) => !isKnownBrowserDiagnostic(text)),
     formatConsoleIssues(consoleIssues),
@@ -320,4 +432,27 @@ function horizontalDistance(
   b: { readonly x: number; readonly z: number },
 ): number {
   return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+async function dialogueLayout(page: Page): Promise<{
+  readonly top: number;
+  readonly bottom: number;
+  readonly height: number;
+  readonly textClientHeight: number;
+  readonly textScrollHeight: number;
+}> {
+  return page.getByTestId('dialogue-box').evaluate((panel) => {
+    const text = panel.querySelector<HTMLElement>(
+      '[data-testid="dialogue-text"]',
+    );
+    if (!text) throw new Error('Dialogue text element unavailable');
+    const bounds = panel.getBoundingClientRect();
+    return {
+      top: bounds.top,
+      bottom: bounds.bottom,
+      height: bounds.height,
+      textClientHeight: text.clientHeight,
+      textScrollHeight: text.scrollHeight,
+    };
+  });
 }

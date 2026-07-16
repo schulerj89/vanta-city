@@ -5,6 +5,7 @@ import type {
   ConversationCatalog,
   ConversationDefinition,
 } from './ConversationDefinition';
+import { isPlayableConversation } from './ConversationDefinition';
 
 export interface ConversationSession {
   readonly npcId: string;
@@ -39,12 +40,34 @@ export class ConversationCoordinator implements GameSystem {
 
   public start(conversationId: string, npcId: string): boolean {
     if (this.session || this.state.current !== 'playing') return false;
+    // Resolve and admit the definition before publishing any lifecycle event.
+    // Empty placeholders are valid NPC references, but have no dialogue
+    // session that could be advanced or completed.
+    const definition = this.catalog.get(conversationId);
+    if (!isPlayableConversation(definition)) return false;
     const session = {
       npcId,
-      definition: this.catalog.get(conversationId),
+      definition,
     } satisfies ConversationSession;
     this.session = session;
-    this.events.emit('conversation:started', { session });
+    try {
+      this.events.emit('conversation:started', { session });
+    } catch (error) {
+      // A presentation subscriber may have acquired UI or camera ownership
+      // before a later subscriber fails. Roll back through the same end event
+      // used by ordinary cancellation so every initialized owner releases.
+      if (this.session === session) {
+        this.session = undefined;
+        this.events.emit('conversation:ended', {
+          session,
+          reason: 'cancelled',
+        });
+      }
+      throw error;
+    }
+
+    // A started observer may synchronously reject/end the request.
+    if (this.session !== session) return false;
 
     // Let the initiating InteractionSystem finish its immediate action before
     // changing state; availability is already locked by the active session.

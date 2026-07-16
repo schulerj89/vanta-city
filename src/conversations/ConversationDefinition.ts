@@ -75,6 +75,13 @@ export function validateConversation(
   validateConversationDefinitions([conversation]);
 }
 
+/** Placeholder definitions are valid catalog references, but not sessions. */
+export function isPlayableConversation(
+  conversation: ConversationDefinition,
+): boolean {
+  return conversation.lines.length > 0;
+}
+
 export class ConversationCatalog {
   private readonly byId: ReadonlyMap<string, ConversationDefinition>;
 

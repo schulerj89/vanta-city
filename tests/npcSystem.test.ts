@@ -195,6 +195,56 @@ describe('NPC foundation', () => {
     conversations.dispose();
   });
 
+  it('keeps no-dialogue NPC interactions in playing without session ownership', async () => {
+    const scene = new Scene();
+    const objects = new GameObjectWorld(scene);
+    const interactions = interactionRegistry();
+    const worldEvents = new EventBus<WorldEvents>();
+    const { state } = stateHarness();
+    const conversations = new ConversationCoordinator(
+      conversationCatalog,
+      state,
+    );
+    const started = vi.fn();
+    conversations.events.on('conversation:started', started);
+    const system = new NpcSystem(
+      npcDefinitions,
+      npcCharacterDefinitions,
+      characterLoader(),
+      objects,
+      interactions,
+      conversations,
+      {
+        getWorldPose: () => ({
+          position: { x: -13, y: 0.2, z: 4 },
+          forward: { x: 1, y: 0, z: 0 },
+        }),
+      },
+      { activeLevel: testDistrict.definition },
+      worldEvents,
+    );
+    await system.init();
+    const nox = interactions.entries.get('interaction.npc.nox');
+    if (!nox) throw new Error('Nox interaction was not registered');
+
+    await nox.interact({
+      gameState: 'playing',
+      targetId: nox.id,
+      signal: new AbortController().signal,
+    });
+    await Promise.resolve();
+
+    expect(started).not.toHaveBeenCalled();
+    expect(conversations.active).toBeUndefined();
+    expect(state.current).toBe('playing');
+    expect(system.getDebugSnapshot('nox')).toMatchObject({
+      interactionState: 'available',
+      conversationState: 'idle',
+    });
+    system.dispose();
+    conversations.dispose();
+  });
+
   it('calculates shortest-path facing and restores idle orientation', async () => {
     expect(
       calculateFacingYaw({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }),
