@@ -4,9 +4,12 @@ Place the selected runtime-ready character at:
 
 ```text
 public/assets/characters/ultimate-modular-men/model.glb
+public/assets/characters/ultimate-modular-men/worker.glb
+public/assets/characters/ultimate-modular-men/hoodie-character.glb
+public/assets/characters/ultimate-modular-men/punk.glb
 ```
 
-The catalog entry `character.modular-man.model` resolves to that URL. The game intentionally falls back to its primitive character while the file is absent.
+The catalog entries resolve the playable Modular Man plus Mack's Worker, Nox's Hoodie Character, and Raze's Punk model to these URLs. The game intentionally falls back to generated primitive characters while files are absent.
 
 Source: [Ultimate Modular Men Pack by Quaternius](https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ), listed by Poly Pizza as CC0. Keep this note and update `docs/ATTRIBUTIONS.md` if the downloaded source or license differs.
 

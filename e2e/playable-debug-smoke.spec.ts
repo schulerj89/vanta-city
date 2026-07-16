@@ -221,6 +221,49 @@ test.describe('playable debug district', () => {
       .poll(async () => (await snapshot(page)).picker.open)
       .toBe(false);
   });
+
+  test('spawns conversation NPCs and signals Mack dialogue through Talk', async ({
+    page,
+  }) => {
+    await openReadyApp(page);
+    await expect.poll(async () => (await snapshot(page)).npcs.count).toBe(3);
+    const initial = await snapshot(page);
+    expect(
+      initial.npcs.snapshots.map(({ definitionId }) => definitionId),
+    ).toEqual(['mack', 'nox', 'raze']);
+    expect(
+      initial.npcs.snapshots.every(({ modelFallback }) => modelFallback),
+    ).toBe(true);
+
+    await executeCommand(page, 'player.teleport', 'spawn.npc-mechanic');
+    await expect
+      .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+      .toBe('interaction.npc.mack');
+    await page.keyboard.press('e');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('dialogue');
+    const talking = await snapshot(page);
+    expect(talking.conversation).toEqual({
+      npcId: 'mack',
+      conversationId: 'conversation.mack.introduction',
+    });
+    expect(
+      talking.npcs.snapshots.find(
+        ({ definitionId }) => definitionId === 'mack',
+      ),
+    ).toMatchObject({
+      interactionState: 'conversation',
+      conversationState: 'active',
+    });
+    expect(talking.interaction.activeTargetId).toBeUndefined();
+
+    await executeCommand(page, 'conversation.end');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
+    expect((await snapshot(page)).conversation.npcId).toBeUndefined();
+  });
 });
 
 async function openReadyApp(page: Page): Promise<void> {

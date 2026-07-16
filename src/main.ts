@@ -7,6 +7,8 @@ import { CharacterLoader } from './characters/CharacterLoader';
 import { ManifestCharacterAvailabilityProbe } from './characters/CharacterAvailability';
 import { CharacterSelectionStore } from './characters/CharacterSelection';
 import { characterDefinitions } from './characters/characters';
+import { ConversationCoordinator } from './conversations/ConversationCoordinator';
+import { conversationCatalog } from './conversations/conversations';
 import type { GameSystem } from './core/lifecycle';
 import { EventBus } from './core/events';
 import { GameObjectWorld } from './entities/GameObjectWorld';
@@ -15,6 +17,8 @@ import type { GameContext } from './game/GameRuntime';
 import { InputSystem } from './input/InputSystem';
 import { defaultBindings } from './input/defaultBindings';
 import { InteractionSystem } from './interactions/InteractionSystem';
+import { NpcSystem } from './npcs/NpcSystem';
+import { npcCharacterDefinitions, npcDefinitions } from './npcs/npcs';
 import { StaticCollisionWorld } from './physics/CollisionWorld';
 import { WorldCollisionSystem } from './physics/WorldCollisionSystem';
 import { CharacterPlayerVisual } from './player/CharacterPlayerVisual';
@@ -136,6 +140,21 @@ async function bootstrap(): Promise<void> {
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
   const interactions = new InteractionSystem(input, runtime.state, player);
+  const conversations = new ConversationCoordinator(
+    conversationCatalog,
+    runtime.state,
+  );
+  const npcs = new NpcSystem(
+    npcDefinitions,
+    npcCharacterDefinitions,
+    new CharacterLoader(assets),
+    objects,
+    interactions,
+    conversations,
+    player,
+    levelSystem,
+    worldEvents,
+  );
   interactions.register({
     id: 'interaction.garage-door',
     prompt: 'Inspect garage door',
@@ -178,6 +197,8 @@ async function bootstrap(): Promise<void> {
         characterSelection,
         characterVisual,
         characterPicker,
+        npcs,
+        conversations,
         interactionDebug,
         characterAlignmentDebug,
       )
@@ -192,6 +213,8 @@ async function bootstrap(): Promise<void> {
     .register(player)
     .register(camera)
     .register(interactions)
+    .register(conversations)
+    .register(npcs)
     .register(new InteractionPromptSystem(mount, interactions))
     .register(characterPicker);
   if (interactionDebug) runtime.register(interactionDebug);
@@ -221,6 +244,9 @@ async function bootstrap(): Promise<void> {
           player,
           camera,
           interactions,
+          npcs,
+          npcDefinitions,
+          conversations,
           characterSelection,
           characterVisual,
           characterPicker,
@@ -245,11 +271,82 @@ function registerVerticalSliceDebug(
   characterSelection: CharacterSelectionStore,
   characterVisual: CharacterPlayerVisual,
   characterPicker: CharacterPickerSystem,
+  npcs: NpcSystem,
+  conversations: ConversationCoordinator,
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
 ): (() => void)[] {
   const { debug, visualHelpers } = development;
+  const npcDebug = npcDefinitions.flatMap((definition) => {
+    const read = <Value>(
+      select: (
+        snapshot: NonNullable<ReturnType<NpcSystem['getDebugSnapshot']>>,
+      ) => Value,
+      fallback: Value,
+    ): Value => {
+      const snapshot = npcs.getDebugSnapshot(definition.id);
+      return snapshot ? select(snapshot) : fallback;
+    };
+    const group = `NPC: ${definition.displayName}`;
+    return [
+      debug.registerValue({
+        id: `npc.${definition.id}.id`,
+        label: 'NPC ID',
+        group,
+        read: () => read(({ npcId }) => npcId, 'loading'),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.definition`,
+        label: 'Definition ID',
+        group,
+        read: () => read(({ definitionId }) => definitionId, definition.id),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.spawn`,
+        label: 'Spawn point',
+        group,
+        read: () => read(({ spawnId }) => spawnId, definition.spawnId),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.animation`,
+        label: 'Animation',
+        group,
+        read: () => read(({ currentAnimation }) => currentAnimation, 'loading'),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.interaction`,
+        label: 'Interaction',
+        group,
+        read: () => read(({ interactionState }) => interactionState, 'loading'),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.conversation`,
+        label: 'Conversation',
+        group,
+        read: () => read(({ conversationState }) => conversationState, 'idle'),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.fallback`,
+        label: 'Model fallback',
+        group,
+        read: () => read(({ modelFallback }) => modelFallback, true),
+      }),
+    ];
+  });
   return [
+    ...npcDebug,
+    debug.registerValue({
+      id: 'conversation.active-npc',
+      label: 'Active NPC',
+      group: 'Conversation',
+      read: () => conversations.active?.npcId ?? 'none',
+    }),
+    debug.registerValue({
+      id: 'conversation.active-id',
+      label: 'Conversation ID',
+      group: 'Conversation',
+      read: () => conversations.active?.definition.id ?? 'none',
+    }),
     debug.registerValue({
       id: 'player.character-selected',
       label: 'Selected character',
@@ -432,6 +529,14 @@ function registerVerticalSliceDebug(
       label: 'Reload character',
       group: 'Actions',
       run: () => characterVisual.reload(),
+    }),
+    debug.registerCommand({
+      id: 'conversation.end',
+      label: 'End conversation',
+      group: 'Actions',
+      run: () => {
+        conversations.end();
+      },
     }),
     debug.registerCommand({
       id: 'level.reload',

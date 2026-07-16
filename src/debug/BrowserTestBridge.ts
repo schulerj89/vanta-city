@@ -3,6 +3,9 @@ import type { CharacterDefinition } from '../characters/CharacterDefinition';
 import type { CharacterSelectionReader } from '../characters/CharacterSelection';
 import type { GameRuntime } from '../game/GameRuntime';
 import type { InteractionSystem } from '../interactions/InteractionSystem';
+import type { ConversationCoordinator } from '../conversations/ConversationCoordinator';
+import type { NpcSystem } from '../npcs/NpcSystem';
+import type { npcDefinitions } from '../npcs/npcs';
 import type { StaticCollisionWorld } from '../physics/CollisionWorld';
 import type { CharacterPlayerVisual } from '../player/CharacterPlayerVisual';
 import type { PlayerControllerSystem } from '../player/PlayerControllerSystem';
@@ -60,6 +63,16 @@ export interface BrowserTestSnapshot {
     readonly activeTargetId: string | undefined;
     readonly completedTargetIds: readonly string[];
   };
+  readonly npcs: {
+    readonly count: number;
+    readonly snapshots: readonly NonNullable<
+      ReturnType<NpcSystem['getDebugSnapshot']>
+    >[];
+  };
+  readonly conversation: {
+    readonly npcId: string | undefined;
+    readonly conversationId: string | undefined;
+  };
   readonly runtimeErrors: ReturnType<RuntimeErrorReporter['getDebugSnapshot']>;
 }
 
@@ -82,6 +95,9 @@ export interface BrowserTestBridgeDependencies {
   readonly player: PlayerControllerSystem;
   readonly camera: ThirdPersonCameraSystem;
   readonly interactions: InteractionSystem;
+  readonly npcs: NpcSystem;
+  readonly npcDefinitions: typeof npcDefinitions;
+  readonly conversations: ConversationCoordinator;
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
   readonly characterPicker: CharacterPickerSystem;
@@ -160,6 +176,17 @@ function createSnapshot(
     interaction: {
       activeTargetId: dependencies.interactions.getActiveTarget()?.id,
       completedTargetIds: [...completedTargetIds],
+    },
+    npcs: {
+      count: dependencies.npcs.count,
+      snapshots: dependencies.npcDefinitions.flatMap((definition) => {
+        const snapshot = dependencies.npcs.getDebugSnapshot(definition.id);
+        return snapshot ? [snapshot] : [];
+      }),
+    },
+    conversation: {
+      npcId: dependencies.conversations.active?.npcId,
+      conversationId: dependencies.conversations.active?.definition.id,
     },
     runtimeErrors: dependencies.errors.getDebugSnapshot(),
   };

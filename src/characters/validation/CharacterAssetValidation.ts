@@ -540,6 +540,11 @@ async function validateAnimations(
   }
 
   const resolved: Record<string, string> = {};
+  const optionalEmbeddedSourceUnavailable = Boolean(
+    !model &&
+    definition.modelAssetId &&
+    manifest[definition.modelAssetId]?.optional,
+  );
   for (const [logicalName, binding] of Object.entries(
     definition.animations ?? {},
   )) {
@@ -548,6 +553,9 @@ async function validateAnimations(
       .map((name) => candidates.find((candidate) => candidate.name === name))
       .find((candidate): candidate is AnimationClip => candidate !== undefined);
     if (!clip) {
+      // The optional-file warning already explains why embedded clips cannot be
+      // inspected. Keep required mappings strict whenever a model is present.
+      if (!binding.assetId && optionalEmbeddedSourceUnavailable) continue;
       addIssue(
         binding.required
           ? 'required-animation-missing'

@@ -106,8 +106,12 @@ describe('character asset validation', () => {
       validatePreviewCycles: vi.fn(async () => undefined),
     };
 
+    const optionalAnimatedHero: CharacterDefinition = {
+      ...hero,
+      animations: { idle: { clipNames: ['Idle'], required: true } },
+    };
     const report = await validateCharacterCatalog(
-      [hero],
+      [optionalAnimatedHero],
       manifest,
       inspector,
       mergeCharacterValidationConfig(),

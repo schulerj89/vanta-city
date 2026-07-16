@@ -3,6 +3,7 @@ import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assetManifest } from '../src/assets/catalog';
 import { characterDefinitionEntries } from '../src/characters/characters';
+import { npcCharacterDefinitions } from '../src/npcs/npcs';
 import type {
   CharacterValidationConfigInput,
   CharacterValidationIssue,
@@ -29,7 +30,7 @@ async function main(): Promise<void> {
   const config = mergeCharacterValidationConfig(override);
   const inspector = new NodeCharacterAssetInspector(projectRoot);
   const report = await validateCharacterCatalog(
-    characterDefinitionEntries,
+    [...characterDefinitionEntries, ...npcCharacterDefinitions],
     assetManifest,
     inspector,
     config,

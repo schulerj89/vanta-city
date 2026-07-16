@@ -52,6 +52,12 @@ Rendered geometry, plain collision boxes, semantic locations, trigger definition
 
 `InteractionSystem` centrally registers plain `Interactable` definitions, queries one injected player pose, ranks valid candidates, and executes the single selected target through the named `interact` action. Interactables have no per-frame hook and do not depend on a visual model. Immediate and promise-based handlers share typed lifecycle events and abort-signal cancellation. See [Interaction API](./interactions.md) for scoring, availability, and integration details.
 
+## NPCs and conversation boundary
+
+`NpcSystem` converts data-only `NpcDefinition` entries and level NPC spawns into `NpcEntity` game objects plus generic Talk registrations. It reuses `CharacterLoader`, logical animation mappings, bounds-based ground alignment, `WorldPoseSource`, level events, and `GameObjectWorld` disposal. Static occupancy uses authored level colliders because NPC navigation and dynamic bodies are outside this foundation. See [NPC foundation](./npcs.md) for roster mappings and registration steps.
+
+`ConversationCoordinator` is a UI-free typed session boundary. It validates conversation references, gates duplicate sessions, drives the existing `dialogue` game state, and emits start/end facts. NPC facing observes the public player pose only. Future dialogue presentation owns content flow and calls `end()`; it must not reach into NPC rendering or player simulation.
+
 Asset failures retain the logical ID, asset type, and resolved URL. System initialization failures retain the system ID and dispose systems that were already initialized, making partial startup failures actionable without leaving listeners or render resources attached.
 
 ## Development and sandbox APIs
@@ -63,7 +69,7 @@ Sandbox scenarios implement the normal `GameSystem` lifecycle and replace the no
 ## Future integration
 
 - Player: implement a `GameObject` for presentation and a focused movement/controller system that reads `InputReader`, owns a physics abstraction body, and exposes a read-only position source to debugging/camera code.
-- NPCs: use `GameObject` identity and separate presentation, locomotion, and behavior concerns when their complexity warrants it. Publish meaningful state changes through typed events rather than broadcasting every frame.
+- NPC locomotion: keep presentation, navigation, and behavior separate when mobile actors are introduced. The current conversation NPCs are intentionally static `GameObject` instances.
 - Dialogue/cinematics: request validated state transitions and drive camera/UI systems while in `dialogue` or `cinematic`; content and presentation remain separate.
 - Missions: keep objective data independent of rendering, consume typed world events, and emit objective changes. Do not reach into NPC or player internals.
 - Vehicles: use the same game-owned physics boundary as characters, provide enter/exit commands, and swap the active control target rather than reading keys inside a vehicle object.

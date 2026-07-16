@@ -15,7 +15,7 @@ Each `LevelModule` exports a `definition` and logical `assets` manifest. A defin
 
 Runtime consumers use `LevelLocations` methods (`getSpawn`, `getLocation`, `getTrigger`, `getCinematicAnchor`, and `getStaticColliders`) instead of searching the Three.js scene. `level:loaded` and `level:unloaded` events publish lifecycle facts. Loading remains a direct command on the owning system.
 
-`staticCollision` is deliberately plain data. The future game-owned physics adapter should convert each box's `position`, Euler `rotation`, and `size` to its native static-body representation. Player grounding/movement and camera obstruction can consume the same collider list without either system importing level-rendering internals.
+`staticCollision` is deliberately plain data. The future game-owned physics adapter should convert each box's `position`, Euler `rotation`, and `size` to its native static-body representation. Player grounding/movement and camera obstruction can consume the same collider list without either system importing level-rendering internals. Static conversation NPCs may use small `npc-occupancy` boxes at their authored spawns; unloading the level clears those boxes with every other world collider.
 
 ## Adding a district
 

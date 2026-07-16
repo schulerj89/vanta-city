@@ -114,6 +114,9 @@ const staticCollision: readonly StaticColliderDefinition[] = [
   collider('c.bollard-a', [-5.8, 0.6, 5], [0.35, 1.2, 0.35], ['obstacle']),
   collider('c.bollard-b', [-7, 0.6, 5], [0.35, 1.2, 0.35], ['obstacle']),
   collider('c.bollard-c', [-8.2, 0.6, 5], [0.35, 1.2, 0.35], ['obstacle']),
+  collider('c.npc-mack', [-10, 1.1, 4], [0.75, 1.8, 0.75], ['npc-occupancy']),
+  collider('c.npc-nox', [-19, 1.1, 12], [0.75, 1.8, 0.75], ['npc-occupancy']),
+  collider('c.npc-raze', [14, 3.9, -8], [0.75, 1.8, 0.75], ['npc-occupancy']),
 ];
 
 export const testDistrict = {
