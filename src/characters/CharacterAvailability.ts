@@ -2,7 +2,7 @@ import type { AssetCatalog } from '../assets/AssetCatalog';
 import type { CharacterDefinition } from './CharacterDefinition';
 
 export type CharacterAvailabilityStatus =
-  'checking' | 'available' | 'unavailable';
+  'checking' | 'available' | 'fallback' | 'unavailable';
 
 export interface CharacterAvailabilityResult {
   readonly status: Exclude<CharacterAvailabilityStatus, 'checking'>;
@@ -61,7 +61,7 @@ export class ManifestCharacterAvailabilityProbe implements CharacterAvailability
       const contentType = response.headers.get('content-type') ?? '';
       if (!response.ok || contentType.includes('text/html')) {
         return {
-          status: 'available',
+          status: 'fallback',
           reason:
             'Model file is not installed locally; placeholder fallback will be used.',
         };
@@ -69,7 +69,7 @@ export class ManifestCharacterAvailabilityProbe implements CharacterAvailability
       return { status: 'available' };
     } catch {
       return {
-        status: 'available',
+        status: 'fallback',
         reason:
           'Model file could not be verified; placeholder fallback will be used.',
       };

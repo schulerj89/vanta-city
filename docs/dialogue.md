@@ -56,7 +56,7 @@ The controller emits `dialogue:started`, `dialogue:line-changed`, `dialogue:comp
 
 NPC speaker names and portrait URLs are derived from `NpcDefinition` metadata. A line-level `portraitOverride` wins, followed by selected-player identity, NPC portrait, and fallback initials. Rook uses the selected `CharacterDefinition`; the current playable catalog has no portrait URL, so Rook safely displays initials derived from the confirmed character until one becomes available.
 
-Image load errors replace the image with the same initials fallback. Portrait resolution is visible through the debug panel, `DialogueUISystem.getDebugSnapshot()`, and the opt-in browser-test bridge.
+Optional local portrait URLs are checked before speaker metadata is created, so an uninstalled portrait goes directly to initials instead of requesting the development server's HTML fallback. Unexpected image load errors still replace the image with the same initials fallback. Portrait resolution is visible through the debug panel, `DialogueUISystem.getDebugSnapshot()`, and the opt-in browser-test bridge.
 
 ## Input, accessibility, and tests
 

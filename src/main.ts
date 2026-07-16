@@ -187,7 +187,7 @@ async function bootstrap(): Promise<void> {
     },
   });
   const dialoguePortraits = new DialoguePortraitResolver(
-    createDialogueSpeakers(npcDefinitions, assetCatalog),
+    await createDialogueSpeakers(npcDefinitions, assetCatalog),
     {
       getSelectedIdentity: () => {
         const definition = characterSelection.getSelectedDefinition();

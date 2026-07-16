@@ -22,14 +22,14 @@ These are named actions in `defaultBindings`; a future gamepad implementation ca
 
 ## Availability and previews
 
-Every validated definition in `characterDefinitions` appears. Definitions without external models are immediately available. Model-backed definitions receive a local-only `HEAD` probe against their registered model asset. Missing files, HTML development-server fallbacks, wrong catalog types, and remote URLs produce an unavailable card without loading the full model or crashing the picker.
+Every validated definition in `characterDefinitions` appears. Definitions without external models are immediately available. Model-backed definitions receive a local-only `HEAD` probe against their registered model asset. Missing optional files and HTML development-server fallbacks are labeled as selectable placeholder fallbacks; wrong catalog types and remote URLs remain unavailable. The probe never downloads the full model or crashes the picker.
 
 Only portraits are displayed in the grid and selected preview. No runtime screenshots are generated and the picker does not instantiate every model. Explicit portrait textures use normal browser caching; characters without one receive a deterministic generated silhouette and initials. The existing player visual and asset cache load only the confirmed character model.
 
 The current catalog contains:
 
 - `vanta-placeholder`: available, generated portrait.
-- `modular-man`: generated portrait; available when its locally registered GLB is installed, otherwise visibly unavailable.
+- `modular-man`: generated portrait; available when its locally registered GLB is installed, otherwise explicitly labeled as a selectable placeholder fallback.
 
 ## Registering a portrait
 
@@ -60,6 +60,6 @@ Portrait URLs must remain local. Character asset validation checks that the refe
 `window.__VANTA_TEST__.snapshot().picker` reports:
 
 - whether the picker is open;
-- registered, available, and unavailable character IDs;
+- registered, available, placeholder-fallback, and unavailable character IDs;
 - focused, draft-selected, and confirmed character IDs;
 - preview state: `idle`, `checking`, `loading`, `ready`, `unavailable`, or `failed`.

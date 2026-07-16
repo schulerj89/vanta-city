@@ -42,11 +42,13 @@ export interface DialogueSessionSnapshot {
 }
 
 interface ActiveSession {
+  readonly session: ConversationSession;
   readonly npcId: string;
   readonly conversation: ConversationDefinition;
   lineIndex: number;
   visibleCharacters: number;
   characterProgress: number;
+  cameraStarted: boolean;
 }
 
 export class DialogueSessionController implements GameSystem<GameContext> {
@@ -102,6 +104,7 @@ export class DialogueSessionController implements GameSystem<GameContext> {
     const active = this.active;
     if (!active) return;
     this.updateTypewriter(active, time.delta);
+    if (this.active !== active) return;
 
     if (!this.inputArmed) {
       if (!this.hasPendingDialogueInput()) this.inputArmed = true;
@@ -128,24 +131,31 @@ export class DialogueSessionController implements GameSystem<GameContext> {
   private begin(session: ConversationSession): void {
     const conversation = session.definition;
     validateConversation(conversation);
+    if (this.active?.session === session) return;
     if (this.active) {
       throw new Error(
         `Cannot start conversation "${conversation.id}" while "${this.active.conversation.id}" is active`,
       );
     }
-    this.active = {
+    const active: ActiveSession = {
+      session,
       npcId: session.npcId,
       conversation,
       lineIndex: 0,
       visibleCharacters: 0,
       characterProgress: 0,
+      cameraStarted: false,
     };
+    this.active = active;
     // An interaction key or debug-panel click may also be bound to dialogue.
     // Wait for that initiating edge to clear before dialogue consumes input.
     this.inputArmed = !this.hasPendingDialogueInput();
     this.events.emit('dialogue:started', { conversation });
+    if (this.active !== active) return;
+    active.cameraStarted = true;
     this.cameraHooks.onDialogueStarted?.(session);
-    this.enterCurrentLine();
+    if (this.active !== active) return;
+    this.enterCurrentLine(active);
   }
 
   /** Completes a partial line first; otherwise moves to the next line. */
@@ -158,17 +168,18 @@ export class DialogueSessionController implements GameSystem<GameContext> {
     }
 
     const line = this.currentLine(active);
+    if (!line) return;
     const nextIndex = line.nextLine
       ? active.conversation.lines.findIndex(({ id }) => id === line.nextLine)
       : active.lineIndex + 1;
     if (nextIndex < 0 || nextIndex >= active.conversation.lines.length) {
-      this.finish();
+      this.finish(active);
       return;
     }
     active.lineIndex = nextIndex;
     active.visibleCharacters = 0;
     active.characterProgress = 0;
-    this.enterCurrentLine();
+    this.enterCurrentLine(active);
   }
 
   public skipTypewriter(): void {
@@ -201,6 +212,7 @@ export class DialogueSessionController implements GameSystem<GameContext> {
       };
     }
     const line = this.currentLine(active);
+    if (!line) return this.idleSnapshot();
     const characters = Array.from(line.text);
     const complete = active.visibleCharacters >= characters.length;
     return {
@@ -226,6 +238,7 @@ export class DialogueSessionController implements GameSystem<GameContext> {
   }
 
   private updateTypewriter(active: ActiveSession, delta: number): void {
+    if (this.active !== active) return;
     if (!this.typewriterEnabled) {
       this.completeCurrentLine(active);
       return;
@@ -234,16 +247,19 @@ export class DialogueSessionController implements GameSystem<GameContext> {
     active.characterProgress += Math.max(0, delta) * this.charactersPerSecond;
     const reveal = Math.floor(active.characterProgress);
     if (reveal === 0) return;
+    const line = this.currentLine(active);
+    if (!line) return;
     active.visibleCharacters = Math.min(
-      Array.from(this.currentLine(active).text).length,
+      Array.from(line.text).length,
       active.visibleCharacters + reveal,
     );
     active.characterProgress -= reveal;
   }
 
-  private enterCurrentLine(): void {
-    const active = this.requireActive();
+  private enterCurrentLine(active: ActiveSession): void {
+    if (this.active !== active) return;
     const line = this.currentLine(active);
+    if (!line) return;
     if (!this.typewriterEnabled) this.completeCurrentLine(active);
     const context = {
       conversationId: active.conversation.id,
@@ -252,20 +268,23 @@ export class DialogueSessionController implements GameSystem<GameContext> {
       speakerId: line.speakerId,
     };
     this.events.emit('dialogue:line-changed', { ...context, line });
+    if (this.active !== active) return;
     if (line.onEnter) {
       this.events.emit('dialogue:hook', {
         ...context,
         phase: 'line-entry',
         hook: line.onEnter,
       });
+      if (this.active !== active) return;
     }
     this.cameraHooks.onLineChanged?.(active.conversation.id, line);
   }
 
-  private finish(): void {
-    const active = this.requireActive();
+  private finish(active: ActiveSession): void {
+    if (this.active !== active) return;
     const conversationId = active.conversation.id;
     const finalLine = this.currentLine(active);
+    if (!finalLine) return;
     if (active.conversation.onComplete) {
       this.events.emit('dialogue:hook', {
         conversationId,
@@ -275,6 +294,7 @@ export class DialogueSessionController implements GameSystem<GameContext> {
         phase: 'completion',
         hook: active.conversation.onComplete,
       });
+      if (this.active !== active) return;
     }
     this.conversations.end('completed');
   }
@@ -283,10 +303,15 @@ export class DialogueSessionController implements GameSystem<GameContext> {
     session: ConversationSession,
     reason: 'completed' | 'cancelled',
   ): void {
-    if (!this.active || this.active.conversation.id !== session.definition.id)
-      return;
+    const active = this.active;
+    if (!active || active.session !== session) return;
     const conversationId = session.definition.id;
     this.active = undefined;
+    // Release camera ownership before observers can synchronously start the
+    // next conversation from a completed/cancelled event.
+    if (active.cameraStarted) {
+      this.cameraHooks.onDialogueEnded?.(conversationId, reason);
+    }
     if (reason === 'completed') {
       this.events.emit('dialogue:completed', { conversationId });
     } else {
@@ -295,25 +320,24 @@ export class DialogueSessionController implements GameSystem<GameContext> {
         reason: 'cancelled',
       });
     }
-    this.cameraHooks.onDialogueEnded?.(conversationId, reason);
   }
 
-  private currentLine(active: ActiveSession): DialogueLine {
-    const line = active.conversation.lines[active.lineIndex];
-    if (!line) throw new Error('Active dialogue line is unavailable');
-    return line;
+  private currentLine(active: ActiveSession): DialogueLine | undefined {
+    if (this.active !== active) return undefined;
+    return active.conversation.lines[active.lineIndex];
   }
 
   private completeCurrentLine(active: ActiveSession): void {
-    active.visibleCharacters = Array.from(this.currentLine(active).text).length;
+    const line = this.currentLine(active);
+    if (!line) return;
+    active.visibleCharacters = Array.from(line.text).length;
     active.characterProgress = 0;
   }
 
   private isCurrentLineComplete(active: ActiveSession): boolean {
-    return (
-      active.visibleCharacters >=
-      Array.from(this.currentLine(active).text).length
-    );
+    const line = this.currentLine(active);
+    if (!line) return false;
+    return active.visibleCharacters >= Array.from(line.text).length;
   }
 
   private hasPendingDialogueInput(): boolean {
@@ -322,8 +346,13 @@ export class DialogueSessionController implements GameSystem<GameContext> {
     );
   }
 
-  private requireActive(): ActiveSession {
-    if (!this.active) throw new Error('No dialogue session is active');
-    return this.active;
+  private idleSnapshot(): DialogueSessionSnapshot {
+    return {
+      state: 'idle',
+      visibleText: '',
+      fullText: '',
+      canCancel: false,
+      typewriterEnabled: this.typewriterEnabled,
+    };
   }
 }

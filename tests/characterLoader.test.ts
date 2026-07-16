@@ -5,6 +5,7 @@ import type {
   GameAssetLoader,
   ModelInstance,
 } from '../src/assets/AssetLoader';
+import { AssetLoadError } from '../src/assets/AssetLoader';
 import {
   CharacterLoader,
   removeSceneRootMotion,
@@ -57,6 +58,33 @@ describe('CharacterLoader', () => {
     expect(loaded.source).toBe('placeholder');
     expect(loaded.root.children.length).toBeGreaterThan(0);
     expect(warnings[0]).toContain('using placeholder');
+    loaded.dispose();
+  });
+
+  it('keeps an optional missing model observable without a console warning', async () => {
+    const warnings: string[] = [];
+    const missing = new AssetLoadError(
+      'hero.model',
+      'model',
+      '/hero.glb',
+      new Error('not installed'),
+      true,
+    );
+    const loader = new CharacterLoader(
+      assetLoader({
+        instantiateModel: vi.fn(async () => {
+          throw missing;
+        }),
+      }),
+      (warning) => warnings.push(warning),
+    );
+
+    const loaded = await loader.instantiate(character);
+
+    expect(loaded.source).toBe('placeholder');
+    expect(loaded.warnings).toHaveLength(1);
+    expect(loaded.warnings[0]).toContain('using placeholder');
+    expect(warnings).toEqual([]);
     loaded.dispose();
   });
 

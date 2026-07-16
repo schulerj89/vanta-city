@@ -74,6 +74,38 @@ describe('CharacterPickerSystem', () => {
     harness.dispose();
   });
 
+  it('keeps explicit model fallbacks selectable without calling them available', async () => {
+    const harness = createHarness({
+      first: { status: 'available' },
+      second: {
+        status: 'fallback',
+        reason: 'Model missing; placeholder fallback will be used.',
+      },
+    });
+    harness.picker.open();
+    await vi.waitFor(() => {
+      expect(harness.picker.getSnapshot().fallbackCharacterIds).toEqual([
+        'second',
+      ]);
+    });
+
+    expect(harness.picker.getSnapshot().availableCharacterIds).toEqual([
+      'first',
+    ]);
+    harness.picker.next();
+    harness.picker.selectFocused();
+    expect(harness.picker.getSnapshot()).toMatchObject({
+      selectedCharacterId: 'second',
+      previewState: 'ready',
+    });
+    expect(
+      harness.mount.querySelector('[data-picker-preview-status]')?.textContent,
+    ).toContain('placeholder fallback');
+    harness.picker.confirm();
+    expect(harness.selection.getSelectedId()).toBe('second');
+    harness.dispose();
+  });
+
   it('supports mouse selection, cancellation, and reopening without recreating state', async () => {
     const harness = createHarness({
       first: { status: 'available' },
@@ -159,12 +191,28 @@ describe('ManifestCharacterAvailabilityProbe', () => {
     );
 
     const availability = await probe.check(modelDefinition);
-    expect(availability.status).toBe('available');
+    expect(availability.status).toBe('fallback');
     expect(availability.reason).toContain('placeholder fallback');
     expect(request).toHaveBeenCalledWith(
       new URL('http://localhost/model.glb'),
       { method: 'HEAD' },
     );
+  });
+
+  it('reports request failures as explicit placeholder fallback', async () => {
+    const probe = new ManifestCharacterAvailabilityProbe(
+      new AssetCatalog({
+        'character.model': { type: 'model', url: '/model.glb' },
+      }),
+      vi.fn(async () => {
+        throw new TypeError('network unavailable');
+      }),
+      'http://localhost/game',
+    );
+
+    const result = await probe.check(modelDefinition);
+    expect(result.status).toBe('fallback');
+    expect(result.reason).toContain('placeholder fallback');
   });
 
   it('never probes remote character URLs', async () => {

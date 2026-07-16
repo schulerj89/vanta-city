@@ -1,7 +1,12 @@
 import { Group, Texture } from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { AssetCatalog } from '../src/assets/AssetCatalog';
-import { AssetLoadError, ThreeAssetLoader } from '../src/assets/AssetLoader';
+import {
+  AssetLoadError,
+  AssetSourceUnavailableError,
+  BrowserAssetBackend,
+  ThreeAssetLoader,
+} from '../src/assets/AssetLoader';
 import type { AssetBackend } from '../src/assets/AssetLoader';
 
 function createGltf(): GLTF {
@@ -117,5 +122,21 @@ describe('AssetLoadError', () => {
       url: '/assets/hero.glb',
       cause,
     });
+  });
+});
+
+describe('BrowserAssetBackend', () => {
+  it('rejects an HTML SPA fallback before passing it to GLTFLoader', async () => {
+    const backend = new BrowserAssetBackend(
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+      })),
+    );
+
+    await expect(
+      backend.loadGltf('/missing.glb', vi.fn()),
+    ).rejects.toBeInstanceOf(AssetSourceUnavailableError);
   });
 });

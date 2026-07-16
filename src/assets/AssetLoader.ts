@@ -49,9 +49,29 @@ export interface AssetBackend {
   loadGltf(url: string, onProgress: (progress: number) => void): Promise<GLTF>;
 }
 
+type AssetHeadRequest = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Pick<Response, 'ok' | 'status' | 'headers'>>;
+
+export class AssetSourceUnavailableError extends Error {
+  public constructor(
+    public readonly url: string,
+    detail: string,
+  ) {
+    super(`Asset source "${url}" is unavailable: ${detail}`);
+    this.name = 'AssetSourceUnavailableError';
+  }
+}
+
 export class BrowserAssetBackend implements AssetBackend {
   private readonly textureLoader = new TextureLoader();
   private readonly gltfLoader = new GLTFLoader();
+
+  public constructor(
+    private readonly request: AssetHeadRequest = (input, init) =>
+      fetch(input, init),
+  ) {}
 
   public loadTexture(
     url: string,
@@ -67,10 +87,24 @@ export class BrowserAssetBackend implements AssetBackend {
     });
   }
 
-  public loadGltf(
+  public async loadGltf(
     url: string,
     onProgress: (progress: number) => void,
   ): Promise<GLTF> {
+    const response = await this.request(url, { method: 'HEAD' });
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!response.ok) {
+      throw new AssetSourceUnavailableError(
+        url,
+        `HTTP ${response.status || 'error'}`,
+      );
+    }
+    if (contentType.toLowerCase().includes('text/html')) {
+      throw new AssetSourceUnavailableError(
+        url,
+        'server returned HTML instead of model data',
+      );
+    }
     return new Promise((resolve, reject) => {
       this.gltfLoader.load(
         url,
@@ -88,6 +122,7 @@ export class AssetLoadError extends Error {
     public readonly assetType: AssetDescriptor['type'],
     public readonly url: string,
     cause: unknown,
+    public readonly optional = false,
   ) {
     const detail = cause instanceof Error ? cause.message : String(cause);
     super(
@@ -209,7 +244,13 @@ export class ThreeAssetLoader implements GameAssetLoader {
         const error =
           cause instanceof AssetLoadError
             ? cause
-            : new AssetLoadError(id, asset.type, asset.url, cause);
+            : new AssetLoadError(
+                id,
+                asset.type,
+                asset.url,
+                cause,
+                asset.optional ?? false,
+              );
         if (!this.disposed)
           this.publish({ id, phase: 'error', progress: 0, error });
         throw error;

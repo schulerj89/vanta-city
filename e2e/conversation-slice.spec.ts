@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { ConsoleMessage, Page } from '@playwright/test';
 import type {
   BrowserTestApi,
   BrowserTestSnapshot,
@@ -9,14 +9,19 @@ test('character picker through repeatable Mack conversation', async ({
   page,
 }) => {
   const uncaught: string[] = [];
+  const consoleIssues = monitorConsoleIssues(page);
   page.on('pageerror', (error) => uncaught.push(error.message));
   await page.goto('/?e2e=1&debug=1&dialogueTypewriter=0');
 
   await expect.poll(async () => (await snapshot(page)).picker.open).toBe(true);
   await expect
-    .poll(
-      async () => (await snapshot(page)).picker.availableCharacterIds.length,
-    )
+    .poll(async () => {
+      const pickerState = (await snapshot(page)).picker;
+      return (
+        pickerState.availableCharacterIds.length +
+        pickerState.fallbackCharacterIds.length
+      );
+    })
     .toBeGreaterThanOrEqual(2);
   const picker = await snapshot(page);
   expect(picker.gameState).toBe('character-select');
@@ -40,7 +45,13 @@ test('character picker through repeatable Mack conversation', async ({
   const entered = await snapshot(page);
   expect(entered.selectedCharacterId).toBe('modular-man');
   expect(entered.character.loadedDefinitionId).toBe('modular-man');
+  // The source field is the explicit fallback contract. A missing optional
+  // model may resolve to a placeholder, but it must not surface as a loader or
+  // HTML-parsing warning in the browser console.
   expect(['asset', 'placeholder']).toContain(entered.character.source);
+  if (entered.character.source === 'placeholder') {
+    expect(picker.picker.fallbackCharacterIds).toContain('modular-man');
+  }
   expect(entered.player.grounded).toBe(true);
   expect(entered.world.levelId).toBe('test-district');
   expect(
@@ -97,7 +108,11 @@ test('character picker through repeatable Mack conversation', async ({
         /player-identity|image-error/,
       );
     }
-    await page.keyboard.press('Enter');
+    if (index === expected.length - 1) {
+      await page.getByRole('button', { name: 'Advance dialogue' }).click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
   }
 
   await expect
@@ -128,7 +143,48 @@ test('character picker through repeatable Mack conversation', async ({
   );
   expect(completed.runtimeErrors.count, completed.runtimeErrors.last).toBe(0);
   expect(uncaught).toEqual([]);
+  expect(
+    consoleIssues.filter(({ text }) =>
+      /unexpected token ['"]?<['"]?|gltfloader|not valid json|<!doctype/i.test(
+        text,
+      ),
+    ),
+    `asset URLs must never send HTML into the model loader:\n${formatConsoleIssues(consoleIssues)}`,
+  ).toEqual([]);
+  expect(
+    consoleIssues.filter(({ text }) => !isKnownBrowserDiagnostic(text)),
+    `fallbacks must be represented by test state instead of console warnings:\n${formatConsoleIssues(consoleIssues)}`,
+  ).toEqual([]);
 });
+
+interface BrowserConsoleIssue {
+  readonly type: 'warning' | 'error';
+  readonly text: string;
+}
+
+function monitorConsoleIssues(page: Page): BrowserConsoleIssue[] {
+  const issues: BrowserConsoleIssue[] = [];
+  page.on('console', (message: ConsoleMessage) => {
+    const type = message.type();
+    if (type !== 'warning' && type !== 'error') return;
+    issues.push({ type, text: message.text() });
+  });
+  return issues;
+}
+
+function formatConsoleIssues(issues: readonly BrowserConsoleIssue[]): string {
+  return issues.length === 0
+    ? 'no console warnings or errors'
+    : issues.map(({ type, text }) => `${type}: ${text}`).join('\n');
+}
+
+function isKnownBrowserDiagnostic(text: string): boolean {
+  // Chromium's software WebGL backend reports this performance diagnostic
+  // when Playwright records screenshots/video. It is not emitted by the app.
+  return /^\[\.WebGL-[^\]]+\]GL Driver Message .*GPU stall due to ReadPixels/.test(
+    text,
+  );
+}
 
 async function snapshot(page: Page): Promise<BrowserTestSnapshot> {
   return page.evaluate(() => {

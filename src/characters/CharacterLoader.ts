@@ -1,5 +1,9 @@
 import type { AnimationClip, Object3D } from 'three';
-import type { GameAssetLoader, ModelInstance } from '../assets/AssetLoader';
+import {
+  AssetLoadError,
+  type GameAssetLoader,
+  type ModelInstance,
+} from '../assets/AssetLoader';
 import type { CharacterDefinition } from './CharacterDefinition';
 import { createPlaceholderCharacter } from './PlaceholderCharacter';
 
@@ -56,7 +60,12 @@ export class CharacterLoader {
     } catch (error: unknown) {
       model?.dispose();
       const message = `Character "${definition.id}" could not load its model; using placeholder. ${toMessage(error)}`;
-      this.warn(message);
+      // Optional external assets intentionally fall back when they have not
+      // been installed. Keep the reason in debug state without filling the
+      // browser console with expected warnings on every startup.
+      if (!(error instanceof AssetLoadError && error.optional)) {
+        this.warn(message);
+      }
       return this.placeholder(definition, [message]);
     }
   }

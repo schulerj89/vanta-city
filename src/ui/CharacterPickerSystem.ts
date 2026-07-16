@@ -19,6 +19,7 @@ export interface CharacterPickerSnapshot {
   readonly open: boolean;
   readonly registeredCharacterIds: readonly string[];
   readonly availableCharacterIds: readonly string[];
+  readonly fallbackCharacterIds: readonly string[];
   readonly unavailableCharacterIds: readonly string[];
   readonly focusedCharacterId: string;
   readonly selectedCharacterId: string;
@@ -159,6 +160,9 @@ export class CharacterPickerSystem implements GameSystem {
       availableCharacterIds: entries
         .filter(([, value]) => value.status === 'available')
         .map(([id]) => id),
+      fallbackCharacterIds: entries
+        .filter(([, value]) => value.status === 'fallback')
+        .map(([id]) => id),
       unavailableCharacterIds: entries
         .filter(([, value]) => value.status === 'unavailable')
         .map(([id]) => id),
@@ -297,7 +301,7 @@ export class CharacterPickerSystem implements GameSystem {
         `Enter as ${selected.displayName}`,
         'confirm',
         'primary',
-        selectedAvailability.status !== 'available',
+        !this.isSelectable(selected.id),
       ),
     );
     footer.append(hints, footerActions);
@@ -315,7 +319,7 @@ export class CharacterPickerSystem implements GameSystem {
     panel.dataset.characterId = definition.id;
     const portrait = this.createPortrait(
       definition,
-      availability.status === 'available',
+      this.isSelectable(definition.id),
       version,
     );
     portrait.classList.add('character-picker__portrait--large');
@@ -343,6 +347,11 @@ export class CharacterPickerSystem implements GameSystem {
       this.previewState = 'unavailable';
       status.textContent = availability.reason ?? 'Character unavailable.';
       panel.classList.add('is-unavailable');
+    } else if (availability.status === 'fallback') {
+      this.previewState = 'ready';
+      status.textContent =
+        availability.reason ?? 'Placeholder character will be used.';
+      panel.classList.add('is-fallback');
     } else {
       const portraitSource = resolveCharacterPortrait(definition, this.catalog);
       const portraitStatus = this.portraitStatus.get(definition.id);
@@ -407,9 +416,13 @@ export class CharacterPickerSystem implements GameSystem {
         ? 'Checking files…'
         : availability.status === 'unavailable'
           ? 'Unavailable'
-          : definition.id === this.selectedId
-            ? 'Selected'
-            : 'Available';
+          : availability.status === 'fallback'
+            ? definition.id === this.selectedId
+              ? 'Selected · placeholder'
+              : 'Placeholder available'
+            : definition.id === this.selectedId
+              ? 'Selected'
+              : 'Available';
     copy.append(name, status);
     card.append(portrait, copy);
     return card;
@@ -502,7 +515,12 @@ export class CharacterPickerSystem implements GameSystem {
   }
 
   private isAvailable(id: string): boolean {
-    return this.availability.get(id)?.status === 'available';
+    return this.isSelectable(id);
+  }
+
+  private isSelectable(id: string): boolean {
+    const status = this.availability.get(id)?.status;
+    return status === 'available' || status === 'fallback';
   }
 
   private focusCard(): void {

@@ -6,6 +6,7 @@ import { GameStateMachine } from '../src/core/gameState';
 import type { StateEvents } from '../src/core/gameState';
 import type { FrameTime } from '../src/core/time';
 import { DialogueSessionController } from '../src/dialogue/DialogueSessionController';
+import type { DialogueCameraHooks } from '../src/dialogue/DialogueSessionController';
 import type { InputReader } from '../src/input/InputSystem';
 
 class TestInput implements InputReader {
@@ -37,7 +38,10 @@ const conversation: ConversationDefinition = {
   onComplete: { id: 'test.completed' },
 };
 
-function createHarness(typewriterEnabled = false) {
+function createHarness(
+  typewriterEnabled = false,
+  cameraHooks?: DialogueCameraHooks,
+) {
   const events = new EventBus<StateEvents>();
   const state = new GameStateMachine(events);
   state.transition('playing');
@@ -49,6 +53,7 @@ function createHarness(typewriterEnabled = false) {
   const controller = new DialogueSessionController(input, conversations, {
     typewriterEnabled,
     charactersPerSecond: 10,
+    cameraHooks,
   });
   controller.init({ events, state, input });
   return { controller, conversations, events, input, state };
@@ -123,5 +128,87 @@ describe('DialogueSessionController', () => {
       conversationId: conversation.id,
       reason: 'cancelled',
     });
+  });
+
+  it('tolerates cancellation from a reentrant dialogue-started observer', () => {
+    const cameraStarted = vi.fn();
+    const cameraEnded = vi.fn();
+    const harness = createHarness(false, {
+      onDialogueStarted: cameraStarted,
+      onDialogueEnded: cameraEnded,
+    });
+    harness.controller.events.on('dialogue:started', () => {
+      harness.conversations.end('cancelled');
+    });
+
+    expect(() =>
+      harness.conversations.start(conversation.id, 'mack'),
+    ).not.toThrow();
+    expect(harness.controller.getSnapshot().state).toBe('idle');
+    expect(cameraStarted).not.toHaveBeenCalled();
+    expect(cameraEnded).not.toHaveBeenCalled();
+  });
+
+  it('stops entering a line when a line observer cancels reentrantly', () => {
+    const cameraOrder: string[] = [];
+    const harness = createHarness(false, {
+      onDialogueStarted: () => cameraOrder.push('started'),
+      onLineChanged: () => cameraOrder.push('line-camera'),
+      onDialogueEnded: (_conversationId, reason) =>
+        cameraOrder.push(`ended:${reason}`),
+    });
+    const hookEntered = vi.fn();
+    harness.controller.events.on('dialogue:hook', hookEntered);
+    harness.controller.events.on('dialogue:line-changed', () => {
+      harness.conversations.end('cancelled');
+    });
+
+    expect(() =>
+      harness.controller.request(conversation.id, 'mack'),
+    ).not.toThrow();
+    expect(harness.controller.getSnapshot().state).toBe('idle');
+    expect(cameraOrder).toEqual(['started', 'ended:cancelled']);
+    expect(hookEntered).not.toHaveBeenCalled();
+  });
+
+  it('releases the old camera before a completion observer restarts dialogue', () => {
+    const cameraOrder: string[] = [];
+    const harness = createHarness(false, {
+      onDialogueStarted: () => cameraOrder.push('started'),
+      onDialogueEnded: (_conversationId, reason) =>
+        cameraOrder.push(`ended:${reason}`),
+    });
+    harness.controller.events.on('dialogue:completed', () => {
+      cameraOrder.push('completed');
+      expect(harness.controller.request(conversation.id, 'mack')).toBe(true);
+    });
+
+    harness.controller.request(conversation.id, 'mack');
+    harness.controller.advance();
+    expect(() => harness.controller.advance()).not.toThrow();
+
+    expect(cameraOrder).toEqual([
+      'started',
+      'ended:completed',
+      'completed',
+      'started',
+    ]);
+    expect(harness.controller.getSnapshot()).toMatchObject({
+      conversationId: conversation.id,
+      lineIndex: 0,
+    });
+  });
+
+  it('ignores a stale frame after input synchronously cancels the session', () => {
+    const harness = createHarness(true);
+    harness.controller.request(conversation.id, 'mack');
+    vi.spyOn(harness.input, 'wasPressed').mockImplementation((action) => {
+      if (action === 'cancelDialogue') harness.conversations.end('cancelled');
+      return action === 'advanceDialogue';
+    });
+
+    expect(() => harness.controller.update(frame(0.1))).not.toThrow();
+    expect(harness.controller.getSnapshot().state).toBe('idle');
+    expect(harness.state.current).toBe('playing');
   });
 });
