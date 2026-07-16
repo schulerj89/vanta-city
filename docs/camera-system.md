@@ -6,9 +6,10 @@
 
 - Click the game to enter pointer lock, or hold the left mouse button to orbit without locking.
 - Move the mouse to orbit. Horizontal and vertical sensitivities are independent, and vertical input can be inverted.
+- Hold `Q` or `E` to orbit left or right at the configured frame-rate-independent keyboard speed.
 - Use the mouse wheel to change follow distance. The requested distance and obstruction-adjusted distance both move smoothly and remain inside configured safety limits.
 - Press `C` to recenter behind a moving player. Automatic recenter can be disabled; when enabled it waits after manual orbiting.
-- Press `Q` to switch shoulders. The configured offset crosses between sides smoothly.
+- Press `V` to switch shoulders. The configured offset crosses between sides smoothly.
 - Pausing, entering dialogue/directed camera mode, or focusing a form control releases pointer lock and consumes camera input without applying it.
 
 Gameplay preferences are stored in local storage under `vanta-city:camera-preferences` as a versioned payload. Horizontal sensitivity, vertical sensitivity, invert-Y, follow distance, automatic recenter, and shoulder side persist. Directed modes never modify these preferences.

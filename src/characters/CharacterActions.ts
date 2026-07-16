@@ -1,4 +1,11 @@
-export const characterActionNames = ['wave', 'interact'] as const;
+export const characterActionNames = [
+  'wave',
+  'interact',
+  'punchLeft',
+  'punchRight',
+  'kickLeft',
+  'kickRight',
+] as const;
 
 export type CharacterActionName = (typeof characterActionNames)[number];
 

@@ -24,7 +24,11 @@ import { GameObjectWorld } from './entities/GameObjectWorld';
 import { GameRuntime } from './game/GameRuntime';
 import type { GameContext } from './game/GameRuntime';
 import { InputSystem } from './input/InputSystem';
-import { defaultBindings } from './input/defaultBindings';
+import {
+  characterControlSummary,
+  defaultBindings,
+  helpControlEntries,
+} from './input/defaultBindings';
 import { InteractionSystem } from './interactions/InteractionSystem';
 import { NpcSystem } from './npcs/NpcSystem';
 import { npcCharacterDefinitions, npcDefinitions } from './npcs/npcs';
@@ -37,6 +41,7 @@ import { CameraPreferenceStore } from './camera/CameraPreferences';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
 import { CharacterPickerSystem } from './ui/CharacterPickerSystem';
+import { HelpOverlaySystem } from './ui/HelpOverlaySystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
@@ -153,6 +158,7 @@ async function bootstrap(): Promise<void> {
   );
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
+  const help = new HelpOverlaySystem(mount, runtime, helpControlEntries);
   const interactions = new InteractionSystem(input, runtime.state, player);
   const conversations = new ConversationCoordinator(
     conversationCatalog,
@@ -253,6 +259,7 @@ async function bootstrap(): Promise<void> {
         dialogueUI,
         interactionDebug,
         characterAlignmentDebug,
+        help,
       )
     : [];
 
@@ -262,6 +269,7 @@ async function bootstrap(): Promise<void> {
     .register(worldCollision)
     .register(levelSystem)
     .register(objects)
+    .register(help)
     .register(player)
     .register(camera)
     .register(interactions)
@@ -302,6 +310,7 @@ async function bootstrap(): Promise<void> {
           characterSelection,
           characterVisual,
           characterPicker,
+          help,
           dialogue,
           dialogueUI,
           debug: development.debug,
@@ -335,6 +344,7 @@ function registerVerticalSliceDebug(
   dialogueUI: DialogueUISystem,
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
+  help?: HelpOverlaySystem,
 ): (() => void)[] {
   const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
@@ -394,6 +404,24 @@ function registerVerticalSliceDebug(
   });
   return [
     ...npcDebug,
+    debug.registerValue({
+      id: 'player.run-mode',
+      label: 'Run mode',
+      group: 'Player',
+      read: () => player.getDebugSnapshot().runMode,
+    }),
+    debug.registerValue({
+      id: 'controls.bindings',
+      label: 'Bindings',
+      group: 'Player',
+      read: () => characterControlSummary,
+    }),
+    debug.registerValue({
+      id: 'controls.help-open',
+      label: 'Help open',
+      group: 'Player',
+      read: () => help?.getSnapshot().open ?? false,
+    }),
     debug.registerValue({
       id: 'conversation.active-npc',
       label: 'Active NPC',
@@ -733,10 +761,13 @@ function registerVerticalSliceDebug(
       id: 'player.play-character-action',
       label: 'Play character action',
       group: sections.actions,
-      argumentLabel: 'wave or interact',
+      argumentLabel:
+        'wave, interact, punchLeft, punchRight, kickLeft, or kickRight',
       run: (action) => {
         if (!isCharacterActionName(action)) {
-          throw new Error('Expected character action: wave or interact');
+          throw new Error(
+            'Expected character action: wave, interact, punchLeft, punchRight, kickLeft, or kickRight',
+          );
         }
         if (!player.triggerCharacterAction(action, 'debug-command')) {
           throw new Error(`Character action "${action}" is unavailable`);

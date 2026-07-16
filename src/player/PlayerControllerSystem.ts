@@ -51,6 +51,7 @@ export interface PlayerDebugSnapshot {
   readonly movementState: PlayerMovementState;
   readonly blocked: boolean;
   readonly facingYaw: number;
+  readonly runMode: boolean;
 }
 
 const controlledStates: readonly GameState[] = ['playing'];
@@ -64,6 +65,9 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   private state: GameContext['state'] | undefined;
   private controlEnabled = true;
   private visualAdded = false;
+  private runMode = false;
+  private nextPunchSide: 'Left' | 'Right' = 'Left';
+  private nextKickSide: 'Left' | 'Right' = 'Left';
 
   public constructor(
     private readonly objects: GameObjectWorld,
@@ -91,10 +95,26 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     const acceptsInput =
       this.controlEnabled &&
       this.state !== undefined &&
-      controlledStates.includes(this.state.current);
+      controlledStates.includes(this.state.current) &&
+      this.input?.isUiFocused?.() !== true;
+    if (acceptsInput && this.input?.wasPressed('toggleRun')) {
+      this.runMode = !this.runMode;
+    }
+    if (acceptsInput && this.input?.wasPressed('punch')) {
+      const action = `punch${this.nextPunchSide}` as CharacterActionName;
+      if (this.triggerCharacterAction(action, 'keyboard:punch')) {
+        this.nextPunchSide = this.nextPunchSide === 'Left' ? 'Right' : 'Left';
+      }
+    }
+    if (acceptsInput && this.input?.wasPressed('kick')) {
+      const action = `kick${this.nextKickSide}` as CharacterActionName;
+      if (this.triggerCharacterAction(action, 'keyboard:kick')) {
+        this.nextKickSide = this.nextKickSide === 'Left' ? 'Right' : 'Left';
+      }
+    }
     const intent =
       acceptsInput && this.input
-        ? readPlayerIntent(this.input)
+        ? readPlayerIntent(this.input, this.runMode)
         : idlePlayerIntent;
     this.movement.simulate(intent, this.cameraYaw(), time.delta);
     this.visual.sync(this.movement, time.delta);
@@ -150,6 +170,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       movementState: this.movement.state,
       blocked: this.movement.blocked,
       facingYaw: this.movement.facingYaw,
+      runMode: this.runMode,
     };
   }
 

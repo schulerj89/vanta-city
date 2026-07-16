@@ -16,6 +16,8 @@ import type { LevelSystem } from '../world/LevelSystem';
 import type { DebugRegistry } from './DebugRegistry';
 import type { RuntimeErrorReporter } from './RuntimeErrorReporter';
 import type { CharacterPickerSystem } from '../ui/CharacterPickerSystem';
+import type { HelpOverlaySystem } from '../ui/HelpOverlaySystem';
+import { defaultBindings, helpControlEntries } from '../input/defaultBindings';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -66,6 +68,12 @@ export interface BrowserTestSnapshot {
     readonly footClearance: number | undefined;
     readonly movementState: string;
     readonly facingYaw: number;
+    readonly runMode: boolean;
+  };
+  readonly controls: {
+    readonly bindings: typeof defaultBindings;
+    readonly helpEntries: typeof helpControlEntries;
+    readonly help: ReturnType<HelpOverlaySystem['getSnapshot']>;
   };
   readonly character: ReturnType<CharacterPlayerVisual['getDebugSnapshot']>;
   readonly selectedCharacterId: string;
@@ -119,6 +127,7 @@ export interface BrowserTestBridgeDependencies {
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
   readonly characterPicker: CharacterPickerSystem;
+  readonly help: HelpOverlaySystem;
   readonly dialogue: DialogueSessionController;
   readonly dialogueUI: DialogueUISystem;
   readonly debug: DebugRegistry;
@@ -216,6 +225,12 @@ function createSnapshot(
           : character.bounds.min.y - position.y,
       movementState: movement.movementState,
       facingYaw: movement.facingYaw,
+      runMode: movement.runMode,
+    },
+    controls: {
+      bindings: defaultBindings,
+      helpEntries: helpControlEntries,
+      help: dependencies.help.getSnapshot(),
     },
     character,
     selectedCharacterId: dependencies.characterSelection.getSelectedId(),

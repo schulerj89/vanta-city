@@ -17,15 +17,20 @@ Player and camera input are accepted only in the `playing` game state. Pause use
 | --------------------- | ------------------------------------------------------------ |
 | Move forward/backward | `W` / `S` or up/down arrows                                  |
 | Strafe left/right     | `A` / `D` or left/right arrows                               |
-| Sprint                | Left or right `Shift`                                        |
+| Walk/run mode         | `R` toggles persistent run mode                              |
 | Jump                  | `Space`                                                      |
 | Orbit                 | Pointer lock after clicking the canvas, or left-drag         |
+| Keyboard orbit        | Hold `Q` / `E` for left / right                              |
 | Camera distance       | Mouse wheel                                                  |
 | Camera re-center      | `C` (automatic after the configured idle delay while moving) |
-| Pause                 | `Escape` or `P`                                              |
+| Camera shoulder       | `V`                                                          |
+| Interact              | `G`                                                          |
+| Punch / kick          | `J` / `L` (each alternates left and right)                   |
+| Controls help         | `H` or the top-right Help button                             |
+| Pause                 | `P` (`Escape` closes the active modal UI)                    |
 | Debug overlay         | Backtick                                                     |
 
-Bindings live only in `src/input/defaultBindings.ts`.
+Bindings and display metadata live only in `src/input/defaultBindings.ts`. Prompts, the help overlay, debug snapshots, and tests consume the same named-action data. `G` keeps interaction away from the `Q`/`E` camera pair and dialogue's `F` reveal key; `V` is a mnemonic for view/shoulder and does not overlap movement or modal navigation.
 
 ## Tuning
 
@@ -39,10 +44,11 @@ The `PlayerControllerSystem` instance is the stable owner other branches should 
 
 - `getPlayerPosition()` returns a copied plain `{ x, y, z }` value.
 - `getWorldPose()` returns the shared copied position/forward contract consumed by interactions and future location-based systems.
-- `getDebugSnapshot()` returns copied velocity, grounded state, movement state, and collision-blocked state.
+- `getDebugSnapshot()` returns copied velocity, grounded state, movement state, collision-blocked state, and persistent run mode.
 - `teleport(position, facingYaw?)` clears velocity and re-probes the ground.
 - `reset()` returns to the configured spawn and clears movement.
 - `setControlEnabled(enabled)` and `isControlEnabled()` provide an explicit feature lock.
+- `triggerCharacterAction(action, source)` requests a presentation-only one-shot; `getCharacterActionState()` exposes acceptance, source, active action, and deterministic sequence.
 - `movement.state` exposes `idle`, `walking`, `running`, `airborne`, and `landing` for a future animation adapter. Animation code should observe it, not mutate simulation.
 
 The camera exposes `getYaw()`, `obstructed`, `snapToPlayer()`, and its read-only config. `WorldCollisionSystem` consumes the level's shared `StaticColliderDefinition` list and keeps `StaticCollisionWorld` synchronized across reloads; player code depends only on the narrower `CollisionWorld` interface.

@@ -69,4 +69,32 @@ describe('InputSystem', () => {
     input.dispose();
     field.remove();
   });
+
+  it('does not fire gameplay controls while a text field owns keyboard input', () => {
+    const input = new InputSystem(defaultBindings);
+    input.init();
+    const field = document.createElement('input');
+    document.body.append(field);
+    field.focus();
+
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'KeyR', bubbles: true }),
+    );
+    expect(input.wasPressed('toggleRun')).toBe(false);
+    expect(input.isUiFocused()).toBe(true);
+
+    field.remove();
+    input.dispose();
+  });
+
+  it('does not mistake a closed UI button focus target for an active modal owner', () => {
+    const input = new InputSystem(defaultBindings);
+    input.init();
+    const button = document.createElement('button');
+    document.body.append(button);
+    button.focus();
+    expect(input.isUiFocused()).toBe(false);
+    button.remove();
+    input.dispose();
+  });
 });

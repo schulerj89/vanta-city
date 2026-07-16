@@ -32,6 +32,7 @@ export interface ThirdPersonCameraConfig {
   readonly maxDistance: number;
   readonly initialDistance: number;
   readonly zoomSensitivity: number;
+  readonly keyboardOrbitSpeed: number;
   readonly zoomSharpness: number;
   readonly followSharpness: number;
   readonly collisionEnterSharpness: number;
@@ -61,6 +62,7 @@ export const defaultThirdPersonCameraConfig: ThirdPersonCameraConfig = {
   maxDistance: cameraPreferenceLimits.maxFollowDistance,
   initialDistance: defaultCameraPreferences.followDistance,
   zoomSensitivity: 0.006,
+  keyboardOrbitSpeed: MathUtils.degToRad(105),
   zoomSharpness: 12,
   followSharpness: 12,
   collisionEnterSharpness: 30,
@@ -383,7 +385,15 @@ export class ThirdPersonCameraSystem implements GameSystem {
       );
       this.secondsSinceOrbit = 0;
     } else if (acceptsInput) {
-      this.secondsSinceOrbit += time.delta;
+      const keyboardOrbit =
+        Number(this.input?.isDown('cameraOrbitRight') === true) -
+        Number(this.input?.isDown('cameraOrbitLeft') === true);
+      if (keyboardOrbit !== 0) {
+        this.yaw += keyboardOrbit * this.config.keyboardOrbitSpeed * time.delta;
+        this.secondsSinceOrbit = 0;
+      } else {
+        this.secondsSinceOrbit += time.delta;
+      }
     }
 
     if (acceptsInput && pointerDelta.wheel !== 0) {

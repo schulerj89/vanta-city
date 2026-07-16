@@ -79,7 +79,7 @@ test('character picker through repeatable Mack conversation', async ({
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.npc.mack');
   await expect(page.locator('.interaction-prompt')).toContainText('Talk');
-  await page.keyboard.press('e');
+  await page.keyboard.press('g');
 
   await expect
     .poll(async () => (await snapshot(page)).gameState)
@@ -192,7 +192,7 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.npc.mack');
 
-  await page.keyboard.press('e');
+  await page.keyboard.press('g');
   await expect
     .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
     .toBe(0);
@@ -244,7 +244,7 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
     'conversation.mack.introduction',
   );
 
-  await page.keyboard.press('e');
+  await page.keyboard.press('g');
   await expect
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('dialogue');
@@ -295,7 +295,7 @@ test('no-dialogue NPCs never acquire dialogue, camera, or input ownership', asyn
     await expect
       .poll(async () => (await snapshot(page)).interaction.activeTargetId)
       .toBe(`interaction.npc.${npc.id}`);
-    await page.keyboard.press('e');
+    await page.keyboard.press('g');
     await page.waitForTimeout(100);
 
     const state = await snapshot(page);

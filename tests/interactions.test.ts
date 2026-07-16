@@ -99,7 +99,7 @@ describe('InteractionSystem', () => {
     prompt.init();
 
     harness.system.update();
-    expect(mount.textContent).toBe('[E] Use sign');
+    expect(mount.textContent).toBe('[G] Use sign');
     expect(mount.querySelector('.interaction-prompt')).not.toHaveProperty(
       'hidden',
       true,

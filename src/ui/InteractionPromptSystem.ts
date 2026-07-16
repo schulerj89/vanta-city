@@ -1,5 +1,6 @@
 import type { GameSystem } from '../core/lifecycle';
 import type { InteractionSystem } from '../interactions/InteractionSystem';
+import { bindingLabel } from '../input/defaultBindings';
 
 export class InteractionPromptSystem implements GameSystem {
   public readonly id = 'interaction-prompt';
@@ -23,7 +24,9 @@ export class InteractionPromptSystem implements GameSystem {
       'interaction:target-changed',
       ({ target }) => {
         this.element.hidden = target === undefined;
-        this.element.textContent = target ? `[E] ${target.prompt}` : '';
+        this.element.textContent = target
+          ? `[${bindingLabel('interact')}] ${target.prompt}`
+          : '';
       },
     );
   }

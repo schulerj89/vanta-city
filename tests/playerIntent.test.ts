@@ -15,13 +15,23 @@ function inputReader(
 describe('readPlayerIntent', () => {
   it('translates named directional actions and normalizes diagonals', () => {
     const intent = readPlayerIntent(
-      inputReader(['moveForward', 'moveRight', 'sprint']),
+      inputReader(['moveForward', 'moveRight']),
+      true,
     );
 
     expect(intent.move.length()).toBeCloseTo(1);
     expect(intent.move.x).toBeGreaterThan(0);
     expect(intent.move.y).toBeGreaterThan(0);
     expect(intent.sprint).toBe(true);
+  });
+
+  it('uses persistent run mode independently of held keyboard actions', () => {
+    expect(readPlayerIntent(inputReader(['moveForward']), true).sprint).toBe(
+      true,
+    );
+    expect(readPlayerIntent(inputReader(['moveForward']), false).sprint).toBe(
+      false,
+    );
   });
 
   it('cancels opposing input and preserves the jump edge', () => {

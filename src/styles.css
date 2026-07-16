@@ -27,6 +27,211 @@ canvas {
   height: 100%;
 }
 
+.help-button {
+  position: absolute;
+  z-index: 35;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  min-width: 5.25rem;
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid rgb(124 226 198 / 48%);
+  border-radius: 999px;
+  color: #effff8;
+  background: rgb(5 12 18 / 76%);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 28%);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  font:
+    750 0.82rem/1 Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.help-button:hover,
+.help-button:focus-visible,
+.help-overlay__close:hover,
+.help-overlay__close:focus-visible {
+  border-color: #7ce2c6;
+  outline: 2px solid rgb(124 226 198 / 35%);
+  outline-offset: 3px;
+  background: rgb(18 48 46 / 92%);
+}
+
+.help-overlay {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: clamp(1rem, 4vw, 3rem);
+  color: #effff8;
+  background: rgb(3 8 13 / 62%);
+  backdrop-filter: blur(12px) saturate(0.75);
+}
+
+.help-overlay[hidden] {
+  display: none;
+}
+
+.help-overlay__panel {
+  width: min(68rem, 100%);
+  max-height: calc(100dvh - clamp(2rem, 8vw, 6rem));
+  overflow: auto;
+  border: 1px solid rgb(124 226 198 / 30%);
+  border-radius: 1.1rem;
+  background: linear-gradient(145deg, rgb(7 17 23 / 94%), rgb(13 31 33 / 92%));
+  box-shadow: 0 2rem 6rem rgb(0 0 0 / 55%);
+}
+
+.help-overlay__panel > header {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(7 17 23 / 94%);
+  backdrop-filter: blur(16px);
+}
+
+.help-overlay__panel h1,
+.help-overlay__panel h2,
+.help-overlay__panel p,
+.help-overlay__panel dl,
+.help-overlay__panel dd {
+  margin: 0;
+}
+
+.help-overlay__panel h1 {
+  margin-top: 0.15rem;
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+}
+
+.help-overlay__panel header p:last-child {
+  max-width: 42rem;
+  margin-top: 0.75rem;
+  color: #adc4bc;
+  line-height: 1.5;
+}
+
+.help-overlay__eyebrow {
+  color: #7ce2c6;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.help-overlay__close {
+  min-width: 5rem;
+  min-height: 2.6rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 0.55rem;
+  color: #effff8;
+  background: rgb(255 255 255 / 7%);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 750;
+}
+
+.help-overlay__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: rgb(255 255 255 / 8%);
+}
+
+.help-overlay__grid section {
+  min-width: 0;
+  padding: clamp(1.1rem, 3vw, 1.75rem);
+  background: rgb(8 20 25 / 96%);
+}
+
+.help-overlay__grid h2 {
+  margin-bottom: 0.9rem;
+  color: #d6a95c;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.help-overlay__grid dl {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem 1rem;
+}
+
+.help-overlay__grid dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.help-overlay__grid dd {
+  color: #d8e6e1;
+  line-height: 1.35;
+}
+
+.help-overlay kbd {
+  min-width: 2rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-bottom-width: 2px;
+  border-radius: 0.35rem;
+  color: #fff;
+  background: rgb(255 255 255 / 8%);
+  font:
+    750 0.74rem/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 42rem) {
+  .help-button {
+    top: max(0.65rem, env(safe-area-inset-top));
+    right: max(0.65rem, env(safe-area-inset-right));
+  }
+
+  .help-overlay {
+    padding: 0;
+  }
+
+  .help-overlay__panel {
+    width: 100%;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .help-overlay__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .help-overlay__panel > header {
+    padding: 1rem;
+  }
+
+  .help-overlay__panel header p:last-child {
+    display: none;
+  }
+}
+
 .debug-panel {
   position: absolute;
   z-index: 30;

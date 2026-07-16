@@ -212,7 +212,7 @@ test.describe('playable debug district', () => {
     await openReadyApp(page);
     const initial = await snapshot(page);
 
-    await page.keyboard.press('q');
+    await page.keyboard.press('v');
     await expect
       .poll(async () => (await snapshot(page)).camera.shoulderSide, {
         message: 'shoulder switch action should update the gameplay camera',
@@ -243,13 +243,13 @@ test.describe('playable debug district', () => {
       .poll(async () => (await snapshot(page)).character.animationState)
       .toBe('idle');
 
-    await page.keyboard.down('Shift');
+    await page.keyboard.press('r');
     await page.keyboard.down('w');
     await expect
       .poll(async () => (await snapshot(page)).character.animationState)
       .toBe('run');
     await page.keyboard.up('w');
-    await page.keyboard.up('Shift');
+    await page.keyboard.press('r');
     await expect
       .poll(async () => (await snapshot(page)).character.animationState)
       .toBe('idle');
@@ -308,7 +308,7 @@ test.describe('playable debug district', () => {
       })
       .toBe('interaction.garage-door');
     await attachScreenshot(page, testInfo, 'player-beside-interactable');
-    await page.keyboard.press('e');
+    await page.keyboard.press('g');
     await expect
       .poll(async () => (await snapshot(page)).interaction.completedTargetIds)
       .toContain('interaction.garage-door');
@@ -320,7 +320,7 @@ test.describe('playable debug district', () => {
     });
   });
 
-  test('keeps WASD, Down, character facing, sprint, and orbit controls independent', async ({
+  test('keeps movement, run mode, character facing, and orbit controls independent', async ({
     page,
   }) => {
     await openReadyApp(page);
@@ -395,14 +395,18 @@ test.describe('playable debug district', () => {
       ).toBeLessThan(0.02);
 
       await executeCommand(page, 'player.teleport', 'spawn.player-default');
-      await page.keyboard.down('Shift');
+      await page.keyboard.press('r');
       await page.keyboard.down('w');
       await expect
         .poll(async () => (await snapshot(page)).player.movementState)
         .toBe('running');
       expect((await snapshot(page)).character.animationState).toBe('run');
       await page.keyboard.up('w');
-      await page.keyboard.up('Shift');
+      expect((await snapshot(page)).player.runMode).toBe(true);
+      await page.keyboard.press('r');
+      await expect
+        .poll(async () => (await snapshot(page)).player.runMode)
+        .toBe(false);
 
       await expect
         .poll(async () =>
@@ -441,6 +445,101 @@ test.describe('playable debug district', () => {
         afterOrbit.runtimeErrors.last,
       ).toBe(0);
     }
+  });
+
+  test('supports keyboard orbit, alternating actions, and accessible help without leaking input', async ({
+    page,
+  }) => {
+    const runtimeFailures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+    const initial = await snapshot(page);
+
+    await page.keyboard.down('q');
+    await expect
+      .poll(async () => (await snapshot(page)).camera.yaw)
+      .toBeLessThan(initial.camera.yaw - 0.2);
+    await page.keyboard.up('q');
+    const afterLeft = await snapshot(page);
+    expect(
+      horizontalDistance(afterLeft.player.position, initial.player.position),
+      'keyboard orbit must not move the simulation transform',
+    ).toBeLessThan(0.02);
+
+    await page.keyboard.down('e');
+    await expect
+      .poll(async () => (await snapshot(page)).camera.yaw)
+      .toBeGreaterThan(afterLeft.camera.yaw + 0.2);
+    await page.keyboard.up('e');
+
+    for (const characterId of ['casual', 'punk']) {
+      await executeCommand(page, 'player.select-character', characterId);
+      await expect
+        .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+        .toBe(characterId);
+      for (const [key, expectedAction] of [
+        ['j', 'punchLeft'],
+        ['j', 'punchRight'],
+        ['l', 'kickLeft'],
+        ['l', 'kickRight'],
+      ] as const) {
+        await page.keyboard.press(key);
+        await expect
+          .poll(
+            async () =>
+              (await snapshot(page)).character.characterAction.lastRequested,
+          )
+          .toBe(expectedAction);
+        expect(
+          (await snapshot(page)).character.characterAction.lastAccepted,
+        ).toBe(true);
+      }
+      await page.keyboard.down('w');
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('walk');
+      await page.keyboard.press('j');
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('action:punchLeft');
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('walk');
+      await page.keyboard.up('w');
+    }
+
+    const helpButton = page.getByRole('button', { name: 'Help', exact: true });
+    await expect(helpButton).toBeVisible();
+    await helpButton.click();
+    await expect(page.getByRole('dialog', { name: 'Controls' })).toBeVisible();
+    await expect(page.getByText('Orbit camera left')).toBeVisible();
+    await expect(page.getByText('Interact / talk')).toBeVisible();
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('paused');
+    expect((await snapshot(page)).controls.help.focusedElement).toBe(
+      'Close controls help',
+    );
+    const helpPlayer = (await snapshot(page)).player.position;
+    await page.keyboard.press('r');
+    await page.keyboard.press('j');
+    expect((await snapshot(page)).player.runMode).toBe(false);
+    expect(
+      horizontalDistance((await snapshot(page)).player.position, helpPlayer),
+    ).toBeLessThan(0.02);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Controls' })).toBeHidden();
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
+    await expect(helpButton).toBeFocused();
+
+    await page.keyboard.press('h');
+    await expect(page.getByRole('dialog', { name: 'Controls' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close controls help' }).click();
+    await expect(page.getByRole('dialog', { name: 'Controls' })).toBeHidden();
+    const final = await snapshot(page);
+    expect(final.runtimeErrors.count, final.runtimeErrors.last).toBe(0);
+    expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
   });
 
   test('keeps feet grounded at named curb, ramp, stair, and elevation transitions', async ({
@@ -599,7 +698,7 @@ test.describe('playable debug district', () => {
     await expect
       .poll(async () => (await snapshot(page)).interaction.activeTargetId)
       .toBe('interaction.npc.mack');
-    await page.keyboard.press('e');
+    await page.keyboard.press('g');
     await expect
       .poll(async () => (await snapshot(page)).gameState)
       .toBe('dialogue');

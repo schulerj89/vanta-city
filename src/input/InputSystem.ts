@@ -7,6 +7,7 @@ export interface InputReader {
   isDown(action: ActionName): boolean;
   wasPressed(action: ActionName): boolean;
   wasReleased(action: ActionName): boolean;
+  isUiFocused?(): boolean;
 }
 
 export interface PointerDelta {
@@ -50,6 +51,7 @@ export class InputSystem
     if (this.attached) return;
     this.target.addEventListener('keydown', this.onKeyDown);
     this.target.addEventListener('keyup', this.onKeyUp);
+    this.target.addEventListener('focusin', this.onFocusIn);
     this.target.addEventListener('blur', this.onBlur);
     this.target.addEventListener('mousemove', this.onMouseMove);
     this.target.addEventListener('mousedown', this.onMouseDown);
@@ -99,12 +101,11 @@ export class InputSystem
 
   public isUiFocused(): boolean {
     const active = document.activeElement;
-    return (
+    return Boolean(
       active instanceof HTMLInputElement ||
       active instanceof HTMLTextAreaElement ||
       active instanceof HTMLSelectElement ||
-      active instanceof HTMLButtonElement ||
-      (active instanceof HTMLElement && active.isContentEditable)
+      (active instanceof HTMLElement && active.isContentEditable),
     );
   }
 
@@ -129,6 +130,7 @@ export class InputSystem
     if (!this.attached) return;
     this.target.removeEventListener('keydown', this.onKeyDown);
     this.target.removeEventListener('keyup', this.onKeyUp);
+    this.target.removeEventListener('focusin', this.onFocusIn);
     this.target.removeEventListener('blur', this.onBlur);
     this.target.removeEventListener('mousemove', this.onMouseMove);
     this.target.removeEventListener('mousedown', this.onMouseDown);
@@ -163,6 +165,13 @@ export class InputSystem
       return;
     }
     if (this.downCodes.delete(event.code)) this.releasedCodes.add(event.code);
+  };
+
+  private readonly onFocusIn = (event: FocusEvent): void => {
+    if (!isEditableTarget(event.target)) return;
+    for (const code of [...this.downCodes]) {
+      if (!code.startsWith('Mouse')) this.downCodes.delete(code);
+    }
   };
 
   private readonly onBlur = (): void => this.clear();

@@ -14,7 +14,7 @@ pnpm install
 pnpm dev
 ```
 
-Open the URL printed by Vite. The Foundry test district and its two CC0 playable character GLBs are fully local. Press `Escape` or `P` to pause/resume and the backtick key to open the developer panel. Its toggles expose collision, spawn, trigger, and interaction helpers.
+Open the URL printed by Vite. The Foundry test district and its two CC0 playable character GLBs are fully local. Press `P` to pause/resume and the backtick key to open the developer panel. `Escape` closes the active help, dialogue, or picker UI. The developer toggles expose collision, spawn, trigger, and interaction helpers.
 
 The selected session-persistent character is used by the playable player. Choose Casual or Punk in the picker; a generated primitive remains available only as an emergency load-failure fallback. See [Character assets and registration](docs/characters.md).
 
@@ -23,13 +23,17 @@ The character picker opens before entering the district and can be reopened with
 ## On-foot controls
 
 - `WASD` or arrow keys: camera-relative movement
-- `Shift`: sprint
+- `R`: toggle persistent walk/run mode
 - `Space`: jump
 - Mouse: orbit while pointer-locked (click the game) or while holding the left button
+- `Q` / `E`: orbit the gameplay camera left / right
 - Mouse wheel: adjust follow distance
 - `C`: re-center the camera behind a moving player
-- `Q`: switch camera shoulder
-- `Escape` or `P`: pause/resume
+- `V`: switch camera shoulder
+- `G`: interact or talk
+- `J` / `L`: punch / kick (each alternates left and right clips)
+- `H`: open controls help
+- `P`: pause/resume (`Escape` closes the active menu)
 - Backtick: toggle movement and camera diagnostics
 
 The scene keeps an emergency generated placeholder behind the two local character assets. See

@@ -13,7 +13,10 @@ export const idlePlayerIntent: PlayerIntent = {
   jump: false,
 };
 
-export function readPlayerIntent(input: InputReader): PlayerIntent {
+export function readPlayerIntent(
+  input: InputReader,
+  runMode = false,
+): PlayerIntent {
   const x =
     Number(input.isDown('moveRight')) - Number(input.isDown('moveLeft'));
   const y =
@@ -22,7 +25,7 @@ export function readPlayerIntent(input: InputReader): PlayerIntent {
   if (move.lengthSq() > 1) move.normalize();
   return {
     move,
-    sprint: input.isDown('sprint'),
+    sprint: runMode,
     jump: input.wasPressed('jump'),
   };
 }

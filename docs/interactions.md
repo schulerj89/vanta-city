@@ -44,7 +44,7 @@ Higher scores win. Equal scores use the target id as a deterministic tie-break. 
 
 ## Execution, cancellation, and events
 
-The existing named `interact` input action (`E` by default) starts the active target. A handler may return immediately or return a promise. Promise resolution emits completion. The supplied `AbortSignal` is aborted if the player leaves range, the required game state no longer matches, availability becomes false, the target is disabled or removed, or the system is disposed. Late promise settlement after cancellation is ignored.
+The existing named `interact` input action (`G` by default) starts the active target. `G` avoids the camera-orbit `Q`/`E` pair and dialogue's `F` reveal action. A handler may return immediately or return a promise. Promise resolution emits completion. The supplied `AbortSignal` is aborted if the player leaves range, the required game state no longer matches, availability becomes false, the target is disabled or removed, or the system is disposed. Late promise settlement after cancellation is ignored.
 
 Subscribe through `interactions.events` without importing UI code:
 

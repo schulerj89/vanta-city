@@ -198,6 +198,28 @@ describe('ThirdPersonCameraSystem', () => {
     );
   });
 
+  it('orbits left and right from held keyboard actions at a frame-rate-independent speed', () => {
+    const harness = createHarness();
+    harness.system.setPreferences({ automaticRecenter: false });
+    const initialYaw = harness.system.getDebugSnapshot().yaw;
+    harness.input.down.add('cameraOrbitLeft');
+    update(harness, 60);
+    const leftYaw = harness.system.getDebugSnapshot().yaw;
+    expect(leftYaw - initialYaw).toBeCloseTo(
+      -harness.system.config.keyboardOrbitSpeed,
+      4,
+    );
+
+    harness.input.down.delete('cameraOrbitLeft');
+    harness.input.down.add('cameraOrbitRight');
+    update(harness, 60);
+    expect(harness.system.getDebugSnapshot().yaw).toBeCloseTo(initialYaw, 4);
+
+    harness.input.uiFocused = true;
+    update(harness, 60);
+    expect(harness.system.getDebugSnapshot().yaw).toBeCloseTo(initialYaw, 4);
+  });
+
   it('enforces ownership priority and resumes a suspended conversation', () => {
     const harness = createHarness();
     const conversation = harness.system.requestConversation('dialogue');
