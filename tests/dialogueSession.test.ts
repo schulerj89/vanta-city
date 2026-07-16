@@ -107,7 +107,8 @@ describe('DialogueSessionController', () => {
   });
 
   it('leaves ownership untouched when a conversation id is missing', async () => {
-    const harness = createHarness();
+    const cameraStarted = vi.fn();
+    const harness = createHarness(false, { onDialogueStarted: cameraStarted });
     expect(() =>
       harness.conversations.start('test.missing', 'missing'),
     ).toThrow('Unknown conversation');
@@ -115,6 +116,7 @@ describe('DialogueSessionController', () => {
     expect(harness.conversations.active).toBeUndefined();
     expect(harness.controller.getSnapshot().state).toBe('idle');
     expect(harness.state.current).toBe('playing');
+    expect(cameraStarted).not.toHaveBeenCalled();
   });
 
   it('rolls back initialized dialogue owners when a start observer fails', async () => {

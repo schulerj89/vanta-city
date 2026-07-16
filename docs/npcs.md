@@ -4,11 +4,11 @@ NPCs are data-defined static district actors. `NpcSystem` listens to level load/
 
 ## Debug district roster
 
-| NPC  | NPC character definition | Poly Pizza model                                       |   Scale | Spawn                | Conversation                     |
-| ---- | ------------------------ | ------------------------------------------------------ | ------: | -------------------- | -------------------------------- |
-| Mack | `npc-worker`             | [Man in Long Sleeves](https://poly.pizza/m/DLptRuewTn) | `0.370` | `spawn.npc-mechanic` | `conversation.mack.introduction` |
-| Nox  | `npc-hoodie`             | [Man (layered shirt)](https://poly.pizza/m/fjHyMd5Wxw) | `0.368` | `spawn.npc-alley`    | `conversation.nox.placeholder`   |
-| Raze | `npc-punk`               | [Man in Suit](https://poly.pizza/m/mQnGoME1ez)         | `0.369` | `spawn.npc-deck`     | `conversation.raze.placeholder`  |
+| NPC  | NPC character definition | Poly Pizza model                                       |   Scale | Portrait asset      | Spawn                | Conversation                     |
+| ---- | ------------------------ | ------------------------------------------------------ | ------: | ------------------- | -------------------- | -------------------------------- |
+| Mack | `npc-worker`             | [Man in Long Sleeves](https://poly.pizza/m/DLptRuewTn) | `0.370` | `portrait.npc-mack` | `spawn.npc-mechanic` | `conversation.mack.introduction` |
+| Nox  | `npc-hoodie`             | [Man (layered shirt)](https://poly.pizza/m/fjHyMd5Wxw) | `0.368` | `portrait.npc-nox`  | `spawn.npc-alley`    | `conversation.nox.check-in`      |
+| Raze | `npc-punk`               | [Man in Suit](https://poly.pizza/m/mQnGoME1ez)         | `0.369` | `portrait.npc-raze` | `spawn.npc-deck`     | `conversation.raze.check-in`     |
 
 All three are selected from Quaternius's [Animated Men Pack](https://poly.pizza/bundle/Animated-Men-Pack-DAC9SDgMQT), a CC0/Public Domain source distinct from the playable Casual/Punk **Ultimate Modular Men Pack**. The three self-contained GLBs, CC0 legal text, archive hash, individual hashes, sizes, and full clip inventory are committed under `public/assets/characters/animated-men/`. No model conversion was needed.
 
@@ -21,7 +21,7 @@ Each NPC maps exact inspected embedded clips:
 - logical `idle` → `HumanArmature|Man_Idle` (4.166667 seconds, looping);
 - logical `gesture` → `HumanArmature|Man_Clapping` (1.666667 seconds, one shot).
 
-Idle runs during gameplay. A playable conversation start triggers the matching NPC gesture through the coordinator event, so Mack also gestures when dialogue starts from debug tooling. A placeholder/no-dialogue Talk triggers the same one shot directly; Nox and Raze retain gameplay state, gameplay camera, and input ownership. When a gesture finishes, the entity cross-fades back to idle.
+Idle runs during gameplay. A conversation start triggers the matching NPC gesture through the coordinator event, including conversations started from debug tooling. When a gesture finishes, the entity cross-fades back to idle.
 
 Animation mixers target only the loaded character subtree. Every update restores the authored model-root offset, and no animation or alignment code mutates the NPC world/simulation transform. Bounds are measured after the definition scale/rotation correction; a dedicated visual alignment root places the transformed minimum Y on the actor contact plane. Validated heights are approximately `1.780m`, `1.782m`, and `1.782m`, respectively.
 
@@ -47,13 +47,13 @@ Missing portraits resolve through the dialogue UI's initials fallback.
 2. Add a non-picker `CharacterDefinition` to `npcCharacterDefinitions` and map exact inspected idle/gesture clip names.
 3. Add a `kind: 'npc'` spawn to the level; the spawn owns position and optional idle rotation.
 4. Add an `npc-occupancy` static collider if the actor should block the current static collision backend.
-5. Add a conversation definition or explicit empty placeholder.
+5. Add a conversation definition to `src/conversations/conversations.ts`.
 6. Add the authoritative `NpcDefinition`, including `defaultAnimation` and `gestureAnimation`.
 
 `validateNpcDefinitions` rejects duplicate/invalid IDs, missing character or conversation definitions, blank labels/animations, and non-positive radii.
 
 ## Conversation and ownership boundary
 
-`ConversationCoordinator.start(conversationId, npcId)` synchronously publishes `conversation:started`, locks every NPC interaction, and transitions the existing game state to `dialogue` only when the referenced definition contains lines. Mack's definition contains the demonstration exchange. Nox and Raze point to validated empty placeholders; their Talk interactions acquire no conversation, camera, or input ownership.
+`ConversationCoordinator.start(conversationId, npcId)` synchronously publishes `conversation:started`, locks every NPC interaction, and transitions the existing game state to `dialogue` after the initiating interaction completes only when the referenced definition contains dialogue lines. Mack has a short demonstration exchange; Nox and Raze each use a one-line check-in through the same catalog, coordinator, session, portrait, camera, and interaction contracts. Empty placeholders and missing IDs are rejected before acquiring dialogue ownership.
 
 During Mack's active session, the NPC smoothly faces the player through `WorldPoseSource`. Ending returns it toward authored idle yaw plus ambient variation. `GameObjectWorld` owns scene attachment and per-frame updates; `NpcSystem` owns interaction registrations, conversation gesture routing, and level synchronization. Unloading unregisters Talk targets, removes entities, stops/uncaches mixers, disposes instances, and cancels a conversation belonging to the unloaded roster.

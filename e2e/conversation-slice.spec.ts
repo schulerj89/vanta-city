@@ -298,39 +298,94 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   ).toEqual([]);
 });
 
-test('no-dialogue NPCs never acquire dialogue, camera, or input ownership', async ({
+test('Nox and Raze complete and repeat their registered Talk conversations', async ({
   page,
 }) => {
   const uncaught: string[] = [];
   const consoleIssues = monitorConsoleIssues(page);
   page.on('pageerror', (error) => uncaught.push(error.message));
-  await page.goto('/?e2e=1&debug=1&skipPicker=1');
+  await page.goto('/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0');
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
 
   for (const npc of [
-    { id: 'nox', spawnId: 'spawn.npc-alley' },
-    { id: 'raze', spawnId: 'spawn.npc-deck' },
+    {
+      id: 'nox',
+      displayName: 'Nox',
+      spawnId: 'spawn.npc-alley',
+      conversationId: 'conversation.nox.check-in',
+      text: 'Alley’s clear. Keep moving.',
+    },
+    {
+      id: 'raze',
+      displayName: 'Raze',
+      spawnId: 'spawn.npc-deck',
+      conversationId: 'conversation.raze.check-in',
+      text: 'Deck’s quiet. Don’t make it loud.',
+    },
   ]) {
     await command(page, 'player.teleport', npc.spawnId);
     await expect
       .poll(async () => (await snapshot(page)).interaction.activeTargetId)
       .toBe(`interaction.npc.${npc.id}`);
+    await expect(page.locator('.interaction-prompt')).toContainText('Talk');
     await page.keyboard.press('g');
-    await page.waitForTimeout(100);
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('dialogue');
 
-    const state = await snapshot(page);
-    expect(state.gameState).toBe('playing');
-    expect(state.conversation).toEqual({
-      npcId: undefined,
-      conversationId: undefined,
+    const talking = await snapshot(page);
+    expect(talking.conversation).toEqual({
+      npcId: npc.id,
+      conversationId: npc.conversationId,
     });
-    expect(state.dialogue.session.state).toBe('idle');
-    expect(state.dialogue.ui.visible).toBe(false);
-    expect(state.camera).toMatchObject({
-      mode: 'gameplay',
-      owner: 'gameplay',
+    expect(talking.dialogue.session).toMatchObject({
+      state: 'ready',
+      conversationId: npc.conversationId,
+      lineIndex: 0,
+      speakerId: npc.id,
+      fullText: npc.text,
     });
-    expect(state.interaction.activeTargetId).toBe(`interaction.npc.${npc.id}`);
+    expect(talking.dialogue.ui).toMatchObject({
+      visible: true,
+      speakerName: npc.displayName,
+      renderedText: npc.text,
+    });
+    expect([
+      'image:speaker',
+      'fallback:speaker-fallback',
+      'fallback:image-error',
+    ]).toContain(talking.dialogue.ui.portraitResolution);
+    expect(talking.camera).toMatchObject({
+      mode: 'conversation',
+      owner: `dialogue:${npc.conversationId}`,
+    });
+
+    await page.getByRole('button', { name: 'Continue dialogue' }).click();
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
+    await expect
+      .poll(async () => (await snapshot(page)).camera.owner)
+      .toBe('gameplay');
+    await expect
+      .poll(async () => (await snapshot(page)).camera.transitionProgress)
+      .toBe(1);
+    await expect
+      .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+      .toBe(`interaction.npc.${npc.id}`);
+
+    // The generic NPC Talk registration remains repeatable after completion.
+    await page.keyboard.press('g');
+    await expect
+      .poll(async () => (await snapshot(page)).conversation.conversationId)
+      .toBe(npc.conversationId);
+    await page.keyboard.press('Escape');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
+    await expect
+      .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+      .toBe(`interaction.npc.${npc.id}`);
   }
 
   await command(page, 'player.teleport', 'spawn.player-default');
@@ -344,6 +399,12 @@ test('no-dialogue NPCs never acquire dialogue, camera, or input ownership', asyn
   await page.keyboard.up('w');
 
   const restored = await snapshot(page);
+  expect(restored.dialogue.completedConversationIds).toEqual(
+    expect.arrayContaining([
+      'conversation.nox.check-in',
+      'conversation.raze.check-in',
+    ]),
+  );
   expect(restored.runtimeErrors.count, restored.runtimeErrors.last).toBe(0);
   expect(uncaught).toEqual([]);
   expect(

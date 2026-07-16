@@ -208,7 +208,7 @@ describe('NPC foundation', () => {
     conversations.dispose();
   });
 
-  it('keeps no-dialogue NPC interactions in playing without session ownership', async () => {
+  it('routes Nox and Raze through their registered conversations', async () => {
     const scene = new Scene();
     const objects = new GameObjectWorld(scene);
     const interactions = interactionRegistry();
@@ -237,27 +237,57 @@ describe('NPC foundation', () => {
       worldEvents,
     );
     await system.init();
-    const nox = interactions.entries.get('interaction.npc.nox');
-    if (!nox) throw new Error('Nox interaction was not registered');
+    for (const expected of [
+      {
+        npcId: 'nox',
+        conversationId: 'conversation.nox.check-in',
+        text: 'Alley’s clear. Keep moving.',
+      },
+      {
+        npcId: 'raze',
+        conversationId: 'conversation.raze.check-in',
+        text: 'Deck’s quiet. Don’t make it loud.',
+      },
+    ]) {
+      const interaction = interactions.entries.get(
+        `interaction.npc.${expected.npcId}`,
+      );
+      if (!interaction) {
+        throw new Error(`${expected.npcId} interaction was not registered`);
+      }
 
-    await nox.interact({
-      gameState: 'playing',
-      targetId: nox.id,
-      signal: new AbortController().signal,
-    });
-    await Promise.resolve();
+      await interaction.interact({
+        gameState: 'playing',
+        targetId: interaction.id,
+        signal: new AbortController().signal,
+      });
+      await Promise.resolve();
 
-    expect(started).not.toHaveBeenCalled();
-    expect(conversations.active).toBeUndefined();
-    expect(state.current).toBe('playing');
-    expect(system.getDebugSnapshot('nox')).toMatchObject({
-      interactionState: 'available',
-      conversationState: 'idle',
-      currentAnimation: 'gesture',
-      gestureActive: true,
-      lastGestureSource: 'interaction:nox',
-      lastGestureAccepted: true,
-    });
+      expect(conversations.active).toMatchObject({
+        npcId: expected.npcId,
+        definition: {
+          id: expected.conversationId,
+          lines: [
+            expect.objectContaining({
+              speakerId: expected.npcId,
+              text: expected.text,
+            }),
+          ],
+        },
+      });
+      expect(state.current).toBe('dialogue');
+      expect(system.getDebugSnapshot(expected.npcId)).toMatchObject({
+        interactionState: 'conversation',
+        conversationState: 'active',
+        currentAnimation: 'gesture',
+        gestureActive: true,
+        lastGestureSource: `conversation:${expected.conversationId}`,
+        lastGestureAccepted: true,
+      });
+      conversations.end();
+      expect(state.current).toBe('playing');
+    }
+    expect(started).toHaveBeenCalledTimes(2);
     system.dispose();
     conversations.dispose();
   });

@@ -385,13 +385,13 @@ function registerVerticalSliceDebug(
       debug.registerValue({
         id: `npc.${definition.id}.source`,
         label: 'Model source',
-        group,
+        group: sections.characters,
         read: () => read(({ modelSource }) => modelSource, 'pending'),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.gesture`,
         label: 'Last gesture',
-        group,
+        group: sections.characters,
         read: () =>
           read(
             ({ gestureActive, lastGestureSource }) =>
@@ -404,7 +404,7 @@ function registerVerticalSliceDebug(
       debug.registerValue({
         id: `npc.${definition.id}.grounding`,
         label: 'Visual ground / height',
-        group,
+        group: sections.collision,
         read: () =>
           read(
             ({ visualBounds }) =>

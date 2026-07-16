@@ -33,14 +33,26 @@ export const conversationDefinitions = validateConversationDefinitions([
     onComplete: { id: 'conversation.mack-introduction.completed' },
   },
   {
-    id: 'conversation.nox.placeholder',
-    lines: [],
-    placeholder: true,
+    id: 'conversation.nox.check-in',
+    canCancel: true,
+    lines: [
+      {
+        id: 'conversation.nox.check-in.clear',
+        speakerId: 'nox',
+        text: 'Alley’s clear. Keep moving.',
+      },
+    ],
   },
   {
-    id: 'conversation.raze.placeholder',
-    lines: [],
-    placeholder: true,
+    id: 'conversation.raze.check-in',
+    canCancel: true,
+    lines: [
+      {
+        id: 'conversation.raze.check-in.quiet',
+        speakerId: 'raze',
+        text: 'Deck’s quiet. Don’t make it loud.',
+      },
+    ],
   },
 ]);
 
