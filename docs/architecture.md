@@ -50,6 +50,14 @@ Rendered geometry, plain collision boxes, semantic locations, trigger definition
 
 `InteractionSystem` centrally registers plain `Interactable` definitions, queries one injected player pose, ranks valid candidates, and executes the single selected target through the named `interact` action. Interactables have no per-frame hook and do not depend on a visual model. Immediate and promise-based handlers share typed lifecycle events and abort-signal cancellation. See [Interaction API](./interactions.md) for scoring, availability, and integration details.
 
+Asset failures retain the logical ID, asset type, and resolved URL. System initialization failures retain the system ID and dispose systems that were already initialized, making partial startup failures actionable without leaving listeners or render resources attached.
+
+## Development and sandbox APIs
+
+Development builds dynamically load a generic `DebugRegistry`, panel, error reporter, visual-helper registry, and optional sandbox scenario. Production builds take the normal scene path and do not initialize dangerous development commands. Systems contribute debug values, toggles, commands, and visual-helper visibility callbacks through public APIs; the panel never reaches into private system state.
+
+Sandbox scenarios implement the normal `GameSystem` lifecycle and replace the normal scene only when a development URL supplies `?sandbox=<id>`. This keeps isolated mechanic experiments representative of runtime lifecycle behavior without introducing a separate editor or story dependency. See [Developer tooling](developer-tooling.md) for extension examples.
+
 ## Future integration
 
 - Player: implement a `GameObject` for presentation and a focused movement/controller system that reads `InputReader`, owns a physics abstraction body, and exposes a read-only position source to debugging/camera code.
@@ -75,6 +83,8 @@ Parallel work may rely on these APIs:
 - `PlayerPositionSource.getPlayerPosition/getPlayerTransform`
 - `PlayerControllerSystem.teleport/reset/setControlEnabled/getDebugSnapshot`
 - `CollisionWorld.moveCharacter/castCamera`
+- `DebugRegistry` registration and command APIs (development-only)
+- `DebugVisualHelpers.register` and standard helper IDs (development-only)
 - `RenderSystem.scene`, `.camera`, and `.renderer` (renderer configuration only; do not start another loop)
 - `LevelDefinition`, `LevelRegistry`, `LevelSystem`, and `LevelLocations`
 

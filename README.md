@@ -32,6 +32,16 @@ Use the character panel to select a session-persistent character, inspect it wit
 The scene uses a generated capsule placeholder and requires no character asset. See
 [Player controller](docs/player-controller.md) for tuning and integration APIs.
 
+Development builds can open the developer panel with the backtick key or `?debug=1`; production builds do not initialize the panel or its commands.
+
+Run the isolated foundation sandbox without a story scene:
+
+```sh
+pnpm sandbox
+```
+
+See [Developer tooling](docs/developer-tooling.md) for the debug extension API, visual-helper providers, commands, and adding sandbox scenarios.
+
 Quality and production commands:
 
 ```sh
@@ -40,6 +50,7 @@ pnpm lint
 pnpm typecheck
 pnpm format:check
 pnpm build
+pnpm size
 pnpm preview
 ```
 

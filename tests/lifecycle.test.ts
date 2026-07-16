@@ -41,4 +41,24 @@ describe('SystemRegistry', () => {
       'already registered',
     );
   });
+
+  it('reports the failing system id and disposes initialized systems', async () => {
+    const disposeFirst = vi.fn();
+    const disposeFailing = vi.fn();
+    const registry = new SystemRegistry();
+    registry.register({ id: 'first', dispose: disposeFirst }).register({
+      id: 'broken-assets',
+      init: () => {
+        throw new Error('manifest was unavailable');
+      },
+      dispose: disposeFailing,
+    });
+
+    await expect(registry.init(undefined)).rejects.toThrow(
+      'Failed to initialize system "broken-assets": manifest was unavailable',
+    );
+    registry.dispose();
+    expect(disposeFailing).toHaveBeenCalledOnce();
+    expect(disposeFirst).toHaveBeenCalledOnce();
+  });
 });

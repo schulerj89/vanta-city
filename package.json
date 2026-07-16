@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sandbox": "vite --open '/?sandbox=foundation&debug=1'",
+    "size": "node scripts/report-bundle-size.mjs"
   },
   "dependencies": {
     "three": "^0.185.1"

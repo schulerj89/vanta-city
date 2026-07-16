@@ -74,7 +74,7 @@ describe('ThreeAssetLoader', () => {
       AssetLoadError,
     );
     expect(loader.getStatus('hero').error?.message).toContain(
-      'Failed to load asset "hero"',
+      'Failed to load model asset "hero"',
     );
     await expect(loader.loadGltf('hero')).rejects.toBeInstanceOf(
       AssetLoadError,
@@ -95,5 +95,27 @@ describe('ThreeAssetLoader', () => {
     expect(() => loader.loadGltf('portrait')).toThrow('portrait" is texture');
     loader.dispose();
     expect(() => loader.getStatus('portrait')).toThrow('disposed');
+  });
+});
+
+describe('AssetLoadError', () => {
+  it('retains the logical id, type, URL, and original failure context', () => {
+    const cause = new Error('network unavailable');
+    const error = new AssetLoadError(
+      'character.hero',
+      'model',
+      '/assets/hero.glb',
+      cause,
+    );
+
+    expect(error.message).toContain(
+      'Failed to load model asset "character.hero" from "/assets/hero.glb"',
+    );
+    expect(error).toMatchObject({
+      assetId: 'character.hero',
+      assetType: 'model',
+      url: '/assets/hero.glb',
+      cause,
+    });
   });
 });

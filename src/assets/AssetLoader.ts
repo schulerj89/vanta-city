@@ -85,10 +85,15 @@ export class BrowserAssetBackend implements AssetBackend {
 export class AssetLoadError extends Error {
   public constructor(
     public readonly assetId: string,
+    public readonly assetType: AssetDescriptor['type'],
     public readonly url: string,
     cause: unknown,
   ) {
-    super(`Failed to load asset "${assetId}" from ${url}`, { cause });
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(
+      `Failed to load ${assetType} asset "${assetId}" from "${url}": ${detail}`,
+      { cause },
+    );
     this.name = 'AssetLoadError';
   }
 }
@@ -204,7 +209,7 @@ export class ThreeAssetLoader implements GameAssetLoader {
         const error =
           cause instanceof AssetLoadError
             ? cause
-            : new AssetLoadError(id, asset.url, cause);
+            : new AssetLoadError(id, asset.type, asset.url, cause);
         if (!this.disposed)
           this.publish({ id, phase: 'error', progress: 0, error });
         throw error;
