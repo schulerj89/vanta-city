@@ -1,26 +1,25 @@
 import { EventBus } from '../core/events';
-import type { GameStateMachine } from '../core/gameState';
 import type { GameSystem } from '../core/lifecycle';
 import type { FrameTime } from '../core/time';
 import type { GameContext } from '../game/GameRuntime';
 import type { InputReader } from '../input/InputSystem';
 import type {
+  ConversationCoordinator,
+  ConversationSession,
+} from '../conversations/ConversationCoordinator';
+import type {
   ConversationDefinition,
   DialogueLine,
-} from './DialogueDefinition';
-import { validateConversation } from './DialogueDefinition';
-import type {
-  DialogueCancelReason,
-  DialogueEvents,
-  DialogueOutcome,
-} from './DialogueEvents';
+} from '../conversations/ConversationDefinition';
+import { validateConversation } from '../conversations/ConversationDefinition';
+import type { DialogueEvents } from './DialogueEvents';
 
 export interface DialogueCameraHooks {
-  onDialogueStarted?(conversationId: string): void;
+  onDialogueStarted?(session: ConversationSession): void;
   onLineChanged?(conversationId: string, line: DialogueLine): void;
   onDialogueEnded?(
     conversationId: string,
-    outcome: DialogueOutcome['status'],
+    outcome: 'completed' | 'cancelled',
   ): void;
 }
 
@@ -43,12 +42,11 @@ export interface DialogueSessionSnapshot {
 }
 
 interface ActiveSession {
+  readonly npcId: string;
   readonly conversation: ConversationDefinition;
   lineIndex: number;
   visibleCharacters: number;
   characterProgress: number;
-  readonly completion: Promise<DialogueOutcome>;
-  resolve(outcome: DialogueOutcome): void;
 }
 
 export class DialogueSessionController implements GameSystem<GameContext> {
@@ -61,11 +59,12 @@ export class DialogueSessionController implements GameSystem<GameContext> {
   private readonly charactersPerSecond: number;
   private readonly cameraHooks: DialogueCameraHooks;
   private unsubscribeState: (() => void) | undefined;
+  private readonly unsubscribeConversation: (() => void)[] = [];
   private inputArmed = true;
 
   public constructor(
     private readonly input: InputReader,
-    private readonly state: GameStateMachine,
+    private readonly conversations: ConversationCoordinator,
     options: DialogueSessionOptions = {},
   ) {
     this.typewriterEnabled = options.typewriterEnabled ?? true;
@@ -80,11 +79,20 @@ export class DialogueSessionController implements GameSystem<GameContext> {
   }
 
   public init(context: GameContext): void {
+    this.unsubscribeConversation.push(
+      this.conversations.events.on('conversation:started', ({ session }) =>
+        this.begin(session),
+      ),
+      this.conversations.events.on(
+        'conversation:ended',
+        ({ session, reason }) => this.close(session, reason),
+      ),
+    );
     this.unsubscribeState = context.events.on(
       'game-state:changed',
       ({ to }) => {
-        if (this.active && to !== 'dialogue') {
-          this.cancelInternal('game-state-changed', false);
+        if (this.active && to !== 'dialogue' && this.conversations.active) {
+          this.conversations.end('cancelled');
         }
       },
     );
@@ -113,39 +121,31 @@ export class DialogueSessionController implements GameSystem<GameContext> {
     }
   }
 
-  public start(conversation: ConversationDefinition): Promise<DialogueOutcome> {
+  public request(conversationId: string, npcId: string): boolean {
+    return this.conversations.start(conversationId, npcId);
+  }
+
+  private begin(session: ConversationSession): void {
+    const conversation = session.definition;
     validateConversation(conversation);
     if (this.active) {
       throw new Error(
         `Cannot start conversation "${conversation.id}" while "${this.active.conversation.id}" is active`,
       );
     }
-    if (this.state.current !== 'playing') {
-      throw new Error(
-        `Conversation "${conversation.id}" requires playing state; current state is ${this.state.current}`,
-      );
-    }
-
-    let resolveCompletion: (outcome: DialogueOutcome) => void = () => undefined;
-    const completion = new Promise<DialogueOutcome>((resolve) => {
-      resolveCompletion = resolve;
-    });
     this.active = {
+      npcId: session.npcId,
       conversation,
       lineIndex: 0,
       visibleCharacters: 0,
       characterProgress: 0,
-      completion,
-      resolve: resolveCompletion,
     };
     // An interaction key or debug-panel click may also be bound to dialogue.
     // Wait for that initiating edge to clear before dialogue consumes input.
     this.inputArmed = !this.hasPendingDialogueInput();
-    this.state.transition('dialogue');
     this.events.emit('dialogue:started', { conversation });
-    this.cameraHooks.onDialogueStarted?.(conversation.id);
+    this.cameraHooks.onDialogueStarted?.(session);
     this.enterCurrentLine();
-    return completion;
   }
 
   /** Completes a partial line first; otherwise moves to the next line. */
@@ -177,8 +177,7 @@ export class DialogueSessionController implements GameSystem<GameContext> {
 
   public cancel(): boolean {
     if (!this.active || !this.active.conversation.canCancel) return false;
-    this.cancelInternal('cancelled', true);
-    return true;
+    return this.conversations.end('cancelled');
   }
 
   public setTypewriterEnabled(enabled: boolean): void {
@@ -220,7 +219,9 @@ export class DialogueSessionController implements GameSystem<GameContext> {
   public dispose(): void {
     this.unsubscribeState?.();
     this.unsubscribeState = undefined;
-    if (this.active) this.cancelInternal('system-disposed', false);
+    if (this.active) this.conversations.end('cancelled');
+    for (const unsubscribe of this.unsubscribeConversation.splice(0))
+      unsubscribe();
     this.events.clear();
   }
 
@@ -265,9 +266,6 @@ export class DialogueSessionController implements GameSystem<GameContext> {
     const active = this.requireActive();
     const conversationId = active.conversation.id;
     const finalLine = this.currentLine(active);
-    const outcome: DialogueOutcome = { status: 'completed', conversationId };
-    this.active = undefined;
-    if (this.state.current === 'dialogue') this.state.transition('playing');
     if (active.conversation.onComplete) {
       this.events.emit('dialogue:hook', {
         conversationId,
@@ -278,29 +276,26 @@ export class DialogueSessionController implements GameSystem<GameContext> {
         hook: active.conversation.onComplete,
       });
     }
-    this.events.emit('dialogue:completed', { conversationId });
-    this.cameraHooks.onDialogueEnded?.(conversationId, 'completed');
-    active.resolve(outcome);
+    this.conversations.end('completed');
   }
 
-  private cancelInternal(
-    reason: DialogueCancelReason,
-    transitionToPlaying: boolean,
+  private close(
+    session: ConversationSession,
+    reason: 'completed' | 'cancelled',
   ): void {
-    const active = this.requireActive();
-    const conversationId = active.conversation.id;
-    const outcome: DialogueOutcome = {
-      status: 'cancelled',
-      conversationId,
-      reason,
-    };
+    if (!this.active || this.active.conversation.id !== session.definition.id)
+      return;
+    const conversationId = session.definition.id;
     this.active = undefined;
-    if (transitionToPlaying && this.state.current === 'dialogue') {
-      this.state.transition('playing');
+    if (reason === 'completed') {
+      this.events.emit('dialogue:completed', { conversationId });
+    } else {
+      this.events.emit('dialogue:cancelled', {
+        conversationId,
+        reason: 'cancelled',
+      });
     }
-    this.events.emit('dialogue:cancelled', { conversationId, reason });
-    this.cameraHooks.onDialogueEnded?.(conversationId, 'cancelled');
-    active.resolve(outcome);
+    this.cameraHooks.onDialogueEnded?.(conversationId, reason);
   }
 
   private currentLine(active: ActiveSession): DialogueLine {

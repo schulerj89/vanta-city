@@ -1,4 +1,4 @@
-import type { DialogueLine } from './DialogueDefinition';
+import type { DialogueLine } from '../conversations/ConversationDefinition';
 
 export interface DialogueSpeaker {
   readonly id: string;

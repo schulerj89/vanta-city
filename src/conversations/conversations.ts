@@ -6,20 +6,31 @@ import {
 export const conversationDefinitions = validateConversationDefinitions([
   {
     id: 'conversation.mack.introduction',
+    canCancel: true,
     lines: [
       {
+        id: 'conversation.mack.introduction.late',
         speakerId: 'mack',
-        text: 'You picked a loud night to visit the garage.',
+        text: 'You’re late.',
+        onEnter: { id: 'conversation.mack-introduction.entered' },
       },
       {
-        speakerId: 'player',
-        text: 'I was told you know what moves through this district.',
+        id: 'conversation.mack.introduction.nephew',
+        speakerId: 'rook',
+        text: 'Your nephew was supposed to meet me.',
       },
       {
+        id: 'conversation.mack.introduction.later',
         speakerId: 'mack',
-        text: 'I know enough to tell you the alley radios never stay quiet for long.',
+        text: 'Then he’s later.',
+      },
+      {
+        id: 'conversation.mack.introduction.warning',
+        speakerId: 'mack',
+        text: 'Walk around the block. If anyone follows you, don’t bring them back here.',
       },
     ],
+    onComplete: { id: 'conversation.mack-introduction.completed' },
   },
   {
     id: 'conversation.nox.placeholder',

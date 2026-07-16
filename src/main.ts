@@ -4,7 +4,10 @@ import { AssetCatalog } from './assets/AssetCatalog';
 import { ThreeAssetLoader } from './assets/AssetLoader';
 import { assetManifest } from './assets/catalog';
 import { CharacterLoader } from './characters/CharacterLoader';
-import { ManifestCharacterAvailabilityProbe } from './characters/CharacterAvailability';
+import {
+  ManifestCharacterAvailabilityProbe,
+  resolveCharacterPortrait,
+} from './characters/CharacterAvailability';
 import { CharacterSelectionStore } from './characters/CharacterSelection';
 import { characterDefinitions } from './characters/characters';
 import { ConversationCoordinator } from './conversations/ConversationCoordinator';
@@ -14,8 +17,7 @@ import { EventBus } from './core/events';
 import { DialoguePortraitResolver } from './dialogue/DialoguePortraitResolver';
 import { DialogueSessionController } from './dialogue/DialogueSessionController';
 import { DialogueUISystem } from './dialogue/DialogueUISystem';
-import { mackIntroduction } from './dialogue/conversations/mackIntroduction';
-import { dialogueSpeakers } from './dialogue/speakers';
+import { createDialogueSpeakers } from './dialogue/speakers';
 import { GameObjectWorld } from './entities/GameObjectWorld';
 import { GameRuntime } from './game/GameRuntime';
 import type { GameContext } from './game/GameRuntime';
@@ -129,17 +131,6 @@ async function bootstrap(): Promise<void> {
     assetCatalog,
     new ManifestCharacterAvailabilityProbe(assetCatalog),
   );
-  const dialogue = new DialogueSessionController(input, runtime.state, {
-    typewriterEnabled:
-      pageParameters.get('dialogueTypewriter') !== '0' &&
-      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-  });
-  const dialoguePortraits = new DialoguePortraitResolver(dialogueSpeakers, {
-    getSelectedIdentity: () => ({
-      displayName: characterSelection.getSelectedDefinition().displayName,
-    }),
-  });
-  const dialogueUI = new DialogueUISystem(mount, dialogue, dialoguePortraits);
   const cameraReference: { current?: ThirdPersonCameraSystem } = {};
   const player = new PlayerControllerSystem(
     objects,
@@ -175,6 +166,40 @@ async function bootstrap(): Promise<void> {
     levelSystem,
     worldEvents,
   );
+  let dialogueCamera:
+    ReturnType<ThirdPersonCameraSystem['requestConversation']> | undefined;
+  const dialogue = new DialogueSessionController(input, conversations, {
+    typewriterEnabled:
+      pageParameters.get('dialogueTypewriter') !== '0' &&
+      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    cameraHooks: {
+      onDialogueStarted: (session) => {
+        dialogueCamera?.release();
+        dialogueCamera = camera.requestConversation(
+          `dialogue:${session.definition.id}`,
+          npcs.getWorldPoseSource(session.npcId),
+        );
+      },
+      onDialogueEnded: () => {
+        dialogueCamera?.release();
+        dialogueCamera = undefined;
+      },
+    },
+  });
+  const dialoguePortraits = new DialoguePortraitResolver(
+    createDialogueSpeakers(npcDefinitions, assetCatalog),
+    {
+      getSelectedIdentity: () => {
+        const definition = characterSelection.getSelectedDefinition();
+        const portrait = resolveCharacterPortrait(definition, assetCatalog);
+        return {
+          displayName: definition.displayName,
+          ...(portrait.kind === 'asset' ? { portraitSrc: portrait.url } : {}),
+        };
+      },
+    },
+  );
+  const dialogueUI = new DialogueUISystem(mount, dialogue, dialoguePortraits);
   interactions.register({
     id: 'interaction.garage-door',
     prompt: 'Inspect garage door',
@@ -187,21 +212,6 @@ async function bootstrap(): Promise<void> {
     range: 2.75,
     repeatable: false,
     interact: () => undefined,
-  });
-  interactions.register({
-    id: 'interaction.mack-conversation',
-    prompt: 'Talk to Mack',
-    location: () => {
-      const [x, y, z] = levelSystem.getSpawn('spawn.npc-mechanic').position;
-      return { x, y, z };
-    },
-    range: 4,
-    priority: -1,
-    requiredStates: ['playing', 'dialogue'],
-    repeatable: true,
-    interact: async () => {
-      await dialogue.start(mackIntroduction);
-    },
   });
   let interactionDebug:
     | import('./interactions/InteractionDebugSystem').InteractionDebugSystem
@@ -271,7 +281,7 @@ async function bootstrap(): Promise<void> {
     throw error;
   }
 
-  if (developmentParameters?.get('e2e') !== '1') characterPicker.open();
+  if (pageParameters.get('skipPicker') !== '1') characterPicker.open();
 
   const disposeBrowserTestBridge =
     browserTestModule && development
@@ -708,7 +718,7 @@ function registerVerticalSliceDebug(
       label: 'Start Mack dialogue',
       group: 'Actions',
       run: () => {
-        void dialogue.start(mackIntroduction);
+        conversations.start('conversation.mack.introduction', 'mack');
       },
     }),
     debug.registerCommand({

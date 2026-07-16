@@ -8,7 +8,12 @@ const characters = [
 ] as const satisfies readonly CharacterDefinition[];
 
 const conversations = new ConversationCatalog([
-  { id: 'conversation.test', lines: [{ speakerId: 'worker', text: 'Hello' }] },
+  {
+    id: 'conversation.test',
+    lines: [
+      { id: 'conversation.test.hello', speakerId: 'worker', text: 'Hello' },
+    ],
+  },
 ]);
 
 const npc: NpcDefinition = {

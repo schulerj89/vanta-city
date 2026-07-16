@@ -2,7 +2,7 @@ import type {
   ConversationDefinition,
   DialogueEventHook,
   DialogueLine,
-} from './DialogueDefinition';
+} from '../conversations/ConversationDefinition';
 
 export type DialogueCancelReason =
   'cancelled' | 'game-state-changed' | 'system-disposed';

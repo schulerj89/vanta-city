@@ -145,7 +145,7 @@ describe('ManifestCharacterAvailabilityProbe', () => {
     fallback: 'placeholder',
   };
 
-  it('uses a local HEAD request and rejects an HTML fallback', async () => {
+  it('uses a local HEAD request and keeps the explicit placeholder fallback selectable', async () => {
     const request = vi.fn(async () => ({
       ok: true,
       headers: new Headers({ 'content-type': 'text/html' }),
@@ -158,9 +158,9 @@ describe('ManifestCharacterAvailabilityProbe', () => {
       'http://localhost/game',
     );
 
-    await expect(probe.check(modelDefinition)).resolves.toMatchObject({
-      status: 'unavailable',
-    });
+    const availability = await probe.check(modelDefinition);
+    expect(availability.status).toBe('available');
+    expect(availability.reason).toContain('placeholder fallback');
     expect(request).toHaveBeenCalledWith(
       new URL('http://localhost/model.glb'),
       { method: 'HEAD' },

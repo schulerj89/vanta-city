@@ -9,7 +9,11 @@ import {
 import type { FrameTime } from '../core/time';
 import type { GameObject } from '../entities/GameObject';
 import type { ConversationCoordinator } from '../conversations/ConversationCoordinator';
-import type { WorldPoseSource, WorldPosition } from '../world/Spatial';
+import type {
+  WorldPose,
+  WorldPoseSource,
+  WorldPosition,
+} from '../world/Spatial';
 import type { SpawnPointDefinition } from '../world/LevelDefinition';
 import type { NpcDefinition } from './NpcDefinition';
 
@@ -139,6 +143,17 @@ export class NpcEntity implements GameObject {
       x: this.object3d.position.x,
       y: this.object3d.position.y,
       z: this.object3d.position.z,
+    };
+  }
+
+  public getWorldPose(): WorldPose {
+    return {
+      position: this.getWorldPosition(),
+      forward: {
+        x: Math.sin(this.object3d.rotation.y),
+        y: 0,
+        z: Math.cos(this.object3d.rotation.y),
+      },
     };
   }
 

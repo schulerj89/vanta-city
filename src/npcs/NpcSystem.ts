@@ -66,6 +66,10 @@ export class NpcSystem implements GameSystem {
     return this.spawned.get(id)?.entity.getDebugSnapshot();
   }
 
+  public getWorldPoseSource(id: string): WorldPoseSource | undefined {
+    return this.spawned.get(id)?.entity;
+  }
+
   public get count(): number {
     return this.spawned.size;
   }

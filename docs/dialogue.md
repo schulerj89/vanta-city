@@ -41,12 +41,12 @@ Entry and completion hooks are emitted as `dialogue:hook` facts. Future mission 
 
 ## Public session API
 
-`DialogueSessionController` is the public owner of a single active session:
+`ConversationCoordinator` owns the single active conversation request and game-state transition. `DialogueSessionController` observes it and owns line progression:
 
-- `start(conversation)` enters `dialogue`, displays the first line, and returns a promise resolving to a completed or cancelled outcome. Starting while another session is active throws without replacing it.
+- `ConversationCoordinator.start(conversationId, npcId)` validates the shared catalog and starts only from `playing`; duplicate requests are rejected without replacement.
 - `advance()` completes partially revealed text first. Calling it again advances to the next line; advancing the final complete line finishes the conversation.
 - `skipTypewriter()` immediately reveals the current line without advancing.
-- `cancel()` returns `false` if no cancellable session is active. Otherwise it closes the session, returns to `playing`, emits cancellation, and resolves the completion promise.
+- `cancel()` returns `false` if no cancellable session is active. Otherwise it asks the coordinator to end the conversation and restore `playing`.
 - `setTypewriterEnabled(enabled)` is the accessibility and deterministic-test control. Disabling it immediately reveals the current text.
 - `getSnapshot()` and `getCurrentLine()` provide read-only state for UI, debugging, and browser tests.
 
@@ -54,7 +54,7 @@ The controller emits `dialogue:started`, `dialogue:line-changed`, `dialogue:comp
 
 ## Speakers and portraits
 
-Register speaker names and optional portrait URLs in `src/dialogue/speakers.ts`. A line-level `portraitOverride` wins, followed by selected-player identity, speaker portrait, and fallback initials. Rook uses the selected player identity source. The current character catalog has no portrait URLs, so Rook safely displays initials derived from the selected character until one becomes available.
+NPC speaker names and portrait URLs are derived from `NpcDefinition` metadata. A line-level `portraitOverride` wins, followed by selected-player identity, NPC portrait, and fallback initials. Rook uses the selected `CharacterDefinition`; the current playable catalog has no portrait URL, so Rook safely displays initials derived from the confirmed character until one becomes available.
 
 Image load errors replace the image with the same initials fallback. Portrait resolution is visible through the debug panel, `DialogueUISystem.getDebugSnapshot()`, and the opt-in browser-test bridge.
 

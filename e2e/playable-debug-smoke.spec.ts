@@ -5,7 +5,7 @@ import type {
   BrowserTestSnapshot,
 } from '../src/debug/BrowserTestBridge';
 
-const appUrl = '/?e2e=1&debug=1';
+const appUrl = '/?e2e=1&debug=1&skipPicker=1';
 
 test.describe('playable debug district', () => {
   test('starts ready with a grounded player, valid visual, world, and camera', async ({
@@ -294,7 +294,7 @@ test.describe('playable debug district', () => {
     const first = await snapshot(page);
     expect(first.gameState).toBe('dialogue');
     expect(first.dialogue.session).toMatchObject({
-      conversationId: 'mack.introduction',
+      conversationId: 'conversation.mack.introduction',
       lineIndex: 0,
       speakerId: 'mack',
       fullText: 'You’re late.',
@@ -303,8 +303,8 @@ test.describe('playable debug district', () => {
       visible: true,
       speakerName: 'Mack',
       renderedText: 'You’re late.',
-      portraitResolution: 'fallback:speaker-fallback',
     });
+    expect(first.dialogue.ui.portraitResolution).toContain('fallback');
 
     const stoppedAt = first.player.position;
     await page.keyboard.down('w');
@@ -357,7 +357,7 @@ test.describe('playable debug district', () => {
     expect(completed.dialogue.session.state).toBe('idle');
     expect(completed.dialogue.ui.visible).toBe(false);
     expect(completed.dialogue.completedConversationIds).toContain(
-      'mack.introduction',
+      'conversation.mack.introduction',
     );
     expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
   });

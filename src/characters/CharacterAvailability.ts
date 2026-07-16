@@ -61,15 +61,17 @@ export class ManifestCharacterAvailabilityProbe implements CharacterAvailability
       const contentType = response.headers.get('content-type') ?? '';
       if (!response.ok || contentType.includes('text/html')) {
         return {
-          status: 'unavailable',
-          reason: 'Model file is not installed locally.',
+          status: 'available',
+          reason:
+            'Model file is not installed locally; placeholder fallback will be used.',
         };
       }
       return { status: 'available' };
     } catch {
       return {
-        status: 'unavailable',
-        reason: 'Model file could not be verified.',
+        status: 'available',
+        reason:
+          'Model file could not be verified; placeholder fallback will be used.',
       };
     }
   }
