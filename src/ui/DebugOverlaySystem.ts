@@ -11,6 +11,13 @@ export interface Position3 {
 
 export interface DebugDataSource {
   getPlayerPosition(): Position3 | undefined;
+  getDebugSnapshot?(): {
+    readonly velocity: Position3;
+    readonly grounded: boolean;
+    readonly movementState: string;
+    readonly blocked: boolean;
+  };
+  readonly cameraObstructed?: boolean;
 }
 
 export class DebugOverlaySystem implements GameSystem {
@@ -52,7 +59,20 @@ export class DebugOverlaySystem implements GameSystem {
     const player = position
       ? `${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}`
       : 'not available';
-    this.element.textContent = `FPS ${this.smoothedFps.toFixed(0)}\nState ${this.state.current}\nPlayer ${player}`;
+    const debug = this.data?.getDebugSnapshot?.();
+    const velocity = debug
+      ? `${debug.velocity.x.toFixed(2)}, ${debug.velocity.y.toFixed(2)}, ${debug.velocity.z.toFixed(2)}`
+      : 'not available';
+    this.element.textContent = [
+      `FPS ${this.smoothedFps.toFixed(0)}`,
+      `State ${this.state.current}`,
+      `Player ${player}`,
+      `Velocity ${velocity}`,
+      `Grounded ${debug?.grounded ?? 'not available'}`,
+      `Movement ${debug?.movementState ?? 'not available'}`,
+      `Blocked ${debug?.blocked ?? 'not available'}`,
+      `Camera obstructed ${this.data?.cameraObstructed ?? 'not available'}`,
+    ].join('\n');
   }
 
   public dispose(): void {

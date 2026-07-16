@@ -68,6 +68,9 @@ Parallel work may rely on these APIs:
 - `AssetCatalog`, `AssetLoadStatus`, `ModelInstance`, and `CharacterLoader`
 - `CharacterDefinition`, `CharacterSelectionReader`, and `LoadedCharacter`
 - `DebugDataSource.getPlayerPosition`
+- `PlayerPositionSource.getPlayerPosition/getPlayerTransform`
+- `PlayerControllerSystem.teleport/reset/setControlEnabled/getDebugSnapshot`
+- `CollisionWorld.moveCharacter/castCamera`
 - `RenderSystem.scene`, `.camera`, and `.renderer` (renderer configuration only; do not start another loop)
 - `LevelDefinition`, `LevelRegistry`, `LevelSystem`, and `LevelLocations`
 
