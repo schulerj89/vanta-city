@@ -161,7 +161,12 @@ async function bootstrap(): Promise<void> {
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
   const help = new HelpOverlaySystem(mount, runtime, helpControlEntries);
-  const interactions = new InteractionSystem(input, runtime.state, player);
+  const interactions = new InteractionSystem(
+    input,
+    runtime.state,
+    player,
+    collision,
+  );
   const conversations = new ConversationCoordinator(
     conversationCatalog,
     runtime.state,
@@ -263,6 +268,7 @@ async function bootstrap(): Promise<void> {
     ? registerVerticalSliceDebug(
         development,
         levelSystem,
+        collision,
         player,
         camera,
         interactions,
@@ -351,6 +357,7 @@ async function bootstrap(): Promise<void> {
 function registerVerticalSliceDebug(
   development: import('./debug/setupDevelopmentTools').DevelopmentTools,
   level: LevelSystem,
+  collision: StaticCollisionWorld,
   player: PlayerControllerSystem,
   camera: ThirdPersonCameraSystem,
   interactions: InteractionSystem,
@@ -828,6 +835,31 @@ function registerVerticalSliceDebug(
       label: 'Colliders',
       group: sections.collision,
       read: () => level.activeLevel?.staticCollision.length,
+    }),
+    debug.registerValue({
+      id: 'collision.oriented-boxes',
+      label: 'Rotated boxes',
+      group: sections.collision,
+      read: () => collision.getDebugSnapshot().orientedBoxCount,
+    }),
+    debug.registerValue({
+      id: 'collision.last-ground',
+      label: 'Ground shape',
+      group: sections.collision,
+      read: () => collision.getDebugSnapshot().lastGroundColliderId,
+    }),
+    debug.registerValue({
+      id: 'collision.last-blocks',
+      label: 'Movement contacts',
+      group: sections.collision,
+      read: () =>
+        collision.getDebugSnapshot().lastCharacterBlockIds.join(', ') || 'none',
+    }),
+    debug.registerValue({
+      id: 'collision.camera-hit',
+      label: 'Camera obstruction',
+      group: sections.collision,
+      read: () => collision.getDebugSnapshot().lastCameraHitId ?? 'none',
     }),
     debug.registerValue({
       id: 'level.spawns',

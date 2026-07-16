@@ -47,4 +47,28 @@ describe('validateLevelDefinition', () => {
       );
     }
   });
+
+  it('rejects unsupported collider rotations at the authored boundary', () => {
+    const collider = testDistrict.definition.staticCollision[0]!;
+    const invalid: LevelDefinition = {
+      ...testDistrict.definition,
+      staticCollision: [
+        { ...collider, rotation: [0.2, 0, 0] },
+        {
+          ...testDistrict.definition.staticCollision.find(
+            ({ id }) => id === 'c.deck-ramp',
+          )!,
+          id: 'c.invalid-ramp',
+          rotation: [0.2, 0.1, 0],
+        },
+      ],
+    };
+
+    expect(() => validateLevelDefinition(invalid)).toThrow(
+      /boxes support yaw only/,
+    );
+    expect(() => validateLevelDefinition(invalid)).toThrow(
+      /ramps support pitch only/,
+    );
+  });
 });

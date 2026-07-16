@@ -15,7 +15,9 @@ Each `LevelModule` exports a `definition` and logical `assets` manifest. A defin
 
 Runtime consumers use `LevelLocations` methods (`getSpawn`, `getLocation`, `getTrigger`, `getCinematicAnchor`, and `getStaticColliders`) instead of searching the Three.js scene. `level:loaded` and `level:unloaded` events publish lifecycle facts. Loading remains a direct command on the owning system.
 
-`staticCollision` is deliberately plain data. The future game-owned physics adapter should convert each box's `position`, Euler `rotation`, and `size` to its native static-body representation. Player grounding/movement and camera obstruction can consume the same collider list without either system importing level-rendering internals. Static conversation NPCs may use small `npc-occupancy` boxes at their authored spawns; unloading the level clears those boxes with every other world collider.
+`staticCollision` is deliberately plain data. The game-owned adapter converts each box's `position`, supported rotation, and `size` into the authoritative query model. Ordinary boxes may be axis-aligned or yaw-rotated; tagged ramps may use pitch but not yaw or roll. Validation rejects other combinations so rendering and collision cannot silently disagree. Movement, grounding, step/head probes, interaction visibility, and gameplay/directed camera obstruction consume the same loaded shapes. Camera casts use the full oriented thickness of pitched ramps rather than omitting them. Static conversation NPCs may use small `npc-occupancy` boxes at their authored spawns; those shapes block movement and camera but are ignored as visibility occluders so their own Talk target remains reachable. Unloading clears every representation together.
+
+The debug district includes `spawn.geometry-service-entry` and `spawn.geometry-service-exit` around a 45° service passage. Its clear alley width is 1.7m and its doorway opening is approximately 1.3m, intentionally close to the 0.76m player capsule diameter while retaining useful art clearance. The fixtures are tagged `debug-geometry` and are not a general environment kit.
 
 ## Adding a district
 
@@ -60,4 +62,6 @@ Add `warehouseDistrict` to `new LevelRegistry([...])`. The registry merges its a
 
 ## Debug view
 
-The backtick action toggles both the existing overlay and world helpers. Colors are: red collision, green player spawns, blue NPC spawns, yellow triggers, cyan interactions, pink mission locations, and purple cinematic anchors/look lines. Helpers live under `debug-helpers`; rendered geometry and hidden semantic data have separate groups.
+The backtick action toggles both the existing overlay and world helpers. Colors are: red collision, green player spawns, blue NPC spawns, yellow triggers, cyan interactions, pink mission locations, and purple cinematic anchors/look lines. Rotated red wireframes preserve the authored transform. The Collision / Physics panel also reports rotated-box count, last supporting shape, movement contacts, and the latest camera obstruction ID. Helpers live under `debug-helpers`; rendered geometry and hidden semantic data have separate groups.
+
+Known limits: static triangle meshes, compound curved shapes, moving platforms, dynamic bodies, navigation, vehicles, destructibility, and arbitrary non-ramp pitch/roll are outside this boundary. Ramps remain bounded planar height fields for character grounding; they do not add side-wall resolution. Teleports ground-probe the requested point but do not search for a nearby free position.

@@ -22,6 +22,7 @@ const rampLength = Math.hypot(2.8, 9);
 const rampThickness = 0.35;
 const rampCenterY = 1.4 - (rampThickness / 2) * Math.cos(rampAngle);
 const rampCenterZ = 1.5 - (rampThickness / 2) * Math.sin(rampAngle);
+const servicePassageYaw = Math.PI / 4;
 
 const stairs = Array.from({ length: 8 }, (_, index) => {
   const height = (index + 1) * 0.35;
@@ -77,6 +78,37 @@ const environment: readonly BoxVisualDefinition[] = [
   box('v.bollard-a', [-5.8, 0.6, 5], [0.35, 1.2, 0.35], colors.garageTrim),
   box('v.bollard-b', [-7, 0.6, 5], [0.35, 1.2, 0.35], colors.garageTrim),
   box('v.bollard-c', [-8.2, 0.6, 5], [0.35, 1.2, 0.35], colors.garageTrim),
+
+  // Art-ready collision fixtures: a rotated, capsule-tight service passage
+  // and a doorway whose clear opening is 1.5m wide.
+  box(
+    'v.service-wall-north',
+    [11.29, 1.4, 12.71],
+    [0.3, 2.8, 8],
+    colors.brick,
+    [0, servicePassageYaw, 0],
+  ),
+  box(
+    'v.service-wall-south',
+    [12.71, 1.4, 11.29],
+    [0.3, 2.8, 8],
+    colors.brick,
+    [0, servicePassageYaw, 0],
+  ),
+  box(
+    'v.service-door-left',
+    [8.46, 1.4, 11.29],
+    [2.5, 2.8, 0.3],
+    colors.metal,
+    [0, servicePassageYaw, 0],
+  ),
+  box(
+    'v.service-door-right',
+    [11.29, 1.4, 8.46],
+    [2.5, 2.8, 0.3],
+    colors.metal,
+    [0, servicePassageYaw, 0],
+  ),
 ];
 
 const staticCollision: readonly StaticColliderDefinition[] = [
@@ -119,6 +151,34 @@ const staticCollision: readonly StaticColliderDefinition[] = [
   collider('c.bollard-a', [-5.8, 0.6, 5], [0.35, 1.2, 0.35], ['obstacle']),
   collider('c.bollard-b', [-7, 0.6, 5], [0.35, 1.2, 0.35], ['obstacle']),
   collider('c.bollard-c', [-8.2, 0.6, 5], [0.35, 1.2, 0.35], ['obstacle']),
+  collider(
+    'c.service-wall-north',
+    [11.29, 1.4, 12.71],
+    [0.3, 2.8, 8],
+    ['wall', 'debug-geometry'],
+    [0, servicePassageYaw, 0],
+  ),
+  collider(
+    'c.service-wall-south',
+    [12.71, 1.4, 11.29],
+    [0.3, 2.8, 8],
+    ['wall', 'debug-geometry'],
+    [0, servicePassageYaw, 0],
+  ),
+  collider(
+    'c.service-door-left',
+    [8.46, 1.4, 11.29],
+    [2.5, 2.8, 0.3],
+    ['doorway', 'debug-geometry'],
+    [0, servicePassageYaw, 0],
+  ),
+  collider(
+    'c.service-door-right',
+    [11.29, 1.4, 8.46],
+    [2.5, 2.8, 0.3],
+    ['doorway', 'debug-geometry'],
+    [0, servicePassageYaw, 0],
+  ),
   collider('c.npc-mack', [-10, 1.1, 4], [0.75, 1.8, 0.75], ['npc-occupancy']),
   collider('c.npc-nox', [-19, 1.1, 12], [0.75, 1.8, 0.75], ['npc-occupancy']),
   collider('c.npc-raze', [14, 3.9, -8], [0.75, 1.8, 0.75], ['npc-occupancy']),
@@ -180,6 +240,20 @@ export const testDistrict = {
         position: [3.5, 0.15, 14],
         rotation: [0, Math.PI, 0],
         tags: ['debug', 'sparring'],
+      },
+      {
+        id: 'spawn.geometry-service-entry',
+        kind: 'player',
+        position: [9.88, 0, 9.88],
+        rotation: [0, Math.PI / 4, 0],
+        tags: ['debug', 'collision', 'doorway', 'tight-alley'],
+      },
+      {
+        id: 'spawn.geometry-service-exit',
+        kind: 'player',
+        position: [14.12, 0, 14.12],
+        rotation: [0, (-3 * Math.PI) / 4, 0],
+        tags: ['debug', 'collision', 'camera-recovery'],
       },
       { id: 'spawn.npc-mechanic', kind: 'npc', position: [-10, 0.2, 4] },
       { id: 'spawn.npc-alley', kind: 'npc', position: [-19, 0.2, 12] },

@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { Euler, Quaternion, Vector3 } from 'three';
 import type { StaticColliderDefinition } from './StaticCollider';
 
 export interface CharacterShape {
@@ -13,6 +13,18 @@ interface StaticBoxCollider {
   readonly id: string;
   readonly min: Readonly<Vector3>;
   readonly max: Readonly<Vector3>;
+}
+
+interface StaticOrientedBoxCollider {
+  readonly id: string;
+  readonly center: Readonly<Vector3>;
+  readonly halfSize: Readonly<Vector3>;
+  readonly yaw: number;
+  readonly cosine: number;
+  readonly sine: number;
+  readonly inverseRotation: Readonly<Quaternion>;
+  readonly tags: readonly string[];
+  readonly ramp: boolean;
 }
 
 interface StaticRampCollider {
@@ -45,6 +57,16 @@ export interface CharacterMoveResult {
 export interface CameraCastResult {
   readonly fraction: number;
   readonly obstructed: boolean;
+  readonly colliderId?: string;
+}
+
+export interface CollisionDebugSnapshot {
+  readonly colliderCount: number;
+  readonly orientedBoxCount: number;
+  readonly rampCount: number;
+  readonly lastCameraHitId: string | undefined;
+  readonly lastCharacterBlockIds: readonly string[];
+  readonly lastGroundColliderId: string;
 }
 
 export interface CollisionWorld {
@@ -59,10 +81,12 @@ export interface CollisionWorld {
     to: Readonly<Vector3>,
     radius: number,
   ): CameraCastResult;
+  isVisible(from: Readonly<Vector3>, to: Readonly<Vector3>): boolean;
 }
 
 const UP = new Vector3(0, 1, 0);
 const EPSILON = 1e-5;
+const VISIBILITY_ENDPOINT_TOLERANCE = 1e-3;
 
 /**
  * Small deterministic collision world for authored static city geometry.
@@ -70,15 +94,30 @@ const EPSILON = 1e-5;
  * replace it without leaking physics-library types into player code.
  */
 export class StaticCollisionWorld implements CollisionWorld {
-  private readonly boxes = new Map<string, StaticBoxCollider>();
+  private readonly boxes = new Map<string, StaticOrientedBoxCollider>();
   private readonly ramps = new Map<string, StaticRampCollider>();
+  private lastCameraHitId: string | undefined;
+  private lastCharacterBlockIds: readonly string[] = [];
+  private lastGroundColliderId = 'world-floor';
 
   public constructor(private readonly floorHeight = 0) {}
 
   public addDefinition(collider: StaticColliderDefinition): void {
     const [x, y, z] = collider.position;
     const [width, height, depth] = collider.size;
-    if (collider.tags?.includes('ramp')) {
+    const tags = collider.tags ?? [];
+    const isRamp = tags.includes('ramp');
+    this.addOrientedBox({
+      id: collider.id,
+      center: new Vector3(x, y, z),
+      halfSize: new Vector3(width / 2, height / 2, depth / 2),
+      yaw: collider.rotation?.[1] ?? 0,
+      rotation: collider.rotation ?? [0, 0, 0],
+      tags,
+      ramp: isRamp,
+    });
+
+    if (isRamp) {
       const angle = collider.rotation?.[0] ?? 0;
       const run = depth * Math.cos(angle);
       const rise = depth * Math.sin(angle);
@@ -95,37 +134,35 @@ export class StaticCollisionWorld implements CollisionWorld {
         slopeX: 0,
         slopeZ: -rise / run,
       });
-      return;
     }
-    this.addBox({
-      id: collider.id,
-      min: new Vector3(x - width / 2, y - height / 2, z - depth / 2),
-      max: new Vector3(x + width / 2, y + height / 2, z + depth / 2),
-    });
   }
 
   public addDefinitions(colliders: readonly StaticColliderDefinition[]): void {
     for (const collider of colliders) this.addDefinition(collider);
   }
 
+  /** Compatibility helper for tests and procedural axis-aligned geometry. */
   public addBox(collider: StaticBoxCollider): void {
-    if (this.boxes.has(collider.id)) {
-      throw new Error(`Duplicate static collider: ${collider.id}`);
-    }
-    this.boxes.set(collider.id, {
+    this.addOrientedBox({
       id: collider.id,
-      min: collider.min.clone(),
-      max: collider.max.clone(),
+      center: collider.min.clone().add(collider.max).multiplyScalar(0.5),
+      halfSize: collider.max.clone().sub(collider.min).multiplyScalar(0.5),
+      yaw: 0,
+      rotation: [0, 0, 0],
+      tags: [],
+      ramp: false,
     });
   }
 
   public remove(id: string): boolean {
-    return this.boxes.delete(id) || this.ramps.delete(id);
+    const boxRemoved = this.boxes.delete(id);
+    const rampRemoved = this.ramps.delete(id);
+    return boxRemoved || rampRemoved;
   }
 
   public addRamp(collider: StaticRampCollider): void {
-    if (this.boxes.has(collider.id) || this.ramps.has(collider.id)) {
-      throw new Error(`Duplicate static collider: ${collider.id}`);
+    if (this.ramps.has(collider.id)) {
+      throw new Error(`Duplicate static ramp: ${collider.id}`);
     }
     this.ramps.set(collider.id, { ...collider });
   }
@@ -133,10 +170,26 @@ export class StaticCollisionWorld implements CollisionWorld {
   public clear(): void {
     this.boxes.clear();
     this.ramps.clear();
+    this.lastCameraHitId = undefined;
+    this.lastCharacterBlockIds = [];
+    this.lastGroundColliderId = 'world-floor';
   }
 
   public getColliderCount(): number {
-    return this.boxes.size + this.ramps.size;
+    return this.boxes.size;
+  }
+
+  public getDebugSnapshot(): CollisionDebugSnapshot {
+    return {
+      colliderCount: this.getColliderCount(),
+      orientedBoxCount: [...this.boxes.values()].filter(
+        ({ yaw }) => Math.abs(yaw) > EPSILON,
+      ).length,
+      rampCount: this.ramps.size,
+      lastCameraHitId: this.lastCameraHitId,
+      lastCharacterBlockIds: [...this.lastCharacterBlockIds],
+      lastGroundColliderId: this.lastGroundColliderId,
+    };
   }
 
   public moveCharacter(
@@ -148,6 +201,7 @@ export class StaticCollisionWorld implements CollisionWorld {
     const result = position.clone();
     let blocked = false;
     let stepped = false;
+    const blockedIds = new Set<string>();
     const horizontalLength = Math.hypot(displacement.x, displacement.z);
     const steps = Math.max(
       1,
@@ -161,12 +215,14 @@ export class StaticCollisionWorld implements CollisionWorld {
       const resolution = this.resolveHorizontal(result, shape);
       blocked ||= resolution.blocked;
       stepped ||= resolution.stepped;
+      for (const id of resolution.blockedIds) blockedIds.add(id);
 
       const ground = this.groundAt(result.x, result.z);
       const walkable = ground.normal.y >= Math.cos(shape.maxSlopeAngle);
       if (!walkable && ground.height > previous.y + EPSILON) {
         result.copy(previous);
         blocked = true;
+        blockedIds.add(ground.colliderId);
       } else if (
         wasGrounded &&
         walkable &&
@@ -199,6 +255,8 @@ export class StaticCollisionWorld implements CollisionWorld {
       position.y >= ground.height - shape.stepHeight;
     const grounded = walkable && crossingGround;
     if (grounded) result.y = ground.height;
+    this.lastGroundColliderId = ground.colliderId;
+    this.lastCharacterBlockIds = [...blockedIds].sort();
 
     return {
       position: result,
@@ -215,61 +273,134 @@ export class StaticCollisionWorld implements CollisionWorld {
     to: Readonly<Vector3>,
     radius: number,
   ): CameraCastResult {
-    let fraction = 1;
-    for (const box of this.boxes.values()) {
-      const hit = segmentBoxFraction(from, to, box, radius);
-      if (hit !== undefined) fraction = Math.min(fraction, hit);
-    }
-
+    const hit = this.castBoxes(from, to, radius);
+    let fraction = hit?.fraction ?? 1;
+    let colliderId = hit?.colliderId;
     const directionY = to.y - from.y;
     if (to.y < this.floorHeight + radius && directionY < -EPSILON) {
       const floorFraction = (this.floorHeight + radius - from.y) / directionY;
-      if (floorFraction >= 0) fraction = Math.min(fraction, floorFraction);
+      if (floorFraction >= 0 && floorFraction < fraction) {
+        fraction = floorFraction;
+        colliderId = 'world-floor';
+      }
     }
-    return { fraction: Math.max(0, fraction), obstructed: fraction < 1 };
+    fraction = Math.max(0, fraction);
+    this.lastCameraHitId = fraction < 1 ? colliderId : undefined;
+    return {
+      fraction,
+      obstructed: fraction < 1,
+      ...(colliderId === undefined ? {} : { colliderId }),
+    };
+  }
+
+  public isVisible(from: Readonly<Vector3>, to: Readonly<Vector3>): boolean {
+    for (const box of this.boxes.values()) {
+      if (box.tags.includes('npc-occupancy')) continue;
+      const fraction = segmentOrientedBoxFraction(from, to, box, 0);
+      // Ignore the supporting surface at the ray origin and shapes touched
+      // only by the target endpoint. Everything between them occludes.
+      if (
+        fraction !== undefined &&
+        fraction > EPSILON &&
+        fraction < 1 - VISIBILITY_ENDPOINT_TOLERANCE
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private addOrientedBox(collider: {
+    readonly id: string;
+    readonly center: Readonly<Vector3>;
+    readonly halfSize: Readonly<Vector3>;
+    readonly yaw: number;
+    readonly rotation: readonly [number, number, number];
+    readonly tags: readonly string[];
+    readonly ramp: boolean;
+  }): void {
+    if (this.boxes.has(collider.id) || this.ramps.has(collider.id)) {
+      throw new Error(`Duplicate static collider: ${collider.id}`);
+    }
+    this.boxes.set(collider.id, {
+      ...collider,
+      center: collider.center.clone(),
+      halfSize: collider.halfSize.clone(),
+      cosine: Math.cos(collider.yaw),
+      sine: Math.sin(collider.yaw),
+      inverseRotation: new Quaternion()
+        .setFromEuler(new Euler(...collider.rotation))
+        .invert(),
+      tags: [...collider.tags],
+    });
+  }
+
+  private castBoxes(
+    from: Readonly<Vector3>,
+    to: Readonly<Vector3>,
+    padding: number,
+    ignore: (box: StaticOrientedBoxCollider) => boolean = () => false,
+  ): { readonly fraction: number; readonly colliderId: string } | undefined {
+    let nearest:
+      { readonly fraction: number; readonly colliderId: string } | undefined;
+    for (const box of this.boxes.values()) {
+      if (ignore(box)) continue;
+      const fraction = segmentOrientedBoxFraction(from, to, box, padding);
+      if (
+        fraction !== undefined &&
+        (nearest === undefined || fraction < nearest.fraction)
+      ) {
+        nearest = { fraction, colliderId: box.id };
+      }
+    }
+    return nearest;
   }
 
   private resolveHorizontal(
     position: Vector3,
     shape: CharacterShape,
-  ): { blocked: boolean; stepped: boolean } {
+  ): {
+    blocked: boolean;
+    stepped: boolean;
+    blockedIds: readonly string[];
+  } {
     let blocked = false;
     let stepped = false;
+    const blockedIds: string[] = [];
 
     for (const box of this.boxes.values()) {
-      if (position.y >= box.max.y - EPSILON) continue;
-      if (position.y + shape.height <= box.min.y + EPSILON) continue;
-      if (!circleOverlapsBox(position.x, position.z, shape.radius, box))
-        continue;
+      if (box.ramp) continue;
+      const minY = box.center.y - box.halfSize.y;
+      const maxY = box.center.y + box.halfSize.y;
+      if (position.y >= maxY - EPSILON) continue;
+      if (position.y + shape.height <= minY + EPSILON) continue;
+      if (!circleOverlapsOrientedBox(position, shape.radius, box)) continue;
 
-      const rise = box.max.y - position.y;
+      const rise = maxY - position.y;
       if (
         rise >= -EPSILON &&
         rise <= shape.stepHeight + EPSILON &&
-        !this.hasHeadObstruction(position, box.max.y, shape, box.id)
+        !this.hasHeadObstruction(position, maxY, shape, box.id)
       ) {
         stepped = true;
         continue;
       }
 
       blocked = true;
-      pushCircleOutsideBox(position, shape.radius, box);
+      blockedIds.push(box.id);
+      pushCircleOutsideOrientedBox(position, shape.radius, box);
     }
-    return { blocked, stepped };
+    return { blocked, stepped, blockedIds };
   }
 
   private groundAt(x: number, z: number): GroundHit {
     let height = this.floorHeight;
     let colliderId = 'world-floor';
     for (const box of this.boxes.values()) {
-      if (
-        x >= box.min.x - EPSILON &&
-        x <= box.max.x + EPSILON &&
-        z >= box.min.z - EPSILON &&
-        z <= box.max.z + EPSILON &&
-        box.max.y >= height - EPSILON
-      ) {
-        height = box.max.y;
+      if (box.ramp || !pointInsideOrientedBox(x, z, box)) continue;
+      const top = box.center.y + box.halfSize.y;
+      if (top >= height - EPSILON) {
+        height = top;
         colliderId = box.id;
       }
     }
@@ -302,11 +433,11 @@ export class StaticCollisionWorld implements CollisionWorld {
   ): number | undefined {
     let ceiling: number | undefined;
     for (const box of this.boxes.values()) {
-      if (!circleOverlapsBox(position.x, position.z, shape.radius, box))
+      if (box.ramp || !circleOverlapsOrientedBox(position, shape.radius, box))
         continue;
-      if (box.min.y < position.y + shape.height - EPSILON) continue;
-      ceiling =
-        ceiling === undefined ? box.min.y : Math.min(ceiling, box.min.y);
+      const minY = box.center.y - box.halfSize.y;
+      if (minY < position.y + shape.height - EPSILON) continue;
+      ceiling = ceiling === undefined ? minY : Math.min(ceiling, minY);
     }
     return ceiling;
   }
@@ -317,87 +448,131 @@ export class StaticCollisionWorld implements CollisionWorld {
     shape: CharacterShape,
     ignoredId: string,
   ): boolean {
-    return [...this.boxes.values()].some(
-      (box) =>
+    return [...this.boxes.values()].some((box) => {
+      const minY = box.center.y - box.halfSize.y;
+      const maxY = box.center.y + box.halfSize.y;
+      return (
         box.id !== ignoredId &&
-        circleOverlapsBox(position.x, position.z, shape.radius, box) &&
-        box.max.y > footHeight &&
-        box.min.y < footHeight + shape.height,
-    );
+        !box.ramp &&
+        circleOverlapsOrientedBox(position, shape.radius, box) &&
+        maxY > footHeight &&
+        minY < footHeight + shape.height
+      );
+    });
   }
 }
 
-function circleOverlapsBox(
+function toLocalXZ(
   x: number,
   z: number,
-  radius: number,
-  box: StaticBoxCollider,
+  box: StaticOrientedBoxCollider,
+): { readonly x: number; readonly z: number } {
+  const dx = x - box.center.x;
+  const dz = z - box.center.z;
+  return {
+    x: box.cosine * dx - box.sine * dz,
+    z: box.sine * dx + box.cosine * dz,
+  };
+}
+
+function pointInsideOrientedBox(
+  x: number,
+  z: number,
+  box: StaticOrientedBoxCollider,
 ): boolean {
-  const closestX = Math.max(box.min.x, Math.min(x, box.max.x));
-  const closestZ = Math.max(box.min.z, Math.min(z, box.max.z));
-  const dx = x - closestX;
-  const dz = z - closestZ;
+  const local = toLocalXZ(x, z, box);
+  return (
+    Math.abs(local.x) <= box.halfSize.x + EPSILON &&
+    Math.abs(local.z) <= box.halfSize.z + EPSILON
+  );
+}
+
+function circleOverlapsOrientedBox(
+  position: Readonly<Vector3>,
+  radius: number,
+  box: StaticOrientedBoxCollider,
+): boolean {
+  const local = toLocalXZ(position.x, position.z, box);
+  const closestX = Math.max(-box.halfSize.x, Math.min(local.x, box.halfSize.x));
+  const closestZ = Math.max(-box.halfSize.z, Math.min(local.z, box.halfSize.z));
+  const dx = local.x - closestX;
+  const dz = local.z - closestZ;
   return dx * dx + dz * dz < radius * radius - EPSILON;
 }
 
-function pushCircleOutsideBox(
+function pushCircleOutsideOrientedBox(
   position: Vector3,
   radius: number,
-  box: StaticBoxCollider,
+  box: StaticOrientedBoxCollider,
 ): void {
-  const closestX = Math.max(box.min.x, Math.min(position.x, box.max.x));
-  const closestZ = Math.max(box.min.z, Math.min(position.z, box.max.z));
-  const dx = position.x - closestX;
-  const dz = position.z - closestZ;
+  const local = toLocalXZ(position.x, position.z, box);
+  const closestX = Math.max(-box.halfSize.x, Math.min(local.x, box.halfSize.x));
+  const closestZ = Math.max(-box.halfSize.z, Math.min(local.z, box.halfSize.z));
+  const dx = local.x - closestX;
+  const dz = local.z - closestZ;
   const distance = Math.hypot(dx, dz);
+  let resolvedX: number;
+  let resolvedZ: number;
   if (distance > EPSILON) {
     const correction = (radius - distance) / distance;
-    position.x += dx * correction;
-    position.z += dz * correction;
-    return;
+    resolvedX = local.x + dx * correction;
+    resolvedZ = local.z + dz * correction;
+  } else {
+    const choices = [
+      {
+        distance: local.x + box.halfSize.x,
+        x: -box.halfSize.x - radius,
+        z: local.z,
+      },
+      {
+        distance: box.halfSize.x - local.x,
+        x: box.halfSize.x + radius,
+        z: local.z,
+      },
+      {
+        distance: local.z + box.halfSize.z,
+        x: local.x,
+        z: -box.halfSize.z - radius,
+      },
+      {
+        distance: box.halfSize.z - local.z,
+        x: local.x,
+        z: box.halfSize.z + radius,
+      },
+    ].sort((a, b) => a.distance - b.distance);
+    resolvedX = choices[0]!.x;
+    resolvedZ = choices[0]!.z;
   }
-
-  const choices = [
-    {
-      distance: Math.abs(position.x - box.min.x),
-      x: box.min.x - radius,
-      z: position.z,
-    },
-    {
-      distance: Math.abs(box.max.x - position.x),
-      x: box.max.x + radius,
-      z: position.z,
-    },
-    {
-      distance: Math.abs(position.z - box.min.z),
-      x: position.x,
-      z: box.min.z - radius,
-    },
-    {
-      distance: Math.abs(box.max.z - position.z),
-      x: position.x,
-      z: box.max.z + radius,
-    },
-  ];
-  choices.sort((a, b) => a.distance - b.distance);
-  const nearest = choices[0];
-  if (nearest) position.set(nearest.x, position.y, nearest.z);
+  position.x = box.center.x + box.cosine * resolvedX + box.sine * resolvedZ;
+  position.z = box.center.z - box.sine * resolvedX + box.cosine * resolvedZ;
 }
 
-function segmentBoxFraction(
+function segmentOrientedBoxFraction(
   from: Readonly<Vector3>,
   to: Readonly<Vector3>,
-  box: StaticBoxCollider,
+  box: StaticOrientedBoxCollider,
   padding: number,
 ): number | undefined {
+  const localFrom = new Vector3(
+    from.x - box.center.x,
+    from.y - box.center.y,
+    from.z - box.center.z,
+  ).applyQuaternion(box.inverseRotation);
+  const localTo = new Vector3(
+    to.x - box.center.x,
+    to.y - box.center.y,
+    to.z - box.center.z,
+  ).applyQuaternion(box.inverseRotation);
   let near = 0;
   let far = 1;
-  const axes = ['x', 'y', 'z'] as const;
-  for (const axis of axes) {
-    const start = from[axis];
-    const direction = to[axis] - start;
-    const min = box.min[axis] - padding;
-    const max = box.max[axis] + padding;
+  for (const [start, end, halfSize] of [
+    [localFrom.x, localTo.x, box.halfSize.x],
+    [localFrom.y, localTo.y, box.halfSize.y],
+    [localFrom.z, localTo.z, box.halfSize.z],
+  ] as const) {
+    const direction = end - start;
+    const min = -halfSize - padding;
+    const max = halfSize + padding;
     if (Math.abs(direction) < EPSILON) {
       if (start < min || start > max) return undefined;
       continue;

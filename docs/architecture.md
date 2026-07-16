@@ -4,7 +4,7 @@
 
 Vanta City uses TypeScript, Vite, and Three.js without a UI framework. The current UI is small and DOM-native; adding a framework now would add runtime and ownership complexity without solving a foundation requirement. Modules are organized by responsibility rather than by speculative feature layers.
 
-No third-party physics library is installed. The first vertical slice uses a deterministic game-owned `StaticCollisionWorld` behind the narrower `CollisionWorld` query contract. Authored `StaticColliderDefinition` data is shared by level loading and the collision adapter; player and camera code do not depend on level files or a physics package.
+No third-party physics library is installed. The first vertical slice uses a deterministic game-owned `StaticCollisionWorld` behind the narrower `CollisionWorld` query contract. Authored `StaticColliderDefinition` data is shared by level loading and the collision adapter; player, interaction, and camera code do not depend on level files or a physics package. Character movement/ground probes, interaction visibility, and camera obstruction all query this one runtime model.
 
 ## Runtime lifecycle
 
@@ -48,11 +48,11 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 `LevelRegistry` validates data-only `LevelModule` exports and combines their logical asset manifests. `LevelSystem` loads one registered definition through the existing asset loader, owns a single scene root, publishes typed load/unload events, and releases its generated resources during lifecycle disposal. See [World levels](world-levels.md) for the schema and registration example.
 
-Rendered geometry, plain collision boxes, semantic locations, trigger definitions, and debug helpers are separate concerns. Player, NPC, interaction, mission, dialogue, and camera systems query the `LevelLocations` API rather than traverse scene nodes. The plain rotated-box collision convention is the first implementation of the previously reserved game-owned physics boundary; a future physics adapter can consume it without leaking a physics package into feature code.
+Rendered geometry, plain collision boxes, semantic locations, trigger definitions, and debug helpers are separate concerns. Player, NPC, interaction, mission, dialogue, and camera systems query the `LevelLocations` API rather than traverse scene nodes. The collision adapter converts authored axis-aligned or yaw-oriented boxes into one deterministic model. Movement resolves the player circle in box-local space, grounding and steps use the same oriented footprint, visibility tests the same shapes, and camera casts use the complete authored box rotation. Pitch is reserved for tagged planar ramps. A future physics adapter can consume the unchanged plain data without leaking package types into feature code.
 
 ## Interactions
 
-`InteractionSystem` centrally registers plain `Interactable` definitions, queries one injected player pose, ranks valid candidates, and executes the single selected target through the named `interact` action. Interactables have no per-frame hook and do not depend on a visual model. Immediate and promise-based handlers share typed lifecycle events and abort-signal cancellation. See [Interaction API](./interactions.md) for scoring, availability, and integration details.
+`InteractionSystem` centrally registers plain `Interactable` definitions, queries one injected player pose, rejects candidates occluded by the shared collision world, ranks the remainder, and executes the single selected target through the named `interact` action. Interactables have no per-frame hook and do not depend on a visual model. Immediate and promise-based handlers share typed lifecycle events and abort-signal cancellation. See [Interaction API](./interactions.md) for scoring, availability, and integration details.
 
 ## NPCs and conversation boundary
 
@@ -93,7 +93,7 @@ Parallel work may rely on these APIs:
 - `WorldPosition`, `WorldPose`, and `WorldPoseSource`
 - `PlayerControllerSystem.getPlayerPosition/getWorldPose`
 - `PlayerControllerSystem.teleport/reset/setControlEnabled/getDebugSnapshot`
-- `CollisionWorld.moveCharacter/castCamera`
+- `CollisionWorld.moveCharacter/castCamera/isVisible`
 - `StaticColliderDefinition` and `WorldCollisionSystem`
 - `DebugRegistry` registration and command APIs (development-only)
 - `DebugVisualHelpers.register` and standard helper IDs (development-only)

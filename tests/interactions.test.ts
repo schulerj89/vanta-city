@@ -6,6 +6,7 @@ import type { Interactable } from '../src/interactions/Interactable';
 import { InteractionSystem } from '../src/interactions/InteractionSystem';
 import { InteractionPromptSystem } from '../src/ui/InteractionPromptSystem';
 import type { WorldPose, WorldPoseSource } from '../src/world/Spatial';
+import { StaticCollisionWorld } from '../src/physics/CollisionWorld';
 
 class TestInput implements InputReader {
   public pressed = false;
@@ -33,7 +34,7 @@ interface Harness {
   readonly system: InteractionSystem;
 }
 
-function createHarness(): Harness {
+function createHarness(visibility?: StaticCollisionWorld): Harness {
   const events = new EventBus<StateEvents>();
   const state = new GameStateMachine(events);
   state.transition('playing');
@@ -47,7 +48,7 @@ function createHarness(): Harness {
   const player: WorldPoseSource = {
     getWorldPose: () => pose.current,
   };
-  const system = new InteractionSystem(input, state, player);
+  const system = new InteractionSystem(input, state, player, visibility);
   system.init({ events });
   return { events, input, pose, state, system };
 }
@@ -66,6 +67,31 @@ function target(
 }
 
 describe('InteractionSystem', () => {
+  it('uses the shared collision geometry to reject occluded candidates', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addDefinition({
+      id: 'supporting-floor',
+      position: [0, -0.1, 1],
+      size: [4, 0.2, 4],
+      tags: ['walkable'],
+    });
+    collision.addDefinition({
+      id: 'angled-divider',
+      position: [0, 0.8, 1],
+      size: [2, 1.6, 0.2],
+      rotation: [0, Math.PI / 6, 0],
+    });
+    const harness = createHarness(collision);
+    harness.system.register(
+      target('behind-divider', { location: { x: 0, y: 0.8, z: 2 } }),
+    );
+
+    harness.system.update();
+
+    expect(harness.system.getActiveTarget()).toBeUndefined();
+    expect(harness.system.getDebugSnapshot().candidates).toEqual([]);
+  });
+
   it('ranks overlapping candidates and exposes only the best target', () => {
     const harness = createHarness();
     harness.system.register(

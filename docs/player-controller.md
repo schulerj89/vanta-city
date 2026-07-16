@@ -55,8 +55,8 @@ The camera exposes `getYaw()`, `obstructed`, `snapToPlayer()`, and its read-only
 
 ## Integration risks
 
-- The placeholder collision backend handles a floor, axis-aligned static boxes, and bounded planar ramps. The world branch must register authored collision geometry and may eventually replace this backend behind `CollisionWorld` for arbitrary meshes or moving platforms.
+- The collision backend handles the world floor, axis-aligned and yaw-oriented static boxes, and bounded planar pitch ramps. Arbitrary meshes, moving platforms, and non-ramp pitch/roll remain outside the `CollisionWorld` boundary.
 - Static collider IDs must be unique and collider registration must occur before the player initializes. Large-world streaming will need ownership-aware add/remove calls later.
 - Character animation targets only the loaded model subtree and derives logical state from movement. Bounds alignment establishes the feet-at-contact convention at the alignment root. Scene-root translation tracks are filtered and the authored model offset is restored after mixer updates; deliberate root motion needs a coordinated API that feeds simulation instead of moving visual ancestors.
-- Camera obstruction currently tests boxes and the world floor. Ramp geometry should be approximated by obstruction boxes if camera clipping there becomes visible, or supported by a future physics backend.
+- Camera obstruction tests the full oriented thickness of the same boxes and ramps used by the level. Extremely tight clearance can force the safety-minimum camera close enough for the avatar to occlude the view; avatar fading or a first-person fallback is not implemented.
 - Teleport validates ground height but does not search outward from a point embedded deep inside arbitrary geometry. Callers should provide known spawn markers from the world branch.

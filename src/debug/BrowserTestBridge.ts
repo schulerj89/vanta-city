@@ -45,6 +45,7 @@ export interface BrowserTestSnapshot {
     readonly declaredColliderCount: number;
     readonly initializedColliderCount: number;
     readonly floorHeight: number;
+    readonly collision: ReturnType<StaticCollisionWorld['getDebugSnapshot']>;
   };
   readonly player: {
     readonly exists: boolean;
@@ -218,6 +219,7 @@ function createSnapshot(
       declaredColliderCount: activeLevel?.staticCollision.length ?? 0,
       initializedColliderCount: dependencies.collision.getColliderCount(),
       floorHeight: 0,
+      collision: dependencies.collision.getDebugSnapshot(),
     },
     player: {
       exists: dependencies.player.visual.object3d.parent !== null,

@@ -115,6 +115,16 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
       issues.push(`${visual.id}.assetId is empty`);
     }
   }
+  for (const collider of definition.staticCollision) {
+    const [pitch = 0, yaw = 0, roll = 0] = collider.rotation ?? [0, 0, 0];
+    const isRamp = collider.tags?.includes('ramp') === true;
+    if (isRamp && (Math.abs(yaw) > 1e-6 || Math.abs(roll) > 1e-6)) {
+      issues.push(`${collider.id}.rotation ramps support pitch only`);
+    }
+    if (!isRamp && (Math.abs(pitch) > 1e-6 || Math.abs(roll) > 1e-6)) {
+      issues.push(`${collider.id}.rotation boxes support yaw only`);
+    }
+  }
   for (const anchor of definition.cinematicAnchors) {
     validateVector(anchor.lookAt, `${anchor.id}.lookAt`, issues);
     if (
