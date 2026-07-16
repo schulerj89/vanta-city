@@ -734,12 +734,10 @@ function registerVerticalSliceDebug(
       id: 'player.play-character-action',
       label: 'Play character action',
       group: 'Actions',
-      argumentLabel: 'wave, interact, or punch',
+      argumentLabel: 'wave or interact',
       run: (action) => {
         if (!isCharacterActionName(action)) {
-          throw new Error(
-            'Expected character action: wave, interact, or punch',
-          );
+          throw new Error('Expected character action: wave or interact');
         }
         if (!player.triggerCharacterAction(action, 'debug-command')) {
           throw new Error(`Character action "${action}" is unavailable`);

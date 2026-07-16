@@ -217,10 +217,10 @@ describe('CharacterPlayerVisual', () => {
     });
     await visual.init();
 
-    expect(visual.triggerCharacterAction('punch', 'unit-test')).toBe(false);
+    expect(visual.triggerCharacterAction('interact', 'unit-test')).toBe(false);
     expect(visual.getCharacterActionState()).toMatchObject({
       active: undefined,
-      lastRequested: 'punch',
+      lastRequested: 'interact',
       lastAccepted: false,
       sequence: 0,
     });

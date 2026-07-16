@@ -16,7 +16,6 @@ export const characterDefinitionEntries = [
       },
       wave: { clipNames: ['CharacterArmature|Wave'], required: true },
       interact: { clipNames: ['CharacterArmature|Interact'], required: true },
-      punch: { clipNames: ['CharacterArmature|Punch_Right'], required: true },
     },
     transform: {
       // 1.823 m authored height -> 1.787 m, inside the 1.8 m capsule.
@@ -38,7 +37,6 @@ export const characterDefinitionEntries = [
       },
       wave: { clipNames: ['CharacterArmature|Wave'], required: true },
       interact: { clipNames: ['CharacterArmature|Interact'], required: true },
-      punch: { clipNames: ['CharacterArmature|Punch_Right'], required: true },
     },
     transform: {
       // 1.936 m authored height -> 1.781 m, inside the 1.8 m capsule.
