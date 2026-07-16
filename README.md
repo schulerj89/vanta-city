@@ -4,8 +4,8 @@ Browser-based low-poly open-world game foundation using TypeScript, Three.js, an
 
 ## Requirements
 
-- Node.js 22.12 or newer
-- pnpm 11
+- Node.js 22.13 or newer
+- pnpm 11.7
 
 ## Commands
 
@@ -51,17 +51,26 @@ See [Dialogue system](docs/dialogue.md) for conversation data, session APIs, por
 
 See [Conversation-slice integration decisions](docs/conversation-slice-integration.md) for the authoritative identity, dialogue, interaction, and camera contracts selected while combining the worker branches.
 
-Quality and production commands:
+## Validation
+
+GitHub Actions is intentionally a small main-branch gate. It installs pnpm 11.7.0
+with Node.js 24.4.1, installs the frozen lockfile, runs the unit tests, and creates
+a production build. The build includes the TypeScript project check.
+
+Before opening a pull request, run the fuller local validation suite:
 
 ```sh
-pnpm test
-pnpm test:e2e
+pnpm format:check
 pnpm lint
 pnpm typecheck
-pnpm format:check
+pnpm test
+pnpm validate:characters
 pnpm build
 pnpm size
-pnpm preview
+pnpm test:e2e:install # first time only
+pnpm test:e2e
 ```
+
+Use `pnpm preview` for a final manual check of the production build when relevant.
 
 See [Architecture](docs/architecture.md) and [First-wave integration decisions](docs/first-wave-integration.md) for design decisions, [World levels](docs/world-levels.md) for level APIs and environment GLB registration, and [Browser smoke tests](docs/browser-smoke-tests.md) for deterministic playable-slice validation.
