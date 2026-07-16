@@ -1,4 +1,5 @@
-import { DebugRegistry } from '../src/debug/DebugRegistry';
+import { DebugRegistry, debugSections } from '../src/debug/DebugRegistry';
+import type { DebugRegistryChange } from '../src/debug/DebugRegistry';
 import { DebugVisualHelpers } from '../src/debug/DebugVisualHelpers';
 
 describe('DebugRegistry', () => {
@@ -53,6 +54,29 @@ describe('DebugRegistry', () => {
     await expect(debug.executeCommand('missing')).rejects.toThrow(
       'Unknown debug command',
     );
+  });
+
+  it('uses passive and control defaults and distinguishes structural and toggle changes', () => {
+    const debug = new DebugRegistry();
+    const changes = vi.fn<(change: DebugRegistryChange) => void>();
+    debug.subscribe(changes);
+    debug.registerValue({ id: 'test.value', label: 'Value', read: () => 1 });
+    const unregister = debug.registerToggle({
+      id: 'test.toggle',
+      label: 'Test',
+    });
+
+    expect(debug.readValues()[0]?.group).toBe(debugSections.runtime);
+    expect(debug.listToggles()[0]?.group).toBe(debugSections.actions);
+    debug.setToggle('test.toggle', true);
+    unregister();
+
+    expect(changes.mock.calls.map(([change]) => change)).toEqual([
+      { kind: 'structure', id: 'test.value' },
+      { kind: 'structure', id: 'test.toggle' },
+      { kind: 'toggle', id: 'test.toggle' },
+      { kind: 'structure', id: 'test.toggle' },
+    ]);
   });
 });
 

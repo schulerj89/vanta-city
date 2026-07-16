@@ -2,7 +2,18 @@ import type { GameSystem } from '../core/lifecycle';
 import type { FrameTime } from '../core/time';
 import type { InputReader } from '../input/InputSystem';
 import type { DebugUnregister, DebugValue } from './DebugRegistry';
-import { DebugRegistry } from './DebugRegistry';
+import {
+  DebugRegistry,
+  debugSectionOrder,
+  debugSections,
+} from './DebugRegistry';
+
+const defaultOpenSections = new Set<string>([
+  debugSections.player,
+  debugSections.camera,
+  debugSections.interactions,
+  debugSections.runtime,
+]);
 
 export class DebugPanelSystem implements GameSystem {
   public readonly id = 'debug-panel';
@@ -10,6 +21,8 @@ export class DebugPanelSystem implements GameSystem {
 
   private readonly element = document.createElement('aside');
   private readonly valueElements = new Map<string, HTMLElement>();
+  private readonly toggleElements = new Map<string, HTMLInputElement>();
+  private readonly sectionOpen = new Map<string, boolean>();
   private visible: boolean;
   private dirty = true;
   private smoothedFps = 0;
@@ -29,8 +42,13 @@ export class DebugPanelSystem implements GameSystem {
   public init(): void {
     this.element.className = 'debug-panel';
     this.element.setAttribute('aria-label', 'Developer tools');
-    this.unregisterRegistry = this.registry.subscribe(() => {
-      this.dirty = true;
+    this.unregisterRegistry = this.registry.subscribe((change) => {
+      if (change.kind === 'structure') {
+        this.dirty = true;
+        return;
+      }
+      const input = this.toggleElements.get(change.id);
+      if (input) input.checked = this.registry.isToggleEnabled(change.id);
     });
     this.unregisterFps = this.registry.registerValue({
       id: 'runtime.fps',
@@ -62,31 +80,59 @@ export class DebugPanelSystem implements GameSystem {
     this.unregisterFps = undefined;
     this.unregisterRegistry = undefined;
     this.valueElements.clear();
+    this.toggleElements.clear();
+    this.sectionOpen.clear();
     this.element.remove();
   }
 
   private renderStructure(): void {
     this.dirty = false;
     this.valueElements.clear();
+    this.toggleElements.clear();
 
     const heading = document.createElement('header');
     heading.textContent = 'Developer tools';
     this.element.replaceChildren(heading);
 
-    const groups = new Map<string, HTMLElement>();
+    const groups = new Map<
+      string,
+      { details: HTMLDetailsElement; body: HTMLElement }
+    >();
     const groupFor = (name: string): HTMLElement => {
       const existing = groups.get(name);
-      if (existing) return existing;
-      const section = document.createElement('section');
-      const title = document.createElement('h2');
+      if (existing) return existing.body;
+      const details = document.createElement('details');
+      details.className = 'debug-section';
+      details.dataset.debugSection = name;
+      details.open =
+        this.sectionOpen.get(name) ?? defaultOpenSections.has(name);
+      const title = document.createElement('summary');
+      title.className = 'debug-section__heading';
+      title.setAttribute('role', 'heading');
+      title.setAttribute('aria-level', '2');
       title.textContent = name;
-      section.append(title);
-      groups.set(name, section);
-      this.element.append(section);
-      return section;
+      const body = document.createElement('div');
+      body.className = 'debug-section__body';
+      details.addEventListener('toggle', () => {
+        this.sectionOpen.set(name, details.open);
+      });
+      details.append(title, body);
+      groups.set(name, { details, body });
+      return body;
     };
 
-    for (const value of this.registry.readValues()) {
+    const values = this.registry.readValues();
+    const toggles = this.registry.listToggles();
+    const commands = this.registry.listCommands();
+    const names = new Set([
+      ...values.map(({ group }) => group),
+      ...toggles.map(({ group }) => group),
+      ...commands.map(({ group }) => group),
+    ]);
+    for (const name of [...names].sort(compareSections)) groupFor(name);
+    for (const { details } of groups.values()) this.element.append(details);
+
+    for (const value of values) {
       const row = document.createElement('div');
       row.className = 'debug-value';
       const label = document.createElement('span');
@@ -98,9 +144,10 @@ export class DebugPanelSystem implements GameSystem {
       this.valueElements.set(value.id, output);
     }
 
-    for (const toggle of this.registry.listToggles()) {
+    for (const toggle of toggles) {
       const label = document.createElement('label');
       label.className = 'debug-toggle';
+      label.dataset.debugToggle = toggle.id;
       const input = document.createElement('input');
       input.type = 'checkbox';
       input.checked = toggle.enabled;
@@ -114,24 +161,30 @@ export class DebugPanelSystem implements GameSystem {
       });
       label.append(input, toggle.label);
       groupFor(toggle.group).append(label);
+      this.toggleElements.set(toggle.id, input);
     }
 
-    for (const command of this.registry.listCommands()) {
-      const row = document.createElement('div');
+    for (const command of commands) {
+      const row = document.createElement('form');
       row.className = 'debug-command';
+      row.dataset.debugCommand = command.id;
       const input = command.argumentLabel
         ? document.createElement('input')
         : undefined;
       if (input) {
         input.type = 'text';
         input.placeholder = command.argumentLabel ?? '';
-        input.setAttribute('aria-label', command.argumentLabel ?? 'Argument');
+        input.setAttribute(
+          'aria-label',
+          `${command.label}: ${command.argumentLabel ?? 'argument'}`,
+        );
         row.append(input);
       }
       const button = document.createElement('button');
-      button.type = 'button';
+      button.type = 'submit';
       button.textContent = command.label;
-      button.addEventListener('click', () => {
+      row.addEventListener('submit', (event) => {
+        event.preventDefault();
         void this.registry
           .executeCommand(command.id, input?.value.trim() || undefined)
           .catch((error: unknown) => {
@@ -159,4 +212,13 @@ export class DebugPanelSystem implements GameSystem {
   private applyVisibility(): void {
     this.element.hidden = !this.visible;
   }
+}
+
+function compareSections(left: string, right: string): number {
+  const leftIndex = debugSectionOrder.indexOf(left);
+  const rightIndex = debugSectionOrder.indexOf(right);
+  if (leftIndex === -1 && rightIndex === -1) return left.localeCompare(right);
+  if (leftIndex === -1) return 1;
+  if (rightIndex === -1) return -1;
+  return leftIndex - rightIndex;
 }

@@ -13,6 +13,7 @@ import type { BufferGeometry, Material, Object3D } from 'three';
 import type { GameSystem } from '../../core/lifecycle';
 import type { FrameTime } from '../../core/time';
 import type { DebugUnregister } from '../../debug/DebugRegistry';
+import { debugSections } from '../../debug/DebugRegistry';
 import type { SandboxContext, SandboxScenario } from '../SandboxScenario';
 
 const spawns = {
@@ -71,7 +72,7 @@ class FoundationSandboxSystem implements GameSystem {
       this.context.debug.registerValue({
         id: 'sandbox.subject-position',
         label: 'Subject',
-        group: 'Sandbox',
+        group: debugSections.player,
         read: () =>
           this.subject.position
             .toArray()
@@ -81,13 +82,13 @@ class FoundationSandboxSystem implements GameSystem {
       this.context.debug.registerCommand({
         id: 'player.reset',
         label: 'Reset player',
-        group: 'Sandbox',
+        group: debugSections.actions,
         run: () => this.teleport('origin'),
       }),
       this.context.debug.registerCommand({
         id: 'player.teleport',
         label: 'Teleport to spawn',
-        group: 'Sandbox',
+        group: debugSections.actions,
         argumentLabel: Object.keys(spawns).join(', '),
         run: (name) => this.teleport(name),
       }),

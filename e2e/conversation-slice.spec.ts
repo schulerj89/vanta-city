@@ -125,7 +125,9 @@ test('character picker through repeatable Mack conversation', async ({
       );
     }
     if (index === expected.length - 1) {
-      await page.getByRole('button', { name: 'Advance dialogue' }).click();
+      const actions = page.locator('[data-debug-section="Commands / Actions"]');
+      await actions.locator('summary').click();
+      await actions.getByRole('button', { name: 'Advance dialogue' }).click();
     } else {
       await page.keyboard.press('Enter');
     }

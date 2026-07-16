@@ -1,5 +1,5 @@
 import type { DebugUnregister } from './DebugRegistry';
-import { DebugRegistry } from './DebugRegistry';
+import { DebugRegistry, debugSections } from './DebugRegistry';
 
 export const standardVisualHelpers = {
   collision: 'Collision geometry',
@@ -31,7 +31,7 @@ export class DebugVisualHelpers {
       registry.registerToggle({
         id: this.toggleId(id),
         label,
-        group: 'Visual helpers',
+        group: debugSections.actions,
         onChange: (enabled) => this.apply(id, enabled),
       }),
     );

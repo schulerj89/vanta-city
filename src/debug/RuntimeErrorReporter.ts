@@ -1,6 +1,6 @@
 import type { GameSystem } from '../core/lifecycle';
 import type { DebugUnregister } from './DebugRegistry';
-import { DebugRegistry } from './DebugRegistry';
+import { DebugRegistry, debugSections } from './DebugRegistry';
 
 export class RuntimeErrorReporter implements GameSystem {
   public readonly id = 'runtime-error-reporter';
@@ -20,13 +20,13 @@ export class RuntimeErrorReporter implements GameSystem {
       this.registry.registerValue({
         id: 'errors.count',
         label: 'Errors',
-        group: 'Diagnostics',
+        group: debugSections.runtime,
         read: () => this.errorCount,
       }),
       this.registry.registerValue({
         id: 'errors.last',
         label: 'Last error',
-        group: 'Diagnostics',
+        group: debugSections.runtime,
         read: () => this.lastError,
       }),
     ];

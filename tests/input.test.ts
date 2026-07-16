@@ -48,4 +48,25 @@ describe('InputSystem', () => {
     expect(input.wasPressed('moveBackward')).toBe(false);
     input.dispose();
   });
+
+  it('does not leak editable control keystrokes into game actions', () => {
+    const input = new InputSystem(defaultBindings);
+    const field = document.createElement('input');
+    document.body.append(field);
+    input.init();
+
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true }),
+    );
+    expect(input.isDown('moveForward')).toBe(false);
+    expect(input.wasPressed('moveForward')).toBe(false);
+
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'Backquote', bubbles: true }),
+    );
+    expect(input.wasPressed('toggleDebug')).toBe(true);
+
+    input.dispose();
+    field.remove();
+  });
 });

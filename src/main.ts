@@ -336,7 +336,7 @@ function registerVerticalSliceDebug(
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
 ): (() => void)[] {
-  const { debug, visualHelpers } = development;
+  const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
     const read = <Value>(
       select: (
@@ -347,48 +347,47 @@ function registerVerticalSliceDebug(
       const snapshot = npcs.getDebugSnapshot(definition.id);
       return snapshot ? select(snapshot) : fallback;
     };
-    const group = `NPC: ${definition.displayName}`;
     return [
       debug.registerValue({
         id: `npc.${definition.id}.id`,
-        label: 'NPC ID',
-        group,
+        label: `${definition.displayName} · NPC ID`,
+        group: sections.characters,
         read: () => read(({ npcId }) => npcId, 'loading'),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.definition`,
-        label: 'Definition ID',
-        group,
+        label: `${definition.displayName} · Definition ID`,
+        group: sections.characters,
         read: () => read(({ definitionId }) => definitionId, definition.id),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.spawn`,
-        label: 'Spawn point',
-        group,
+        label: `${definition.displayName} · Spawn point`,
+        group: sections.world,
         read: () => read(({ spawnId }) => spawnId, definition.spawnId),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.animation`,
-        label: 'Animation',
-        group,
+        label: `${definition.displayName} · Animation`,
+        group: sections.characters,
         read: () => read(({ currentAnimation }) => currentAnimation, 'loading'),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.interaction`,
-        label: 'Interaction',
-        group,
+        label: `${definition.displayName} · Interaction`,
+        group: sections.interactions,
         read: () => read(({ interactionState }) => interactionState, 'loading'),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.conversation`,
-        label: 'Conversation',
-        group,
+        label: `${definition.displayName} · Conversation`,
+        group: sections.dialogue,
         read: () => read(({ conversationState }) => conversationState, 'idle'),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.fallback`,
-        label: 'Model fallback',
-        group,
+        label: `${definition.displayName} · Model fallback`,
+        group: sections.characters,
         read: () => read(({ modelFallback }) => modelFallback, true),
       }),
     ];
@@ -398,73 +397,73 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'conversation.active-npc',
       label: 'Active NPC',
-      group: 'Conversation',
+      group: sections.dialogue,
       read: () => conversations.active?.npcId ?? 'none',
     }),
     debug.registerValue({
       id: 'conversation.active-id',
       label: 'Conversation ID',
-      group: 'Conversation',
+      group: sections.dialogue,
       read: () => conversations.active?.definition.id ?? 'none',
     }),
     debug.registerValue({
       id: 'player.character-selected',
       label: 'Selected character',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().selectedCharacterId,
     }),
     debug.registerValue({
       id: 'picker.open',
       label: 'Character picker open',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterPicker.getSnapshot().open,
     }),
     debug.registerValue({
       id: 'picker.focused',
       label: 'Picker focused',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterPicker.getSnapshot().focusedCharacterId,
     }),
     debug.registerValue({
       id: 'picker.preview-state',
       label: 'Picker preview',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterPicker.getSnapshot().previewState,
     }),
     debug.registerValue({
       id: 'player.character-loaded',
       label: 'Loaded visual',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().loadedVisualId ?? 'none',
     }),
     debug.registerValue({
       id: 'player.character-fallback',
       label: 'Fallback active',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().fallbackActive,
     }),
     debug.registerValue({
       id: 'player.character-load-status',
       label: 'Visual load status',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().loadStatus,
     }),
     debug.registerValue({
       id: 'player.character-animation',
       label: 'Animation',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().animationState,
     }),
     debug.registerValue({
       id: 'player.character-action',
       label: 'Character action',
-      group: 'Player',
+      group: sections.characters,
       read: () => player.getCharacterActionState().active ?? 'none',
     }),
     debug.registerValue({
       id: 'player.character-action-last',
       label: 'Last action request',
-      group: 'Player',
+      group: sections.characters,
       read: () => {
         const action = player.getCharacterActionState();
         if (!action.lastRequested) return 'none';
@@ -474,25 +473,25 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-scale',
       label: 'Applied scale',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().appliedScale,
     }),
     debug.registerValue({
       id: 'player.character-rotation',
       label: 'Applied rotation',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().appliedRotation,
     }),
     debug.registerValue({
       id: 'player.character-offset-y',
       label: 'Vertical offset',
-      group: 'Player',
+      group: sections.characters,
       read: () => characterVisual.getDebugSnapshot().verticalOffset,
     }),
     debug.registerValue({
       id: 'player.character-height',
       label: 'Character height',
-      group: 'Player',
+      group: sections.characters,
       read: () =>
         formatOptionalNumber(
           characterVisual.getAlignmentReport()?.computedHeight,
@@ -501,7 +500,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-min-y',
       label: 'Character minimum Y',
-      group: 'Player',
+      group: sections.characters,
       read: () =>
         formatOptionalNumber(
           characterVisual.getAlignmentReport()?.computedMinimumY,
@@ -510,7 +509,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-visual-offset',
       label: 'Applied visual offset',
-      group: 'Player',
+      group: sections.characters,
       read: () =>
         formatOptionalNumber(
           characterVisual.getAlignmentReport()?.appliedVisualOffset,
@@ -519,37 +518,37 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.position',
       label: 'Position',
-      group: 'Player',
+      group: sections.player,
       read: () => formatVector(player.getPlayerPosition()),
     }),
     debug.registerValue({
       id: 'player.movement',
       label: 'Movement',
-      group: 'Player',
+      group: sections.player,
       read: () => player.getDebugSnapshot().movementState,
     }),
     debug.registerValue({
       id: 'player.grounded',
       label: 'Grounded',
-      group: 'Player',
+      group: sections.player,
       read: () => player.getDebugSnapshot().grounded,
     }),
     debug.registerValue({
       id: 'camera.mode',
       label: 'Mode',
-      group: 'Camera',
+      group: sections.camera,
       read: () => camera.getDebugSnapshot().mode,
     }),
     debug.registerValue({
       id: 'camera.owner',
       label: 'Owner',
-      group: 'Camera',
+      group: sections.camera,
       read: () => camera.getDebugSnapshot().owner,
     }),
     debug.registerValue({
       id: 'camera.yaw-pitch',
       label: 'Yaw / pitch',
-      group: 'Camera',
+      group: sections.camera,
       read: () => {
         const { yaw, pitch } = camera.getDebugSnapshot();
         return `${MathUtils.radToDeg(yaw).toFixed(1)}° / ${MathUtils.radToDeg(pitch).toFixed(1)}°`;
@@ -558,7 +557,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'camera.distance',
       label: 'Desired / actual distance',
-      group: 'Camera',
+      group: sections.camera,
       read: () => {
         const snapshot = camera.getDebugSnapshot();
         return `${snapshot.desiredDistance.toFixed(2)} / ${snapshot.actualDistance.toFixed(2)}`;
@@ -567,56 +566,56 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'camera.shoulder',
       label: 'Shoulder',
-      group: 'Camera',
+      group: sections.camera,
       read: () => camera.getDebugSnapshot().shoulderSide,
     }),
     debug.registerValue({
       id: 'camera.target',
       label: 'Target',
-      group: 'Camera',
+      group: sections.camera,
       read: () => formatVector(camera.getDebugSnapshot().target),
     }),
     debug.registerValue({
       id: 'camera.anchor',
       label: 'Anchor',
-      group: 'Camera',
+      group: sections.camera,
       read: () => camera.getDebugSnapshot().activeAnchorId ?? 'none',
     }),
     debug.registerValue({
       id: 'camera.transition',
       label: 'Transition',
-      group: 'Camera',
+      group: sections.camera,
       read: () => camera.getDebugSnapshot().transitionProgress.toFixed(2),
     }),
     debug.registerValue({
       id: 'camera.obstructed',
       label: 'Obstructed',
-      group: 'Camera',
+      group: sections.camera,
       read: () => camera.getDebugSnapshot().obstructed,
     }),
     debug.registerValue({
       id: 'camera.horizontal-sensitivity',
       label: 'Horizontal sensitivity',
-      group: 'Camera settings',
+      group: sections.camera,
       read: () => camera.preferences.current.horizontalSensitivity,
     }),
     debug.registerValue({
       id: 'camera.vertical-sensitivity',
       label: 'Vertical sensitivity',
-      group: 'Camera settings',
+      group: sections.camera,
       read: () => camera.preferences.current.verticalSensitivity,
     }),
     debug.registerToggle({
       id: 'camera.invert-y',
       label: 'Invert Y',
-      group: 'Camera settings',
+      group: sections.actions,
       initialValue: camera.preferences.current.invertY,
       onChange: (enabled) => camera.setPreferences({ invertY: enabled }),
     }),
     debug.registerToggle({
       id: 'camera.automatic-recenter',
       label: 'Automatic recenter',
-      group: 'Camera settings',
+      group: sections.actions,
       initialValue: camera.preferences.current.automaticRecenter,
       onChange: (enabled) =>
         camera.setPreferences({ automaticRecenter: enabled }),
@@ -624,7 +623,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.set-horizontal-sensitivity',
       label: 'Set horizontal sensitivity',
-      group: 'Camera settings',
+      group: sections.actions,
       argumentLabel: '0.0005–0.01',
       run: (value) => {
         camera.setPreferences({
@@ -635,7 +634,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.set-vertical-sensitivity',
       label: 'Set vertical sensitivity',
-      group: 'Camera settings',
+      group: sections.actions,
       argumentLabel: '0.0005–0.01',
       run: (value) => {
         camera.setPreferences({
@@ -646,7 +645,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.set-follow-distance',
       label: 'Set follow distance',
-      group: 'Camera settings',
+      group: sections.actions,
       argumentLabel: `${camera.config.minDistance}–${camera.config.maxDistance}`,
       run: (value) => {
         camera.setPreferences({ followDistance: parseCameraSetting(value) });
@@ -655,7 +654,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.set-shoulder',
       label: 'Set shoulder',
-      group: 'Camera settings',
+      group: sections.actions,
       argumentLabel: 'left or right',
       run: (value) => {
         if (value !== 'left' && value !== 'right') {
@@ -667,73 +666,73 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'interaction.selected',
       label: 'Interaction',
-      group: 'Interactions',
+      group: sections.interactions,
       read: () => interactions.getActiveTarget()?.id ?? 'none',
     }),
     debug.registerValue({
       id: 'interaction.candidates',
       label: 'Candidates',
-      group: 'Interactions',
+      group: sections.interactions,
       read: () => interactions.getDebugSnapshot().candidates.length,
     }),
     debug.registerValue({
       id: 'level.current',
       label: 'Level',
-      group: 'World',
+      group: sections.world,
       read: () => level.activeLevel?.id ?? 'loading',
     }),
     debug.registerValue({
       id: 'level.colliders',
       label: 'Colliders',
-      group: 'World',
+      group: sections.collision,
       read: () => level.activeLevel?.staticCollision.length,
     }),
     debug.registerValue({
       id: 'level.spawns',
       label: 'Spawns',
-      group: 'World',
+      group: sections.world,
       read: () => level.activeLevel?.spawns.length,
     }),
     debug.registerValue({
       id: 'dialogue.conversation',
       label: 'Active conversation',
-      group: 'Dialogue',
+      group: sections.dialogue,
       read: () => dialogue.getSnapshot().conversationId ?? 'none',
     }),
     debug.registerValue({
       id: 'dialogue.line-index',
       label: 'Line index',
-      group: 'Dialogue',
+      group: sections.dialogue,
       read: () => dialogue.getSnapshot().lineIndex ?? 'none',
     }),
     debug.registerValue({
       id: 'dialogue.speaker',
       label: 'Speaker',
-      group: 'Dialogue',
+      group: sections.dialogue,
       read: () => dialogue.getSnapshot().speakerId ?? 'none',
     }),
     debug.registerValue({
       id: 'dialogue.portrait',
       label: 'Portrait',
-      group: 'Dialogue',
+      group: sections.dialogue,
       read: () => dialogueUI.getDebugSnapshot().portraitResolution,
     }),
     debug.registerValue({
       id: 'dialogue.state',
       label: 'Dialogue state',
-      group: 'Dialogue',
+      group: sections.dialogue,
       read: () => dialogue.getSnapshot().state,
     }),
     debug.registerCommand({
       id: 'player.reset',
       label: 'Reset player',
-      group: 'Actions',
+      group: sections.actions,
       run: () => player.reset(),
     }),
     debug.registerCommand({
       id: 'player.play-character-action',
       label: 'Play character action',
-      group: 'Actions',
+      group: sections.actions,
       argumentLabel: 'wave or interact',
       run: (action) => {
         if (!isCharacterActionName(action)) {
@@ -747,13 +746,13 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'ui.open-character-picker',
       label: 'Open character picker',
-      group: 'Actions',
+      group: sections.actions,
       run: () => characterPicker.open(),
     }),
     debug.registerCommand({
       id: 'dialogue.start-mack',
       label: 'Start Mack dialogue',
-      group: 'Actions',
+      group: sections.actions,
       run: () => {
         conversations.start('conversation.mack.introduction', 'mack');
       },
@@ -761,13 +760,13 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'dialogue.advance',
       label: 'Advance dialogue',
-      group: 'Actions',
+      group: sections.actions,
       run: () => dialogue.advance(),
     }),
     debug.registerCommand({
       id: 'dialogue.set-typewriter',
       label: 'Set typewriter',
-      group: 'Actions',
+      group: sections.actions,
       argumentLabel: 'on / off',
       run: (value) => {
         if (value !== 'on' && value !== 'off') {
@@ -779,7 +778,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.select-character',
       label: 'Select character',
-      group: 'Actions',
+      group: sections.actions,
       argumentLabel: 'character id',
       run: (id) => {
         if (!id) throw new Error('A character id is required');
@@ -789,7 +788,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.cycle-character',
       label: 'Cycle character',
-      group: 'Actions',
+      group: sections.actions,
       run: () => {
         characterSelection.cycle();
       },
@@ -797,13 +796,13 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.reload-character',
       label: 'Reload character',
-      group: 'Actions',
+      group: sections.actions,
       run: () => characterVisual.reload(),
     }),
     debug.registerCommand({
       id: 'conversation.end',
       label: 'End conversation',
-      group: 'Actions',
+      group: sections.actions,
       run: () => {
         conversations.end();
       },
@@ -811,7 +810,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'level.reload',
       label: 'Reload level',
-      group: 'Actions',
+      group: sections.actions,
       run: async () => {
         const id = level.activeLevel?.id;
         if (!id) throw new Error('No level is loaded');
@@ -821,7 +820,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.teleport',
       label: 'Teleport to spawn',
-      group: 'Actions',
+      group: sections.actions,
       argumentLabel: 'spawn id',
       run: (id) => {
         const spawn = level.getSpawn(id || undefined);

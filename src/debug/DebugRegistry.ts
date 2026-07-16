@@ -1,5 +1,25 @@
 export type DebugValue = string | number | boolean | null | undefined;
 
+/**
+ * One shared information architecture keeps registrations predictable. Values
+ * belong to the subsystem they describe; every mutating toggle or command goes
+ * in Commands / Actions so passive observation is visually unambiguous.
+ */
+export const debugSections = {
+  player: 'Player / Coordinates',
+  collision: 'Collision / Physics',
+  camera: 'Camera',
+  world: 'World / Level / Spawns',
+  characters: 'Characters / Assets',
+  interactions: 'Interactions',
+  dialogue: 'Dialogue / Conversation',
+  runtime: 'Runtime / State',
+  actions: 'Commands / Actions',
+} as const;
+
+export const debugSectionOrder: readonly string[] =
+  Object.values(debugSections);
+
 export interface DebugValueRegistration {
   readonly id: string;
   readonly label: string;
@@ -39,7 +59,13 @@ export interface DebugCommandSnapshot {
 
 export type DebugUnregister = () => void;
 
-const DEFAULT_GROUP = 'Runtime';
+export interface DebugRegistryChange {
+  readonly kind: 'structure' | 'toggle';
+  readonly id: string;
+}
+
+const DEFAULT_VALUE_GROUP = debugSections.runtime;
+const DEFAULT_CONTROL_GROUP = debugSections.actions;
 
 export class DebugRegistry {
   private readonly values = new Map<string, DebugValueRegistration>();
@@ -48,12 +74,12 @@ export class DebugRegistry {
     DebugToggleRegistration & { enabled: boolean }
   >();
   private readonly commands = new Map<string, DebugCommandRegistration>();
-  private readonly listeners = new Set<() => void>();
+  private readonly listeners = new Set<(change: DebugRegistryChange) => void>();
 
   public registerValue(registration: DebugValueRegistration): DebugUnregister {
     this.assertAvailable(registration.id);
     this.values.set(registration.id, registration);
-    this.notify();
+    this.notify({ kind: 'structure', id: registration.id });
     return this.unregister(this.values, registration.id, registration);
   }
 
@@ -66,7 +92,7 @@ export class DebugRegistry {
       enabled: registration.initialValue ?? false,
     };
     this.toggles.set(registration.id, entry);
-    this.notify();
+    this.notify({ kind: 'structure', id: registration.id });
     return this.unregister(this.toggles, registration.id, entry);
   }
 
@@ -75,7 +101,7 @@ export class DebugRegistry {
   ): DebugUnregister {
     this.assertAvailable(registration.id);
     this.commands.set(registration.id, registration);
-    this.notify();
+    this.notify({ kind: 'structure', id: registration.id });
     return this.unregister(this.commands, registration.id, registration);
   }
 
@@ -85,7 +111,7 @@ export class DebugRegistry {
   })[] {
     return [...this.values.values()].map((entry) => ({
       ...entry,
-      group: entry.group ?? DEFAULT_GROUP,
+      group: entry.group ?? DEFAULT_VALUE_GROUP,
       value: entry.read(),
     }));
   }
@@ -94,7 +120,7 @@ export class DebugRegistry {
     return [...this.toggles.values()].map((entry) => ({
       id: entry.id,
       label: entry.label,
-      group: entry.group ?? DEFAULT_GROUP,
+      group: entry.group ?? DEFAULT_CONTROL_GROUP,
       enabled: entry.enabled,
     }));
   }
@@ -103,7 +129,7 @@ export class DebugRegistry {
     return [...this.commands.values()].map((entry) => ({
       id: entry.id,
       label: entry.label,
-      group: entry.group ?? DEFAULT_GROUP,
+      group: entry.group ?? DEFAULT_CONTROL_GROUP,
       ...(entry.argumentLabel === undefined
         ? {}
         : { argumentLabel: entry.argumentLabel }),
@@ -119,7 +145,7 @@ export class DebugRegistry {
     if (toggle.enabled === enabled) return;
     toggle.onChange?.(enabled);
     toggle.enabled = enabled;
-    this.notify();
+    this.notify({ kind: 'toggle', id });
   }
 
   public toggle(id: string): boolean {
@@ -134,7 +160,9 @@ export class DebugRegistry {
     await command.run(argument);
   }
 
-  public subscribe(listener: () => void): DebugUnregister {
+  public subscribe(
+    listener: (change: DebugRegistryChange) => void,
+  ): DebugUnregister {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
@@ -161,11 +189,11 @@ export class DebugRegistry {
     return () => {
       if (collection.get(id) !== registration) return;
       collection.delete(id);
-      this.notify();
+      this.notify({ kind: 'structure', id });
     };
   }
 
-  private notify(): void {
-    for (const listener of [...this.listeners]) listener();
+  private notify(change: DebugRegistryChange): void {
+    for (const listener of [...this.listeners]) listener(change);
   }
 }

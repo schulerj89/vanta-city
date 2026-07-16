@@ -89,6 +89,123 @@ test.describe('playable debug district', () => {
     expect(reloaded.runtimeErrors.count, reloaded.runtimeErrors.last).toBe(0);
   });
 
+  test('groups the developer menu, retains actions, isolates focused input, and fits narrow screens', async ({
+    page,
+  }) => {
+    const runtimeFailures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+    const panel = page.getByRole('complementary', { name: 'Developer tools' });
+    await expect(panel).toBeVisible();
+
+    const expectedSections = [
+      'Player / Coordinates',
+      'Collision / Physics',
+      'Camera',
+      'World / Level / Spawns',
+      'Characters / Assets',
+      'Interactions',
+      'Dialogue / Conversation',
+      'Runtime / State',
+      'Commands / Actions',
+    ];
+    await expect(panel.locator('.debug-section__heading')).toHaveText(
+      expectedSections,
+    );
+    await expect(
+      panel
+        .locator('[data-debug-value="player.position"]')
+        .locator('xpath=ancestor::details'),
+    ).toHaveAttribute('data-debug-section', 'Player / Coordinates');
+    await expect(
+      panel
+        .locator('[data-debug-value="camera.owner"]')
+        .locator('xpath=ancestor::details'),
+    ).toHaveAttribute('data-debug-section', 'Camera');
+    await expect(
+      panel
+        .locator('[data-debug-value="interaction.selected"]')
+        .locator('xpath=ancestor::details'),
+    ).toHaveAttribute('data-debug-section', 'Interactions');
+
+    const actions = panel.locator('[data-debug-section="Commands / Actions"]');
+    await actions.locator('summary').press('Enter');
+    await expect(actions).toHaveAttribute('open', '');
+    const retainedCommands = await actions
+      .locator('[data-debug-command]')
+      .evaluateAll((commands) =>
+        commands.map((command) => command.getAttribute('data-debug-command')),
+      );
+    expect(retainedCommands).toEqual(
+      expect.arrayContaining([
+        'runtime.pause-resume',
+        'helpers.toggle',
+        'camera.set-horizontal-sensitivity',
+        'camera.set-vertical-sensitivity',
+        'camera.set-follow-distance',
+        'camera.set-shoulder',
+        'player.reset',
+        'player.play-character-action',
+        'ui.open-character-picker',
+        'dialogue.start-mack',
+        'dialogue.advance',
+        'dialogue.set-typewriter',
+        'player.select-character',
+        'player.cycle-character',
+        'player.reload-character',
+        'conversation.end',
+        'level.reload',
+        'player.teleport',
+      ]),
+    );
+    const retainedToggles = await actions
+      .locator('[data-debug-toggle]')
+      .evaluateAll((toggles) =>
+        toggles.map((toggle) => toggle.getAttribute('data-debug-toggle')),
+      );
+    expect(retainedToggles).toEqual([
+      'visual.collision',
+      'visual.triggers',
+      'visual.entityIds',
+      'visual.spawnPoints',
+      'visual.interactionRanges',
+      'visual.navigation',
+      'visual.characterAlignment',
+      'camera.invert-y',
+      'camera.automatic-recenter',
+    ]);
+
+    const positionBeforeTyping = (await snapshot(page)).player.position;
+    const teleportField = actions.locator(
+      '[data-debug-command="player.teleport"] input',
+    );
+    await teleportField.focus();
+    await page.keyboard.press('w');
+    await page.waitForTimeout(200);
+    expect(
+      horizontalDistance(
+        (await snapshot(page)).player.position,
+        positionBeforeTyping,
+      ),
+      'typing a bound gameplay key into a command field must not move the player',
+    ).toBeLessThan(0.02);
+    await teleportField.fill('spawn.player-default');
+    await teleportField.press('Enter');
+    await expect(actions).toHaveAttribute('open', '');
+
+    await actions.locator('summary').press('Enter');
+    await expect(actions).not.toHaveAttribute('open', '');
+    await actions.locator('summary').press('Enter');
+    await expect(actions).toHaveAttribute('open', '');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const box = await panel.boundingBox();
+    if (!box) throw new Error('Developer panel has no visible bounds');
+    expect(box.width).toBeCloseTo(390, 0);
+    expect(box.y + box.height).toBeCloseTo(844, 0);
+    expect(box.height).toBeLessThanOrEqual(844 * 0.52 + 1);
+    expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
+  });
+
   test('moves, decelerates, pauses, resumes, and completes an interaction', async ({
     page,
   }, testInfo) => {
@@ -652,6 +769,9 @@ async function executeCommand(
 function monitorRuntimeFailures(page: Page): string[] {
   const failures: string[] = [];
   page.on('pageerror', (error) => failures.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') failures.push(message.text());
+  });
   return failures;
 }
 

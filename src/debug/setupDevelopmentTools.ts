@@ -2,7 +2,7 @@ import type { GameSystem } from '../core/lifecycle';
 import type { GameRuntime } from '../game/GameRuntime';
 import type { InputReader } from '../input/InputSystem';
 import { DebugPanelSystem } from './DebugPanelSystem';
-import { DebugRegistry } from './DebugRegistry';
+import { DebugRegistry, debugSections } from './DebugRegistry';
 import { DebugVisualHelpers } from './DebugVisualHelpers';
 import type { StandardVisualHelper } from './DebugVisualHelpers';
 import { standardVisualHelpers } from './DebugVisualHelpers';
@@ -10,6 +10,7 @@ import { RuntimeErrorReporter } from './RuntimeErrorReporter';
 
 export interface DevelopmentTools {
   readonly debug: DebugRegistry;
+  readonly sections: typeof debugSections;
   readonly visualHelpers: DebugVisualHelpers;
   readonly systems: readonly GameSystem[];
   readonly errors: RuntimeErrorReporter;
@@ -34,7 +35,7 @@ export function setupDevelopmentTools(
   debug.registerCommand({
     id: 'runtime.pause-resume',
     label: 'Pause / resume',
-    group: 'Actions',
+    group: debugSections.actions,
     run: () => {
       if (runtime.state.current === 'paused') runtime.resume();
       else runtime.pause();
@@ -43,7 +44,7 @@ export function setupDevelopmentTools(
   debug.registerCommand({
     id: 'helpers.toggle',
     label: 'Toggle helper',
-    group: 'Actions',
+    group: debugSections.actions,
     argumentLabel: 'collision, triggers, entityIds…',
     run: (argument) => {
       if (!argument || !(argument in standardVisualHelpers)) {
@@ -65,6 +66,7 @@ export function setupDevelopmentTools(
 
   return {
     debug,
+    sections: debugSections,
     visualHelpers,
     systems: [errors, panel],
     errors,

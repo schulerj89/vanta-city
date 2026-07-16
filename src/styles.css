@@ -29,9 +29,10 @@ canvas {
 
 .debug-panel {
   position: absolute;
+  z-index: 30;
   top: 1rem;
   left: 1rem;
-  width: min(18rem, calc(100vw - 2rem));
+  width: min(22rem, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   overflow: auto;
   padding: 0.65rem 0.75rem;
@@ -482,18 +483,30 @@ canvas {
   font-weight: 700;
 }
 
-.debug-panel section + section {
+.debug-section + .debug-section {
   margin-top: 0.55rem;
   padding-top: 0.45rem;
   border-top: 1px solid rgb(255 255 255 / 10%);
 }
 
-.debug-panel h2 {
-  margin: 0 0 0.25rem;
+.debug-section__heading {
+  margin: 0;
   color: #91b9ad;
   font: inherit;
   font-weight: 700;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.debug-section__heading:focus-visible,
+.debug-panel input:focus-visible,
+.debug-panel button:focus-visible {
+  outline: 2px solid #ffe082;
+  outline-offset: 2px;
+}
+
+.debug-section__body {
+  padding-top: 0.25rem;
 }
 
 .debug-value,
@@ -538,6 +551,41 @@ canvas {
 .debug-command button {
   padding: 0.2rem 0.4rem;
   cursor: pointer;
+}
+
+@media (max-width: 40rem) {
+  .debug-panel {
+    inset: auto 0 0;
+    width: 100%;
+    max-height: min(52dvh, 28rem);
+    padding: 0.7rem max(0.75rem, env(safe-area-inset-right))
+      max(0.7rem, env(safe-area-inset-bottom))
+      max(0.75rem, env(safe-area-inset-left));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0.55rem 0.55rem 0 0;
+    background: rgb(5 12 18 / 92%);
+  }
+
+  .debug-value,
+  .debug-toggle,
+  .debug-command {
+    min-height: 2rem;
+  }
+
+  .debug-command {
+    flex-wrap: wrap;
+  }
+
+  .debug-command input {
+    flex-basis: 9rem;
+    min-height: 2rem;
+  }
+
+  .debug-command button {
+    min-height: 2rem;
+  }
 }
 
 .fatal-error {

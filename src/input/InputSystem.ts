@@ -146,6 +146,10 @@ export class InputSystem
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    // Text entered into developer tools and other UI must never become player,
+    // camera, dialogue, or pause input. Backquote remains a panel hotkey so a
+    // focused command field cannot trap keyboard-only users in the overlay.
+    if (isEditableTarget(event.target) && event.code !== 'Backquote') return;
     if (event.code.startsWith('Arrow') && this.boundCodes.has(event.code)) {
       event.preventDefault();
     }
@@ -154,6 +158,10 @@ export class InputSystem
   };
 
   private readonly onKeyUp = (event: KeyboardEvent): void => {
+    if (isEditableTarget(event.target) && event.code !== 'Backquote') {
+      this.downCodes.delete(event.code);
+      return;
+    }
     if (this.downCodes.delete(event.code)) this.releasedCodes.add(event.code);
   };
 
@@ -190,4 +198,13 @@ export class InputSystem
     this.pointerY = 0;
     this.wheelDelta = 0;
   }
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }

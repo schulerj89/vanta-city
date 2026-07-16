@@ -13,7 +13,7 @@
 
 Gameplay preferences are stored in local storage under `vanta-city:camera-preferences` as a versioned payload. Horizontal sensitivity, vertical sensitivity, invert-Y, follow distance, automatic recenter, and shoulder side persist. Directed modes never modify these preferences.
 
-Development builds expose a `Camera settings` section in the existing developer panel. It contains sensitivity and distance commands, invert-Y and automatic-recenter toggles, and shoulder selection. The `Camera` section reports mode, owner, yaw/pitch, desired and actual distances, shoulder, target, anchor, obstruction, and transition progress.
+Development builds expose passive camera diagnostics in the `Camera` section: mode, owner, yaw/pitch, desired and actual distances, shoulder, target, anchor, obstruction, transition progress, and current sensitivities. Mutating sensitivity, distance, invert-Y, automatic-recenter, and shoulder controls are collected under `Commands / Actions`, consistent with the developer panel's state-versus-action convention.
 
 ## Modes and ownership
 
