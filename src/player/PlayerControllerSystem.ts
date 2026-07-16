@@ -37,6 +37,12 @@ const idleCharacterActionState: CharacterActionRequestState = {
   lastRejection: undefined,
   busyRejectionCount: 0,
   sequence: 0,
+  activeNormalizedTime: 0,
+  lastImpact: undefined,
+  lastImpactSource: undefined,
+  impactSequence: 0,
+  impactNormalizedTime: undefined,
+  completedSequenceAtImpact: undefined,
   lastCompleted: undefined,
   lastCompletedSource: undefined,
   completedSequence: 0,
@@ -44,6 +50,12 @@ const idleCharacterActionState: CharacterActionRequestState = {
 };
 
 export interface PlayerActionEvents {
+  'character-action:impact': {
+    readonly action: CharacterActionName;
+    readonly source: string | undefined;
+    readonly sequence: number;
+    readonly normalizedTime: number;
+  };
   'character-action:completed': {
     readonly action: CharacterActionName;
     readonly source: string | undefined;
@@ -87,6 +99,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   private runMode = false;
   private nextPunchSide: 'Left' | 'Right' = 'Left';
   private nextKickSide: 'Left' | 'Right' = 'Left';
+  private publishedImpactSequence = 0;
   private publishedCompletionSequence = 0;
   private presentationFacingTarget: WorldPoseSource | undefined;
   private presentationFacingYaw: number;
@@ -142,6 +155,19 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     this.movement.simulate(intent, this.cameraYaw(), time.delta);
     this.visual.sync(this.movement, time.delta);
     const actionState = this.getCharacterActionState();
+    if (
+      actionState.impactSequence > this.publishedImpactSequence &&
+      actionState.lastImpact &&
+      actionState.impactNormalizedTime !== undefined
+    ) {
+      this.publishedImpactSequence = actionState.impactSequence;
+      this.events.emit('character-action:impact', {
+        action: actionState.lastImpact,
+        source: actionState.lastImpactSource,
+        sequence: actionState.impactSequence,
+        normalizedTime: actionState.impactNormalizedTime,
+      });
+    }
     if (
       actionState.completedSequence > this.publishedCompletionSequence &&
       actionState.lastCompleted

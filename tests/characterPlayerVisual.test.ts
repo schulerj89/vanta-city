@@ -248,14 +248,35 @@ describe('CharacterPlayerVisual', () => {
       completedSequence: 0,
     });
 
-    visual.sync(movement('walking'), 0.79);
+    visual.sync(movement('walking'), 0.43);
     expect(visual.getDebugSnapshot()).toMatchObject({
       animationState: 'action:punchLeft',
-      characterAction: { busy: true, completedSequence: 0 },
+      animationGraph: { phase: 'action', transitionReason: 'action' },
+      characterAction: {
+        busy: true,
+        impactSequence: 0,
+        completedSequence: 0,
+      },
     });
     visual.sync(movement('walking'), 0.02);
     expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'action:punchLeft',
+      characterAction: {
+        busy: true,
+        lastImpact: 'punchLeft',
+        impactSequence: 1,
+        impactNormalizedTime: 0.55,
+        completedSequenceAtImpact: 0,
+        completedSequence: 0,
+      },
+    });
+    visual.sync(movement('walking'), 0.36);
+    expect(visual.getDebugSnapshot()).toMatchObject({
       animationState: 'walk',
+      animationGraph: {
+        phase: 'locomotion',
+        transitionReason: 'restoration',
+      },
       characterAction: {
         active: undefined,
         busy: false,

@@ -560,6 +560,24 @@ function registerVerticalSliceDebug(
       read: () => characterVisual.getDebugSnapshot().animationState,
     }),
     debug.registerValue({
+      id: 'player.character-animation-graph',
+      label: 'Animation graph',
+      group: sections.characters,
+      read: () => {
+        const graph = characterVisual.getDebugSnapshot().animationGraph;
+        return `${graph.phase} · ${graph.requestedClip} → ${graph.resolvedClip ?? 'static'} · ${graph.fallback}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'player.character-animation-transition',
+      label: 'Animation transition',
+      group: sections.characters,
+      read: () => {
+        const graph = characterVisual.getDebugSnapshot().animationGraph;
+        return `${graph.previousLabel ?? 'none'} → ${graph.label} · ${graph.transitionReason} · #${graph.transitionSequence}`;
+      },
+    }),
+    debug.registerValue({
       id: 'player.character-action',
       label: 'Character action',
       group: sections.characters,
@@ -590,6 +608,17 @@ function registerVerticalSliceDebug(
       },
     }),
     debug.registerValue({
+      id: 'player.character-action-impact',
+      label: 'Last action impact',
+      group: sections.characters,
+      read: () => {
+        const action = player.getCharacterActionState();
+        return action.lastImpact
+          ? `${action.lastImpact} · ${(action.impactNormalizedTime ?? 0).toFixed(2)} · #${action.impactSequence}`
+          : 'none';
+      },
+    }),
+    debug.registerValue({
       id: 'player.character-action-rejections',
       label: 'Busy action rejections',
       group: sections.characters,
@@ -601,7 +630,7 @@ function registerVerticalSliceDebug(
       group: sections.characters,
       read: () => {
         const target = sparringTarget.getSnapshot();
-        return `${target.enabled ? 'active' : 'inactive'} · ${target.animation} · responses ${target.responseSequence}`;
+        return `${target.enabled ? 'active' : 'inactive'} · ${target.animation} · ${target.feedback} · responses ${target.responseSequence}`;
       },
     }),
     debug.registerValue({
@@ -610,7 +639,16 @@ function registerVerticalSliceDebug(
       group: sections.interactions,
       read: () => {
         const target = sparringTarget.getSnapshot();
-        return `${target.distance.toFixed(2)}m · ${target.facingDot.toFixed(2)} · ${target.eligible ? 'eligible' : 'out of position'}`;
+        return `${target.distance.toFixed(2)}m ${target.inRange ? 'in range' : 'out of range'} · ${target.facingDot.toFixed(2)} ${target.facing ? 'facing' : 'not facing'} · ${target.eligible ? 'eligible' : 'blocked'}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'sparring-target.feedback',
+      label: 'Sparring target · impact feedback',
+      group: sections.interactions,
+      read: () => {
+        const target = sparringTarget.getSnapshot();
+        return `${target.feedback} · impacts ${target.impactSequence} · ignored ${target.ignoredSequence}${target.lastIgnoredReason ? ` (${target.lastIgnoredReason})` : ''}`;
       },
     }),
     debug.registerValue({

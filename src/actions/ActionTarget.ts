@@ -1,10 +1,11 @@
 import type { CharacterActionName } from '../characters/CharacterActions';
 import type { WorldPose } from '../world/Spatial';
 
-export interface CompletedCharacterAction {
+export interface CharacterActionImpact {
   readonly action: CharacterActionName;
   readonly source: string | undefined;
   readonly sequence: number;
+  readonly normalizedTime: number;
 }
 
 export interface ActionTargetRange {
@@ -15,6 +16,8 @@ export interface ActionTargetRange {
 export interface ActionTargetEvaluation {
   readonly distance: number;
   readonly facingDot: number;
+  readonly inRange: boolean;
+  readonly facing: boolean;
   readonly eligible: boolean;
 }
 
@@ -23,7 +26,7 @@ export interface CharacterActionTarget {
   readonly id: string;
   readonly enabled: boolean;
   getWorldPose(): WorldPose;
-  receiveAction(action: CompletedCharacterAction): boolean;
+  receiveActionImpact(impact: CharacterActionImpact): boolean;
   reset(): void;
 }
 
@@ -45,10 +48,13 @@ export function evaluateActionTarget(
     distance <= 1e-6
       ? 1
       : (actor.forward.x * dx + actor.forward.z * dz) / distance;
+  const inRange = distance <= range.maxDistance;
+  const facing = facingDot >= range.minimumFacingDot;
   return {
     distance,
     facingDot,
-    eligible:
-      distance <= range.maxDistance && facingDot >= range.minimumFacingDot,
+    inRange,
+    facing,
+    eligible: inRange && facing,
   };
 }

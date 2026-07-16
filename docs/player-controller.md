@@ -6,7 +6,7 @@ The on-foot feature keeps four concerns separate:
 
 - `PlayerIntent` translates named `InputReader` actions into normalized movement intent.
 - `PlayerMovementSimulation` owns acceleration, velocity, gravity, jumping, collision, grounding, steps, slope limits, and movement-state decisions. It never reads DOM input.
-- `CharacterPlayerVisual` mirrors the simulated transform, loads the selected character, drives available logical animation clips, and falls back to primitives without changing simulation.
+- `CharacterPlayerVisual` mirrors the simulated transform, loads the selected character, and applies decisions from the game-owned animation graph without changing simulation. The graph owns locomotion/airborne/action/reaction priority and restoration; the visual owns mixer playback and primitive fallback.
 - `ThirdPersonCameraSystem` owns orbit, pitch/zoom limits, smooth follow, delayed/manual re-centering, and obstruction response. Pointer events remain inside `InputSystem`.
 
 Player and camera input are accepted only in the `playing` game state. Pause uses the foundation's simulation pause. Dialogue and cinematic states continue the lifecycle but feed no player intent and ignore camera input. `setControlEnabled(false)` provides an additional direct lock for feature-owned transitions.

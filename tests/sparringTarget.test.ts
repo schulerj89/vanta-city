@@ -16,12 +16,16 @@ import { testDistrict } from '../src/world/levels/testDistrict';
 
 function player() {
   const events = new EventBus<PlayerActionEvents>();
+  let pose = {
+    position: { x: 3.5, y: 0.15, z: 14 },
+    forward: { x: 0, y: 0, z: -1 },
+  };
   return {
     events,
-    getWorldPose: () => ({
-      position: { x: 3.5, y: 0.15, z: 14 },
-      forward: { x: 0, y: 0, z: -1 },
-    }),
+    getWorldPose: () => pose,
+    setPose: (next: typeof pose) => {
+      pose = next;
+    },
   };
 }
 
@@ -62,11 +66,11 @@ function loader() {
   };
 }
 
-function completion(
+function impact(
   action: 'punchLeft' | 'punchRight' | 'kickLeft' | 'kickRight',
   sequence: number,
-): PlayerActionEvents['character-action:completed'] {
-  return { action, source: 'keyboard', sequence };
+): PlayerActionEvents['character-action:impact'] {
+  return { action, source: 'keyboard', sequence, normalizedTime: 0.55 };
 }
 
 describe('action target foundation', () => {
@@ -83,10 +87,16 @@ describe('action target foundation', () => {
         },
         { maxDistance: 2.6, minimumFacingDot: 0.55 },
       ),
-    ).toMatchObject({ distance: 2, facingDot: 1, eligible: true });
+    ).toMatchObject({
+      distance: 2,
+      facingDot: 1,
+      inRange: true,
+      facing: true,
+      eligible: true,
+    });
   });
 
-  it('reacts once per eligible completion, ignores disabled hits, and resets', async () => {
+  it('reacts once per eligible impact, reports feedback, and resets', async () => {
     const scene = new Scene();
     const objects = new GameObjectWorld(scene);
     const actor = player();
@@ -105,28 +115,35 @@ describe('action target foundation', () => {
       responseSequence: 0,
     });
     expect(initial.height).toBeCloseTo(1.8);
-    actor.events.emit('character-action:completed', completion('punchLeft', 1));
+    actor.events.emit('character-action:impact', impact('punchLeft', 1));
     expect(system.getSnapshot()).toMatchObject({
       responseSequence: 0,
       ignoredSequence: 1,
       lastIgnoredReason: 'disabled',
+      feedback: 'ignored-disabled',
     });
 
     system.setEnabled(true);
-    actor.events.emit('character-action:completed', completion('punchLeft', 2));
+    system.update({ delta: 0, elapsed: 0, frame: 0 });
+    actor.events.emit('character-action:impact', impact('punchLeft', 2));
     expect(system.getSnapshot()).toMatchObject({
       enabled: true,
       eligible: true,
-      animation: 'getHitRight',
+      visualizationVisible: true,
+      animation: 'reaction:getHitRight',
+      animationGraph: { phase: 'reaction' },
       busy: true,
       responseSequence: 1,
       lastAction: 'punchLeft',
+      feedback: 'accepted',
+      impactSequence: 2,
     });
-    actor.events.emit('character-action:completed', completion('kickRight', 3));
+    actor.events.emit('character-action:impact', impact('kickRight', 3));
     expect(system.getSnapshot()).toMatchObject({
       responseSequence: 1,
       ignoredSequence: 2,
       lastIgnoredReason: 'target-busy',
+      feedback: 'ignored-target-busy',
     });
 
     objects.update({ delta: 0.6, elapsed: 0.6, frame: 1 });
@@ -135,6 +152,26 @@ describe('action target foundation', () => {
       busy: false,
       responseSequence: 1,
     });
+
+    actor.setPose({
+      position: { x: 3.5, y: 0.15, z: 20 },
+      forward: { x: 0, y: 0, z: -1 },
+    });
+    actor.events.emit('character-action:impact', impact('kickLeft', 4));
+    expect(system.getSnapshot()).toMatchObject({
+      lastIgnoredReason: 'out-of-range',
+      feedback: 'ignored-out-of-range',
+    });
+    actor.setPose({
+      position: { x: 3.5, y: 0.15, z: 14 },
+      forward: { x: 0, y: 0, z: 1 },
+    });
+    actor.events.emit('character-action:impact', impact('kickRight', 5));
+    expect(system.getSnapshot()).toMatchObject({
+      lastIgnoredReason: 'not-facing',
+      feedback: 'ignored-not-facing',
+    });
+
     system.reset();
     expect(system.getSnapshot()).toMatchObject({
       animation: 'idle',
@@ -145,6 +182,7 @@ describe('action target foundation', () => {
 
     system.dispose();
     expect(objects.get('debug.sparring-target')).toBeUndefined();
+    expect(objects.get('debug.sparring-eligibility')).toBeUndefined();
     expect(characterLoader.disposals[0]).toHaveBeenCalledOnce();
   });
 });

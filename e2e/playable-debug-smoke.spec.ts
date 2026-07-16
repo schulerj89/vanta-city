@@ -451,7 +451,7 @@ test.describe('playable debug district', () => {
 
   test('supports keyboard orbit, alternating actions, and accessible help without leaking input', async ({
     page,
-  }) => {
+  }, testInfo) => {
     const runtimeFailures = monitorRuntimeFailures(page);
     await openReadyApp(page);
     const initial = await snapshot(page);
@@ -504,6 +504,36 @@ test.describe('playable debug district', () => {
           .poll(async () => (await snapshot(page)).player.actionBusy)
           .toBe(false);
       }
+
+      await page.keyboard.press('Space');
+      await expect
+        .poll(async () => (await snapshot(page)).player.movementState)
+        .toBe('airborne');
+      expect((await snapshot(page)).character.animationGraph).toMatchObject({
+        phase: 'airborne',
+        requestedClip: 'airborne',
+        resolvedClip: 'idle',
+        fallback: 'idle',
+      });
+      await attachScreenshot(
+        page,
+        testInfo,
+        `${characterId}-airborne-fallback`,
+      );
+      await expect
+        .poll(
+          async () => (await snapshot(page)).character.animationGraph.phase,
+          { intervals: [10], timeout: 3_000 },
+        )
+        .toBe('landing');
+      expect((await snapshot(page)).character.animationGraph).toMatchObject({
+        requestedClip: 'landing',
+        resolvedClip: 'idle',
+        fallback: 'idle',
+      });
+      await expect
+        .poll(async () => (await snapshot(page)).player.grounded)
+        .toBe(true);
     }
 
     await page.keyboard.down('w');
@@ -532,9 +562,15 @@ test.describe('playable debug district', () => {
       'Close controls help',
     );
     const helpPlayer = (await snapshot(page)).player.position;
+    const actionSequenceBeforeHelp = (await snapshot(page)).character
+      .characterAction.sequence;
     await page.keyboard.press('r');
     await page.keyboard.press('j');
     expect((await snapshot(page)).player.runMode).toBe(false);
+    expect(
+      (await snapshot(page)).character.characterAction.sequence,
+      'help ownership must gate character actions',
+    ).toBe(actionSequenceBeforeHelp);
     expect(
       horizontalDistance((await snapshot(page)).player.position, helpPlayer),
     ).toBeLessThan(0.02);
@@ -549,12 +585,28 @@ test.describe('playable debug district', () => {
     await expect(page.getByRole('dialog', { name: 'Controls' })).toBeVisible();
     await page.getByRole('button', { name: 'Close controls help' }).click();
     await expect(page.getByRole('dialog', { name: 'Controls' })).toBeHidden();
+
+    await executeCommand(page, 'dialogue.start-mack');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('dialogue');
+    const actionSequenceBeforeDialogue = (await snapshot(page)).character
+      .characterAction.sequence;
+    await page.keyboard.press('l');
+    expect(
+      (await snapshot(page)).character.characterAction.sequence,
+      'dialogue ownership must gate character actions',
+    ).toBe(actionSequenceBeforeDialogue);
+    await executeCommand(page, 'conversation.end');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
     const final = await snapshot(page);
     expect(final.runtimeErrors.count, final.runtimeErrors.last).toBe(0);
     expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
   });
 
-  test('locks action spam and drives the optional sparring target once per completion', async ({
+  test('locks action spam and drives the optional sparring target once per timed impact', async ({
     page,
   }, testInfo) => {
     const runtimeFailures = monitorRuntimeFailures(page);
@@ -584,9 +636,17 @@ test.describe('playable debug district', () => {
       .toBe('punchLeft');
     const accepted = await snapshot(page);
     const acceptedSequence = accepted.character.characterAction.sequence;
+    const rejectionCount =
+      accepted.character.characterAction.busyRejectionCount;
     await page.keyboard.press('j');
     await page.keyboard.press('l');
-    await page.waitForTimeout(50);
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).character.characterAction.busyRejectionCount,
+        { intervals: [10], timeout: 2_000 },
+      )
+      .toBe(rejectionCount + 2);
     const spammed = await snapshot(page);
     expect(spammed.character.characterAction).toMatchObject({
       active: 'punchLeft',
@@ -595,8 +655,34 @@ test.describe('playable debug district', () => {
       lastAccepted: false,
       lastRejection: 'busy',
     });
-    expect(spammed.character.characterAction.busyRejectionCount).toBe(2);
-    expect(spammed.sparringTarget.responseSequence).toBe(0);
+    expect(spammed.character.characterAction.busyRejectionCount).toBe(
+      rejectionCount + 2,
+    );
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).character.characterAction.impactSequence,
+        { intervals: [10], timeout: 2_000 },
+      )
+      .toBe(accepted.character.characterAction.impactSequence + 1);
+    const impacted = await snapshot(page);
+    expect(impacted.character.characterAction).toMatchObject({
+      lastImpact: 'punchLeft',
+      impactNormalizedTime: 0.55,
+      completedSequenceAtImpact:
+        accepted.character.characterAction.completedSequence,
+    });
+    expect(impacted.sparringTarget).toMatchObject({
+      responseSequence: 1,
+      busy: true,
+      animation: 'reaction:getHitRight',
+      animationGraph: { phase: 'reaction' },
+      feedback: 'accepted',
+      visualizationVisible: true,
+      lastAction: 'punchLeft',
+      lastImpactNormalizedTime: 0.55,
+    });
+    await attachScreenshot(page, testInfo, 'sparring-impact-eligibility');
 
     await expect
       .poll(
@@ -604,25 +690,16 @@ test.describe('playable debug district', () => {
           (await snapshot(page)).character.characterAction.completedSequence,
       )
       .toBe(accepted.character.characterAction.completedSequence + 1);
-    await expect
-      .poll(async () => (await snapshot(page)).sparringTarget.responseSequence)
-      .toBe(1);
     const reacting = await snapshot(page);
     expect(reacting.character.characterAction).toMatchObject({
       busy: false,
       lastCompleted: 'punchLeft',
       completionRelease: 'mixer-finished',
     });
-    expect(reacting.sparringTarget).toMatchObject({
-      busy: true,
-      animation: 'getHitRight',
-      lastAction: 'punchLeft',
-    });
     expect(
       horizontalDistance(reacting.player.position, authoritativePosition),
       'actions and target reactions must not move the simulation transform',
     ).toBeLessThan(0.02);
-    await attachScreenshot(page, testInfo, 'sparring-target-hit-reaction');
     await expect
       .poll(async () => (await snapshot(page)).sparringTarget.animation)
       .toBe('idle');
@@ -646,6 +723,15 @@ test.describe('playable debug district', () => {
     await setDebugToggle(page, 'sparring-target.active', false);
     await page.keyboard.press('l');
     await expect
+      .poll(async () => (await snapshot(page)).sparringTarget.feedback)
+      .toBe('ignored-disabled');
+    expect((await snapshot(page)).sparringTarget).toMatchObject({
+      enabled: false,
+      responseSequence: 2,
+      lastIgnoredReason: 'disabled',
+      visualizationVisible: false,
+    });
+    await expect
       .poll(
         async () =>
           (await snapshot(page)).character.characterAction.lastCompleted,
@@ -656,6 +742,7 @@ test.describe('playable debug district', () => {
       enabled: false,
       responseSequence: 2,
       lastIgnoredReason: 'disabled',
+      visualizationVisible: false,
     });
 
     await setDebugToggle(page, 'sparring-target.active', true);

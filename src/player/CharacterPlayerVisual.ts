@@ -1,4 +1,11 @@
-import { AnimationMixer, Box3, Group, LoopOnce, Vector3 } from 'three';
+import {
+  AnimationMixer,
+  Box3,
+  Group,
+  LoopOnce,
+  LoopRepeat,
+  Vector3,
+} from 'three';
 import type { AnimationAction } from 'three';
 import type { LoadedCharacter } from '../characters/CharacterLoader';
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
@@ -7,6 +14,9 @@ import type {
   CharacterActionRequestState,
   CharacterActionSink,
 } from '../characters/CharacterActions';
+import { characterActionTimings } from '../characters/CharacterActions';
+import { CharacterAnimationStateMachine } from '../characters/CharacterAnimationStateMachine';
+import type { CharacterAnimationGraphState } from '../characters/CharacterAnimationStateMachine';
 import type { CharacterSelectionReader } from '../characters/CharacterSelection';
 import type {
   PlayerMovementSimulation,
@@ -50,23 +60,11 @@ export interface CharacterPlayerVisualDebugSnapshot {
   readonly fallbackActive: boolean;
   readonly loadStatus: CharacterVisualLoadStatus;
   readonly animationState: string;
+  readonly animationGraph: CharacterAnimationGraphState;
   readonly characterAction: CharacterActionRequestState;
   readonly appliedScale: string;
   readonly appliedRotation: string;
   readonly verticalOffset: number;
-}
-
-function logicalAnimationFor(state: PlayerMovementState): string {
-  switch (state) {
-    case 'walking':
-      return 'walk';
-    case 'running':
-      return 'run';
-    case 'idle':
-    case 'airborne':
-    case 'landing':
-      return 'idle';
-  }
 }
 
 function formatVector(x: number, y: number, z: number, digits = 2): string {
@@ -121,12 +119,23 @@ export class CharacterPlayerVisual
     lastRejection: undefined,
     busyRejectionCount: 0,
     sequence: 0,
+    activeNormalizedTime: 0,
+    lastImpact: undefined,
+    lastImpactSource: undefined,
+    impactSequence: 0,
+    impactNormalizedTime: undefined,
+    completedSequenceAtImpact: undefined,
     lastCompleted: undefined,
     lastCompletedSource: undefined,
     completedSequence: 0,
     completionRelease: undefined,
   };
   private activeActionSource: string | undefined;
+  private activeActionElapsed = 0;
+  private activeActionDuration = 0;
+  private activeActionImpacted = false;
+  private movementState: PlayerMovementState = 'idle';
+  private readonly animationGraph = new CharacterAnimationStateMachine();
   private readonly modelOffset = new Vector3();
 
   public constructor(
@@ -186,6 +195,7 @@ export class CharacterPlayerVisual
       fallbackActive: this.loaded?.source === 'placeholder',
       loadStatus: this.loadStatus,
       animationState: this.animationState,
+      animationGraph: this.animationGraph.getState(),
       characterAction: this.getCharacterActionState(),
       appliedScale: root
         ? formatVector(root.scale.x, root.scale.y, root.scale.z)
@@ -227,20 +237,18 @@ export class CharacterPlayerVisual
       lastAccepted: accepted,
       lastRejection: accepted ? undefined : 'unavailable',
       sequence: this.characterAction.sequence + (accepted ? 1 : 0),
+      activeNormalizedTime: accepted
+        ? 0
+        : this.characterAction.activeNormalizedTime,
     };
     if (!accepted || !this.mixer || !clip) return false;
 
-    this.action = this.mixer.clipAction(clip);
-    this.action
-      .reset()
-      .setLoop(LoopOnce, 1)
-      .setEffectiveTimeScale(1)
-      .fadeIn(0.1)
-      .play();
-    this.action.clampWhenFinished = true;
     this.activeActionRemaining = Math.max(0.05, clip.duration + 0.1);
+    this.activeActionElapsed = 0;
+    this.activeActionDuration = Math.max(0.05, clip.duration);
+    this.activeActionImpacted = false;
     this.activeActionSource = source;
-    this.animationState = `action:${action}`;
+    this.applyGraphTransition();
     return true;
   }
 
@@ -283,6 +291,7 @@ export class CharacterPlayerVisual
     this.loadedModelRoot.add(next.root);
     this.loadStatus = next.source === 'asset' ? 'loaded' : 'fallback';
     this.animationState = 'static';
+    this.animationGraph.reset();
     if (next.animationClips.size > 0) {
       this.mixer = new AnimationMixer(next.root);
       this.mixer.addEventListener('finished', this.onMixerFinished);
@@ -293,38 +302,27 @@ export class CharacterPlayerVisual
     const loaded = this.loaded;
     const mixer = this.mixer;
     if (!loaded || !mixer) return;
-    let mixerAdvanced = false;
+    this.movementState = state;
+    const frameDelta = Math.max(0, delta);
     if (this.characterAction.active) {
-      mixer.update(Math.max(0, delta));
-      mixerAdvanced = true;
-      loaded.root.position.copy(this.modelOffset);
-      if (!this.characterAction.active) {
-        // Mixer completion is authoritative. Continue below so locomotion is
-        // restored in the same update that released the action lock.
-      } else {
-        this.activeActionRemaining = Math.max(
-          0,
-          this.activeActionRemaining - Math.max(0, delta),
-        );
-        if (this.activeActionRemaining > 0) return;
+      this.updateActiveActionTiming(frameDelta);
+    }
+    this.applyGraphTransition();
+    mixer.update(frameDelta);
+    loaded.root.position.copy(this.modelOffset);
+
+    if (this.characterAction.active) {
+      this.activeActionRemaining = Math.max(
+        0,
+        this.activeActionRemaining - frameDelta,
+      );
+      if (this.activeActionRemaining === 0) {
         this.finishActiveAction('duration-fallback');
       }
     }
-    const requested = logicalAnimationFor(state);
-    const clip =
-      loaded.animationClips.get(requested) ?? loaded.animationClips.get('idle');
-    const nextState = clip
-      ? loaded.animationClips.has(requested)
-        ? requested
-        : `idle (fallback for ${requested})`
-      : 'static';
-    if (nextState !== this.animationState) {
-      this.action?.fadeOut(0.12);
-      this.action = clip ? mixer.clipAction(clip) : undefined;
-      this.action?.reset().fadeIn(0.12).play();
-      this.animationState = nextState;
-    }
-    if (!mixerAdvanced) mixer.update(Math.max(0, delta));
+    // Mixer completion is authoritative. Re-evaluate after its finished event
+    // so locomotion is restored in the same release frame.
+    this.applyGraphTransition();
     // Authored root-motion tracks may animate the model root. The simulation
     // container remains authoritative, and the definition offset is restored.
     loaded.root.position.copy(this.modelOffset);
@@ -340,11 +338,16 @@ export class CharacterPlayerVisual
     this.action = undefined;
     this.animationState = 'static';
     this.activeActionRemaining = 0;
+    this.activeActionElapsed = 0;
+    this.activeActionDuration = 0;
+    this.activeActionImpacted = false;
     this.activeActionSource = undefined;
+    this.animationGraph.reset();
     this.characterAction = {
       ...this.characterAction,
       active: undefined,
       busy: false,
+      activeNormalizedTime: 0,
     };
     this.loaded?.dispose();
     this.loaded = undefined;
@@ -368,16 +371,86 @@ export class CharacterPlayerVisual
     this.action?.fadeOut(0.1);
     this.action = undefined;
     this.activeActionRemaining = 0;
+    this.activeActionElapsed = 0;
+    this.activeActionDuration = 0;
+    this.activeActionImpacted = false;
     this.animationState = 'static';
     this.characterAction = {
       ...this.characterAction,
       active: undefined,
       busy: false,
+      activeNormalizedTime: 0,
       lastCompleted: completed,
       lastCompletedSource: this.activeActionSource,
       completedSequence: this.characterAction.completedSequence + 1,
       completionRelease: release,
     };
     this.activeActionSource = undefined;
+  }
+
+  private updateActiveActionTiming(delta: number): void {
+    const active = this.characterAction.active;
+    if (!active) return;
+    this.activeActionElapsed = Math.min(
+      this.activeActionDuration,
+      this.activeActionElapsed + delta,
+    );
+    const normalized = Math.min(
+      1,
+      this.activeActionElapsed / this.activeActionDuration,
+    );
+    const impactTime = characterActionTimings[active].impactNormalizedTime;
+    const reachedImpact =
+      impactTime !== undefined &&
+      !this.activeActionImpacted &&
+      normalized >= impactTime;
+    if (reachedImpact) this.activeActionImpacted = true;
+    this.characterAction = {
+      ...this.characterAction,
+      activeNormalizedTime: normalized,
+      lastImpact: reachedImpact ? active : this.characterAction.lastImpact,
+      lastImpactSource: reachedImpact
+        ? this.activeActionSource
+        : this.characterAction.lastImpactSource,
+      impactSequence:
+        this.characterAction.impactSequence + (reachedImpact ? 1 : 0),
+      impactNormalizedTime: reachedImpact
+        ? impactTime
+        : this.characterAction.impactNormalizedTime,
+      completedSequenceAtImpact: reachedImpact
+        ? this.characterAction.completedSequence
+        : this.characterAction.completedSequenceAtImpact,
+    };
+  }
+
+  private applyGraphTransition(): void {
+    const loaded = this.loaded;
+    const mixer = this.mixer;
+    if (!loaded || !mixer) return;
+    const transition = this.animationGraph.transition(
+      {
+        movement: this.movementState,
+        action: this.characterAction.active,
+      },
+      (logicalName) => loaded.animationClips.has(logicalName),
+    );
+    this.animationState = transition.state.label;
+    if (!transition.changed) return;
+
+    this.action?.fadeOut(0.12);
+    const clip = transition.state.resolvedClip
+      ? loaded.animationClips.get(transition.state.resolvedClip)
+      : undefined;
+    this.action = clip ? mixer.clipAction(clip) : undefined;
+    if (!this.action) return;
+    this.action.reset().setEffectiveTimeScale(1).fadeIn(0.12);
+    if (transition.state.phase === 'action') {
+      this.action.setLoop(LoopOnce, 1);
+      this.action.clampWhenFinished = true;
+    } else {
+      this.action.setLoop(LoopRepeat, Infinity);
+      this.action.clampWhenFinished = false;
+    }
+    this.action.play();
   }
 }

@@ -45,6 +45,12 @@ class ActionVisual implements PlayerVisual {
     lastRejection: undefined,
     busyRejectionCount: 0,
     sequence: 0,
+    activeNormalizedTime: 0,
+    lastImpact: undefined,
+    lastImpactSource: undefined,
+    impactSequence: 0,
+    impactNormalizedTime: undefined,
+    completedSequenceAtImpact: undefined,
     lastCompleted: undefined,
     lastCompletedSource: undefined,
     completedSequence: 0,
@@ -68,6 +74,16 @@ class ActionVisual implements PlayerVisual {
       lastCompletedSource: 'unit-test',
       completedSequence: this.actionState.completedSequence + 1,
       completionRelease: 'mixer-finished',
+    };
+  }
+  public impact(action: CharacterActionName, normalizedTime: number): void {
+    this.actionState = {
+      ...this.actionState,
+      lastImpact: action,
+      lastImpactSource: 'unit-test',
+      impactSequence: this.actionState.impactSequence + 1,
+      impactNormalizedTime: normalizedTime,
+      completedSequenceAtImpact: this.actionState.completedSequence,
     };
   }
   public getAlignmentReport(): undefined {
@@ -151,6 +167,22 @@ describe('PlayerControllerSystem controls', () => {
       action: 'punchLeft',
       source: 'unit-test',
       sequence: 1,
+    });
+  });
+
+  it('publishes each animation-timed impact exactly once', async () => {
+    const { player, visual } = await harness();
+    const impacted = vi.fn();
+    player.events.on('character-action:impact', impacted);
+    visual.impact('kickRight', 0.62);
+    player.update(frame);
+    player.update(frame);
+    expect(impacted).toHaveBeenCalledOnce();
+    expect(impacted).toHaveBeenCalledWith({
+      action: 'kickRight',
+      source: 'unit-test',
+      sequence: 1,
+      normalizedTime: 0.62,
     });
   });
 });
