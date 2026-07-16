@@ -121,11 +121,7 @@ describe('character asset validation', () => {
 
   it('detects clip duration, mapping, skeleton, and root-motion defects', async () => {
     const movingIdle = new AnimationClip('Idle', 1, [
-      new VectorKeyframeTrack(
-        'Root.position',
-        [0, 1],
-        [0, 0, 0, 0.2, 0, 0],
-      ),
+      new VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 0.2, 0, 0]),
     ]);
     const broken = new AnimationClip('Broken', 0, []);
     const definition: CharacterDefinition = {
@@ -157,11 +153,7 @@ describe('character asset validation', () => {
 
   it('supports warning, failure, and off rule overrides', async () => {
     const movingIdle = new AnimationClip('Idle', 1, [
-      new VectorKeyframeTrack(
-        'Root.position',
-        [0, 1],
-        [0, 0, 0, 0.2, 0, 0],
-      ),
+      new VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 0.2, 0, 0]),
     ]);
     const definition: CharacterDefinition = {
       ...hero,

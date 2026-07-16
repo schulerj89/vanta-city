@@ -1,5 +1,12 @@
 import { access, readFile } from 'node:fs/promises';
-import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
+import {
+  dirname,
+  extname,
+  isAbsolute,
+  relative,
+  resolve,
+  sep,
+} from 'node:path';
 import { LoadingManager } from 'three';
 import type { Material, Object3D, Texture } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -15,7 +22,10 @@ import { CharacterInspectionError } from '../../src/characters/validation/Charac
 
 interface GltfJson {
   readonly buffers?: readonly { readonly uri?: string }[];
-  readonly images?: readonly { readonly uri?: string; readonly mimeType?: string }[];
+  readonly images?: readonly {
+    readonly uri?: string;
+    readonly mimeType?: string;
+  }[];
 }
 
 interface ResourceReference {
@@ -145,12 +155,16 @@ export class NodeCharacterAssetInspector implements CharacterAssetInspector {
       if (!inspection) {
         const placeholder = createPlaceholderCharacter();
         if (instances.has(placeholder.root)) {
-          throw new Error('Placeholder preview reused a disposed scene instance');
+          throw new Error(
+            'Placeholder preview reused a disposed scene instance',
+          );
         }
         instances.add(placeholder.root);
         placeholder.dispose();
         if (placeholder.root.children.length !== 0) {
-          throw new Error('Placeholder preview retained children after disposal');
+          throw new Error(
+            'Placeholder preview retained children after disposal',
+          );
         }
         continue;
       }
@@ -205,7 +219,10 @@ export class NodeCharacterAssetInspector implements CharacterAssetInspector {
     path: string,
     source: string,
   ): void {
-    if (path !== this.publicRoot && !path.startsWith(`${this.publicRoot}${sep}`)) {
+    if (
+      path !== this.publicRoot &&
+      !path.startsWith(`${this.publicRoot}${sep}`)
+    ) {
       throw new CharacterInspectionError(
         'external-network-resource',
         `Asset "${assetId}" resource "${source}" escapes the public asset root.`,
@@ -216,10 +233,12 @@ export class NodeCharacterAssetInspector implements CharacterAssetInspector {
 }
 
 function readGlbJson(bytes: Buffer): GltfJson {
-  if (bytes.byteLength < 20) throw new Error('file is smaller than a GLB header');
+  if (bytes.byteLength < 20)
+    throw new Error('file is smaller than a GLB header');
   if (bytes.readUInt32LE(0) !== 0x46546c67)
     throw new Error('GLB magic header is missing');
-  if (bytes.readUInt32LE(4) !== 2) throw new Error('only GLB version 2 is supported');
+  if (bytes.readUInt32LE(4) !== 2)
+    throw new Error('only GLB version 2 is supported');
   const declaredLength = bytes.readUInt32LE(8);
   if (declaredLength !== bytes.byteLength)
     throw new Error(
@@ -229,7 +248,8 @@ function readGlbJson(bytes: Buffer): GltfJson {
   if (bytes.readUInt32LE(16) !== 0x4e4f534a)
     throw new Error('first GLB chunk is not JSON');
   const jsonEnd = 20 + jsonLength;
-  if (jsonEnd > bytes.byteLength) throw new Error('JSON chunk exceeds file size');
+  if (jsonEnd > bytes.byteLength)
+    throw new Error('JSON chunk exceeds file size');
   const jsonText = bytes
     .subarray(20, jsonEnd)
     .toString('utf8')
@@ -243,9 +263,8 @@ function collectResources(json: GltfJson): readonly ResourceReference[] {
       .filter((entry): entry is { uri: string } => Boolean(entry.uri))
       .map(({ uri }) => ({ uri, mimeType: 'application/octet-stream' })),
     ...(json.images ?? [])
-      .filter(
-        (entry): entry is { uri: string; mimeType?: string } =>
-          Boolean(entry.uri),
+      .filter((entry): entry is { uri: string; mimeType?: string } =>
+        Boolean(entry.uri),
       )
       .map(({ uri, mimeType }) => ({
         uri,

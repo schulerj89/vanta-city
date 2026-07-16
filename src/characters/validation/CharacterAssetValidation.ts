@@ -337,13 +337,7 @@ async function validateCharacter(
         : createPlaceholderCharacter().root;
     if (source) {
       applyTransform(source, definition);
-      metrics = inspectScene(
-        source,
-        inspection,
-        config,
-        addIssue,
-        scale,
-      );
+      metrics = inspectScene(source, inspection, config, addIssue, scale);
       if (!inspection) disposePlaceholderScene(source);
       else source.clear();
     }
@@ -446,7 +440,7 @@ function inspectScene(
   }
 
   const lowestPoint = min[1];
-  const visualGroundOffset = -lowestPoint;
+  const visualGroundOffset = lowestPoint === 0 ? 0 : -lowestPoint;
   if (!Number.isFinite(lowestPoint) || !Number.isFinite(visualGroundOffset)) {
     addIssue(
       'invalid-grounding',
@@ -591,7 +585,10 @@ async function validateAnimations(
 
   return {
     clips: allClips
-      .map((clip) => ({ name: clip.name || '<unnamed>', duration: clip.duration }))
+      .map((clip) => ({
+        name: clip.name || '<unnamed>',
+        duration: clip.duration,
+      }))
       .sort((left, right) => left.name.localeCompare(right.name)),
     resolved,
   };
@@ -863,7 +860,9 @@ function duplicateValues(values: readonly string[]): ReadonlySet<string> {
 function validateConfig(config: CharacterValidationConfig): void {
   const limits = Object.values(config.limits);
   if (limits.some((value) => !Number.isFinite(value) || value < 0)) {
-    throw new Error('Character validation limits must be finite and nonnegative');
+    throw new Error(
+      'Character validation limits must be finite and nonnegative',
+    );
   }
   if (
     config.limits.minScale <= 0 ||

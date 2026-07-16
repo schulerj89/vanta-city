@@ -122,9 +122,7 @@ function printIssues(
 }
 
 function formatMetric(value: number | undefined): string {
-  return value === undefined
-    ? '—'
-    : value.toFixed(3).replace(/\.?0+$/, '');
+  return value === undefined ? '—' : value.toFixed(3).replace(/\.?0+$/, '');
 }
 
 void main().catch((error: unknown) => {

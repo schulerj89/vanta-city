@@ -117,8 +117,7 @@ export class CharacterPlayerVisual implements PlayerVisual {
       appliedRotation: root
         ? formatVector(root.rotation.x, root.rotation.y, root.rotation.z)
         : 'pending',
-      verticalOffset:
-        this.loadedModelRoot.position.y + (root?.position.y ?? 0),
+      verticalOffset: this.loadedModelRoot.position.y + (root?.position.y ?? 0),
     };
   }
 
