@@ -28,6 +28,7 @@ The character picker opens before entering the district and can be reopened with
 - Mouse: orbit while pointer-locked (click the game) or while holding the left button
 - Mouse wheel: adjust follow distance
 - `C`: re-center the camera behind a moving player
+- `Q`: switch camera shoulder
 - `Escape` or `P`: pause/resume
 - Backtick: toggle movement and camera diagnostics
 
@@ -43,6 +44,8 @@ pnpm sandbox
 ```
 
 See [Developer tooling](docs/developer-tooling.md) for the debug extension API, visual-helper providers, commands, and adding sandbox scenarios.
+
+See [Camera system](docs/camera-system.md) for camera controls, persistent settings, conversation framing, and ownership priorities.
 
 Quality and production commands:
 

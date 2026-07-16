@@ -86,6 +86,18 @@ test.describe('playable debug district', () => {
     await openReadyApp(page);
     const initial = await snapshot(page);
 
+    await page.keyboard.press('q');
+    await expect
+      .poll(async () => (await snapshot(page)).camera.shoulderSide, {
+        message: 'shoulder switch action should update the gameplay camera',
+      })
+      .not.toBe(initial.camera.shoulderSide);
+    await expect
+      .poll(async () => (await snapshot(page)).camera.shoulderOffset, {
+        message: 'shoulder offset should transition to the selected side',
+      })
+      .toBeLessThan(-0.65);
+
     await page.keyboard.down('w');
     await expect
       .poll(

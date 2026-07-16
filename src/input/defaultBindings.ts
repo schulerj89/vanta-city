@@ -9,6 +9,7 @@ export const defaultBindings = {
   jump: ['Space'],
   cameraOrbit: ['Mouse0'],
   cameraRecenter: ['KeyC'],
+  cameraSwitchShoulder: ['KeyQ'],
   interact: ['KeyE'],
   pause: ['Escape', 'KeyP'],
   toggleDebug: ['Backquote'],

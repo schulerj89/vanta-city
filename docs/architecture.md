@@ -42,6 +42,8 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 `RenderSystem` exclusively owns the Three.js renderer, scene, camera, canvas, resize observer, and render call. It caps device pixel ratio at two. Future third-person camera logic should update the injected camera from its own simulation system; it should not create another renderer or animation loop.
 
+`ThirdPersonCameraSystem` is the sole coordinator for that renderer camera. Gameplay is the default camera owner; conversations and future cinematics use priority-based request handles and release them on completion or cancellation. See [Camera system](camera-system.md) for ownership, restoration, settings, and authored-anchor integration.
+
 ## Levels and static world collision
 
 `LevelRegistry` validates data-only `LevelModule` exports and combines their logical asset manifests. `LevelSystem` loads one registered definition through the existing asset loader, owns a single scene root, publishes typed load/unload events, and releases its generated resources during lifecycle disposal. See [World levels](world-levels.md) for the schema and registration example.

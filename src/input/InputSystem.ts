@@ -19,6 +19,8 @@ export interface PointerInputReader {
   consumePointerDelta(): PointerDelta;
   isPointerLocked(): boolean;
   requestPointerLock(): void;
+  releasePointerLock?(): void;
+  isUiFocused?(): boolean;
 }
 
 export class InputSystem
@@ -83,6 +85,21 @@ export class InputSystem
 
   public requestPointerLock(): void {
     void this.pointerTarget?.requestPointerLock?.();
+  }
+
+  public releasePointerLock(): void {
+    if (this.isPointerLocked()) void document.exitPointerLock?.();
+  }
+
+  public isUiFocused(): boolean {
+    const active = document.activeElement;
+    return (
+      active instanceof HTMLInputElement ||
+      active instanceof HTMLTextAreaElement ||
+      active instanceof HTMLSelectElement ||
+      active instanceof HTMLButtonElement ||
+      (active instanceof HTMLElement && active.isContentEditable)
+    );
   }
 
   public isDown(action: ActionName): boolean {

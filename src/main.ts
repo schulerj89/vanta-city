@@ -1,5 +1,5 @@
 import './styles.css';
-import { Vector3 } from 'three';
+import { MathUtils, Vector3 } from 'three';
 import { AssetCatalog } from './assets/AssetCatalog';
 import { ThreeAssetLoader } from './assets/AssetLoader';
 import { assetManifest } from './assets/catalog';
@@ -24,6 +24,7 @@ import { WorldCollisionSystem } from './physics/WorldCollisionSystem';
 import { CharacterPlayerVisual } from './player/CharacterPlayerVisual';
 import { PlayerControllerSystem } from './player/PlayerControllerSystem';
 import { RenderSystem } from './render/RenderSystem';
+import { CameraPreferenceStore } from './camera/CameraPreferences';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
 import { CharacterPickerSystem } from './ui/CharacterPickerSystem';
@@ -136,6 +137,8 @@ async function bootstrap(): Promise<void> {
     input,
     player,
     collision,
+    undefined,
+    new CameraPreferenceStore(window.localStorage),
   );
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
@@ -459,10 +462,134 @@ function registerVerticalSliceDebug(
       read: () => player.getDebugSnapshot().grounded,
     }),
     debug.registerValue({
+      id: 'camera.mode',
+      label: 'Mode',
+      group: 'Camera',
+      read: () => camera.getDebugSnapshot().mode,
+    }),
+    debug.registerValue({
+      id: 'camera.owner',
+      label: 'Owner',
+      group: 'Camera',
+      read: () => camera.getDebugSnapshot().owner,
+    }),
+    debug.registerValue({
+      id: 'camera.yaw-pitch',
+      label: 'Yaw / pitch',
+      group: 'Camera',
+      read: () => {
+        const { yaw, pitch } = camera.getDebugSnapshot();
+        return `${MathUtils.radToDeg(yaw).toFixed(1)}° / ${MathUtils.radToDeg(pitch).toFixed(1)}°`;
+      },
+    }),
+    debug.registerValue({
+      id: 'camera.distance',
+      label: 'Desired / actual distance',
+      group: 'Camera',
+      read: () => {
+        const snapshot = camera.getDebugSnapshot();
+        return `${snapshot.desiredDistance.toFixed(2)} / ${snapshot.actualDistance.toFixed(2)}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'camera.shoulder',
+      label: 'Shoulder',
+      group: 'Camera',
+      read: () => camera.getDebugSnapshot().shoulderSide,
+    }),
+    debug.registerValue({
+      id: 'camera.target',
+      label: 'Target',
+      group: 'Camera',
+      read: () => formatVector(camera.getDebugSnapshot().target),
+    }),
+    debug.registerValue({
+      id: 'camera.anchor',
+      label: 'Anchor',
+      group: 'Camera',
+      read: () => camera.getDebugSnapshot().activeAnchorId ?? 'none',
+    }),
+    debug.registerValue({
+      id: 'camera.transition',
+      label: 'Transition',
+      group: 'Camera',
+      read: () => camera.getDebugSnapshot().transitionProgress.toFixed(2),
+    }),
+    debug.registerValue({
       id: 'camera.obstructed',
-      label: 'Camera obstructed',
-      group: 'Player',
-      read: () => camera.obstructed,
+      label: 'Obstructed',
+      group: 'Camera',
+      read: () => camera.getDebugSnapshot().obstructed,
+    }),
+    debug.registerValue({
+      id: 'camera.horizontal-sensitivity',
+      label: 'Horizontal sensitivity',
+      group: 'Camera settings',
+      read: () => camera.preferences.current.horizontalSensitivity,
+    }),
+    debug.registerValue({
+      id: 'camera.vertical-sensitivity',
+      label: 'Vertical sensitivity',
+      group: 'Camera settings',
+      read: () => camera.preferences.current.verticalSensitivity,
+    }),
+    debug.registerToggle({
+      id: 'camera.invert-y',
+      label: 'Invert Y',
+      group: 'Camera settings',
+      initialValue: camera.preferences.current.invertY,
+      onChange: (enabled) => camera.setPreferences({ invertY: enabled }),
+    }),
+    debug.registerToggle({
+      id: 'camera.automatic-recenter',
+      label: 'Automatic recenter',
+      group: 'Camera settings',
+      initialValue: camera.preferences.current.automaticRecenter,
+      onChange: (enabled) =>
+        camera.setPreferences({ automaticRecenter: enabled }),
+    }),
+    debug.registerCommand({
+      id: 'camera.set-horizontal-sensitivity',
+      label: 'Set horizontal sensitivity',
+      group: 'Camera settings',
+      argumentLabel: '0.0005–0.01',
+      run: (value) => {
+        camera.setPreferences({
+          horizontalSensitivity: parseCameraSetting(value),
+        });
+      },
+    }),
+    debug.registerCommand({
+      id: 'camera.set-vertical-sensitivity',
+      label: 'Set vertical sensitivity',
+      group: 'Camera settings',
+      argumentLabel: '0.0005–0.01',
+      run: (value) => {
+        camera.setPreferences({
+          verticalSensitivity: parseCameraSetting(value),
+        });
+      },
+    }),
+    debug.registerCommand({
+      id: 'camera.set-follow-distance',
+      label: 'Set follow distance',
+      group: 'Camera settings',
+      argumentLabel: `${camera.config.minDistance}–${camera.config.maxDistance}`,
+      run: (value) => {
+        camera.setPreferences({ followDistance: parseCameraSetting(value) });
+      },
+    }),
+    debug.registerCommand({
+      id: 'camera.set-shoulder',
+      label: 'Set shoulder',
+      group: 'Camera settings',
+      argumentLabel: 'left or right',
+      run: (value) => {
+        if (value !== 'left' && value !== 'right') {
+          throw new Error('Shoulder must be "left" or "right"');
+        }
+        camera.setPreferences({ shoulderSide: value });
+      },
     }),
     debug.registerValue({
       id: 'interaction.selected',
@@ -586,6 +713,14 @@ function formatVector(value: {
   readonly z: number;
 }): string {
   return `${value.x.toFixed(2)}, ${value.y.toFixed(2)}, ${value.z.toFixed(2)}`;
+}
+
+function parseCameraSetting(value: string | undefined): number {
+  const parsed = Number(value);
+  if (!value || !Number.isFinite(parsed)) {
+    throw new Error('A finite numeric camera setting is required');
+  }
+  return parsed;
 }
 
 function installHotDisposal(
