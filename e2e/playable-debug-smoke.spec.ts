@@ -183,6 +183,44 @@ test.describe('playable debug district', () => {
     expect(reloaded.selectedCharacterId).toBe('vanta-placeholder');
     expect(reloaded.character.loadedDefinitionId).toBe('vanta-placeholder');
   });
+
+  test('opens the picker in-place and supports keyboard-only confirmation', async ({
+    page,
+  }) => {
+    await openReadyApp(page);
+    await executeCommand(page, 'ui.open-character-picker');
+    await expect
+      .poll(async () => (await snapshot(page)).picker.open)
+      .toBe(true);
+    const opened = await snapshot(page);
+    expect(opened.gameState).toBe('character-select');
+    expect(opened.picker.registeredCharacterIds).toEqual(
+      expect.arrayContaining(['vanta-placeholder', 'modular-man']),
+    );
+
+    await page.keyboard.press('ArrowRight');
+    await expect
+      .poll(async () => (await snapshot(page)).picker.focusedCharacterId)
+      .toBe('modular-man');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Space');
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => (await snapshot(page)).picker.open)
+      .toBe(false);
+    const confirmed = await snapshot(page);
+    expect(confirmed.gameState).toBe('playing');
+    expect(confirmed.picker.confirmedCharacterId).toBe('vanta-placeholder');
+
+    await page.keyboard.press('k');
+    await expect
+      .poll(async () => (await snapshot(page)).picker.open)
+      .toBe(true);
+    await page.keyboard.press('Escape');
+    await expect
+      .poll(async () => (await snapshot(page)).picker.open)
+      .toBe(false);
+  });
 });
 
 async function openReadyApp(page: Page): Promise<void> {

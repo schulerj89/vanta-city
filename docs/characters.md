@@ -61,6 +61,8 @@ Add a `CharacterDefinition` to `src/characters/characters.ts`:
 
 `animations` maps game-facing names to candidate clip names. An `assetId` on a binding may point to a separate catalog entry of type `animation`. Attachments and material variations are descriptive data for later systems; this task does not apply them.
 
+`portraitAssetId` may reference a registered local texture for the character picker. When omitted or when the image fails, the picker uses its generated silhouette treatment. See [Character picker](./character-picker.md) for the registration example and UI behavior.
+
 ## Transform and foot-alignment corrections
 
 Character transforms describe authored-model corrections, not player-body movement:

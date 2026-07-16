@@ -20,4 +20,13 @@ describe('GameStateMachine', () => {
     const state = new GameStateMachine(new EventBus<StateEvents>());
     expect(() => state.transition('cinematic')).toThrow('booting -> cinematic');
   });
+
+  it('enters and leaves character selection from gameplay', () => {
+    const state = new GameStateMachine(new EventBus<StateEvents>());
+    state.transition('playing');
+    state.transition('character-select');
+    expect(state.current).toBe('character-select');
+    state.transition('playing');
+    expect(state.current).toBe('playing');
+  });
 });

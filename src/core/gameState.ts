@@ -1,7 +1,12 @@
 import type { EventBus } from './events';
 
 export type GameState =
-  'booting' | 'playing' | 'paused' | 'dialogue' | 'cinematic';
+  | 'booting'
+  | 'playing'
+  | 'paused'
+  | 'dialogue'
+  | 'cinematic'
+  | 'character-select';
 
 export interface StateEvents {
   'game-state:changed': { readonly from: GameState; readonly to: GameState };
@@ -9,10 +14,11 @@ export interface StateEvents {
 
 const allowedTransitions: Readonly<Record<GameState, readonly GameState[]>> = {
   booting: ['playing'],
-  playing: ['paused', 'dialogue', 'cinematic'],
-  paused: ['playing'],
-  dialogue: ['playing', 'paused', 'cinematic'],
-  cinematic: ['playing', 'paused', 'dialogue'],
+  playing: ['paused', 'dialogue', 'cinematic', 'character-select'],
+  paused: ['playing', 'character-select'],
+  dialogue: ['playing', 'paused', 'cinematic', 'character-select'],
+  cinematic: ['playing', 'paused', 'dialogue', 'character-select'],
+  'character-select': ['playing', 'paused', 'dialogue', 'cinematic'],
 };
 
 export class GameStateMachine {

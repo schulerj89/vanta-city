@@ -600,6 +600,8 @@ function validateReferencedAssets(
   addIssue: IssueWriter,
 ): void {
   const references: [string, AssetDescriptor['type']][] = [];
+  if (definition.portraitAssetId)
+    references.push([definition.portraitAssetId, 'texture']);
   if (definition.modelAssetId)
     references.push([definition.modelAssetId, 'model']);
   for (const binding of Object.values(definition.animations ?? {})) {

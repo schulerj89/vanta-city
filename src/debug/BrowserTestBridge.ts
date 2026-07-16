@@ -10,6 +10,7 @@ import type { ThirdPersonCameraSystem } from '../camera/ThirdPersonCameraSystem'
 import type { LevelSystem } from '../world/LevelSystem';
 import type { DebugRegistry } from './DebugRegistry';
 import type { RuntimeErrorReporter } from './RuntimeErrorReporter';
+import type { CharacterPickerSystem } from '../ui/CharacterPickerSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -53,6 +54,7 @@ export interface BrowserTestSnapshot {
   };
   readonly character: ReturnType<CharacterPlayerVisual['getDebugSnapshot']>;
   readonly selectedCharacterId: string;
+  readonly picker: ReturnType<CharacterPickerSystem['getSnapshot']>;
   readonly camera: ReturnType<ThirdPersonCameraSystem['getDebugSnapshot']>;
   readonly interaction: {
     readonly activeTargetId: string | undefined;
@@ -82,6 +84,7 @@ export interface BrowserTestBridgeDependencies {
   readonly interactions: InteractionSystem;
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
+  readonly characterPicker: CharacterPickerSystem;
   readonly debug: DebugRegistry;
   readonly errors: RuntimeErrorReporter;
 }
@@ -152,6 +155,7 @@ function createSnapshot(
     },
     character: dependencies.characterVisual.getDebugSnapshot(),
     selectedCharacterId: dependencies.characterSelection.getSelectedId(),
+    picker: dependencies.characterPicker.getSnapshot(),
     camera: dependencies.camera.getDebugSnapshot(),
     interaction: {
       activeTargetId: dependencies.interactions.getActiveTarget()?.id,

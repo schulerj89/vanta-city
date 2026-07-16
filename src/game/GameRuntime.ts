@@ -72,7 +72,11 @@ export class GameRuntime {
       else if (this.state.current === 'playing') this.pause();
     }
 
-    this.systems.update(time, this.state.current !== 'paused');
+    this.systems.update(
+      time,
+      this.state.current !== 'paused' &&
+        this.state.current !== 'character-select',
+    );
     this.animationFrame = requestAnimationFrame(this.frame);
   };
 }

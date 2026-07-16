@@ -18,6 +18,8 @@ Open the URL printed by Vite. The Foundry test district uses only generated prim
 
 The selected session-persistent character is used by the playable player. In development, use the `Select character` command to change it; missing external files automatically fall back to the primitive character. See [Character assets and registration](docs/characters.md).
 
+The character picker opens before entering the district and can be reopened with `K`. It supports keyboard and mouse navigation, local portrait assets, generated portrait fallbacks, and unavailable-model states. See [Character picker](docs/character-picker.md).
+
 ## On-foot controls
 
 - `WASD` or arrow keys: camera-relative movement

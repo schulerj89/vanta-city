@@ -4,6 +4,7 @@ import { AssetCatalog } from './assets/AssetCatalog';
 import { ThreeAssetLoader } from './assets/AssetLoader';
 import { assetManifest } from './assets/catalog';
 import { CharacterLoader } from './characters/CharacterLoader';
+import { ManifestCharacterAvailabilityProbe } from './characters/CharacterAvailability';
 import { CharacterSelectionStore } from './characters/CharacterSelection';
 import { characterDefinitions } from './characters/characters';
 import type { GameSystem } from './core/lifecycle';
@@ -21,7 +22,7 @@ import { PlayerControllerSystem } from './player/PlayerControllerSystem';
 import { RenderSystem } from './render/RenderSystem';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
-import { CharacterSelectorSystem } from './ui/CharacterSelectorSystem';
+import { CharacterPickerSystem } from './ui/CharacterPickerSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
@@ -35,9 +36,11 @@ async function bootstrap(): Promise<void> {
   const input = new InputSystem(defaultBindings);
   const render = new RenderSystem(mount);
   const levels = new LevelRegistry([testDistrict]);
-  const assets = new ThreeAssetLoader(
-    new AssetCatalog({ ...assetManifest, ...levels.assetManifest }),
-  );
+  const assetCatalog = new AssetCatalog({
+    ...assetManifest,
+    ...levels.assetManifest,
+  });
+  const assets = new ThreeAssetLoader(assetCatalog);
   const runtime = new GameRuntime(input);
   const developmentParameters = import.meta.env.DEV
     ? new URLSearchParams(window.location.search)
@@ -109,6 +112,12 @@ async function bootstrap(): Promise<void> {
     characterSelection,
     new CharacterLoader(assets),
   );
+  const characterPicker = new CharacterPickerSystem(
+    mount,
+    characterSelection,
+    assetCatalog,
+    new ManifestCharacterAvailabilityProbe(assetCatalog),
+  );
   const cameraReference: { current?: ThirdPersonCameraSystem } = {};
   const player = new PlayerControllerSystem(
     objects,
@@ -168,6 +177,7 @@ async function bootstrap(): Promise<void> {
         interactions,
         characterSelection,
         characterVisual,
+        characterPicker,
         interactionDebug,
         characterAlignmentDebug,
       )
@@ -183,7 +193,7 @@ async function bootstrap(): Promise<void> {
     .register(camera)
     .register(interactions)
     .register(new InteractionPromptSystem(mount, interactions))
-    .register(new CharacterSelectorSystem(mount, characterSelection, assets));
+    .register(characterPicker);
   if (interactionDebug) runtime.register(interactionDebug);
   if (characterAlignmentDebug) runtime.register(characterAlignmentDebug);
   runtime.register(render);
@@ -199,6 +209,8 @@ async function bootstrap(): Promise<void> {
     throw error;
   }
 
+  if (developmentParameters?.get('e2e') !== '1') characterPicker.open();
+
   const disposeBrowserTestBridge =
     browserTestModule && development
       ? browserTestModule.installBrowserTestBridge({
@@ -211,6 +223,7 @@ async function bootstrap(): Promise<void> {
           interactions,
           characterSelection,
           characterVisual,
+          characterPicker,
           debug: development.debug,
           errors: development.errors,
         })
@@ -231,6 +244,7 @@ function registerVerticalSliceDebug(
   interactions: InteractionSystem,
   characterSelection: CharacterSelectionStore,
   characterVisual: CharacterPlayerVisual,
+  characterPicker: CharacterPickerSystem,
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
 ): (() => void)[] {
@@ -241,6 +255,24 @@ function registerVerticalSliceDebug(
       label: 'Selected character',
       group: 'Player',
       read: () => characterVisual.getDebugSnapshot().selectedCharacterId,
+    }),
+    debug.registerValue({
+      id: 'picker.open',
+      label: 'Character picker open',
+      group: 'Player',
+      read: () => characterPicker.getSnapshot().open,
+    }),
+    debug.registerValue({
+      id: 'picker.focused',
+      label: 'Picker focused',
+      group: 'Player',
+      read: () => characterPicker.getSnapshot().focusedCharacterId,
+    }),
+    debug.registerValue({
+      id: 'picker.preview-state',
+      label: 'Picker preview',
+      group: 'Player',
+      read: () => characterPicker.getSnapshot().previewState,
     }),
     debug.registerValue({
       id: 'player.character-loaded',
@@ -370,6 +402,12 @@ function registerVerticalSliceDebug(
       label: 'Reset player',
       group: 'Actions',
       run: () => player.reset(),
+    }),
+    debug.registerCommand({
+      id: 'ui.open-character-picker',
+      label: 'Open character picker',
+      group: 'Actions',
+      run: () => characterPicker.open(),
     }),
     debug.registerCommand({
       id: 'player.select-character',
