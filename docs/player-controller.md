@@ -6,7 +6,7 @@ The on-foot feature keeps four concerns separate:
 
 - `PlayerIntent` translates named `InputReader` actions into normalized movement intent.
 - `PlayerMovementSimulation` owns acceleration, velocity, gravity, jumping, collision, grounding, steps, slope limits, and movement-state decisions. It never reads DOM input.
-- `CharacterPlayerVisual` mirrors the simulated transform, loads the selected character, and falls back to primitives without changing simulation.
+- `CharacterPlayerVisual` mirrors the simulated transform, loads the selected character, drives available logical animation clips, and falls back to primitives without changing simulation.
 - `ThirdPersonCameraSystem` owns orbit, pitch/zoom limits, smooth follow, delayed/manual re-centering, and obstruction response. Pointer events remain inside `InputSystem`.
 
 Player and camera input are accepted only in the `playing` game state. Pause uses the foundation's simulation pause. Dialogue and cinematic states continue the lifecycle but feed no player intent and ignore camera input. `setControlEnabled(false)` provides an additional direct lock for feature-owned transitions.
@@ -51,6 +51,6 @@ The camera exposes `getYaw()`, `obstructed`, `snapToPlayer()`, and its read-only
 
 - The placeholder collision backend handles a floor, axis-aligned static boxes, and bounded planar ramps. The world branch must register authored collision geometry and may eventually replace this backend behind `CollisionWorld` for arbitrary meshes or moving platforms.
 - Static collider IDs must be unique and collider registration must occur before the player initializes. Large-world streaming will need ownership-aware add/remove calls later.
-- The character-animation branch should preserve the visual root's feet-at-origin convention and derive animation from movement state/velocity. Root motion must not directly move the visual or simulation and needs a coordinated API if introduced.
+- Character animation preserves the visual root's authored vertical correction and derives logical state from movement. Root-motion translation is reset after mixer updates; intentional root-motion gameplay would require a future coordinated simulation API.
 - Camera obstruction currently tests boxes and the world floor. Ramp geometry should be approximated by obstruction boxes if camera clipping there becomes visible, or supported by a future physics backend.
 - Teleport validates ground height but does not search outward from a point embedded deep inside arbitrary geometry. Callers should provide known spawn markers from the world branch.

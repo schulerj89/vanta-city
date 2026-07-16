@@ -20,15 +20,18 @@ export class CharacterSelectorSystem implements GameSystem {
     private readonly mount: HTMLElement,
     private readonly selection: CharacterSelectionStore,
     private readonly assets: GameAssetLoader,
-    private readonly preview: CharacterPreviewController,
+    private readonly preview?: CharacterPreviewController,
   ) {}
 
   public init(): void {
     this.element.className = 'character-selector';
-    this.element.setAttribute('aria-label', 'Character preview controls');
+    this.element.setAttribute(
+      'aria-label',
+      this.preview ? 'Character preview controls' : 'Character controls',
+    );
 
     const heading = document.createElement('h1');
-    heading.textContent = 'Character Preview';
+    heading.textContent = this.preview ? 'Character Preview' : 'Character';
     const characterLabel = document.createElement('label');
     characterLabel.textContent = 'Character';
     characterLabel.append(this.select);
@@ -57,18 +60,16 @@ export class CharacterSelectorSystem implements GameSystem {
     autoLabel.append(this.autoRotate, document.createTextNode('Auto rotate'));
 
     this.status.className = 'character-selector__status';
-    this.element.append(
-      heading,
-      characterLabel,
-      rotationLabel,
-      autoLabel,
-      this.status,
-    );
+    this.element.append(heading, characterLabel);
+    if (this.preview) this.element.append(rotationLabel, autoLabel);
+    this.element.append(this.status);
     this.mount.append(this.element);
 
     this.select.addEventListener('change', this.onCharacterChange);
-    this.rotation.addEventListener('input', this.onRotationInput);
-    this.autoRotate.addEventListener('change', this.onAutoRotateChange);
+    if (this.preview) {
+      this.rotation.addEventListener('input', this.onRotationInput);
+      this.autoRotate.addEventListener('change', this.onAutoRotateChange);
+    }
     this.unsubscribeSelection = this.selection.onSelectionChanged(
       (definition) => {
         this.select.value = definition.id;
@@ -95,11 +96,11 @@ export class CharacterSelectorSystem implements GameSystem {
   };
 
   private readonly onRotationInput = (): void => {
-    this.preview.setRotation(Number(this.rotation.value));
+    this.preview?.setRotation(Number(this.rotation.value));
   };
 
   private readonly onAutoRotateChange = (): void => {
-    this.preview.setAutoRotate(this.autoRotate.checked);
+    this.preview?.setAutoRotate(this.autoRotate.checked);
   };
 
   private updateStatus(definition: CharacterDefinition): void {
@@ -107,7 +108,11 @@ export class CharacterSelectorSystem implements GameSystem {
       this.status.textContent = 'Repository-safe primitive preview';
       return;
     }
-    this.updateAssetStatus(this.assets.getStatus(definition.modelAssetId));
+    try {
+      this.updateAssetStatus(this.assets.getStatus(definition.modelAssetId));
+    } catch {
+      this.status.textContent = 'Model unavailable — showing placeholder';
+    }
   }
 
   private updateAssetStatus(status: AssetLoadStatus): void {

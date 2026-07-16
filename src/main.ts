@@ -21,6 +21,7 @@ import { PlayerControllerSystem } from './player/PlayerControllerSystem';
 import { RenderSystem } from './render/RenderSystem';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
+import { CharacterSelectorSystem } from './ui/CharacterSelectorSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
@@ -89,7 +90,7 @@ async function bootstrap(): Promise<void> {
   const characterSelection = new CharacterSelectionStore(
     characterDefinitions,
     'vanta-placeholder',
-    window.sessionStorage,
+    window.localStorage,
   );
   const characterVisual = new CharacterPlayerVisual(
     characterSelection,
@@ -157,7 +158,8 @@ async function bootstrap(): Promise<void> {
     .register(player)
     .register(camera)
     .register(interactions)
-    .register(new InteractionPromptSystem(mount, interactions));
+    .register(new InteractionPromptSystem(mount, interactions))
+    .register(new CharacterSelectorSystem(mount, characterSelection, assets));
   if (interactionDebug) runtime.register(interactionDebug);
   runtime.register(render);
   for (const system of development?.systems.slice(1) ?? []) {
@@ -191,16 +193,52 @@ function registerVerticalSliceDebug(
   const { debug, visualHelpers } = development;
   return [
     debug.registerValue({
-      id: 'player.character',
-      label: 'Character',
+      id: 'player.character-selected',
+      label: 'Selected character',
       group: 'Player',
-      read: () => characterSelection.getSelectedId(),
+      read: () => characterVisual.getDebugSnapshot().selectedCharacterId,
     }),
     debug.registerValue({
-      id: 'player.character-source',
-      label: 'Character source',
+      id: 'player.character-loaded',
+      label: 'Loaded visual',
       group: 'Player',
-      read: () => characterVisual.source,
+      read: () => characterVisual.getDebugSnapshot().loadedVisualId ?? 'none',
+    }),
+    debug.registerValue({
+      id: 'player.character-fallback',
+      label: 'Fallback active',
+      group: 'Player',
+      read: () => characterVisual.getDebugSnapshot().fallbackActive,
+    }),
+    debug.registerValue({
+      id: 'player.character-load-status',
+      label: 'Visual load status',
+      group: 'Player',
+      read: () => characterVisual.getDebugSnapshot().loadStatus,
+    }),
+    debug.registerValue({
+      id: 'player.character-animation',
+      label: 'Animation',
+      group: 'Player',
+      read: () => characterVisual.getDebugSnapshot().animationState,
+    }),
+    debug.registerValue({
+      id: 'player.character-scale',
+      label: 'Applied scale',
+      group: 'Player',
+      read: () => characterVisual.getDebugSnapshot().appliedScale,
+    }),
+    debug.registerValue({
+      id: 'player.character-rotation',
+      label: 'Applied rotation',
+      group: 'Player',
+      read: () => characterVisual.getDebugSnapshot().appliedRotation,
+    }),
+    debug.registerValue({
+      id: 'player.character-offset-y',
+      label: 'Vertical offset',
+      group: 'Player',
+      read: () => characterVisual.getDebugSnapshot().verticalOffset,
     }),
     debug.registerValue({
       id: 'player.position',
@@ -271,6 +309,20 @@ function registerVerticalSliceDebug(
         if (!id) throw new Error('A character id is required');
         characterSelection.select(id);
       },
+    }),
+    debug.registerCommand({
+      id: 'player.cycle-character',
+      label: 'Cycle character',
+      group: 'Actions',
+      run: () => {
+        characterSelection.cycle();
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.reload-character',
+      label: 'Reload character',
+      group: 'Actions',
+      run: () => characterVisual.reload(),
     }),
     debug.registerCommand({
       id: 'level.reload',

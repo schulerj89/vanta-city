@@ -16,6 +16,13 @@ function memoryStorage(): Pick<Storage, 'getItem' | 'setItem'> {
   };
 }
 
+function storedPreference(id: string): string {
+  return JSON.stringify({
+    version: CharacterSelectionStore.preferenceVersion,
+    selectedCharacterId: id,
+  });
+}
+
 describe('CharacterSelectionStore', () => {
   it('exposes the selected definition and notifies readers', () => {
     const selection = new CharacterSelectionStore(definitions, 'placeholder');
@@ -29,7 +36,7 @@ describe('CharacterSelectionStore', () => {
     expect(changed).toHaveBeenCalledWith(definitions[1]);
   });
 
-  it('persists a valid choice for the current session', () => {
+  it('persists a valid choice in a versioned preference', () => {
     const storage = memoryStorage();
     const first = new CharacterSelectionStore(
       definitions,
@@ -44,11 +51,17 @@ describe('CharacterSelectionStore', () => {
       storage,
     );
     expect(restored.getSelectedId()).toBe('hero');
+    expect(storage.getItem(CharacterSelectionStore.storageKey)).toBe(
+      storedPreference('hero'),
+    );
   });
 
-  it('rejects unknown selections and ignores unknown stored ids', () => {
+  it('rejects unknown selections and repairs unknown stored ids', () => {
     const storage = memoryStorage();
-    storage.setItem(CharacterSelectionStore.storageKey, 'removed-character');
+    storage.setItem(
+      CharacterSelectionStore.storageKey,
+      storedPreference('removed-character'),
+    );
     const selection = new CharacterSelectionStore(
       definitions,
       'placeholder',
@@ -56,6 +69,41 @@ describe('CharacterSelectionStore', () => {
     );
 
     expect(selection.getSelectedId()).toBe('placeholder');
+    expect(storage.getItem(CharacterSelectionStore.storageKey)).toBe(
+      storedPreference('placeholder'),
+    );
     expect(() => selection.select('missing')).toThrow('Unknown character');
+  });
+
+  it('ignores malformed and unsupported preference versions', () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      CharacterSelectionStore.storageKey,
+      JSON.stringify({ version: 2, selectedCharacterId: 'hero' }),
+    );
+    expect(
+      new CharacterSelectionStore(
+        definitions,
+        'placeholder',
+        storage,
+      ).getSelectedId(),
+    ).toBe('placeholder');
+
+    storage.setItem(CharacterSelectionStore.storageKey, '{bad json');
+    expect(
+      new CharacterSelectionStore(
+        definitions,
+        'placeholder',
+        storage,
+      ).getSelectedId(),
+    ).toBe('placeholder');
+  });
+
+  it('cycles through registered character definitions', () => {
+    const selection = new CharacterSelectionStore(definitions, 'placeholder');
+
+    expect(selection.cycle().id).toBe('hero');
+    expect(selection.getSelectedId()).toBe('hero');
+    expect(selection.cycle().id).toBe('placeholder');
   });
 });

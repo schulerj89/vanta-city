@@ -77,7 +77,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         ? readPlayerIntent(this.input)
         : idlePlayerIntent;
     this.movement.simulate(intent, this.cameraYaw(), time.delta);
-    this.visual.sync(this.movement);
+    this.visual.sync(this.movement, time.delta);
   }
 
   public setControlEnabled(enabled: boolean): void {

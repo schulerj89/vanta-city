@@ -10,7 +10,7 @@ import type { PlayerMovementSimulation } from './PlayerMovement';
 
 export interface PlayerVisual extends GameObject {
   init?(): void | Promise<void>;
-  sync(movement: PlayerMovementSimulation): void;
+  sync(movement: PlayerMovementSimulation, delta?: number): void;
 }
 
 export class PlaceholderPlayerVisual implements PlayerVisual {

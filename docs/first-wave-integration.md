@@ -20,12 +20,12 @@ The first-wave feature branches all began at the same foundation commit and were
 - Player and world collision definitions were unified instead of adapted through parallel box types.
 - The interaction branch's fixed demo-player pose and test-scene objects were removed in favor of the real player and district marker.
 - The player debug overlay and interaction-specific debug panel were removed in favor of the registry-driven developer panel.
-- The character preview actor was not placed beside the playable character. Selection now drives the player's visual directly; preview components remain available for isolated development work.
+- The character preview actor was not placed beside the playable character. The shared selector now drives the existing player's visual directly; preview rotation controls remain available only when the selector is paired with an isolated preview controller.
 
 ## Current limits
 
 - Static collision supports authored axis-aligned boxes plus tagged planar ramps; arbitrary rotated meshes and moving platforms require a future backend behind `CollisionWorld`.
 - The camera obstruction query uses the same static approximation and may need richer geometry in tight art-authored spaces.
-- Character clips are discovered and validated, but animation blending is intentionally not part of this slice.
+- Character playback supports lightweight fades between logical idle, walk, and run mappings. A richer animation graph, authored airborne clips, and layered actions remain future work.
 - Interaction visibility is injectable but the test interaction currently relies on range and facing only.
 - The district is loaded as one unit; streaming and large-world ownership are future work.

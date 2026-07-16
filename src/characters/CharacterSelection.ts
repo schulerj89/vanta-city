@@ -11,7 +11,8 @@ export interface CharacterSelectionReader {
 }
 
 export class CharacterSelectionStore implements CharacterSelectionReader {
-  public static readonly storageKey = 'vanta-city:selected-character';
+  public static readonly storageKey = 'vanta-city:character-preference';
+  public static readonly preferenceVersion = 1;
 
   private readonly byId: ReadonlyMap<string, CharacterDefinition>;
   private readonly listeners = new Set<CharacterSelectionListener>();
@@ -30,6 +31,7 @@ export class CharacterSelectionStore implements CharacterSelectionReader {
     const storedId = this.readStoredId();
     this.selectedId =
       storedId && this.byId.has(storedId) ? storedId : defaultId;
+    this.writeStoredId(this.selectedId);
   }
 
   public getSelectedId(): string {
@@ -54,6 +56,20 @@ export class CharacterSelectionStore implements CharacterSelectionReader {
     for (const listener of [...this.listeners]) listener(definition);
   }
 
+  public cycle(step = 1): CharacterDefinition {
+    const currentIndex = this.definitions.findIndex(
+      ({ id }) => id === this.selectedId,
+    );
+    const nextIndex =
+      (currentIndex +
+        (step % this.definitions.length) +
+        this.definitions.length) %
+      this.definitions.length;
+    const definition = this.definitions[nextIndex]!;
+    this.select(definition.id);
+    return definition;
+  }
+
   public onSelectionChanged(listener: CharacterSelectionListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -61,9 +77,20 @@ export class CharacterSelectionStore implements CharacterSelectionReader {
 
   private readStoredId(): string | undefined {
     try {
-      return (
-        this.storage?.getItem(CharacterSelectionStore.storageKey) ?? undefined
-      );
+      const value = this.storage?.getItem(CharacterSelectionStore.storageKey);
+      if (!value) return undefined;
+      const preference: unknown = JSON.parse(value);
+      if (
+        typeof preference !== 'object' ||
+        preference === null ||
+        !('version' in preference) ||
+        preference.version !== CharacterSelectionStore.preferenceVersion ||
+        !('selectedCharacterId' in preference) ||
+        typeof preference.selectedCharacterId !== 'string'
+      ) {
+        return undefined;
+      }
+      return preference.selectedCharacterId;
     } catch {
       return undefined;
     }
@@ -71,7 +98,13 @@ export class CharacterSelectionStore implements CharacterSelectionReader {
 
   private writeStoredId(id: string): void {
     try {
-      this.storage?.setItem(CharacterSelectionStore.storageKey, id);
+      this.storage?.setItem(
+        CharacterSelectionStore.storageKey,
+        JSON.stringify({
+          version: CharacterSelectionStore.preferenceVersion,
+          selectedCharacterId: id,
+        }),
+      );
     } catch {
       // Storage can be unavailable in privacy modes; in-memory selection still works.
     }
