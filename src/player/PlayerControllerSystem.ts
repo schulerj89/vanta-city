@@ -38,6 +38,7 @@ export interface PlayerDebugSnapshot {
   };
   readonly movementState: PlayerMovementState;
   readonly blocked: boolean;
+  readonly facingYaw: number;
 }
 
 const controlledStates: readonly GameState[] = ['playing'];
@@ -59,6 +60,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     config: PlayerMovementConfig = defaultPlayerMovementConfig,
     private readonly cameraYaw: () => number = () => 0,
     public readonly visual: PlayerVisual = new PlaceholderPlayerVisual(),
+    private readonly spawnFacingYaw = 0,
   ) {
     this.spawnPosition = spawnPosition.clone();
     this.movement = new PlayerMovementSimulation(collision, config);
@@ -123,6 +125,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       },
       movementState: this.movement.state,
       blocked: this.movement.blocked,
+      facingYaw: this.movement.facingYaw,
     };
   }
 
@@ -132,7 +135,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   }
 
   public reset(): void {
-    this.teleport(this.spawnPosition, 0);
+    this.teleport(this.spawnPosition, this.spawnFacingYaw);
   }
 
   public dispose(): void {

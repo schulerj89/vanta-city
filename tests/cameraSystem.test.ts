@@ -18,6 +18,7 @@ import {
   clampPitch,
   clampZoom,
   defaultThirdPersonCameraConfig,
+  isMovingCameraForward,
 } from '../src/camera/ThirdPersonCameraSystem';
 import type { WorldPoseSource } from '../src/world/Spatial';
 
@@ -123,9 +124,31 @@ describe('ThirdPersonCameraSystem helpers', () => {
       defaultThirdPersonCameraConfig.maxDistance,
     );
   });
+
+  it('distinguishes camera-forward movement from backward and strafe input', () => {
+    expect(isMovingCameraForward(new Vector3(0, 0, -2), 0)).toBe(true);
+    expect(isMovingCameraForward(new Vector3(0, 0, 2), 0)).toBe(false);
+    expect(isMovingCameraForward(new Vector3(2, 0, 0), 0)).toBe(false);
+  });
 });
 
 describe('ThirdPersonCameraSystem', () => {
+  it('does not orbit for backward movement but still honors explicit recenter', () => {
+    const harness = createHarness();
+    const initialYaw = harness.system.getDebugSnapshot().yaw;
+    harness.player.movement.velocity.set(0, 0, 3);
+    harness.player.movement.facingYaw = 0;
+
+    update(harness, 180);
+    expect(harness.system.getDebugSnapshot().yaw).toBeCloseTo(initialYaw);
+
+    harness.input.down.add('cameraRecenter');
+    update(harness, 60);
+    expect(
+      Math.abs(harness.system.getDebugSnapshot().yaw - initialYaw),
+    ).toBeGreaterThan(1);
+  });
+
   it('orbits with independent sensitivity and ignores camera input while UI is focused', () => {
     const harness = createHarness();
     harness.input.pointerLocked = true;

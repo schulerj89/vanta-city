@@ -54,7 +54,9 @@ export const defaultThirdPersonCameraConfig: ThirdPersonCameraConfig = {
   minPitch: MathUtils.degToRad(-65),
   maxPitch: MathUtils.degToRad(25),
   initialPitch: MathUtils.degToRad(-18),
-  initialYaw: Math.PI,
+  // The default player spawn faces into the district along -Z. Keeping the
+  // camera on +Z places it behind that authored facing direction.
+  initialYaw: 0,
   minDistance: cameraPreferenceLimits.minFollowDistance,
   maxDistance: cameraPreferenceLimits.maxFollowDistance,
   initialDistance: defaultCameraPreferences.followDistance,
@@ -399,10 +401,12 @@ export class ThirdPersonCameraSystem implements GameSystem {
     }
 
     const currentPreferences = this.preferences.current;
-    const recenterRequested =
-      this.input?.isDown('cameraRecenter') === true ||
-      (currentPreferences.automaticRecenter &&
-        this.secondsSinceOrbit >= this.config.recenterDelay);
+    const explicitRecenter = this.input?.isDown('cameraRecenter') === true;
+    const automaticRecenter =
+      currentPreferences.automaticRecenter &&
+      this.secondsSinceOrbit >= this.config.recenterDelay &&
+      isMovingCameraForward(this.player.movement.velocity, this.yaw);
+    const recenterRequested = explicitRecenter || automaticRecenter;
     if (
       acceptsInput &&
       recenterRequested &&
@@ -715,6 +719,20 @@ export class ThirdPersonCameraSystem implements GameSystem {
     this.gameplayFieldOfView = view.fieldOfView;
     this.obstructionClearTime = 0;
   }
+}
+
+/** Backward/strafe movement must not implicitly orbit a camera the user owns. */
+export function isMovingCameraForward(
+  velocity: Readonly<Vector3>,
+  cameraYaw: number,
+): boolean {
+  const horizontalSpeed = Math.hypot(velocity.x, velocity.z);
+  if (horizontalSpeed <= 1e-5) return false;
+  const forwardX = -Math.sin(cameraYaw);
+  const forwardZ = -Math.cos(cameraYaw);
+  return (
+    (velocity.x * forwardX + velocity.z * forwardZ) / horizontalSpeed > 0.5
+  );
 }
 
 export function clampPitch(

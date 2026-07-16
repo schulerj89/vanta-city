@@ -14,7 +14,6 @@ export const characterDefinitionEntries = [
     transform: {
       // 1.823 m authored height -> 1.787 m, inside the 1.8 m capsule.
       scale: 0.98,
-      rotation: [0, Math.PI, 0],
     },
     fallback: 'placeholder',
   },
@@ -30,7 +29,6 @@ export const characterDefinitionEntries = [
     transform: {
       // 1.936 m authored height -> 1.781 m, inside the 1.8 m capsule.
       scale: 0.92,
-      rotation: [0, Math.PI, 0],
     },
     fallback: 'placeholder',
   },

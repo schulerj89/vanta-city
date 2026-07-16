@@ -32,6 +32,7 @@ test.describe('playable debug district', () => {
       state.world.declaredColliderCount,
     );
     expect(state.player.exists).toBe(true);
+    expect(angleDistance(state.player.facingYaw, Math.PI)).toBeLessThan(0.001);
     expectFiniteVector(state.player.position, 'player position');
     expectFiniteVector(state.player.velocity, 'player velocity');
     expect(
@@ -60,6 +61,10 @@ test.describe('playable debug district', () => {
     ).toBeLessThanOrEqual(0.2);
 
     expect(state.camera.active).toBe(true);
+    expect(
+      state.camera.position.z,
+      'default camera should begin behind the player and look into the district',
+    ).toBeGreaterThan(state.player.position.z);
     expectFiniteVector(state.camera.position, 'camera position');
     expectFiniteVector(state.camera.target, 'camera target');
     expect(state.camera.distance).toBeGreaterThanOrEqual(
@@ -151,6 +156,8 @@ test.describe('playable debug district', () => {
       'movement should not take the player below the world floor',
     ).toBeGreaterThanOrEqual(stopped.world.floorHeight - 0.02);
 
+    // Reset away from the road barrier before isolating pause/resume input.
+    await executeCommand(page, 'player.teleport', 'spawn.player-default');
     await page.keyboard.press('p');
     await expect
       .poll(async () => (await snapshot(page)).gameState)
@@ -190,6 +197,129 @@ test.describe('playable debug district', () => {
       .toContain('interaction.garage-door');
   });
 
+  test('keeps WASD, Down, character facing, sprint, and orbit controls independent', async ({
+    page,
+  }) => {
+    await openReadyApp(page);
+    const canvas = page.locator('canvas');
+    expect(await canvas.count()).toBe(1);
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('Game canvas has no visible bounds');
+
+    for (const characterId of ['casual', 'punk']) {
+      await executeCommand(page, 'player.select-character', characterId);
+      await expect
+        .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+        .toBe(characterId);
+      const loaded = await snapshot(page);
+      expect(loaded.character.source).toBe('asset');
+      expect(loaded.character.appliedRotation).toBe('0.00, 0.00, 0.00');
+
+      for (const [key, axis] of [
+        ['w', 'forward'],
+        ['s', 'backward'],
+        ['a', 'left'],
+        ['d', 'right'],
+      ] as const) {
+        await executeCommand(page, 'player.teleport', 'spawn.player-default');
+        const before = await snapshot(page);
+        await page.keyboard.down(key);
+        await expect
+          .poll(
+            async () =>
+              horizontalDistance(
+                (await snapshot(page)).player.position,
+                before.player.position,
+              ),
+            { message: `${characterId} ${key} should move ${axis}` },
+          )
+          .toBeGreaterThan(0.35);
+        const moving = await snapshot(page);
+        await page.keyboard.up(key);
+
+        const expected = cameraRelativeAxis(before.camera.yaw, axis);
+        const deltaX = moving.player.position.x - before.player.position.x;
+        const deltaZ = moving.player.position.z - before.player.position.z;
+        expect(
+          deltaX * expected.x + deltaZ * expected.z,
+          `${characterId} ${key} should follow the visible camera ${axis} axis`,
+        ).toBeGreaterThan(0.3);
+        expect(moving.player.movementState).toBe('walking');
+        expect(moving.character.animationState).toBe('walk');
+        expect(
+          moving.player.velocity.x * Math.sin(moving.player.facingYaw) +
+            moving.player.velocity.z * Math.cos(moving.player.facingYaw),
+          `${characterId} presentation facing should agree with simulation velocity`,
+        ).toBeGreaterThan(0);
+      }
+
+      await executeCommand(page, 'player.teleport', 'spawn.player-default');
+      const beforeDown = await snapshot(page);
+      await page.keyboard.down('ArrowDown');
+      await page.waitForTimeout(1900);
+      const afterDown = await snapshot(page);
+      await page.keyboard.up('ArrowDown');
+      const backward = cameraRelativeAxis(beforeDown.camera.yaw, 'backward');
+      expect(
+        (afterDown.player.position.x - beforeDown.player.position.x) *
+          backward.x +
+          (afterDown.player.position.z - beforeDown.player.position.z) *
+            backward.z,
+      ).toBeGreaterThan(1);
+      expect(
+        angleDistance(afterDown.camera.yaw, beforeDown.camera.yaw),
+        'ArrowDown must move backward without owning or spinning the camera',
+      ).toBeLessThan(0.02);
+
+      await executeCommand(page, 'player.teleport', 'spawn.player-default');
+      await page.keyboard.down('Shift');
+      await page.keyboard.down('w');
+      await expect
+        .poll(async () => (await snapshot(page)).player.movementState)
+        .toBe('running');
+      expect((await snapshot(page)).character.animationState).toBe('run');
+      await page.keyboard.up('w');
+      await page.keyboard.up('Shift');
+
+      await expect
+        .poll(async () =>
+          horizontalSpeed((await snapshot(page)).player.velocity),
+        )
+        .toBeLessThan(0.1);
+      const beforeOrbit = await snapshot(page);
+      await page.mouse.move(box.x + box.width * 0.65, box.y + box.height * 0.5);
+      await page.mouse.down();
+      await page.mouse.move(
+        box.x + box.width * 0.75,
+        box.y + box.height * 0.5,
+        {
+          steps: 4,
+        },
+      );
+      await page.mouse.up();
+      await expect
+        .poll(async () =>
+          angleDistance(
+            (await snapshot(page)).camera.yaw,
+            beforeOrbit.camera.yaw,
+          ),
+        )
+        .toBeGreaterThan(0.05);
+      const afterOrbit = await snapshot(page);
+      expect(
+        horizontalDistance(
+          afterOrbit.player.position,
+          beforeOrbit.player.position,
+        ),
+        'camera orbit must not mutate the authoritative player transform',
+      ).toBeLessThan(0.02);
+      expect(
+        afterOrbit.runtimeErrors.count,
+        afterOrbit.runtimeErrors.last,
+      ).toBe(0);
+    }
+  });
+
   test('keeps feet grounded at named curb, ramp, stair, and elevation transitions', async ({
     page,
   }) => {
@@ -218,13 +348,13 @@ test.describe('playable debug district', () => {
     }
 
     await executeCommand(page, 'player.teleport', 'spawn.grounding-ramp-low');
-    await page.keyboard.down('s');
+    await page.keyboard.down('w');
     await expect
       .poll(async () => (await snapshot(page)).player.position.y, {
         message: 'forward walking should climb the loading ramp',
       })
       .toBeGreaterThan(0.6);
-    await page.keyboard.up('s');
+    await page.keyboard.up('w');
     const uphill = await snapshot(page);
     expect(uphill.player.grounded).toBe(true);
     expect(uphill.player.groundColliderId).toBe('c.deck-ramp');
@@ -232,13 +362,13 @@ test.describe('playable debug district', () => {
       Math.abs(uphill.player.footClearance ?? Infinity),
     ).toBeLessThanOrEqual(footTolerance);
 
-    await page.keyboard.down('w');
+    await page.keyboard.down('s');
     await expect
       .poll(async () => (await snapshot(page)).player.position.y, {
         message: 'reverse walking should descend the loading ramp',
       })
       .toBeLessThan(0.2);
-    await page.keyboard.up('w');
+    await page.keyboard.up('s');
     const downhill = await snapshot(page);
     expect(downhill.player.grounded).toBe(true);
     expect(downhill.player.groundNormal.y).toBeGreaterThan(0.95);
@@ -535,6 +665,28 @@ function horizontalSpeed(velocity: {
   readonly z: number;
 }): number {
   return Math.hypot(velocity.x, velocity.z);
+}
+
+function cameraRelativeAxis(
+  yaw: number,
+  axis: 'forward' | 'backward' | 'left' | 'right',
+): { readonly x: number; readonly z: number } {
+  const forward = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
+  const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+  switch (axis) {
+    case 'forward':
+      return forward;
+    case 'backward':
+      return { x: -forward.x, z: -forward.z };
+    case 'left':
+      return { x: -right.x, z: -right.z };
+    case 'right':
+      return right;
+  }
+}
+
+function angleDistance(a: number, b: number): number {
+  return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 }
 
 async function attachScreenshot(

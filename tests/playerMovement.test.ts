@@ -28,6 +28,25 @@ describe('decideMovementState', () => {
 });
 
 describe('PlayerMovementSimulation', () => {
+  it.each([
+    ['forward', new Vector2(0, 1), [0, -1], Math.PI],
+    ['backward', new Vector2(0, -1), [0, 1], 0],
+    ['left', new Vector2(-1, 0), [-1, 0], -Math.PI / 2],
+    ['right', new Vector2(1, 0), [1, 0], Math.PI / 2],
+  ] as const)(
+    'maps camera-relative %s intent to the matching world direction and facing',
+    (_label, move, [expectedX, expectedZ], expectedYaw) => {
+      const movement = new PlayerMovementSimulation(new StaticCollisionWorld());
+      movement.teleport(new Vector3(0, 0, 0));
+
+      movement.simulate({ move, sprint: false, jump: false }, 0, 0.1);
+
+      expect(movement.velocity.x).toBeCloseTo(expectedX * 2.2);
+      expect(movement.velocity.z).toBeCloseTo(expectedZ * 2.2);
+      expect(movement.facingYaw).toBeCloseTo(expectedYaw);
+    },
+  );
+
   it('accelerates camera-relative movement instead of changing velocity instantly', () => {
     const movement = new PlayerMovementSimulation(new StaticCollisionWorld());
     movement.teleport(new Vector3(0, 0, 0));

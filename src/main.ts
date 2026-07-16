@@ -139,6 +139,7 @@ async function bootstrap(): Promise<void> {
     undefined,
     () => cameraReference.current?.getYaw() ?? 0,
     characterVisual,
+    spawn.rotation?.[1] ?? 0,
   );
   const camera = new ThirdPersonCameraSystem(
     render.camera,

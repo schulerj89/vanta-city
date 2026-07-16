@@ -32,6 +32,7 @@ export class InputSystem
   private readonly downCodes = new Set<string>();
   private readonly pressedCodes = new Set<string>();
   private readonly releasedCodes = new Set<string>();
+  private readonly boundCodes: ReadonlySet<string>;
   private pointerTarget: HTMLElement | undefined;
   private pointerX = 0;
   private pointerY = 0;
@@ -41,7 +42,9 @@ export class InputSystem
   public constructor(
     private readonly bindings: ActionBindings,
     private readonly target: Window = window,
-  ) {}
+  ) {
+    this.boundCodes = new Set(Object.values(bindings).flat());
+  }
 
   public init(): void {
     if (this.attached) return;
@@ -84,7 +87,10 @@ export class InputSystem
   }
 
   public requestPointerLock(): void {
-    void this.pointerTarget?.requestPointerLock?.();
+    // Browsers may reject pointer lock in automation, embedded views, or when
+    // the document loses focus between mouseup and click. Orbit-drag still
+    // works through Mouse0 deltas, so a rejected lock request is non-fatal.
+    void this.pointerTarget?.requestPointerLock?.().catch(() => undefined);
   }
 
   public releasePointerLock(): void {
@@ -140,6 +146,9 @@ export class InputSystem
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if (event.code.startsWith('Arrow') && this.boundCodes.has(event.code)) {
+      event.preventDefault();
+    }
     if (!this.downCodes.has(event.code)) this.pressedCodes.add(event.code);
     this.downCodes.add(event.code);
   };
