@@ -40,6 +40,12 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 `RenderSystem` exclusively owns the Three.js renderer, scene, camera, canvas, resize observer, and render call. It caps device pixel ratio at two. Future third-person camera logic should update the injected camera from its own simulation system; it should not create another renderer or animation loop.
 
+## Levels and static world collision
+
+`LevelRegistry` validates data-only `LevelModule` exports and combines their logical asset manifests. `LevelSystem` loads one registered definition through the existing asset loader, owns a single scene root, publishes typed load/unload events, and releases its generated resources during lifecycle disposal. See [World levels](world-levels.md) for the schema and registration example.
+
+Rendered geometry, plain collision boxes, semantic locations, trigger definitions, and debug helpers are separate concerns. Player, NPC, interaction, mission, dialogue, and camera systems query the `LevelLocations` API rather than traverse scene nodes. The plain rotated-box collision convention is the first implementation of the previously reserved game-owned physics boundary; a future physics adapter can consume it without leaking a physics package into feature code.
+
 ## Future integration
 
 - Player: implement a `GameObject` for presentation and a focused movement/controller system that reads `InputReader`, owns a physics abstraction body, and exposes a read-only position source to debugging/camera code.
@@ -63,5 +69,6 @@ Parallel work may rely on these APIs:
 - `CharacterDefinition`, `CharacterSelectionReader`, and `LoadedCharacter`
 - `DebugDataSource.getPlayerPosition`
 - `RenderSystem.scene`, `.camera`, and `.renderer` (renderer configuration only; do not start another loop)
+- `LevelDefinition`, `LevelRegistry`, `LevelSystem`, and `LevelLocations`
 
 Changes to these contracts should be coordinated and documented. Feature branches should add narrow event maps and constructor-injected dependencies rather than expanding `GameRuntime` into a general manager.
