@@ -289,6 +289,22 @@ async function bootstrap(): Promise<void> {
   const unsubscribeAccessibility = accessibility.subscribe((preferences) => {
     dialogue.setTypewriterEnabled(preferences.dialogueTypewriter);
   });
+  let inputInspector:
+    | import('./debug/InputOwnershipInspector').InputOwnershipInspector
+    | undefined;
+  if (development) {
+    const { InputOwnershipInspector } =
+      await import('./debug/InputOwnershipInspector');
+    inputInspector = new InputOwnershipInspector(
+      input,
+      runtime.state,
+      help,
+      characterPicker,
+      dialogue,
+      accessibility,
+      development.debug,
+    );
+  }
   const dialoguePortraits = new DialoguePortraitResolver(
     await createDialogueSpeakers(npcDefinitions, assetCatalog),
     {
@@ -362,6 +378,7 @@ async function bootstrap(): Promise<void> {
       : [];
 
   runtime.register(input);
+  if (inputInspector) runtime.register(inputInspector);
   if (development) runtime.register(development.systems[0]!);
   runtime
     .register(worldCollision)
@@ -406,7 +423,7 @@ async function bootstrap(): Promise<void> {
   }
 
   const disposeBrowserTestBridge =
-    browserTestModule && development && sparringTarget
+    browserTestModule && development && sparringTarget && inputInspector
       ? browserTestModule.installBrowserTestBridge({
           runtime,
           render,
@@ -430,6 +447,7 @@ async function bootstrap(): Promise<void> {
           dialogueUI,
           debug: development.debug,
           errors: development.errors,
+          inputInspector,
         })
       : undefined;
 

@@ -112,6 +112,7 @@ export class GameRuntime {
     if (!this.running) return;
     const time = this.clock.tick(timestamp);
 
+    this.input.prepareFrame?.();
     if (this.input.wasPressed('pause')) {
       if (this.state.current === 'paused') this.resume();
       else if (this.state.current === 'playing') this.pause();

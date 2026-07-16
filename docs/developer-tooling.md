@@ -29,6 +29,21 @@ Alternatives considered were free-form registration groups, a separate section f
 
 ## Extension API
 
+### Input ownership inspector
+
+Development startup dynamically loads one `InputOwnershipInspector` into the existing debug registry. It does not add browser listeners or a second panel. Its public `getDebugSnapshot()` contract contains:
+
+- `owner` and `acceptedActions` / `acceptedActionFamilies` for gameplay, pause, help, picker, dialogue, cinematic, boot, or focused text UI;
+- `activeInputFamily`, `activeDevice`, focused-element details, and pointer-lock state;
+- keyboard, mouse, and gamepad named actions split into down, pressed, released, accepted, and rejected sets;
+- standard-gamepad identity, raw axes, deadzone-adjusted axes, down/pressed/released buttons, the configured `0.20` deadzone, and the `0.50` threshold;
+- current reduced-camera-motion and dialogue-typewriter preferences;
+- the most recent rejected action with its ownership reason and a 16-entry ownership/device/input timeline.
+
+The **Commands / Actions** section exposes `input.virtual-gamepad-connect`, `input.virtual-gamepad-disconnect`, `input.virtual-gamepad-axes`, and `input.virtual-gamepad-button`. These controls update the centralized polling adapter; they never dispatch duplicate browser events.
+
+The development browser bridge mirrors the snapshot at `snapshot().controls.ownership` and exposes `setVirtualGamepad(fixture)` for deterministic automation. Omitting the fixture restores native standard-gamepad polling.
+
 Development integrations receive the public `DebugRegistry` and `DebugVisualHelpers` instances. Keep every unregister callback and call it when the owning system is disposed.
 
 ```ts

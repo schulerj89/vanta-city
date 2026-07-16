@@ -69,6 +69,49 @@ describe('GamepadInputAdapter', () => {
     expect(adapter.wasReleased('interact')).toBe(true);
   });
 
+  it('snapshots raw/adjusted controls and virtual disconnect/reconnect', () => {
+    const adapter = new GamepadInputAdapter();
+    adapter.setVirtualFixture({
+      connected: true,
+      axes: [0.1, -0.8, 0.6, 0],
+      buttons: Array.from({ length: 17 }, (_, index) =>
+        index === 2 ? 0.75 : 0,
+      ),
+    });
+    adapter.poll();
+    const connected = adapter.getDebugSnapshot();
+
+    expect(connected).toMatchObject({
+      connected: true,
+      virtual: true,
+      rawAxes: [0.1, -0.8, 0.6, 0],
+      downButtons: [2],
+      pressedButtons: [2],
+      buttonThreshold: 0.5,
+      stickDeadzone: 0.2,
+    });
+    expect(connected.adjustedAxes.moveY).toBeGreaterThan(0);
+    expect(connected.adjustedAxes.cameraX).toBeGreaterThan(0);
+
+    adapter.lateUpdate();
+    adapter.setVirtualFixture({ connected: false, axes: [], buttons: [] });
+    adapter.poll();
+    expect(adapter.getDebugSnapshot()).toMatchObject({
+      connected: false,
+      virtual: true,
+      releasedButtons: [2],
+    });
+
+    adapter.lateUpdate();
+    adapter.setVirtualFixture({
+      connected: true,
+      axes: [0, 0, 0, 0],
+      buttons: Array.from({ length: 17 }, () => 0),
+    });
+    adapter.poll();
+    expect(adapter.getDebugSnapshot().connected).toBe(true);
+  });
+
   it('coexists with keyboard input through the named InputReader', () => {
     const virtual = virtualGamepad();
     const gamepad = new GamepadInputAdapter(undefined, () => [virtual.gamepad]);
@@ -98,6 +141,16 @@ describe('GamepadInputAdapter', () => {
 
     expect(input.wasPressed('interact')).toBe(false);
     expect(input.readAxis('moveX')).toBe(0);
+
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true }),
+    );
+    expect(input.getDebugSnapshot().lastRawRejection).toMatchObject({
+      device: 'keyboard',
+      control: 'KeyW',
+      actions: ['moveForward'],
+      reason: 'focused-text-entry',
+    });
 
     input.dispose();
     field.remove();

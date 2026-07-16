@@ -99,6 +99,7 @@ test.describe('playable debug district', () => {
 
     const expectedSections = [
       'Player / Coordinates',
+      'Input / Ownership',
       'Collision / Physics',
       'Camera',
       'World / Level / Spawns',

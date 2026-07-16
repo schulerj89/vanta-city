@@ -10,6 +10,7 @@ import {
 
 const defaultOpenSections = new Set<string>([
   debugSections.player,
+  debugSections.input,
   debugSections.camera,
   debugSections.interactions,
   debugSections.runtime,

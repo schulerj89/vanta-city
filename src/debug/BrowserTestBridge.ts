@@ -22,6 +22,8 @@ import type { RenderSystem } from '../render/RenderSystem';
 import type { ThreeAssetLoader } from '../assets/AssetLoader';
 import type { LoadingScreen } from '../ui/LoadingScreen';
 import type { DevelopmentAssetFaults } from './DevelopmentAssetFaults';
+import type { InputOwnershipInspector } from './InputOwnershipInspector';
+import type { VirtualGamepadFixture } from '../input/GamepadInput';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -81,6 +83,7 @@ export interface BrowserTestSnapshot {
     readonly bindings: typeof defaultBindings;
     readonly helpEntries: typeof helpControlEntries;
     readonly help: ReturnType<HelpOverlayController['getSnapshot']>;
+    readonly ownership: ReturnType<InputOwnershipInspector['getDebugSnapshot']>;
   };
   readonly character: ReturnType<CharacterPlayerVisual['getDebugSnapshot']>;
   readonly selectedCharacterId: string;
@@ -123,6 +126,7 @@ export interface BrowserTestApi {
   snapshot(): BrowserTestSnapshot;
   executeDebugCommand(id: string, argument?: string): Promise<void>;
   setDebugToggle(id: string, enabled: boolean): void;
+  setVirtualGamepad(fixture?: VirtualGamepadFixture): void;
 }
 
 declare global {
@@ -154,6 +158,7 @@ export interface BrowserTestBridgeDependencies {
   readonly dialogueUI: DialogueUISystem;
   readonly debug: DebugRegistry;
   readonly errors: RuntimeErrorReporter;
+  readonly inputInspector: InputOwnershipInspector;
 }
 
 /** Installs the opt-in development bridge used by Playwright smoke tests. */
@@ -191,6 +196,8 @@ export function installBrowserTestBridge(
     executeDebugCommand: (id, argument) =>
       dependencies.debug.executeCommand(id, argument),
     setDebugToggle: (id, enabled) => dependencies.debug.setToggle(id, enabled),
+    setVirtualGamepad: (fixture) =>
+      dependencies.inputInspector.setVirtualGamepad(fixture),
   };
   target.__VANTA_TEST__ = api;
   return () => {
@@ -257,6 +264,7 @@ function createSnapshot(
       bindings: defaultBindings,
       helpEntries: helpControlEntries,
       help: dependencies.help.getSnapshot(),
+      ownership: dependencies.inputInspector.getDebugSnapshot(),
     },
     character,
     selectedCharacterId: dependencies.characterSelection.getSelectedId(),

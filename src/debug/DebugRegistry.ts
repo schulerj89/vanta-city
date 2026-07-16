@@ -7,6 +7,7 @@ export type DebugValue = string | number | boolean | null | undefined;
  */
 export const debugSections = {
   player: 'Player / Coordinates',
+  input: 'Input / Ownership',
   collision: 'Collision / Physics',
   camera: 'Camera',
   world: 'World / Level / Spawns',

@@ -25,3 +25,11 @@ Controls help includes preferences stored under the versioned `vanta-city:access
 - **Animate dialogue text** can be disabled to reveal every line immediately.
 
 On a first visit, the browser's `prefers-reduced-motion` setting enables reduced camera motion and disables dialogue typewriter animation. Explicit saved choices take precedence on later visits. Keyboard bindings, pointer behavior, modal focus isolation, and camera ownership/restoration are unchanged.
+
+## Development ownership diagnostics
+
+Development builds add an **Input / Ownership** section to the existing developer tools. It shows the current gameplay/help/picker/dialogue owner, accepted action families, raw named actions per device, raw and deadzone-adjusted sticks, button edges and threshold, pointer lock, focused text entry, accessibility preferences, the latest rejected action, and a bounded recent timeline.
+
+The inspector is observational: gameplay continues to consume only `InputReader` named actions. A rejected action means no alias for that physical edge belongs to the current owner; contextual aliases such as X → interact/reveal/preview are treated as one accepted physical input when the current context owns any alias.
+
+Virtual gamepad connect/disconnect, axes, and button controls are available only through development tools and the browser-test bridge. They do not provide a remapping UI and are not initialized as production telemetry.
