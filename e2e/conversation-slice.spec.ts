@@ -41,8 +41,13 @@ test('character picker through repeatable Mack conversation', async ({
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('playing');
   await expect
-    .poll(async () => (await snapshot(page)).character.source)
-    .not.toBe('loading');
+    .poll(async () => {
+      const character = (await snapshot(page)).character;
+      return character.loadStatus === 'loading'
+        ? 'loading'
+        : character.loadedDefinitionId;
+    })
+    .toBe('punk');
   const entered = await snapshot(page);
   expect(entered.selectedCharacterId).toBe('punk');
   expect(entered.character.loadedDefinitionId).toBe('punk');
@@ -182,18 +187,21 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   await expect
     .poll(async () => (await snapshot(page)).dialogue.session.state)
     .toBe('typing');
-  await expect(
-    page.getByRole('button', { name: 'Reveal full dialogue line' }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Cancel dialogue' }),
-  ).toBeVisible();
-
-  await page.getByRole('button', { name: 'Reveal full dialogue line' }).click();
+  const revealButton = page.getByRole('button', {
+    name: 'Reveal full dialogue line',
+  });
+  await expect(revealButton).toBeVisible();
+  // The first line is intentionally short. Activate the observed reveal
+  // control in the same browser task so natural typewriter completion cannot
+  // turn this synchronization assertion into an unintended advance.
+  await revealButton.evaluate((button: HTMLButtonElement) => button.click());
   await expect
     .poll(async () => (await snapshot(page)).dialogue.session.state)
     .toBe('ready');
   expect((await snapshot(page)).dialogue.session.lineIndex).toBe(0);
+  await expect(
+    page.getByRole('button', { name: 'Cancel dialogue' }),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue dialogue' }).click();
   await expect
