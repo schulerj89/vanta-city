@@ -39,6 +39,7 @@ import { PlayerControllerSystem } from './player/PlayerControllerSystem';
 import { RenderSystem } from './render/RenderSystem';
 import { CameraPreferenceStore } from './camera/CameraPreferences';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
+import { resolveConversationCameraProfile } from './camera/ConversationCameraProfile';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
 import { CharacterPickerSystem } from './ui/CharacterPickerSystem';
 import { HelpOverlaySystem } from './ui/HelpOverlaySystem';
@@ -191,14 +192,22 @@ async function bootstrap(): Promise<void> {
     cameraHooks: {
       onDialogueStarted: (session) => {
         dialogueCamera?.release();
+        const npcPose = npcs.getWorldPoseSource(session.npcId);
+        const npcDefinition = npcs.getDefinition(session.npcId);
+        player.setPresentationFacingTarget(npcPose);
         dialogueCamera = camera.requestConversation(
           `dialogue:${session.definition.id}`,
-          npcs.getWorldPoseSource(session.npcId),
+          npcPose,
+          undefined,
+          resolveConversationCameraProfile(
+            npcDefinition?.conversationCameraProfileId,
+          ),
         );
       },
       onDialogueEnded: () => {
         dialogueCamera?.release();
         dialogueCamera = undefined;
+        player.setPresentationFacingTarget();
       },
     },
   });
@@ -964,6 +973,22 @@ function registerVerticalSliceDebug(
       run: (id) => {
         const spawn = level.getSpawn(id || undefined);
         player.teleport(new Vector3(...spawn.position), spawn.rotation?.[1]);
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.teleport-position',
+      label: 'Teleport to position',
+      group: sections.actions,
+      argumentLabel: 'x,y,z,yaw',
+      run: (value) => {
+        const [x, y, z, yaw] = (value ?? '').split(',').map(Number);
+        if (![x, y, z].every(Number.isFinite)) {
+          throw new Error('Expected x,y,z and optional yaw');
+        }
+        player.teleport(
+          new Vector3(x, y, z),
+          Number.isFinite(yaw) ? yaw : undefined,
+        );
       },
     }),
     visualHelpers.register('collision', {

@@ -57,6 +57,7 @@ export const npcDefinitions = validateNpcDefinitions(
       interactionRadius: 3.25,
       idleYaw: Math.PI * 0.75,
       ambientYaw: 0.08,
+      conversationCameraProfileId: 'close',
     },
     {
       id: 'nox',
@@ -85,6 +86,7 @@ export const npcDefinitions = validateNpcDefinitions(
       interactionRadius: 3,
       idleYaw: -Math.PI * 0.5,
       ambientYaw: 0.1,
+      conversationCameraProfileId: 'wide',
     },
   ] satisfies readonly NpcDefinition[],
   npcCharacterDefinitions,

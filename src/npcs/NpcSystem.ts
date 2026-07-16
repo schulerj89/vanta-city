@@ -75,6 +75,10 @@ export class NpcSystem implements GameSystem {
     return this.spawned.get(id)?.entity;
   }
 
+  public getDefinition(id: string): NpcDefinition | undefined {
+    return this.definitions.find((definition) => definition.id === id);
+  }
+
   public get count(): number {
     return this.spawned.size;
   }

@@ -59,19 +59,50 @@ describe('NPC definition validation', () => {
         conversations,
       ),
     ).toThrow('Unknown conversation');
+    expect(() =>
+      validateNpcDefinitions([
+        {
+          ...npc,
+          conversationCameraProfileId: 'unknown' as 'default',
+        },
+      ]),
+    ).toThrow('unknown conversation camera profile');
   });
 
   it('maps the fixed NPC roster to exact non-playable Animated Men assets', () => {
     expect(
-      npcDefinitions.map(({ id, characterId, gestureAnimation }) => ({
-        id,
-        characterId,
-        gestureAnimation,
-      })),
+      npcDefinitions.map(
+        ({
+          id,
+          characterId,
+          gestureAnimation,
+          conversationCameraProfileId,
+        }) => ({
+          id,
+          characterId,
+          gestureAnimation,
+          conversationCameraProfileId,
+        }),
+      ),
     ).toEqual([
-      { id: 'mack', characterId: 'npc-worker', gestureAnimation: 'gesture' },
-      { id: 'nox', characterId: 'npc-hoodie', gestureAnimation: 'gesture' },
-      { id: 'raze', characterId: 'npc-punk', gestureAnimation: 'gesture' },
+      {
+        id: 'mack',
+        characterId: 'npc-worker',
+        gestureAnimation: 'gesture',
+        conversationCameraProfileId: 'close',
+      },
+      {
+        id: 'nox',
+        characterId: 'npc-hoodie',
+        gestureAnimation: 'gesture',
+        conversationCameraProfileId: undefined,
+      },
+      {
+        id: 'raze',
+        characterId: 'npc-punk',
+        gestureAnimation: 'gesture',
+        conversationCameraProfileId: 'wide',
+      },
     ]);
     expect(npcCharacterDefinitions.map(({ id }) => id)).toEqual([
       'npc-worker',

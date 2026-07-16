@@ -1,5 +1,7 @@
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
 import type { ConversationCatalog } from '../conversations/ConversationDefinition';
+import type { ConversationCameraProfileId } from '../camera/ConversationCameraProfile';
+import { isConversationCameraProfileId } from '../camera/ConversationCameraProfile';
 
 export interface NpcDefinition {
   readonly id: string;
@@ -14,6 +16,7 @@ export interface NpcDefinition {
   readonly interactionRadius: number;
   readonly idleYaw?: number;
   readonly ambientYaw?: number;
+  readonly conversationCameraProfileId?: ConversationCameraProfileId;
 }
 
 const idPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -62,6 +65,14 @@ export function validateNpcDefinitions(
       definition.interactionRadius <= 0
     ) {
       throw new Error(`NPC "${definition.id}" has invalid interaction radius`);
+    }
+    if (
+      definition.conversationCameraProfileId !== undefined &&
+      !isConversationCameraProfileId(definition.conversationCameraProfileId)
+    ) {
+      throw new Error(
+        `NPC "${definition.id}" has unknown conversation camera profile`,
+      );
     }
     if (characterIds && !characterIds.has(definition.characterId)) {
       throw new Error(

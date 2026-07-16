@@ -26,13 +26,21 @@ Gameplay is the implicit owner at priority `0`. Temporary owners request the sam
 | Conversation |               50 | Dialogue or interaction feature |
 | Cinematic    |              100 | Future cinematic coordinator    |
 
-A request from another owner must have strictly higher priority than the active request. A higher-priority request suspends the previous request; releasing it resumes that request. Releasing or cancelling the last temporary request restores the exact saved gameplay yaw, pitch, requested distance, shoulder offset, and field of view, then smoothly transitions the camera back. Re-requesting from the same owner replaces that owner's prior request.
+A request from another owner must have strictly higher priority than the active request. A higher-priority request suspends the previous request; releasing it resumes that request. Releasing or cancelling the last temporary request restores the exact saved gameplay ownership, yaw, pitch, requested and smoothed distance, shoulder offset, field of view, camera offset, and target relationship, then smoothly transitions the camera back. The saved relationship follows a live player position during the return and yields immediately to new orbit, zoom, shoulder, recenter, or movement input. Re-requesting from the same owner replaces that owner's prior request, and a completed return snapshot is never reused by a later conversation.
 
 ```ts
 const anchor = cameraAnchorFromLevel(
   level.getCinematicAnchor('camera.garage-wide'),
 );
-const control = camera.requestConversation('dialogue:garage', npc, anchor);
+const profile = resolveConversationCameraProfile(
+  npcDefinition.conversationCameraProfileId,
+);
+const control = camera.requestConversation(
+  'dialogue:garage',
+  npc,
+  anchor,
+  profile,
+);
 
 try {
   state.transition('dialogue');
@@ -43,7 +51,9 @@ try {
 }
 ```
 
-Conversation framing accepts the player's public transform, an optional NPC `WorldPoseSource`, and an optional authored level anchor. A valid anchor wins. Without one, the camera creates a shoulder-aware two-shot around the participants. A missing or non-finite NPC/anchor falls back to a finite player-focused composition instead of producing invalid transforms. The collision query remains active in directed modes.
+Conversation framing accepts the live player pose, an optional NPC `WorldPoseSource`, one validated `ConversationCameraProfile`, and an optional authored level anchor. A valid anchor wins. Without one, the pure profile strategy creates a translation-invariant two-shot from the participant positions, independent of district origin, authored yaw, or approach side. It prefers the configured gameplay shoulder and selects the opposite participant-relative shoulder when its obstruction clearance is materially better. A missing or non-finite NPC/anchor falls back to a finite player-focused composition instead of producing invalid transforms.
+
+Dialogue-capable NPC definitions may reference `default`, `close`, or `wide` through `conversationCameraProfileId`; omitted values resolve to `default`. NPC definitions remain authoritative for identity and profile selection. Dialogue requests camera ownership and sets presentation-facing targets, but never writes a camera transform. The camera system remains the sole active-camera writer. Player conversation facing rotates only the visual root, so authoritative movement position and facing yaw stay unchanged; NPC presentation similarly compensates authored model yaw while its conversational world pose faces the player.
 
 The camera API only owns framing. Dialogue progression and game-state transitions remain the caller's responsibility. Always release the handle on completion, cancellation, target removal, or owner disposal.
 

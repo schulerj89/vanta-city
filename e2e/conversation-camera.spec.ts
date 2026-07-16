@@ -1,0 +1,235 @@
+import { expect, test } from '@playwright/test';
+import type { ConsoleMessage, Page } from '@playwright/test';
+import type {
+  BrowserTestApi,
+  BrowserTestSnapshot,
+} from '../src/debug/BrowserTestBridge';
+
+const cases = [
+  {
+    id: 'mack',
+    interactionId: 'interaction.npc.mack',
+    conversationId: 'conversation.mack.introduction',
+    profileId: 'close',
+    npc: { x: -10, y: 0.2, z: 4 },
+  },
+  {
+    id: 'nox',
+    interactionId: 'interaction.npc.nox',
+    conversationId: 'conversation.nox.check-in',
+    profileId: 'default',
+    npc: { x: -19, y: 0.2, z: 12 },
+  },
+  {
+    id: 'raze',
+    interactionId: 'interaction.npc.raze',
+    conversationId: 'conversation.raze.check-in',
+    profileId: 'wide',
+    npc: { x: 14, y: 3, z: -8 },
+  },
+] as const;
+
+test('live participant framing and exact gameplay camera restoration', async ({
+  page,
+}, testInfo) => {
+  const consoleIssues: string[] = [];
+  const pageErrors: string[] = [];
+  page.on('console', (message: ConsoleMessage) => {
+    if (['warning', 'error'].includes(message.type())) {
+      consoleIssues.push(message.text());
+    }
+  });
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.goto('/?e2e=1&skipPicker=1&dialogueTypewriter=0');
+  await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
+  await command(page, 'camera.set-follow-distance', '7');
+  await command(page, 'camera.set-shoulder', 'left');
+
+  for (const npcCase of cases) {
+    for (const [sideIndex, side] of [-1, 1].entries()) {
+      const playerPosition = {
+        x: npcCase.npc.x + side * 1.5,
+        y: npcCase.npc.y,
+        z: npcCase.npc.z + 1.5,
+      };
+      await command(
+        page,
+        'player.teleport-position',
+        `${playerPosition.x},${playerPosition.y},${playerPosition.z},${Math.atan2(-side * 1.5, -1.5)}`,
+      );
+      await expect
+        .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+        .toBe(npcCase.interactionId);
+      await page.waitForTimeout(750);
+
+      await page.keyboard.down(sideIndex === 0 ? 'q' : 'e');
+      await page.waitForTimeout(180);
+      await page.keyboard.up(sideIndex === 0 ? 'q' : 'e');
+      await page.waitForTimeout(350);
+      const gameplay = (await snapshot(page)).camera;
+      const simulationYaw = (await snapshot(page)).player.facingYaw;
+
+      await page.keyboard.press('g');
+      await expect
+        .poll(async () => (await snapshot(page)).gameState)
+        .toBe('dialogue');
+      await expect
+        .poll(async () => (await snapshot(page)).camera.transitionProgress)
+        .toBe(1);
+      const talking = await snapshot(page);
+      expect(talking.conversation).toEqual({
+        npcId: npcCase.id,
+        conversationId: npcCase.conversationId,
+      });
+      expect(talking.camera).toMatchObject({
+        mode: 'conversation',
+        owner: `dialogue:${npcCase.conversationId}`,
+        activeConversationProfileId: npcCase.profileId,
+      });
+      expect(talking.camera.gameplayReturnPosition).toBeDefined();
+      expect(talking.camera.gameplayReturnTarget).toBeDefined();
+      expect(talking.player.facingYaw).toBeCloseTo(simulationYaw, 5);
+      expectAngleClose(
+        talking.player.presentationFacingYaw,
+        Math.atan2(
+          npcCase.npc.x - talking.player.position.x,
+          npcCase.npc.z - talking.player.position.z,
+        ),
+      );
+      const npcSnapshot = talking.npcs.snapshots.find(
+        ({ definitionId }) => definitionId === npcCase.id,
+      );
+      expect(npcSnapshot).toBeDefined();
+      expectAngleClose(
+        npcSnapshot!.facingYaw,
+        Math.atan2(
+          talking.player.position.x - npcCase.npc.x,
+          talking.player.position.z - npcCase.npc.z,
+        ),
+        0.12,
+      );
+      expect(
+        Math.abs(npcSnapshot!.visualBounds?.groundedMinY ?? 1),
+      ).toBeLessThan(0.08);
+      expect(Math.abs(talking.player.footClearance ?? 1)).toBeLessThan(0.12);
+
+      const screenshot = testInfo.outputPath(
+        `${npcCase.id}-approach-${sideIndex + 1}.png`,
+      );
+      await page.screenshot({ path: screenshot, fullPage: true });
+      await testInfo.attach(`${npcCase.id}-approach-${sideIndex + 1}`, {
+        path: screenshot,
+        contentType: 'image/png',
+      });
+
+      if (sideIndex === 0) {
+        await page.keyboard.press('Escape');
+      } else {
+        while ((await snapshot(page)).gameState === 'dialogue') {
+          await page.getByRole('button', { name: 'Continue dialogue' }).click();
+        }
+      }
+      await expect
+        .poll(async () => (await snapshot(page)).gameState)
+        .toBe('playing');
+      await expect
+        .poll(async () => (await snapshot(page)).camera.transitionProgress)
+        .toBe(1);
+      const restored = await snapshot(page);
+      expect(restored.gameState).toBe('playing');
+      expect(restored.camera.owner).toBe('gameplay');
+      expectVectorClose(
+        restored.camera.position,
+        talking.camera.gameplayReturnPosition!,
+      );
+      expectVectorClose(
+        restored.camera.target,
+        talking.camera.gameplayReturnTarget!,
+      );
+      expect(restored.camera.yaw).toBeCloseTo(gameplay.yaw, 5);
+      expect(restored.camera.pitch).toBeCloseTo(gameplay.pitch, 5);
+      expect(restored.camera.desiredDistance).toBeCloseTo(
+        gameplay.desiredDistance,
+        5,
+      );
+      expect(restored.camera.shoulderSide).toBe(gameplay.shoulderSide);
+      expect(restored.player.presentationFacingYaw).toBeCloseTo(
+        restored.player.facingYaw,
+        5,
+      );
+    }
+  }
+
+  const beforeMovement = (await snapshot(page)).player.position;
+  await page.keyboard.down('w');
+  await expect
+    .poll(async () => {
+      const current = (await snapshot(page)).player.position;
+      return Math.hypot(
+        current.x - beforeMovement.x,
+        current.z - beforeMovement.z,
+      );
+    })
+    .toBeGreaterThan(0.15);
+  await page.keyboard.up('w');
+  const yawBeforeOrbit = (await snapshot(page)).camera.yaw;
+  await page.keyboard.down('e');
+  await expect
+    .poll(async () => (await snapshot(page)).camera.yaw)
+    .not.toBeCloseTo(yawBeforeOrbit, 2);
+  await page.keyboard.up('e');
+
+  expect((await snapshot(page)).runtimeErrors.count).toBe(0);
+  expect(pageErrors).toEqual([]);
+  expect(
+    consoleIssues.filter(
+      (text) =>
+        !/^\[\.WebGL-[^\]]+\]GL Driver Message .*GPU stall due to ReadPixels/.test(
+          text,
+        ),
+    ),
+  ).toEqual([]);
+});
+
+async function snapshot(page: Page): Promise<BrowserTestSnapshot> {
+  return page.evaluate(() => {
+    if (!window.__VANTA_TEST__) throw new Error('Browser bridge unavailable');
+    return window.__VANTA_TEST__.snapshot();
+  });
+}
+
+async function command(
+  page: Page,
+  id: string,
+  argument: string,
+): Promise<void> {
+  await page.evaluate(
+    async ({ id, argument }) => {
+      const api: BrowserTestApi | undefined = window.__VANTA_TEST__;
+      if (!api) throw new Error('Browser bridge unavailable');
+      await api.executeDebugCommand(id, argument);
+    },
+    { id, argument },
+  );
+}
+
+function expectAngleClose(
+  actual: number,
+  expected: number,
+  tolerance = 0.03,
+): void {
+  const difference = Math.atan2(
+    Math.sin(actual - expected),
+    Math.cos(actual - expected),
+  );
+  expect(Math.abs(difference)).toBeLessThan(tolerance);
+}
+
+function expectVectorClose(
+  actual: { readonly x: number; readonly y: number; readonly z: number },
+  expected: { readonly x: number; readonly y: number; readonly z: number },
+): void {
+  expect(actual.x).toBeCloseTo(expected.x, 3);
+  expect(actual.y).toBeCloseTo(expected.y, 3);
+  expect(actual.z).toBeCloseTo(expected.z, 3);
+}

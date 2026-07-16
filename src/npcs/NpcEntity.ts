@@ -47,6 +47,7 @@ export interface NpcDebugSnapshot {
   readonly interactionState: NpcInteractionState;
   readonly conversationState: NpcConversationState;
   readonly modelFallback: boolean;
+  readonly facingYaw: number;
 }
 
 export function calculateFacingYaw(
@@ -143,7 +144,9 @@ export class NpcEntity implements GameObject {
     this.elapsed += time.delta;
     const playerPose = this.player.getWorldPose();
     let targetYaw = this.idleYaw;
-    if (this.conversations.active?.npcId === this.definition.id && playerPose) {
+    const isActiveConversation =
+      this.conversations.active?.npcId === this.definition.id;
+    if (isActiveConversation && playerPose) {
       targetYaw = calculateFacingYaw(
         this.getWorldPosition(),
         playerPose.position,
@@ -158,6 +161,12 @@ export class NpcEntity implements GameObject {
       targetYaw,
       time.delta,
     );
+    // Character assets retain their authored model yaw for idle presentation.
+    // Cancel it only for the live two-person presentation so the rendered body
+    // follows the NPC's authoritative conversational forward direction.
+    this.visualRoot.rotation.y = isActiveConversation
+      ? -(this.character.transform?.rotation?.[1] ?? 0)
+      : 0;
     const delta = Math.max(0, time.delta);
     this.mixer?.update(delta);
     if (this.loaded) this.loaded.root.position.copy(this.modelOffset);
@@ -243,6 +252,7 @@ export class NpcEntity implements GameObject {
             : 'available',
       conversationState,
       modelFallback: this.loaded?.source !== 'asset',
+      facingYaw: this.object3d.rotation.y,
     };
   }
 

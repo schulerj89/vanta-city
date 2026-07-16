@@ -69,6 +69,7 @@ export interface BrowserTestSnapshot {
     readonly footClearance: number | undefined;
     readonly movementState: string;
     readonly facingYaw: number;
+    readonly presentationFacingYaw: number;
     readonly runMode: boolean;
     readonly actionBusy: boolean;
   };
@@ -231,6 +232,7 @@ function createSnapshot(
           : character.bounds.min.y - position.y,
       movementState: movement.movementState,
       facingYaw: movement.facingYaw,
+      presentationFacingYaw: movement.presentationFacingYaw,
       runMode: movement.runMode,
       actionBusy: movement.actionBusy,
     },

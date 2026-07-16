@@ -67,6 +67,7 @@ export interface PlayerDebugSnapshot {
   readonly movementState: PlayerMovementState;
   readonly blocked: boolean;
   readonly facingYaw: number;
+  readonly presentationFacingYaw: number;
   readonly runMode: boolean;
   readonly actionBusy: boolean;
 }
@@ -87,6 +88,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   private nextPunchSide: 'Left' | 'Right' = 'Left';
   private nextKickSide: 'Left' | 'Right' = 'Left';
   private publishedCompletionSequence = 0;
+  private presentationFacingTarget: WorldPoseSource | undefined;
+  private presentationFacingYaw: number;
 
   public constructor(
     private readonly objects: GameObjectWorld,
@@ -99,6 +102,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   ) {
     this.spawnPosition = spawnPosition.clone();
     this.movement = new PlayerMovementSimulation(collision, config);
+    this.presentationFacingYaw = spawnFacingYaw;
   }
 
   public async init(context: GameContext): Promise<void> {
@@ -149,6 +153,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         sequence: actionState.completedSequence,
       });
     }
+    this.updatePresentationFacing();
   }
 
   public setControlEnabled(enabled: boolean): void {
@@ -187,6 +192,12 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     };
   }
 
+  /** Faces presentation toward a live subject without changing simulation yaw. */
+  public setPresentationFacingTarget(target?: WorldPoseSource): void {
+    this.presentationFacingTarget = target;
+    this.updatePresentationFacing();
+  }
+
   public getDebugSnapshot(): PlayerDebugSnapshot {
     const { x, y, z } = this.movement.velocity;
     return {
@@ -201,6 +212,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       movementState: this.movement.state,
       blocked: this.movement.blocked,
       facingYaw: this.movement.facingYaw,
+      presentationFacingYaw: this.presentationFacingYaw,
       runMode: this.runMode,
       actionBusy: this.getCharacterActionState().busy,
     };
@@ -209,6 +221,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   public teleport(position: Readonly<Vector3>, facingYaw?: number): void {
     this.movement.teleport(position, facingYaw);
     this.visual.sync(this.movement);
+    this.updatePresentationFacing();
   }
 
   public reset(): void {
@@ -219,8 +232,20 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     if (this.visualAdded) this.objects.remove(this.visual.id);
     else this.visual.dispose?.();
     this.visualAdded = false;
+    this.presentationFacingTarget = undefined;
     this.input = undefined;
     this.state = undefined;
     this.events.clear();
+  }
+
+  private updatePresentationFacing(): void {
+    const target = this.presentationFacingTarget?.getWorldPose();
+    const dx = target ? target.position.x - this.movement.position.x : 0;
+    const dz = target ? target.position.z - this.movement.position.z : 0;
+    this.presentationFacingYaw =
+      target && Math.hypot(dx, dz) >= 1e-6
+        ? Math.atan2(dx, dz)
+        : this.movement.facingYaw;
+    this.visual.visualRoot.rotation.y = this.presentationFacingYaw;
   }
 }

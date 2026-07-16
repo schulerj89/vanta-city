@@ -21,6 +21,7 @@ import {
   isMovingCameraForward,
 } from '../src/camera/ThirdPersonCameraSystem';
 import type { WorldPoseSource } from '../src/world/Spatial';
+import { resolveConversationCameraProfile } from '../src/camera/ConversationCameraProfile';
 
 const frame = { delta: 1 / 60, elapsed: 1, frame: 1 } as const;
 
@@ -249,6 +250,7 @@ describe('ThirdPersonCameraSystem', () => {
     harness.system.setPreferences({
       automaticRecenter: false,
       followDistance: 7,
+      shoulderSide: 'left',
     });
     harness.input.delta = { x: 80, y: -30, wheel: 0 };
     update(harness, 30);
@@ -260,12 +262,17 @@ describe('ThirdPersonCameraSystem', () => {
       }),
     };
 
-    const conversation = harness.system.requestConversation('dialogue', npc, {
-      id: 'camera.dialogue-test',
-      position: { x: 4, y: 3, z: 3 },
-      lookAt: { x: 1, y: 1, z: -1 },
-      fieldOfView: 48,
-    });
+    const conversation = harness.system.requestConversation(
+      'dialogue',
+      npc,
+      {
+        id: 'camera.dialogue-test',
+        position: { x: 4, y: 3, z: 3 },
+        lookAt: { x: 1, y: 1, z: -1 },
+        fieldOfView: 48,
+      },
+      resolveConversationCameraProfile('wide'),
+    );
     harness.state.transition('dialogue');
     const directedYaw = harness.system.getDebugSnapshot().yaw;
     harness.input.pointerLocked = true;
@@ -293,7 +300,30 @@ describe('ThirdPersonCameraSystem', () => {
     expect(restored.shoulderSide).toBe(gameplay.shoulderSide);
     expect(restored.transitionProgress).toBe(1);
     expect(harness.camera.fov).toBeCloseTo(50);
+    expectVectorClose(restored.position, gameplay.position);
+    expectVectorClose(restored.target, gameplay.target);
     expectFiniteCamera(harness.camera);
+
+    // A later conversation captures the current view, not the prior snapshot.
+    harness.input.delta = { x: -120, y: 40, wheel: 0 };
+    harness.input.pointerLocked = true;
+    update(harness, 10);
+    const laterGameplay = harness.system.getDebugSnapshot();
+    const repeated = harness.system.requestConversation(
+      'dialogue:repeat',
+      npc,
+      undefined,
+      resolveConversationCameraProfile('close'),
+    );
+    update(harness, 60);
+    expect(harness.system.getDebugSnapshot().activeConversationProfileId).toBe(
+      'close',
+    );
+    repeated.release();
+    update(harness, 60);
+    const repeatedRestore = harness.system.getDebugSnapshot();
+    expectVectorClose(repeatedRestore.position, laterGameplay.position);
+    expectVectorClose(repeatedRestore.target, laterGameplay.target);
   });
 
   it('restores gameplay on cancellation and remains finite without a valid target', () => {
@@ -334,4 +364,13 @@ describe('ThirdPersonCameraSystem', () => {
 function expectFiniteCamera(camera: PerspectiveCamera): void {
   expect(camera.position.toArray().every(Number.isFinite)).toBe(true);
   expect(camera.quaternion.toArray().every(Number.isFinite)).toBe(true);
+}
+
+function expectVectorClose(
+  actual: { readonly x: number; readonly y: number; readonly z: number },
+  expected: { readonly x: number; readonly y: number; readonly z: number },
+): void {
+  expect(actual.x).toBeCloseTo(expected.x, 5);
+  expect(actual.y).toBeCloseTo(expected.y, 5);
+  expect(actual.z).toBeCloseTo(expected.z, 5);
 }

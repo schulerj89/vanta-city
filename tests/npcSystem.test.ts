@@ -342,6 +342,7 @@ describe('NPC foundation', () => {
     entity.update({ delta: 0.25, elapsed: 0.25, frame: 1 });
     const facingPlayer = entity.object3d.rotation.y;
     expect(facingPlayer).not.toBeCloseTo(npcDefinitions[0]!.idleYaw!);
+    expect(entity.object3d.children[0]!.rotation.y).toBeCloseTo(-Math.PI);
     expect(playerPose).toEqual(playerBefore);
     expect(entity.getDebugSnapshot().currentAnimation).toBe('idle');
     expect(entity.triggerGesture('unit-test')).toBe(true);
@@ -366,6 +367,7 @@ describe('NPC foundation', () => {
     expect(
       Math.abs(entity.object3d.rotation.y - npcDefinitions[0]!.idleYaw!),
     ).toBeLessThanOrEqual(npcDefinitions[0]!.ambientYaw! + 0.001);
+    expect(entity.object3d.children[0]!.rotation.y).toBe(0);
     entity.dispose();
     expect(dispose).toHaveBeenCalledOnce();
     conversations.dispose();

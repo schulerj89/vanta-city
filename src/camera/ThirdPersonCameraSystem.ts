@@ -21,6 +21,11 @@ import type {
   CameraPreferences,
   CameraShoulderSide,
 } from './CameraPreferences';
+import {
+  calculateConversationFraming,
+  resolveConversationCameraProfile,
+} from './ConversationCameraProfile';
+import type { ConversationCameraProfile } from './ConversationCameraProfile';
 
 export interface ThirdPersonCameraConfig {
   readonly targetHeight: number;
@@ -100,6 +105,7 @@ export interface CameraControlRequest {
   readonly mode: Exclude<CameraMode, 'gameplay'>;
   readonly target?: WorldPoseSource;
   readonly anchor?: CameraAnchor;
+  readonly conversationProfile?: ConversationCameraProfile;
   readonly priority?: number;
 }
 
@@ -134,8 +140,11 @@ export interface ThirdPersonCameraDebugSnapshot {
   readonly shoulderSide: CameraShoulderSide;
   readonly shoulderOffset: number;
   readonly activeAnchorId: string | undefined;
+  readonly activeConversationProfileId: string | undefined;
   readonly transitionProgress: number;
   readonly obstructed: boolean;
+  readonly gameplayReturnPosition: WorldPosition | undefined;
+  readonly gameplayReturnTarget: WorldPosition | undefined;
 }
 
 interface InternalRequest extends CameraControlRequest {
@@ -144,12 +153,15 @@ interface InternalRequest extends CameraControlRequest {
 }
 
 interface GameplayViewState {
+  readonly owner: 'gameplay';
   readonly yaw: number;
   readonly pitch: number;
   readonly smoothedDistance: number;
   readonly actualDistance: number;
   readonly shoulderOffset: number;
   readonly fieldOfView: number;
+  readonly cameraOffset: Vector3;
+  readonly targetOffset: Vector3;
 }
 
 const UP = new Vector3(0, 1, 0);
@@ -181,6 +193,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
   private readonly requests = new Map<symbol, InternalRequest>();
   private activeRequest: InternalRequest | undefined;
   private savedGameplayView: GameplayViewState | undefined;
+  private restoringGameplayView: GameplayViewState | undefined;
 
   public constructor(
     private readonly camera: PerspectiveCamera,
@@ -270,6 +283,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
     }
     if (this.requests.size === 0 && !this.savedGameplayView) {
       this.savedGameplayView = this.captureGameplayView();
+      this.restoringGameplayView = undefined;
     }
     const token = Symbol(request.owner);
     const internal: InternalRequest = { ...request, priority, token };
@@ -291,11 +305,25 @@ export class ThirdPersonCameraSystem implements GameSystem {
     owner: string,
     target?: WorldPoseSource,
     anchor?: CameraAnchor,
+    conversationProfile: ConversationCameraProfile = resolveConversationCameraProfile(),
   ): CameraControlHandle {
-    return this.requestCamera({ owner, mode: 'conversation', target, anchor });
+    return this.requestCamera({
+      owner,
+      mode: 'conversation',
+      target,
+      anchor,
+      conversationProfile,
+    });
   }
 
   public getDebugSnapshot(): ThirdPersonCameraDebugSnapshot {
+    const playerFocus = this.getPlayerFocus();
+    const gameplayReturnPosition = this.savedGameplayView
+      ? playerFocus.clone().add(this.savedGameplayView.cameraOffset)
+      : undefined;
+    const gameplayReturnTarget = this.savedGameplayView
+      ? playerFocus.clone().add(this.savedGameplayView.targetOffset)
+      : undefined;
     return {
       active: this.initializedTarget,
       mode: this.mode,
@@ -313,8 +341,18 @@ export class ThirdPersonCameraSystem implements GameSystem {
       shoulderSide: this.preferences.current.shoulderSide,
       shoulderOffset: this.shoulderOffset,
       activeAnchorId: this.activeRequest?.anchor?.id,
+      activeConversationProfileId:
+        this.activeRequest?.mode === 'conversation'
+          ? (this.activeRequest.conversationProfile?.id ?? 'default')
+          : undefined,
       transitionProgress: this.transitionProgress,
       obstructed: this.obstructed,
+      gameplayReturnPosition: gameplayReturnPosition
+        ? vectorSnapshot(gameplayReturnPosition)
+        : undefined,
+      gameplayReturnTarget: gameplayReturnTarget
+        ? vectorSnapshot(gameplayReturnTarget)
+        : undefined,
     };
   }
 
@@ -357,6 +395,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
     this.requests.clear();
     this.activeRequest = undefined;
     this.savedGameplayView = undefined;
+    this.restoringGameplayView = undefined;
     this.input = undefined;
     this.state = undefined;
   }
@@ -370,6 +409,42 @@ export class ThirdPersonCameraSystem implements GameSystem {
     },
     acceptsInput: boolean,
   ): void {
+    const switchShoulderRequested =
+      acceptsInput && this.input?.wasPressed('cameraSwitchShoulder') === true;
+    const restoreInterrupted =
+      acceptsInput &&
+      (pointerDelta.x !== 0 ||
+        pointerDelta.y !== 0 ||
+        pointerDelta.wheel !== 0 ||
+        this.input?.isDown('cameraOrbitLeft') === true ||
+        this.input?.isDown('cameraOrbitRight') === true ||
+        this.input?.isDown('cameraRecenter') === true ||
+        switchShoulderRequested ||
+        Math.hypot(
+          this.player.movement.velocity.x,
+          this.player.movement.velocity.z,
+        ) > 0.05);
+    if (
+      this.restoringGameplayView &&
+      (this.transitionProgress < 1 || !restoreInterrupted)
+    ) {
+      const playerFocus = this.getPlayerFocus();
+      this.desiredPosition
+        .copy(playerFocus)
+        .add(this.restoringGameplayView.cameraOffset);
+      this.desiredTarget
+        .copy(playerFocus)
+        .add(this.restoringGameplayView.targetOffset);
+      this.applyPose(
+        this.desiredPosition,
+        this.desiredTarget,
+        this.restoringGameplayView.fieldOfView,
+        time.delta,
+        this.config.followSharpness,
+      );
+      return;
+    }
+    this.restoringGameplayView = undefined;
     const preferences = this.preferences.current;
     const orbiting =
       acceptsInput &&
@@ -403,10 +478,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
           pointerDelta.wheel * this.config.zoomSensitivity,
       });
     }
-    if (
-      acceptsInput &&
-      this.input?.wasPressed('cameraSwitchShoulder') === true
-    ) {
+    if (switchShoulderRequested) {
       this.switchShoulder();
     }
 
@@ -501,14 +573,20 @@ export class ThirdPersonCameraSystem implements GameSystem {
       this.desiredPosition.copy(asVector(anchor.position));
       this.desiredTarget.copy(asVector(anchor.lookAt));
     } else {
-      this.calculateConversationPose(request.target?.getWorldPose());
+      this.calculateConversationPose(
+        request.target?.getWorldPose(),
+        request.conversationProfile ?? resolveConversationCameraProfile(),
+      );
     }
     this.applyDirectedCollision(this.desiredTarget, this.desiredPosition);
     this.actualDistance = this.desiredPosition.distanceTo(this.desiredTarget);
     const desiredFov =
       anchor?.fieldOfView && isFiniteNumber(anchor.fieldOfView)
         ? MathUtils.clamp(anchor.fieldOfView, 15, 120)
-        : this.gameplayFieldOfView;
+        : request.mode === 'conversation' &&
+            request.conversationProfile?.fieldOfView
+          ? MathUtils.clamp(request.conversationProfile.fieldOfView, 15, 120)
+          : this.gameplayFieldOfView;
     this.applyPose(
       this.desiredPosition,
       this.desiredTarget,
@@ -518,31 +596,42 @@ export class ThirdPersonCameraSystem implements GameSystem {
     );
   }
 
-  private calculateConversationPose(targetPose: WorldPose | undefined): void {
+  private calculateConversationPose(
+    targetPose: WorldPose | undefined,
+    profile: ConversationCameraProfile,
+  ): void {
     const playerPose = this.player.getWorldPose();
     const playerPosition = validPose(playerPose)
       ? asVector(playerPose.position)
       : this.player.movement.position.clone();
     const playerFocus = playerPosition.clone().addScaledVector(UP, 1.35);
     if (validPose(targetPose)) {
-      const targetFocus = asVector(targetPose.position).addScaledVector(
-        UP,
-        1.35,
+      const framing = calculateConversationFraming(
+        playerPose,
+        targetPose,
+        profile,
+        this.preferences.current.shoulderSide,
       );
-      this.desiredTarget.lerpVectors(playerFocus, targetFocus, 0.5);
-      const participantAxis = targetFocus.clone().sub(playerFocus);
-      participantAxis.y = 0;
-      const separation = Math.max(0.5, participantAxis.length());
-      participantAxis.normalize();
-      const side = new Vector3(
-        -participantAxis.z,
-        0,
-        participantAxis.x,
-      ).multiplyScalar(shoulderSign(this.preferences.current.shoulderSide));
-      this.desiredPosition
-        .copy(this.desiredTarget)
-        .addScaledVector(side, MathUtils.clamp(3 + separation * 0.35, 3, 6))
-        .addScaledVector(UP, 1.1);
+      const alternate = calculateConversationFraming(
+        playerPose,
+        targetPose,
+        profile,
+        this.preferences.current.shoulderSide === 'right' ? 'left' : 'right',
+      );
+      const preferredClearance = this.collision.castCamera(
+        framing.lookAt,
+        framing.position,
+        this.config.collisionRadius,
+      ).fraction;
+      const alternateClearance = this.collision.castCamera(
+        alternate.lookAt,
+        alternate.position,
+        this.config.collisionRadius,
+      ).fraction;
+      const selected =
+        alternateClearance > preferredClearance + 0.05 ? alternate : framing;
+      this.desiredTarget.copy(selected.lookAt);
+      this.desiredPosition.copy(selected.position);
       return;
     }
 
@@ -710,13 +799,17 @@ export class ThirdPersonCameraSystem implements GameSystem {
   }
 
   private captureGameplayView(): GameplayViewState {
+    const playerFocus = this.getPlayerFocus();
     return {
+      owner: 'gameplay',
       yaw: this.yaw,
       pitch: this.pitch,
       smoothedDistance: this.smoothedDistance,
       actualDistance: this.actualDistance,
       shoulderOffset: this.shoulderOffset,
       fieldOfView: this.camera.fov,
+      cameraOffset: this.camera.position.clone().sub(playerFocus),
+      targetOffset: this.target.clone().sub(playerFocus),
     };
   }
 
@@ -727,7 +820,17 @@ export class ThirdPersonCameraSystem implements GameSystem {
     this.actualDistance = view.actualDistance;
     this.shoulderOffset = view.shoulderOffset;
     this.gameplayFieldOfView = view.fieldOfView;
+    this.restoringGameplayView = view;
     this.obstructionClearTime = 0;
+  }
+
+  private getPlayerFocus(): Vector3 {
+    const position = this.player.movement.position;
+    return new Vector3(
+      position.x,
+      position.y + this.config.targetHeight,
+      position.z,
+    );
   }
 }
 
