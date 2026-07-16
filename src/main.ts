@@ -383,6 +383,38 @@ function registerVerticalSliceDebug(
         read: () => read(({ currentAnimation }) => currentAnimation, 'loading'),
       }),
       debug.registerValue({
+        id: `npc.${definition.id}.source`,
+        label: 'Model source',
+        group,
+        read: () => read(({ modelSource }) => modelSource, 'pending'),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.gesture`,
+        label: 'Last gesture',
+        group,
+        read: () =>
+          read(
+            ({ gestureActive, lastGestureSource }) =>
+              lastGestureSource
+                ? `${gestureActive ? 'active' : 'complete'} · ${lastGestureSource}`
+                : 'none',
+            'none',
+          ),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.grounding`,
+        label: 'Visual ground / height',
+        group,
+        read: () =>
+          read(
+            ({ visualBounds }) =>
+              visualBounds
+                ? `${visualBounds.groundedMinY.toFixed(3)} / ${visualBounds.height.toFixed(3)}`
+                : 'pending',
+            'pending',
+          ),
+      }),
+      debug.registerValue({
         id: `npc.${definition.id}.interaction`,
         label: `${definition.displayName} · Interaction`,
         group: sections.interactions,

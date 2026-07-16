@@ -30,45 +30,39 @@ export const assetManifest = {
   },
   'character.npc-worker.model': {
     type: 'model',
-    url: '/assets/characters/ultimate-modular-men/worker.glb',
-    optional: true,
+    url: '/assets/characters/animated-men/mack-long-sleeves.glb',
     attribution: {
-      title: 'Worker — Ultimate Modular Men Pack',
+      title: 'Man in Long Sleeves — Animated Men Pack',
       creator: 'Quaternius',
-      sourceUrl:
-        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      sourceUrl: 'https://poly.pizza/m/DLptRuewTn',
       license: 'CC0 1.0 Universal',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     },
-    metadata: { intendedUse: 'npc-mack', embeddedAnimations: 24 },
+    metadata: { intendedUse: 'npc-mack', embeddedAnimations: 11 },
   },
   'character.npc-hoodie.model': {
     type: 'model',
-    url: '/assets/characters/ultimate-modular-men/hoodie-character.glb',
-    optional: true,
+    url: '/assets/characters/animated-men/nox-layered-shirt.glb',
     attribution: {
-      title: 'Hoodie Character — Ultimate Modular Men Pack',
+      title: 'Man (layered shirt) — Animated Men Pack',
       creator: 'Quaternius',
-      sourceUrl:
-        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      sourceUrl: 'https://poly.pizza/m/fjHyMd5Wxw',
       license: 'CC0 1.0 Universal',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     },
-    metadata: { intendedUse: 'npc-nox', embeddedAnimations: 24 },
+    metadata: { intendedUse: 'npc-nox', embeddedAnimations: 11 },
   },
   'character.npc-punk.model': {
     type: 'model',
-    url: '/assets/characters/ultimate-modular-men/punk.glb',
-    optional: true,
+    url: '/assets/characters/animated-men/raze-suit.glb',
     attribution: {
-      title: 'Punk — Ultimate Modular Men Pack',
+      title: 'Man in Suit — Animated Men Pack',
       creator: 'Quaternius',
-      sourceUrl:
-        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      sourceUrl: 'https://poly.pizza/m/mQnGoME1ez',
       license: 'CC0 1.0 Universal',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     },
-    metadata: { intendedUse: 'npc-raze', embeddedAnimations: 24 },
+    metadata: { intendedUse: 'npc-raze', embeddedAnimations: 11 },
   },
   'portrait.npc-mack': {
     type: 'texture',

@@ -2,6 +2,10 @@ import { ConversationCatalog } from '../src/conversations/ConversationDefinition
 import type { CharacterDefinition } from '../src/characters/CharacterDefinition';
 import type { NpcDefinition } from '../src/npcs/NpcDefinition';
 import { validateNpcDefinitions } from '../src/npcs/NpcDefinition';
+import { assetManifest } from '../src/assets/catalog';
+import type { AssetManifest } from '../src/assets/AssetCatalog';
+import { characterDefinitions } from '../src/characters/characters';
+import { npcCharacterDefinitions, npcDefinitions } from '../src/npcs/npcs';
 
 const characters = [
   { id: 'worker', displayName: 'Worker', fallback: 'placeholder' },
@@ -22,6 +26,7 @@ const npc: NpcDefinition = {
   characterId: 'worker',
   portraitAssetId: 'portrait.mack',
   defaultAnimation: 'idle',
+  gestureAnimation: 'gesture',
   spawnId: 'spawn.npc-mack',
   interactionLabel: 'Talk',
   conversationId: 'conversation.test',
@@ -54,5 +59,50 @@ describe('NPC definition validation', () => {
         conversations,
       ),
     ).toThrow('Unknown conversation');
+  });
+
+  it('maps the fixed NPC roster to exact non-playable Animated Men assets', () => {
+    expect(
+      npcDefinitions.map(({ id, characterId, gestureAnimation }) => ({
+        id,
+        characterId,
+        gestureAnimation,
+      })),
+    ).toEqual([
+      { id: 'mack', characterId: 'npc-worker', gestureAnimation: 'gesture' },
+      { id: 'nox', characterId: 'npc-hoodie', gestureAnimation: 'gesture' },
+      { id: 'raze', characterId: 'npc-punk', gestureAnimation: 'gesture' },
+    ]);
+    expect(npcCharacterDefinitions.map(({ id }) => id)).toEqual([
+      'npc-worker',
+      'npc-hoodie',
+      'npc-punk',
+    ]);
+    expect(characterDefinitions.map(({ id }) => id)).toEqual([
+      'casual',
+      'punk',
+    ]);
+    const manifest: AssetManifest = assetManifest;
+    for (const definition of npcCharacterDefinitions) {
+      expect(definition.animations).toMatchObject({
+        idle: { clipNames: ['HumanArmature|Man_Idle'], required: true },
+        gesture: {
+          clipNames: ['HumanArmature|Man_Clapping'],
+          required: true,
+        },
+      });
+      const asset = manifest[definition.modelAssetId!];
+      expect(asset).toBeDefined();
+      if (!asset) throw new Error('NPC model asset is not registered');
+      expect(asset.url).toContain('/assets/characters/animated-men/');
+      expect(asset.url).not.toContain('ultimate-modular-men');
+      expect(asset.attribution).toMatchObject({
+        creator: 'Quaternius',
+        license: 'CC0 1.0 Universal',
+      });
+      expect(asset.attribution?.sourceUrl).toMatch(
+        /^https:\/\/poly\.pizza\/m\//,
+      );
+    }
   });
 });

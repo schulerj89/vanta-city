@@ -33,6 +33,7 @@ function stateHarness(): {
 
 function characterLoader(
   source: LoadedCharacter['source'] = 'placeholder',
+  animationClips: ReadonlyMap<string, AnimationClip> = new Map(),
 ): NpcCharacterLoader & { readonly disposals: ReturnType<typeof vi.fn>[] } {
   const disposals: ReturnType<typeof vi.fn>[] = [];
   return {
@@ -45,14 +46,23 @@ function characterLoader(
       return {
         definition,
         root: new Group(),
-        animationClips: new Map(),
-        discoveredClipNames: [],
+        animationClips,
+        discoveredClipNames: [...animationClips.values()].map(
+          ({ name }) => name,
+        ),
         source,
         warnings: [],
         dispose,
       };
     },
   };
+}
+
+function npcAnimationClips(): ReadonlyMap<string, AnimationClip> {
+  return new Map([
+    ['idle', new AnimationClip('HumanArmature|Man_Idle', 1, [])],
+    ['gesture', new AnimationClip('HumanArmature|Man_Clapping', 0.6, [])],
+  ]);
 }
 
 function interactionRegistry(): NpcInteractionRegistry & {
@@ -143,7 +153,7 @@ describe('NPC foundation', () => {
     const system = new NpcSystem(
       npcDefinitions,
       npcCharacterDefinitions,
-      characterLoader(),
+      characterLoader('asset', npcAnimationClips()),
       objects,
       interactions,
       conversations,
@@ -183,6 +193,9 @@ describe('NPC foundation', () => {
     expect(system.getDebugSnapshot('mack')).toMatchObject({
       interactionState: 'conversation',
       conversationState: 'active',
+      currentAnimation: 'gesture',
+      gestureActive: true,
+      lastGestureSource: 'conversation:conversation.mack.introduction',
     });
     expect(system.getDebugSnapshot('nox')).toMatchObject({
       interactionState: 'blocked',
@@ -210,7 +223,7 @@ describe('NPC foundation', () => {
     const system = new NpcSystem(
       npcDefinitions,
       npcCharacterDefinitions,
-      characterLoader(),
+      characterLoader('asset', npcAnimationClips()),
       objects,
       interactions,
       conversations,
@@ -240,6 +253,10 @@ describe('NPC foundation', () => {
     expect(system.getDebugSnapshot('nox')).toMatchObject({
       interactionState: 'available',
       conversationState: 'idle',
+      currentAnimation: 'gesture',
+      gestureActive: true,
+      lastGestureSource: 'interaction:nox',
+      lastGestureAccepted: true,
     });
     system.dispose();
     conversations.dispose();
@@ -260,6 +277,7 @@ describe('NPC foundation', () => {
     );
     const character = npcCharacterDefinitions[0]!;
     const idle = new AnimationClip('Idle', 1, []);
+    const gesture = new AnimationClip('Gesture', 0.6, []);
     const dispose = vi.fn();
     const playerPose = {
       position: { x: -7, y: 0.2, z: 4 },
@@ -275,8 +293,11 @@ describe('NPC foundation', () => {
         instantiate: vi.fn(async (): Promise<LoadedCharacter> => ({
           definition: character,
           root: new Group(),
-          animationClips: new Map([['idle', idle]]),
-          discoveredClipNames: ['Idle'],
+          animationClips: new Map([
+            ['idle', idle],
+            ['gesture', gesture],
+          ]),
+          discoveredClipNames: ['Idle', 'Gesture'],
           source: 'asset',
           warnings: [],
           dispose,
@@ -293,9 +314,23 @@ describe('NPC foundation', () => {
     expect(facingPlayer).not.toBeCloseTo(npcDefinitions[0]!.idleYaw!);
     expect(playerPose).toEqual(playerBefore);
     expect(entity.getDebugSnapshot().currentAnimation).toBe('idle');
+    expect(entity.triggerGesture('unit-test')).toBe(true);
+    entity.update({ delta: 0.2, elapsed: 0.45, frame: 2 });
+    expect(entity.getDebugSnapshot()).toMatchObject({
+      currentAnimation: 'gesture',
+      gestureActive: true,
+      lastGestureSource: 'unit-test',
+      gestureSequence: 1,
+    });
+    entity.update({ delta: 0.5, elapsed: 0.95, frame: 3 });
+    expect(entity.getDebugSnapshot()).toMatchObject({
+      currentAnimation: 'idle',
+      gestureActive: false,
+      gestureSequence: 1,
+    });
 
     conversations.end();
-    for (let frame = 2; frame < 30; frame += 1) {
+    for (let frame = 4; frame < 30; frame += 1) {
       entity.update({ delta: 0.1, elapsed: frame * 0.1, frame });
     }
     expect(

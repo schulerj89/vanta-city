@@ -8,6 +8,7 @@ const mack: NpcDefinition = {
   characterId: 'npc-worker',
   portraitAssetId: 'portrait.mack',
   defaultAnimation: 'idle',
+  gestureAnimation: 'gesture',
   spawnId: 'spawn.mack',
   interactionLabel: 'Talk',
   conversationId: 'conversation.mack',

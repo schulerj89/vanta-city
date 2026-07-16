@@ -7,6 +7,7 @@ export interface NpcDefinition {
   readonly characterId: string;
   readonly portraitAssetId: string;
   readonly defaultAnimation: string;
+  readonly gestureAnimation: string;
   readonly spawnId: string;
   readonly interactionLabel: string;
   readonly conversationId: string;
@@ -49,6 +50,9 @@ export function validateNpcDefinitions(
     }
     if (definition.defaultAnimation.trim().length === 0) {
       throw new Error(`NPC "${definition.id}" needs a default animation`);
+    }
+    if (definition.gestureAnimation.trim().length === 0) {
+      throw new Error(`NPC "${definition.id}" needs a gesture animation`);
     }
     if (definition.interactionLabel.trim().length === 0) {
       throw new Error(`NPC "${definition.id}" needs an interaction label`);

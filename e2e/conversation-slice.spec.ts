@@ -73,6 +73,19 @@ test('character picker through repeatable Mack conversation', async ({
   expect(
     entered.npcs.snapshots.some(({ definitionId }) => definitionId === 'mack'),
   ).toBe(true);
+  expect(
+    entered.npcs.snapshots.map(
+      ({ definitionId, modelSource, currentAnimation }) => ({
+        definitionId,
+        modelSource,
+        currentAnimation,
+      }),
+    ),
+  ).toEqual([
+    { definitionId: 'mack', modelSource: 'asset', currentAnimation: 'idle' },
+    { definitionId: 'nox', modelSource: 'asset', currentAnimation: 'idle' },
+    { definitionId: 'raze', modelSource: 'asset', currentAnimation: 'idle' },
+  ]);
 
   await command(page, 'player.teleport', 'spawn.npc-mechanic');
   await expect
@@ -93,6 +106,13 @@ test('character picker through repeatable Mack conversation', async ({
     conversationId: 'conversation.mack.introduction',
   });
   expect(first.camera.owner).toBe('dialogue:conversation.mack.introduction');
+  expect(
+    first.npcs.snapshots.find(({ definitionId }) => definitionId === 'mack'),
+  ).toMatchObject({
+    lastGestureSource: 'conversation:conversation.mack.introduction',
+    lastGestureAccepted: true,
+    gestureSequence: 1,
+  });
   expect(first.dialogue.ui).toMatchObject({
     visible: true,
     speakerName: 'Mack',

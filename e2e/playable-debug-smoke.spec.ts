@@ -691,8 +691,43 @@ test.describe('playable debug district', () => {
       initial.npcs.snapshots.map(({ definitionId }) => definitionId),
     ).toEqual(['mack', 'nox', 'raze']);
     expect(
-      initial.npcs.snapshots.every(({ modelFallback }) => modelFallback),
-    ).toBe(true);
+      initial.npcs.snapshots.map(
+        ({ definitionId, characterId, modelSource, currentAnimation }) => ({
+          definitionId,
+          characterId,
+          modelSource,
+          currentAnimation,
+        }),
+      ),
+    ).toEqual([
+      {
+        definitionId: 'mack',
+        characterId: 'npc-worker',
+        modelSource: 'asset',
+        currentAnimation: 'idle',
+      },
+      {
+        definitionId: 'nox',
+        characterId: 'npc-hoodie',
+        modelSource: 'asset',
+        currentAnimation: 'idle',
+      },
+      {
+        definitionId: 'raze',
+        characterId: 'npc-punk',
+        modelSource: 'asset',
+        currentAnimation: 'idle',
+      },
+    ]);
+    for (const npc of initial.npcs.snapshots) {
+      expect(npc.modelFallback).toBe(false);
+      expect(npc.visualBounds).toBeDefined();
+      expect(npc.visualBounds!.height).toBeGreaterThanOrEqual(1.7);
+      expect(npc.visualBounds!.height).toBeLessThanOrEqual(1.85);
+      expect(Math.abs(npc.visualBounds!.groundedMinY)).toBeLessThanOrEqual(
+        0.005,
+      );
+    }
 
     await executeCommand(page, 'player.teleport', 'spawn.npc-mechanic');
     await expect
@@ -714,6 +749,9 @@ test.describe('playable debug district', () => {
     ).toMatchObject({
       interactionState: 'conversation',
       conversationState: 'active',
+      lastGestureSource: 'conversation:conversation.mack.introduction',
+      lastGestureAccepted: true,
+      gestureSequence: 1,
     });
     expect(talking.interaction.activeTargetId).toBeUndefined();
 
@@ -722,6 +760,38 @@ test.describe('playable debug district', () => {
       .poll(async () => (await snapshot(page)).gameState)
       .toBe('playing');
     expect((await snapshot(page)).conversation.npcId).toBeUndefined();
+
+    for (const [spawnId, npcId] of [
+      ['spawn.npc-alley', 'nox'],
+      ['spawn.npc-deck', 'raze'],
+    ] as const) {
+      await executeCommand(page, 'player.teleport', spawnId);
+      await expect
+        .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+        .toBe(`interaction.npc.${npcId}`);
+      await page.keyboard.press('e');
+      await expect
+        .poll(
+          async () =>
+            (await snapshot(page)).npcs.snapshots.find(
+              ({ definitionId }) => definitionId === npcId,
+            )?.gestureSequence,
+        )
+        .toBe(1);
+      const placeholderInteraction = await snapshot(page);
+      expect(placeholderInteraction.gameState).toBe('playing');
+      expect(placeholderInteraction.camera.mode).toBe('gameplay');
+      expect(placeholderInteraction.conversation.npcId).toBeUndefined();
+      expect(
+        placeholderInteraction.npcs.snapshots.find(
+          ({ definitionId }) => definitionId === npcId,
+        ),
+      ).toMatchObject({
+        currentAnimation: 'gesture',
+        lastGestureSource: `interaction:${npcId}`,
+        lastGestureAccepted: true,
+      });
+    }
   });
 
   test('runs the Mack conversation deterministically through the dialogue UI', async ({

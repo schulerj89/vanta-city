@@ -155,6 +155,33 @@ describe('character asset validation', () => {
     expect(report.summary.failed).toBe(1);
   });
 
+  it('applies root-motion validation to NPC gestures', async () => {
+    const movingGesture = new AnimationClip('Gesture', 1, [
+      new VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 0.2, 0, 0]),
+    ]);
+    const definition: CharacterDefinition = {
+      ...hero,
+      animations: {
+        gesture: { clipNames: ['Gesture'], required: true },
+      },
+    };
+
+    const report = await validateCharacterCatalog(
+      [definition],
+      modelManifest,
+      mockInspector(modelInspection([movingGesture])),
+      mergeCharacterValidationConfig({
+        requireSkeletonForMappedAnimations: false,
+      }),
+    );
+
+    expect(report.characters[0]?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'root-motion-exceeded' }),
+      ]),
+    );
+  });
+
   it('supports warning, failure, and off rule overrides', async () => {
     const movingIdle = new AnimationClip('Idle', 1, [
       new VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 0.2, 0, 0]),

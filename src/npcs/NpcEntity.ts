@@ -1,4 +1,4 @@
-import { AnimationMixer, Group, Vector3 } from 'three';
+import { AnimationMixer, Group, LoopOnce, LoopRepeat, Vector3 } from 'three';
 import type { AnimationAction } from 'three';
 import type { CharacterDefinition } from '../characters/CharacterDefinition';
 import type { LoadedCharacter } from '../characters/CharacterLoader';
@@ -27,8 +27,23 @@ export type NpcConversationState = 'idle' | 'other-active' | 'active';
 export interface NpcDebugSnapshot {
   readonly npcId: string;
   readonly definitionId: string;
+  readonly characterId: string;
   readonly spawnId: string;
   readonly currentAnimation: string;
+  readonly modelSource: LoadedCharacter['source'] | 'pending';
+  readonly visualBounds:
+    | {
+        readonly minY: number;
+        readonly maxY: number;
+        readonly height: number;
+        readonly groundedMinY: number;
+      }
+    | undefined;
+  readonly appliedVisualOffset: number | undefined;
+  readonly gestureActive: boolean;
+  readonly lastGestureSource: string | undefined;
+  readonly lastGestureAccepted: boolean;
+  readonly gestureSequence: number;
   readonly interactionState: NpcInteractionState;
   readonly conversationState: NpcConversationState;
   readonly modelFallback: boolean;
@@ -67,6 +82,13 @@ export class NpcEntity implements GameObject {
   private mixer: AnimationMixer | undefined;
   private action: AnimationAction | undefined;
   private currentAnimation = 'loading';
+  private visualBounds: NpcDebugSnapshot['visualBounds'];
+  private appliedVisualOffset: number | undefined;
+  private gestureActive = false;
+  private gestureRemaining = 0;
+  private lastGestureSource: string | undefined;
+  private lastGestureAccepted = false;
+  private gestureSequence = 0;
   private elapsed = 0;
   private readonly modelOffset = new Vector3();
 
@@ -98,17 +120,19 @@ export class NpcEntity implements GameObject {
       );
       this.modelOffset.copy(loaded.root.position);
       this.visualRoot.position.y = alignment.appliedVisualOffset;
+      this.appliedVisualOffset = alignment.appliedVisualOffset;
+      this.visualBounds = {
+        minY: bounds.min.y,
+        maxY: bounds.max.y,
+        height: bounds.max.y - bounds.min.y,
+        groundedMinY: bounds.min.y + alignment.appliedVisualOffset,
+      };
       this.visualRoot.add(loaded.root);
 
-      const clip = loaded.animationClips.get(this.definition.defaultAnimation);
-      if (clip) {
+      if (loaded.animationClips.size > 0) {
         this.mixer = new AnimationMixer(loaded.root);
-        this.action = this.mixer.clipAction(clip);
-        this.action.play();
-        this.currentAnimation = this.definition.defaultAnimation;
-      } else {
-        this.currentAnimation = 'static (idle unavailable)';
       }
+      this.playIdle();
     } catch (error) {
       this.dispose();
       throw error;
@@ -134,8 +158,41 @@ export class NpcEntity implements GameObject {
       targetYaw,
       time.delta,
     );
-    this.mixer?.update(Math.max(0, time.delta));
+    const delta = Math.max(0, time.delta);
+    this.mixer?.update(delta);
     if (this.loaded) this.loaded.root.position.copy(this.modelOffset);
+    if (this.gestureActive) {
+      this.gestureRemaining = Math.max(0, this.gestureRemaining - delta);
+      if (this.gestureRemaining === 0) {
+        this.gestureActive = false;
+        this.playIdle();
+      }
+    }
+  }
+
+  public triggerGesture(source = 'interaction'): boolean {
+    const clip = this.loaded?.animationClips.get(
+      this.definition.gestureAnimation,
+    );
+    const accepted = Boolean(this.mixer && clip);
+    this.lastGestureSource = source;
+    this.lastGestureAccepted = accepted;
+    if (!accepted || !this.mixer || !clip) return false;
+
+    this.action?.fadeOut(0.12);
+    this.action = this.mixer.clipAction(clip);
+    this.action
+      .reset()
+      .setLoop(LoopOnce, 1)
+      .setEffectiveTimeScale(1)
+      .fadeIn(0.12)
+      .play();
+    this.action.clampWhenFinished = true;
+    this.gestureActive = true;
+    this.gestureRemaining = Math.max(0.05, clip.duration);
+    this.gestureSequence += 1;
+    this.currentAnimation = this.definition.gestureAnimation;
+    return true;
   }
 
   public getWorldPosition(): WorldPosition {
@@ -168,8 +225,16 @@ export class NpcEntity implements GameObject {
     return {
       npcId: this.id,
       definitionId: this.definition.id,
+      characterId: this.character.id,
       spawnId: this.spawn.id,
       currentAnimation: this.currentAnimation,
+      modelSource: this.loaded?.source ?? 'pending',
+      visualBounds: this.visualBounds,
+      appliedVisualOffset: this.appliedVisualOffset,
+      gestureActive: this.gestureActive,
+      lastGestureSource: this.lastGestureSource,
+      lastGestureAccepted: this.lastGestureAccepted,
+      gestureSequence: this.gestureSequence,
       interactionState:
         conversationState === 'active'
           ? 'conversation'
@@ -189,10 +254,33 @@ export class NpcEntity implements GameObject {
     }
     this.action = undefined;
     this.mixer = undefined;
+    this.gestureActive = false;
+    this.gestureRemaining = 0;
     this.loaded?.dispose();
     this.loaded = undefined;
     this.visualRoot.clear();
     this.object3d.clear();
     this.currentAnimation = 'disposed';
+  }
+
+  private playIdle(): void {
+    const clip = this.loaded?.animationClips.get(
+      this.definition.defaultAnimation,
+    );
+    if (!clip || !this.mixer) {
+      this.action = undefined;
+      this.currentAnimation = 'static (idle unavailable)';
+      return;
+    }
+    this.action?.fadeOut(0.12);
+    this.action = this.mixer.clipAction(clip);
+    this.action
+      .reset()
+      .setLoop(LoopRepeat, Infinity)
+      .setEffectiveTimeScale(1)
+      .fadeIn(0.12)
+      .play();
+    this.action.clampWhenFinished = false;
+    this.currentAnimation = this.definition.defaultAnimation;
   }
 }

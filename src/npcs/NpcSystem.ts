@@ -50,6 +50,11 @@ export class NpcSystem implements GameSystem {
 
   public async init(): Promise<void> {
     this.unsubscribeWorld.push(
+      this.conversations.events.on('conversation:started', ({ session }) => {
+        this.spawned
+          .get(session.npcId)
+          ?.entity.triggerGesture(`conversation:${session.definition.id}`);
+      }),
       this.worldEvents.on('level:unloaded', () => this.clear()),
       this.worldEvents.on('level:loaded', ({ level }) => {
         void this.spawnLevel(level).catch((error: unknown) => {
@@ -137,7 +142,13 @@ export class NpcSystem implements GameSystem {
           requiredStates: ['playing'],
           isAvailable: () => this.conversations.active === undefined,
           interact: () => {
-            this.conversations.start(definition.conversationId, definition.id);
+            const conversationStarted = this.conversations.start(
+              definition.conversationId,
+              definition.id,
+            );
+            if (!conversationStarted) {
+              entity.triggerGesture(`interaction:${definition.id}`);
+            }
           },
         });
         this.spawned.set(definition.id, { entity, unregisterInteraction });
