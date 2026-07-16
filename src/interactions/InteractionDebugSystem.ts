@@ -63,12 +63,22 @@ export class InteractionDebugSystem implements GameSystem, DebugVisualHelper {
       this.root.add(this.createRange(target.location, target.range, color));
     }
     if (snapshot.pose) {
+      for (const target of snapshot.targets) {
+        if (target.lineOfSight !== 'blocked') continue;
+        this.root.add(
+          this.createLine(snapshot.pose.position, target.location, 0xff496c),
+        );
+      }
       for (const candidate of snapshot.candidates) {
         this.root.add(
           this.createLine(
             snapshot.pose.position,
             candidate.location,
-            candidate.target.id === snapshot.selectedId ? 0x42f5e6 : 0xffb547,
+            candidate.target.id === snapshot.selectedId
+              ? 0x42f5e6
+              : candidate.target.id === snapshot.challengerId
+                ? 0xffcf4a
+                : 0x6196ff,
           ),
         );
       }

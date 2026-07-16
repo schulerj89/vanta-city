@@ -143,6 +143,7 @@ export class NpcSystem implements GameSystem {
           prompt: definition.interactionLabel,
           location: () => entity.getWorldPosition(),
           range: definition.interactionRadius,
+          collisionIgnoreIds: [`c.npc-${definition.id}`],
           requiredStates: ['playing'],
           isAvailable: () => this.conversations.active === undefined,
           interact: () => {

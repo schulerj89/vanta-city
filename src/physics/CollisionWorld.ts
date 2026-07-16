@@ -69,6 +69,15 @@ export interface CollisionDebugSnapshot {
   readonly lastGroundColliderId: string;
 }
 
+export interface SegmentCastOptions {
+  readonly radius?: number;
+  readonly ignoreColliderIds?: readonly string[];
+}
+
+export interface SegmentCastResult extends CameraCastResult {
+  readonly colliderId: string | undefined;
+}
+
 export interface CollisionWorld {
   moveCharacter(
     position: Readonly<Vector3>,
@@ -81,12 +90,16 @@ export interface CollisionWorld {
     to: Readonly<Vector3>,
     radius: number,
   ): CameraCastResult;
-  isVisible(from: Readonly<Vector3>, to: Readonly<Vector3>): boolean;
+  /** Casts against authored world geometry and returns the nearest obstruction. */
+  castSegment(
+    from: Readonly<Vector3>,
+    to: Readonly<Vector3>,
+    options?: SegmentCastOptions,
+  ): SegmentCastResult;
 }
 
 const UP = new Vector3(0, 1, 0);
 const EPSILON = 1e-5;
-const VISIBILITY_ENDPOINT_TOLERANCE = 1e-3;
 
 /**
  * Small deterministic collision world for authored static city geometry.
@@ -273,9 +286,9 @@ export class StaticCollisionWorld implements CollisionWorld {
     to: Readonly<Vector3>,
     radius: number,
   ): CameraCastResult {
-    const hit = this.castBoxes(from, to, radius);
-    let fraction = hit?.fraction ?? 1;
-    let colliderId = hit?.colliderId;
+    const segment = this.castSegment(from, to, { radius });
+    let fraction = segment.fraction;
+    let colliderId = segment.colliderId;
     const directionY = to.y - from.y;
     if (to.y < this.floorHeight + radius && directionY < -EPSILON) {
       const floorFraction = (this.floorHeight + radius - from.y) / directionY;
@@ -291,23 +304,6 @@ export class StaticCollisionWorld implements CollisionWorld {
       obstructed: fraction < 1,
       ...(colliderId === undefined ? {} : { colliderId }),
     };
-  }
-
-  public isVisible(from: Readonly<Vector3>, to: Readonly<Vector3>): boolean {
-    for (const box of this.boxes.values()) {
-      if (box.tags.includes('npc-occupancy')) continue;
-      const fraction = segmentOrientedBoxFraction(from, to, box, 0);
-      // Ignore the supporting surface at the ray origin and shapes touched
-      // only by the target endpoint. Everything between them occludes.
-      if (
-        fraction !== undefined &&
-        fraction > EPSILON &&
-        fraction < 1 - VISIBILITY_ENDPOINT_TOLERANCE
-      ) {
-        return false;
-      }
-    }
-    return true;
   }
 
   private addOrientedBox(collider: {
@@ -354,6 +350,23 @@ export class StaticCollisionWorld implements CollisionWorld {
       }
     }
     return nearest;
+  }
+
+  public castSegment(
+    from: Readonly<Vector3>,
+    to: Readonly<Vector3>,
+    options: SegmentCastOptions = {},
+  ): SegmentCastResult {
+    const ignored = new Set(options.ignoreColliderIds);
+    const hit = this.castBoxes(from, to, options.radius ?? 0, ({ id }) =>
+      ignored.has(id),
+    );
+    const fraction = hit?.fraction ?? 1;
+    return {
+      fraction,
+      obstructed: fraction < 1,
+      colliderId: hit?.colliderId,
+    };
   }
 
   private resolveHorizontal(

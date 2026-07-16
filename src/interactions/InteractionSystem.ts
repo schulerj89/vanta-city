@@ -3,6 +3,8 @@ import type { EventBus as RuntimeEventBus } from '../core/events';
 import type { GameStateMachine, StateEvents } from '../core/gameState';
 import type { GameSystem } from '../core/lifecycle';
 import type { InputReader } from '../input/InputSystem';
+import { Vector3 } from 'three';
+import type { CollisionWorld } from '../physics/CollisionWorld';
 import type {
   Interactable,
   InteractionCandidate,
@@ -10,7 +12,6 @@ import type {
   InteractionDebugSnapshot,
   InteractionEvents,
   InteractionTargetSummary,
-  InteractionVisibilityQuery,
 } from './Interactable';
 import type {
   WorldPose,
@@ -20,6 +21,8 @@ import type {
 
 const DEFAULT_RANGE = 2.5;
 const MIN_FACING = -0.25;
+const DEFAULT_LINE_OF_SIGHT_HEIGHT = 1.2;
+export const INTERACTION_SWITCH_SCORE_MARGIN = 0.75;
 
 interface InteractionRuntimeContext {
   readonly events: RuntimeEventBus<StateEvents>;
@@ -77,13 +80,17 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
   private running: RunningInteraction | undefined;
   private candidates: readonly InteractionCandidate[] = [];
   private pose: WorldPose | undefined;
+  private debugTargets: InteractionDebugSnapshot['targets'] = [];
+  private challengerId: string | undefined;
+  private selectionDecision: InteractionDebugSnapshot['selectionDecision'] =
+    'none';
   private unsubscribeState: (() => void) | undefined;
 
   public constructor(
     private readonly input: InputReader,
     private readonly state: GameStateMachine,
     private readonly player: WorldPoseSource,
-    private readonly visibility?: InteractionVisibilityQuery,
+    private readonly collision: Pick<CollisionWorld, 'castSegment'>,
   ) {}
 
   public init(context: InteractionRuntimeContext): void {
@@ -108,11 +115,14 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
   public unregister(id: string): boolean {
     const registration = this.registrations.get(id);
     if (!registration) return false;
+    this.registrations.delete(id);
     if (this.running?.registration === registration) {
       this.cancelRunning('target-removed');
+    } else {
+      if (this.selected === registration) this.setSelected(undefined);
+      this.refreshSelection();
     }
-    if (this.selected === registration) this.setSelected(undefined);
-    return this.registrations.delete(id);
+    return true;
   }
 
   public setEnabled(id: string, enabled: boolean): void {
@@ -147,14 +157,12 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
   public getDebugSnapshot(): InteractionDebugSnapshot {
     return {
       pose: this.pose,
-      targets: [...this.registrations.values()].map((registration) => ({
-        id: registration.definition.id,
-        location: locationOf(registration.definition),
-        range: registration.definition.range ?? DEFAULT_RANGE,
-        available: this.isAvailable(registration),
-      })),
+      targets: this.debugTargets,
       candidates: this.candidates,
       selectedId: this.selected?.definition.id,
+      challengerId: this.challengerId,
+      selectionDecision: this.selectionDecision,
+      switchScoreMargin: INTERACTION_SWITCH_SCORE_MARGIN,
     };
   }
 
@@ -165,34 +173,119 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
     this.setSelected(undefined);
     this.registrations.clear();
     this.candidates = [];
+    this.debugTargets = [];
     this.events.clear();
   }
 
   private refreshSelection(): void {
     this.pose = this.player.getWorldPose();
-    this.candidates = this.pose ? this.rankCandidates(this.pose) : [];
+    const ranked = this.evaluateCandidates(this.pose);
+    this.candidates = ranked.candidates;
+    this.debugTargets = ranked.targets;
     if (this.running) {
       this.setSelected(undefined);
+      this.challengerId = undefined;
+      this.selectionDecision = 'none';
       return;
     }
     const best = this.candidates[0];
-    this.setSelected(best ? this.registrations.get(best.target.id) : undefined);
+    const current = this.selected
+      ? this.candidates.find(
+          ({ target }) => target.id === this.selected?.definition.id,
+        )
+      : undefined;
+    this.challengerId =
+      best && best.target.id !== current?.target.id
+        ? best.target.id
+        : undefined;
+    if (!best) {
+      this.selectionDecision = 'none';
+      this.setSelected(undefined);
+      return;
+    }
+    if (
+      current &&
+      best.target.id !== current.target.id &&
+      best.score < current.score + INTERACTION_SWITCH_SCORE_MARGIN
+    ) {
+      this.selectionDecision = 'held-current';
+      return;
+    }
+    this.selectionDecision = current
+      ? best.target.id === current.target.id
+        ? 'selected-best'
+        : 'switched'
+      : 'selected-best';
+    this.setSelected(this.registrations.get(best.target.id));
   }
 
-  private rankCandidates(pose: WorldPose): InteractionCandidate[] {
+  private evaluateCandidates(pose: WorldPose | undefined): {
+    candidates: InteractionCandidate[];
+    targets: InteractionDebugSnapshot['targets'];
+  } {
     const candidates: InteractionCandidate[] = [];
+    const targets: InteractionDebugSnapshot['targets'][number][] = [];
     for (const registration of this.registrations.values()) {
-      if (!this.isAvailable(registration)) continue;
       const target = registration.definition;
       const location = locationOf(target);
       const range = target.range ?? DEFAULT_RANGE;
+      const base = { id: target.id, location, range };
+      const unavailable = this.unavailableReason(registration);
+      if (unavailable) {
+        targets.push({
+          ...base,
+          available: false,
+          distance: undefined,
+          facing: undefined,
+          lineOfSight: 'not-tested',
+          blockerId: undefined,
+          score: undefined,
+          rejectionReason: unavailable,
+        });
+        continue;
+      }
+      if (!pose) {
+        targets.push({
+          ...base,
+          available: true,
+          distance: undefined,
+          facing: undefined,
+          lineOfSight: 'not-tested',
+          blockerId: undefined,
+          score: undefined,
+          rejectionReason: 'no-player',
+        });
+        continue;
+      }
       const distance = distanceBetween(pose.position, location);
-      if (distance > range) continue;
       const facing = normalizedDotToTarget(pose, location);
-      if (facing < MIN_FACING) continue;
-      const visible =
-        this.visibility?.isVisible(pose.position, location, target) ?? true;
-      if (!visible) continue;
+      if (distance > range || facing < MIN_FACING) {
+        targets.push({
+          ...base,
+          available: true,
+          distance,
+          facing,
+          lineOfSight: 'not-tested',
+          blockerId: undefined,
+          score: undefined,
+          rejectionReason: distance > range ? 'out-of-range' : 'behind',
+        });
+        continue;
+      }
+      const los = this.castLineOfSight(pose, target, location);
+      if (los.obstructed) {
+        targets.push({
+          ...base,
+          available: true,
+          distance,
+          facing,
+          lineOfSight: 'blocked',
+          blockerId: los.colliderId,
+          score: undefined,
+          rejectionReason: 'occluded',
+        });
+        continue;
+      }
 
       // Priority dominates. Within a priority, closer and more centered targets
       // rank higher. The id tie-break makes overlapping results deterministic.
@@ -205,27 +298,61 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
         location,
         distance,
         facing,
-        visible,
+        visible: true,
+        blockerId: undefined,
         score,
       });
+      targets.push({
+        ...base,
+        available: true,
+        distance,
+        facing,
+        lineOfSight: 'clear',
+        blockerId: undefined,
+        score,
+        rejectionReason: undefined,
+      });
     }
-    return candidates.sort(
+    candidates.sort(
       (a, b) => b.score - a.score || a.target.id.localeCompare(b.target.id),
+    );
+    return { candidates, targets };
+  }
+
+  private castLineOfSight(
+    pose: WorldPose,
+    target: Interactable,
+    location = locationOf(target),
+  ) {
+    const height = target.lineOfSightHeight ?? DEFAULT_LINE_OF_SIGHT_HEIGHT;
+    return this.collision.castSegment(
+      new Vector3(pose.position.x, pose.position.y + height, pose.position.z),
+      new Vector3(location.x, location.y + height, location.z),
+      { ignoreColliderIds: target.collisionIgnoreIds },
     );
   }
 
-  private isAvailable(registration: RegisteredInteractable): boolean {
+  private unavailableReason(
+    registration: RegisteredInteractable,
+  ): InteractionDebugSnapshot['targets'][number]['rejectionReason'] {
     const target = registration.definition;
-    if (!registration.enabled) return false;
-    if (registration.completed && target.repeatable === false) return false;
+    if (!registration.enabled) return 'disabled';
+    if (registration.completed && target.repeatable === false)
+      return 'completed';
     const requiredStates = target.requiredStates ?? ['playing'];
-    if (!requiredStates.includes(this.state.current)) return false;
-    return (
+    if (!requiredStates.includes(this.state.current)) return 'game-state';
+    if (!(
       target.isAvailable?.({
         gameState: this.state.current,
         targetId: target.id,
       }) ?? true
-    );
+    ))
+      return 'unavailable';
+    return undefined;
+  }
+
+  private isAvailable(registration: RegisteredInteractable): boolean {
+    return this.unavailableReason(registration) === undefined;
   }
 
   private setSelected(registration: RegisteredInteractable | undefined): void {
@@ -318,6 +445,10 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
         (target.range ?? DEFAULT_RANGE)
     ) {
       this.cancelRunning('out-of-range');
+      return;
+    }
+    if (this.castLineOfSight(pose, target).obstructed) {
+      this.cancelRunning('occluded');
     }
   }
 

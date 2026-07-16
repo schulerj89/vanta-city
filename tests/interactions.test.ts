@@ -5,8 +5,8 @@ import type { InputReader } from '../src/input/InputSystem';
 import type { Interactable } from '../src/interactions/Interactable';
 import { InteractionSystem } from '../src/interactions/InteractionSystem';
 import { InteractionPromptSystem } from '../src/ui/InteractionPromptSystem';
-import type { WorldPose, WorldPoseSource } from '../src/world/Spatial';
 import { StaticCollisionWorld } from '../src/physics/CollisionWorld';
+import type { WorldPose, WorldPoseSource } from '../src/world/Spatial';
 
 class TestInput implements InputReader {
   public pressed = false;
@@ -27,6 +27,7 @@ class TestInput implements InputReader {
 }
 
 interface Harness {
+  readonly collision: StaticCollisionWorld;
   readonly events: EventBus<StateEvents>;
   readonly input: TestInput;
   readonly pose: { current: WorldPose | undefined };
@@ -48,9 +49,10 @@ function createHarness(visibility?: StaticCollisionWorld): Harness {
   const player: WorldPoseSource = {
     getWorldPose: () => pose.current,
   };
-  const system = new InteractionSystem(input, state, player, visibility);
+  const collision = visibility ?? new StaticCollisionWorld();
+  const system = new InteractionSystem(input, state, player, collision);
   system.init({ events });
-  return { events, input, pose, state, system };
+  return { collision, events, input, pose, state, system };
 }
 
 function target(
@@ -117,6 +119,66 @@ describe('InteractionSystem', () => {
     ).toEqual(['priority', 'centered', 'near-off-axis']);
   });
 
+  it('holds the current target until a challenger clears the score margin', () => {
+    const harness = createHarness();
+    const challenger = { x: 0.35, y: 0, z: 1.1 };
+    harness.system.register(
+      target('anchor', { location: { x: 0, y: 0, z: 1 } }),
+    );
+    harness.system.register(
+      target('challenger', { location: () => challenger }),
+    );
+    harness.system.update();
+    expect(harness.system.getActiveTarget()?.id).toBe('anchor');
+
+    challenger.x = 0;
+    challenger.z = 0.9;
+    harness.system.update();
+    expect(harness.system.getActiveTarget()?.id).toBe('anchor');
+    expect(harness.system.getDebugSnapshot()).toMatchObject({
+      challengerId: 'challenger',
+      selectionDecision: 'held-current',
+    });
+
+    challenger.z = 0.5;
+    harness.system.update();
+    expect(harness.system.getActiveTarget()?.id).toBe('challenger');
+    expect(harness.system.getDebugSnapshot().selectionDecision).toBe(
+      'switched',
+    );
+  });
+
+  it('uses collision-world LOS and reports the blocking collider', () => {
+    const harness = createHarness();
+    harness.collision.addDefinition({
+      id: 'wall',
+      position: [0, 1.2, 1],
+      size: [1, 2, 0.2],
+    });
+    harness.system.register(
+      target('hidden', { location: { x: 0, y: 0, z: 2 } }),
+    );
+    harness.system.register(
+      target('owned-collider', {
+        location: { x: 0, y: 0, z: 2 },
+        collisionIgnoreIds: ['wall'],
+      }),
+    );
+
+    harness.system.update();
+
+    expect(harness.system.getActiveTarget()?.id).toBe('owned-collider');
+    expect(
+      harness.system
+        .getDebugSnapshot()
+        .targets.find(({ id }) => id === 'hidden'),
+    ).toMatchObject({
+      lineOfSight: 'blocked',
+      blockerId: 'wall',
+      rejectionReason: 'occluded',
+    });
+  });
+
   it('adds and clears a prompt as the player enters and leaves range', () => {
     const harness = createHarness();
     harness.system.register(target('sign', { range: 1.5 }));
@@ -136,6 +198,39 @@ describe('InteractionSystem', () => {
       forward: { x: 0, y: 0, z: 1 },
     };
     harness.system.update();
+    expect(mount.querySelector('.interaction-prompt')).toHaveProperty(
+      'hidden',
+      true,
+    );
+    prompt.dispose();
+  });
+
+  it('keeps prompt visibility coherent across occlusion and removal', () => {
+    const harness = createHarness();
+    harness.system.register(
+      target('terminal', { location: { x: 0, y: 0, z: 2 } }),
+    );
+    const mount = document.createElement('div');
+    const prompt = new InteractionPromptSystem(mount, harness.system);
+    prompt.init();
+    harness.system.update();
+    expect(mount.textContent).toBe('[G] Use terminal');
+
+    harness.collision.addDefinition({
+      id: 'moving-obstruction',
+      position: [0, 1.2, 1],
+      size: [1, 2, 0.2],
+    });
+    harness.system.update();
+    expect(mount.querySelector('.interaction-prompt')).toHaveProperty(
+      'hidden',
+      true,
+    );
+
+    harness.collision.remove('moving-obstruction');
+    harness.system.update();
+    expect(mount.textContent).toBe('[G] Use terminal');
+    harness.system.unregister('terminal');
     expect(mount.querySelector('.interaction-prompt')).toHaveProperty(
       'hidden',
       true,
@@ -194,6 +289,17 @@ describe('InteractionSystem', () => {
       (harness: Harness) => harness.system.setEnabled('long', false),
     ],
     ['target-removed', (harness: Harness) => harness.system.unregister('long')],
+    [
+      'occluded',
+      (harness: Harness) => {
+        harness.collision.addDefinition({
+          id: 'sudden-wall',
+          position: [0, 1.2, 0.5],
+          size: [1, 2, 0.2],
+        });
+        harness.system.update();
+      },
+    ],
   ] as const)(
     'cancels an asynchronous interaction when %s',
     (reason, cancel) => {
@@ -251,5 +357,30 @@ describe('InteractionSystem', () => {
     finish?.();
     await Promise.resolve();
     expect(facts).toEqual(['started', 'completed']);
+  });
+
+  it('clears and restores the prompt across pause without stale input', () => {
+    const harness = createHarness();
+    harness.system.register(target('talk'));
+    const mount = document.createElement('div');
+    const prompt = new InteractionPromptSystem(mount, harness.system);
+    prompt.init();
+    harness.system.update();
+    expect(mount.querySelector('.interaction-prompt')).not.toHaveProperty(
+      'hidden',
+      true,
+    );
+
+    harness.state.transition('paused');
+    expect(mount.querySelector('.interaction-prompt')).toHaveProperty(
+      'hidden',
+      true,
+    );
+    harness.input.pressed = true;
+    harness.state.transition('playing');
+    expect(harness.system.getActiveTarget()?.id).toBe('talk');
+    harness.system.update();
+    expect(harness.system.getActiveTarget()?.id).toBe('talk');
+    prompt.dispose();
   });
 });

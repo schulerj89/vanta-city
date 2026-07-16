@@ -6,6 +6,23 @@ import type { WorldEvents } from '../src/world/WorldEvents';
 import { testDistrict } from '../src/world/levels/testDistrict';
 
 describe('WorldCollisionSystem', () => {
+  it('reports nearest segment obstruction and honors explicit ignores', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addDefinitions([
+      { id: 'near', position: [0, 1, 1], size: [1, 2, 0.2] },
+      { id: 'far', position: [0, 1, 2], size: [1, 2, 0.2] },
+    ]);
+
+    expect(
+      collision.castSegment(new Vector3(0, 1, 0), new Vector3(0, 1, 3)),
+    ).toMatchObject({ obstructed: true, colliderId: 'near' });
+    expect(
+      collision.castSegment(new Vector3(0, 1, 0), new Vector3(0, 1, 3), {
+        ignoreColliderIds: ['near'],
+      }),
+    ).toMatchObject({ obstructed: true, colliderId: 'far' });
+  });
+
   it('synchronizes the shared level collider definitions on load and unload', () => {
     const events = new EventBus<WorldEvents>();
     const collision = new StaticCollisionWorld();

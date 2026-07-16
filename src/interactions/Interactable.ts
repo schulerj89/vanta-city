@@ -23,6 +23,10 @@ export interface Interactable {
   readonly enabled?: boolean;
   readonly requiredStates?: readonly GameState[];
   readonly repeatable?: boolean;
+  /** World-space height added to the location for the LOS endpoint. */
+  readonly lineOfSightHeight?: number;
+  /** Colliders belonging to this target, which must not occlude themselves. */
+  readonly collisionIgnoreIds?: readonly string[];
   readonly isAvailable?: InteractionAvailabilityPredicate;
   interact(context: InteractionContext): void | Promise<void>;
 }
@@ -31,6 +35,7 @@ export type InteractionCancelReason =
   | 'disabled'
   | 'game-state'
   | 'handler-error'
+  | 'occluded'
   | 'out-of-range'
   | 'replaced'
   | 'system-disposed'
@@ -57,20 +62,13 @@ export interface InteractionEvents {
   'interaction:disabled': { readonly target: InteractionTargetSummary };
 }
 
-export interface InteractionVisibilityQuery {
-  isVisible(
-    from: WorldPosition,
-    to: WorldPosition,
-    target: Interactable,
-  ): boolean;
-}
-
 export interface InteractionCandidate {
   readonly target: InteractionTargetSummary;
   readonly location: WorldPosition;
   readonly distance: number;
   readonly facing: number;
   readonly visible: boolean;
+  readonly blockerId: string | undefined;
   readonly score: number;
 }
 
@@ -79,6 +77,21 @@ export interface InteractionDebugTarget {
   readonly location: WorldPosition;
   readonly range: number;
   readonly available: boolean;
+  readonly distance: number | undefined;
+  readonly facing: number | undefined;
+  readonly lineOfSight: 'clear' | 'blocked' | 'not-tested';
+  readonly blockerId: string | undefined;
+  readonly score: number | undefined;
+  readonly rejectionReason:
+    | 'behind'
+    | 'completed'
+    | 'disabled'
+    | 'game-state'
+    | 'no-player'
+    | 'occluded'
+    | 'out-of-range'
+    | 'unavailable'
+    | undefined;
 }
 
 export interface InteractionDebugSnapshot {
@@ -86,4 +99,8 @@ export interface InteractionDebugSnapshot {
   readonly targets: readonly InteractionDebugTarget[];
   readonly candidates: readonly InteractionCandidate[];
   readonly selectedId: string | undefined;
+  readonly challengerId: string | undefined;
+  readonly selectionDecision:
+    'none' | 'selected-best' | 'held-current' | 'switched';
+  readonly switchScoreMargin: number;
 }

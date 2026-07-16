@@ -167,6 +167,21 @@ async function bootstrap(): Promise<void> {
     player,
     collision,
   );
+  let interactionScenario:
+    | import('./interactions/InteractionReliabilityScenario').InteractionReliabilityScenario
+    | undefined;
+  if (
+    development &&
+    developmentParameters?.get('interactionScenario') === '1'
+  ) {
+    const { InteractionReliabilityScenario } =
+      await import('./interactions/InteractionReliabilityScenario');
+    interactionScenario = new InteractionReliabilityScenario(
+      interactions,
+      collision,
+      development.debug,
+    );
+  }
   const conversations = new ConversationCoordinator(
     conversationCatalog,
     runtime.state,
@@ -241,6 +256,7 @@ async function bootstrap(): Promise<void> {
     },
     range: 2.75,
     repeatable: false,
+    collisionIgnoreIds: ['c.garage-door'],
     interact: () => {
       player.triggerCharacterAction('interact', 'interaction:garage-door');
     },
@@ -298,7 +314,9 @@ async function bootstrap(): Promise<void> {
     .register(camera)
     .register(interactions)
     .register(conversations)
-    .register(npcs)
+    .register(npcs);
+  if (interactionScenario) runtime.register(interactionScenario);
+  runtime
     .register(dialogue)
     .register(dialogueUI)
     .register(new InteractionPromptSystem(mount, interactions))
@@ -823,6 +841,35 @@ function registerVerticalSliceDebug(
       label: 'Candidates',
       group: sections.interactions,
       read: () => interactions.getDebugSnapshot().candidates.length,
+    }),
+    debug.registerValue({
+      id: 'interaction.scoring',
+      label: 'Current / challenger / decision',
+      group: sections.interactions,
+      read: () => {
+        const snapshot = interactions.getDebugSnapshot();
+        const current = snapshot.candidates.find(
+          ({ target }) => target.id === snapshot.selectedId,
+        );
+        const challenger = snapshot.candidates.find(
+          ({ target }) => target.id === snapshot.challengerId,
+        );
+        return `${snapshot.selectedId ?? 'none'} ${current?.score.toFixed(2) ?? '-'} / ${snapshot.challengerId ?? 'none'} ${challenger?.score.toFixed(2) ?? '-'} / ${snapshot.selectionDecision}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'interaction.rejections',
+      label: 'LOS / rejected targets',
+      group: sections.interactions,
+      read: () =>
+        interactions
+          .getDebugSnapshot()
+          .targets.filter(({ rejectionReason }) => rejectionReason)
+          .map(
+            ({ id, rejectionReason, blockerId }) =>
+              `${id}: ${rejectionReason}${blockerId ? ` (${blockerId})` : ''}`,
+          )
+          .join(', ') || 'none',
     }),
     debug.registerValue({
       id: 'level.current',

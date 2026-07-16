@@ -128,11 +128,13 @@ describe('StaticCollisionWorld oriented geometry', () => {
       rotation: [0, Math.PI / 4, 0],
     });
 
-    expect(world.isVisible(new Vector3(-2, 1, 2), new Vector3(2, 1, -2))).toBe(
-      false,
-    );
-    expect(world.isVisible(new Vector3(-2, 1, -3), new Vector3(2, 1, 1))).toBe(
-      true,
-    );
+    expect(
+      world.castSegment(new Vector3(-2, 1, 2), new Vector3(2, 1, -2))
+        .obstructed,
+    ).toBe(true);
+    expect(
+      world.castSegment(new Vector3(-2, 1, -3), new Vector3(2, 1, 1))
+        .obstructed,
+    ).toBe(false);
   });
 });

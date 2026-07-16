@@ -255,6 +255,13 @@ export const testDistrict = {
         rotation: [0, (-3 * Math.PI) / 4, 0],
         tags: ['debug', 'collision', 'camera-recovery'],
       },
+      {
+        id: 'spawn.debug-interactions',
+        kind: 'player',
+        position: [0, 0.15, -12],
+        rotation: [0, 0, 0],
+        tags: ['debug', 'interaction'],
+      },
       { id: 'spawn.npc-mechanic', kind: 'npc', position: [-10, 0.2, 4] },
       { id: 'spawn.npc-alley', kind: 'npc', position: [-19, 0.2, 12] },
       { id: 'spawn.npc-deck', kind: 'npc', position: [14, 3, -8] },

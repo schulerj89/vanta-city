@@ -86,6 +86,7 @@ export interface BrowserTestSnapshot {
   readonly interaction: {
     readonly activeTargetId: string | undefined;
     readonly completedTargetIds: readonly string[];
+    readonly diagnostics: ReturnType<InteractionSystem['getDebugSnapshot']>;
   };
   readonly npcs: {
     readonly count: number;
@@ -250,6 +251,7 @@ function createSnapshot(
     interaction: {
       activeTargetId: dependencies.interactions.getActiveTarget()?.id,
       completedTargetIds: [...completedTargetIds],
+      diagnostics: dependencies.interactions.getDebugSnapshot(),
     },
     npcs: {
       count: dependencies.npcs.count,
