@@ -1,0 +1,20 @@
+{
+  "limits": {
+    "minScale": 0.01,
+    "maxScale": 10,
+    "minHeight": 0.5,
+    "maxHeight": 3,
+    "maxAbsoluteGroundOffset": 0.25,
+    "rootMotionTolerance": 0.05
+  },
+  "previewCycles": 3,
+  "requireSkeletonForMappedAnimations": true,
+  "rules": {
+    "optional-asset-missing": "warning",
+    "optional-animation-missing": "warning",
+    "scale-out-of-range": "warning",
+    "height-out-of-range": "warning",
+    "ground-offset-out-of-range": "warning",
+    "root-motion-exceeded": "failure"
+  }
+}

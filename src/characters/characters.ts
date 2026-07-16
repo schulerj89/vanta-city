@@ -1,7 +1,7 @@
 import type { CharacterDefinition } from './CharacterDefinition';
 import { validateCharacterDefinitions } from './CharacterDefinition';
 
-export const characterDefinitions = validateCharacterDefinitions([
+export const characterDefinitionEntries = [
   {
     id: 'vanta-placeholder',
     displayName: 'Vanta Placeholder',
@@ -24,4 +24,8 @@ export const characterDefinitions = validateCharacterDefinitions([
     materialVariations: [{ id: 'default', displayName: 'Default materials' }],
     fallback: 'placeholder',
   },
-] satisfies readonly CharacterDefinition[]);
+] satisfies readonly CharacterDefinition[];
+
+export const characterDefinitions = validateCharacterDefinitions(
+  characterDefinitionEntries,
+);

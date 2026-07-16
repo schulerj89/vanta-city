@@ -31,6 +31,8 @@ jobs:
         run: pnpm typecheck
       - name: Test
         run: pnpm test
+      - name: Validate character assets
+        run: pnpm validate:characters
       - name: Production build
         run: pnpm build
       - name: Report bundle size
