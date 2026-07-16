@@ -18,7 +18,9 @@ export class DialogueUISystem implements GameSystem {
   private readonly speakerName = document.createElement('h2');
   private readonly portrait = document.createElement('div');
   private readonly text = document.createElement('p');
-  private readonly continueIndicator = document.createElement('span');
+  private readonly controls = document.createElement('div');
+  private readonly continueButton = document.createElement('button');
+  private readonly cancelButton = document.createElement('button');
   private renderedLineId: string | undefined;
   private portraitResolution = 'none';
 
@@ -41,13 +43,31 @@ export class DialogueUISystem implements GameSystem {
     this.text.className = 'dialogue-box__text';
     this.text.dataset.testid = 'dialogue-text';
     this.text.setAttribute('aria-live', 'polite');
-    this.continueIndicator.className = 'dialogue-box__continue';
-    this.continueIndicator.textContent = 'Continue  ›';
-    this.continueIndicator.dataset.testid = 'dialogue-continue';
+    this.controls.className = 'dialogue-box__controls';
+    this.continueButton.className = 'dialogue-box__continue';
+    this.continueButton.type = 'button';
+    this.continueButton.dataset.testid = 'dialogue-continue';
+    this.continueButton.addEventListener('click', this.advance);
+    this.cancelButton.className = 'dialogue-box__cancel';
+    this.cancelButton.type = 'button';
+    this.cancelButton.textContent = 'Cancel';
+    this.cancelButton.setAttribute('aria-label', 'Cancel dialogue');
+    this.cancelButton.dataset.testid = 'dialogue-cancel';
+    this.cancelButton.addEventListener('click', this.cancel);
+    for (const control of [this.continueButton, this.cancelButton]) {
+      // Dialogue controls call the public session API directly. Keep their
+      // mouse and keyboard edges out of the global gameplay input reader so a
+      // single activation cannot also advance the next line or lock the camera.
+      control.addEventListener('mousedown', stopPropagation);
+      control.addEventListener('mouseup', stopPropagation);
+      control.addEventListener('keydown', stopPropagation);
+      control.addEventListener('keyup', stopPropagation);
+    }
+    this.controls.append(this.cancelButton, this.continueButton);
 
     const content = document.createElement('div');
     content.className = 'dialogue-box__content';
-    content.append(this.speakerName, this.text, this.continueIndicator);
+    content.append(this.speakerName, this.text, this.controls);
     this.element.append(this.portrait, content);
     this.mount.append(this.element);
   }
@@ -81,7 +101,14 @@ export class DialogueUISystem implements GameSystem {
       }
     }
     this.text.textContent = snapshot.visibleText;
-    this.continueIndicator.hidden = snapshot.state !== 'ready';
+    const typing = snapshot.state === 'typing';
+    this.continueButton.textContent = typing ? 'Reveal text' : 'Continue  ›';
+    this.continueButton.dataset.action = typing ? 'reveal' : 'advance';
+    this.continueButton.setAttribute(
+      'aria-label',
+      typing ? 'Reveal full dialogue line' : 'Continue dialogue',
+    );
+    this.cancelButton.hidden = !snapshot.canCancel;
   }
 
   public getDebugSnapshot(): DialogueUIDebugSnapshot {
@@ -124,4 +151,22 @@ export class DialogueUISystem implements GameSystem {
     this.portraitResolution = result;
     this.element.dataset.portraitResolution = result;
   }
+
+  private readonly advance = (): void => {
+    // Honor the action that was visible when the user activated the control.
+    // The typewriter may finish between a rendered "Reveal" label and click.
+    if (this.continueButton.dataset.action === 'reveal') {
+      this.session.skipTypewriter();
+      return;
+    }
+    this.session.advance();
+  };
+
+  private readonly cancel = (): void => {
+    this.session.cancel();
+  };
+}
+
+function stopPropagation(event: Event): void {
+  event.stopPropagation();
 }

@@ -15,7 +15,10 @@ const noInput: InputReader = {
   wasReleased: () => false,
 };
 
-function harness(conversation: ConversationDefinition) {
+function harness(
+  conversation: ConversationDefinition,
+  typewriterEnabled = false,
+) {
   const events = new EventBus<StateEvents>();
   const state = new GameStateMachine(events);
   state.transition('playing');
@@ -24,7 +27,7 @@ function harness(conversation: ConversationDefinition) {
     state,
   );
   const session = new DialogueSessionController(noInput, conversations, {
-    typewriterEnabled: false,
+    typewriterEnabled,
   });
   session.init({ events, input: noInput, state });
   return { conversations, session };
@@ -86,5 +89,66 @@ describe('DialogueUISystem', () => {
     expect(ui.getDebugSnapshot().portraitResolution).toBe(
       'fallback:player-identity-fallback',
     );
+  });
+
+  it('provides isolated controls to reveal, advance, and cancel', () => {
+    const definition: ConversationDefinition = {
+      id: 'test.controls',
+      canCancel: true,
+      lines: [
+        { id: 'test.controls.one', speakerId: 'mack', text: 'First.' },
+        { id: 'test.controls.two', speakerId: 'rook', text: 'Second.' },
+      ],
+    };
+    const { conversations, session } = harness(definition, true);
+    const mount = document.createElement('main');
+    const ui = new DialogueUISystem(
+      mount,
+      session,
+      new DialoguePortraitResolver([]),
+    );
+    const leakedMouseDown = vi.fn();
+    window.addEventListener('mousedown', leakedMouseDown);
+    ui.init();
+    conversations.start(definition.id, 'mack');
+    ui.update();
+
+    const continueButton = mount.querySelector<HTMLButtonElement>(
+      '[data-testid="dialogue-continue"]',
+    );
+    expect(continueButton?.textContent).toBe('Reveal text');
+    continueButton?.dispatchEvent(
+      new MouseEvent('mousedown', { bubbles: true }),
+    );
+    // Simulate the typewriter completing after the control rendered but before
+    // the click lands. The displayed reveal action must not advance a line.
+    session.skipTypewriter();
+    continueButton?.click();
+    ui.update();
+    expect(leakedMouseDown).not.toHaveBeenCalled();
+    expect(session.getSnapshot()).toMatchObject({
+      state: 'ready',
+      lineIndex: 0,
+    });
+    expect(continueButton?.textContent).toContain('Continue');
+
+    continueButton?.click();
+    ui.update();
+    expect(session.getSnapshot()).toMatchObject({
+      state: 'typing',
+      lineIndex: 1,
+    });
+
+    mount
+      .querySelector<HTMLButtonElement>('[data-testid="dialogue-cancel"]')
+      ?.click();
+    ui.update();
+    expect(session.getSnapshot().state).toBe('idle');
+    expect(mount.querySelector<HTMLElement>('.dialogue-box')?.hidden).toBe(
+      true,
+    );
+
+    window.removeEventListener('mousedown', leakedMouseDown);
+    ui.dispose();
   });
 });

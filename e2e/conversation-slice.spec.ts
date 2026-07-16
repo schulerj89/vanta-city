@@ -162,6 +162,99 @@ test('character picker through repeatable Mack conversation', async ({
   ).toEqual([]);
 });
 
+test('cancels and repeats Mack dialogue without leaking controls', async ({
+  page,
+}) => {
+  const uncaught: string[] = [];
+  const consoleIssues = monitorConsoleIssues(page);
+  page.on('pageerror', (error) => uncaught.push(error.message));
+  await page.goto('/?e2e=1&debug=1&skipPicker=1');
+
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
+  await command(page, 'player.teleport', 'spawn.npc-mechanic');
+  await expect
+    .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+    .toBe('interaction.npc.mack');
+
+  await page.keyboard.press('e');
+  await expect
+    .poll(async () => (await snapshot(page)).dialogue.session.state)
+    .toBe('typing');
+  await expect(
+    page.getByRole('button', { name: 'Reveal full dialogue line' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Cancel dialogue' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reveal full dialogue line' }).click();
+  await expect
+    .poll(async () => (await snapshot(page)).dialogue.session.state)
+    .toBe('ready');
+  expect((await snapshot(page)).dialogue.session.lineIndex).toBe(0);
+
+  await page.getByRole('button', { name: 'Continue dialogue' }).click();
+  await expect
+    .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+    .toBe(1);
+  // The control activation must not also enter the global Mouse0 binding and
+  // reveal or advance the newly entered line on the next frame.
+  expect((await snapshot(page)).dialogue.session.state).toBe('typing');
+
+  await page.getByRole('button', { name: 'Cancel dialogue' }).click();
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
+  await expect
+    .poll(async () => (await snapshot(page)).camera.owner)
+    .toBe('gameplay');
+  await expect
+    .poll(async () => (await snapshot(page)).camera.transitionProgress)
+    .toBe(1);
+  await expect
+    .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+    .toBe('interaction.npc.mack');
+  const cancelled = await snapshot(page);
+  expect(cancelled.dialogue.cancelledConversationIds).toContain(
+    'conversation.mack.introduction',
+  );
+
+  await page.keyboard.press('e');
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('dialogue');
+  const repeated = await snapshot(page);
+  expect(repeated.dialogue.session).toMatchObject({
+    lineIndex: 0,
+    speakerId: 'mack',
+    state: 'typing',
+  });
+  expect(repeated.camera.owner).toBe('dialogue:conversation.mack.introduction');
+
+  await page.keyboard.press('Escape');
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
+  const before = (await snapshot(page)).player.position;
+  await page.keyboard.down('w');
+  await expect
+    .poll(async () =>
+      horizontalDistance((await snapshot(page)).player.position, before),
+    )
+    .toBeGreaterThan(0.2);
+  await page.keyboard.up('w');
+
+  const restored = await snapshot(page);
+  expect(restored.runtimeErrors.count, restored.runtimeErrors.last).toBe(0);
+  expect(uncaught).toEqual([]);
+  expect(
+    consoleIssues.filter(({ text }) => !isKnownBrowserDiagnostic(text)),
+    formatConsoleIssues(consoleIssues),
+  ).toEqual([]);
+});
+
 interface BrowserConsoleIssue {
   readonly type: 'warning' | 'error';
   readonly text: string;

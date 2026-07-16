@@ -563,14 +563,41 @@ canvas {
   white-space: pre-wrap;
 }
 
-.dialogue-box__continue {
-  justify-self: end;
+.dialogue-box__controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
   margin-top: 0.45rem;
+}
+
+.dialogue-box__continue,
+.dialogue-box__cancel {
+  min-height: 2rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid rgb(214 169 92 / 32%);
+  border-radius: 0.4rem;
   color: #d6a95c;
+  background: rgb(214 169 92 / 7%);
+  cursor: pointer;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.dialogue-box__cancel {
+  border-color: rgb(255 255 255 / 18%);
+  color: #b9c8c3;
+  background: rgb(255 255 255 / 4%);
+}
+
+.dialogue-box__continue:hover,
+.dialogue-box__continue:focus-visible,
+.dialogue-box__cancel:hover,
+.dialogue-box__cancel:focus-visible {
+  border-color: currentColor;
+  outline: none;
+  background: rgb(255 255 255 / 10%);
 }
 
 @media (max-width: 36rem) {
