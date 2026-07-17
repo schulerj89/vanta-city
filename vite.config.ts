@@ -4,6 +4,7 @@ const domTestFiles = [
   'tests/characterPicker.test.ts',
   'tests/characterPreviewSystem.test.ts',
   'tests/debugPanel.test.ts',
+  'tests/debugCashPickup.test.ts',
   'tests/diagnosticRecorder.test.ts',
   'tests/dialogueUI.test.ts',
   'tests/gamepadInput.test.ts',
@@ -14,6 +15,7 @@ const domTestFiles = [
   'tests/interactions.test.ts',
   'tests/loadingScreen.test.ts',
   'tests/locationHud.test.ts',
+  'tests/moneyHud.test.ts',
   'tests/quickbar.test.ts',
 ];
 
