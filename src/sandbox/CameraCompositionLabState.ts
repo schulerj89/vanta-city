@@ -7,7 +7,13 @@ export type CameraLabApproachSide = 'left' | 'right' | 'front' | 'back';
 export type CameraLabViewportPreset =
   'responsive' | 'desktop' | 'mobile' | 'short';
 export type CameraLabPresetId =
-  'default' | 'nox-alley' | 'narrow-mobile' | 'restoration';
+  | 'default'
+  | 'close-minimum'
+  | 'normal'
+  | 'obstructed'
+  | 'nox-alley'
+  | 'narrow-mobile'
+  | 'restoration';
 
 export interface CameraLabPose {
   readonly x: number;
@@ -56,6 +62,27 @@ const defaultObstruction: CameraLabObstruction = Object.freeze({
 const presets: Readonly<Record<CameraLabPresetId, CameraCompositionLabState>> =
   Object.freeze({
     default: fixture({ preset: 'default' }),
+    'close-minimum': fixture({
+      preset: 'close-minimum',
+      player: { x: -0.4, y: 0, z: 0, yaw: Math.PI / 2 },
+      npc: { x: 0.4, y: 0, z: 0, yaw: -Math.PI / 2 },
+      spacing: 0.8,
+    }),
+    normal: fixture({ preset: 'normal' }),
+    obstructed: fixture({
+      preset: 'obstructed',
+      npcId: 'nox',
+      profileId: 'default',
+      player: { x: -0.6, y: 0, z: 0, yaw: Math.PI / 2 },
+      npc: { x: 0.6, y: 0, z: 0, yaw: -Math.PI / 2 },
+      spacing: 1.2,
+      obstruction: {
+        enabled: true,
+        position: [0, 1.6, 2.1],
+        size: [3.6, 3.2, 0.45],
+        yaw: 0,
+      },
+    }),
     'nox-alley': fixture({
       preset: 'nox-alley',
       npcId: 'nox',

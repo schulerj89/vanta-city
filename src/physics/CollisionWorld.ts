@@ -72,6 +72,8 @@ export interface CollisionDebugSnapshot {
 export interface SegmentCastOptions {
   readonly radius?: number;
   readonly ignoreColliderIds?: readonly string[];
+  /** Ignore tagged volumes only when the sweep origin is already inside them. */
+  readonly ignoreInitialOverlapTags?: readonly string[];
 }
 
 export interface SegmentCastResult extends CameraCastResult {
@@ -89,6 +91,10 @@ export interface CollisionWorld {
     from: Readonly<Vector3>,
     to: Readonly<Vector3>,
     radius: number,
+    options?: Pick<
+      SegmentCastOptions,
+      'ignoreColliderIds' | 'ignoreInitialOverlapTags'
+    >,
   ): CameraCastResult;
   /** Casts against authored world geometry and returns the nearest obstruction. */
   castSegment(
@@ -285,8 +291,12 @@ export class StaticCollisionWorld implements CollisionWorld {
     from: Readonly<Vector3>,
     to: Readonly<Vector3>,
     radius: number,
+    options: Pick<
+      SegmentCastOptions,
+      'ignoreColliderIds' | 'ignoreInitialOverlapTags'
+    > = {},
   ): CameraCastResult {
-    const segment = this.castSegment(from, to, { radius });
+    const segment = this.castSegment(from, to, { ...options, radius });
     let fraction = segment.fraction;
     let colliderId = segment.colliderId;
     const directionY = to.y - from.y;
@@ -358,8 +368,16 @@ export class StaticCollisionWorld implements CollisionWorld {
     options: SegmentCastOptions = {},
   ): SegmentCastResult {
     const ignored = new Set(options.ignoreColliderIds);
-    const hit = this.castBoxes(from, to, options.radius ?? 0, ({ id }) =>
-      ignored.has(id),
+    const initialOverlapTags = new Set(options.ignoreInitialOverlapTags);
+    const radius = options.radius ?? 0;
+    const hit = this.castBoxes(
+      from,
+      to,
+      radius,
+      ({ id, tags }) =>
+        ignored.has(id) ||
+        (tags.some((tag) => initialOverlapTags.has(tag)) &&
+          this.boxContainsPoint(from, id, radius)),
     );
     const fraction = hit?.fraction ?? 1;
     return {
@@ -367,6 +385,18 @@ export class StaticCollisionWorld implements CollisionWorld {
       obstructed: fraction < 1,
       colliderId: hit?.colliderId,
     };
+  }
+
+  private boxContainsPoint(
+    point: Readonly<Vector3>,
+    id: string,
+    padding: number,
+  ): boolean {
+    const box = this.boxes.get(id);
+    return (
+      box !== undefined &&
+      segmentOrientedBoxFraction(point, point, box, padding) === 0
+    );
   }
 
   private resolveHorizontal(

@@ -119,6 +119,45 @@ describe('StaticCollisionWorld oriented geometry', () => {
     });
   });
 
+  it('ignores an initial participant overlap but still blocks on other bodies', () => {
+    const world = new StaticCollisionWorld();
+    world.addDefinition({
+      id: 'bystander-occupancy',
+      position: [0, 1, 1.25],
+      size: [0.75, 2, 0.75],
+      tags: ['npc-occupancy'],
+    });
+    world.addDefinition({
+      id: 'npc-occupancy',
+      position: [0, 1, 0],
+      size: [0.75, 2, 0.75],
+      tags: ['npc-occupancy'],
+    });
+    world.addDefinition({
+      id: 'alley-wall',
+      position: [0, 1, 2],
+      size: [4, 2, 0.3],
+      tags: ['wall'],
+    });
+
+    const ordinary = world.castCamera(
+      new Vector3(0, 1, 0),
+      new Vector3(0, 1, 4),
+      0.2,
+    );
+    const conversation = world.castCamera(
+      new Vector3(0, 1, 0),
+      new Vector3(0, 1, 4),
+      0.2,
+      { ignoreInitialOverlapTags: ['npc-occupancy'] },
+    );
+
+    expect(ordinary.colliderId).toBe('npc-occupancy');
+    expect(ordinary.fraction).toBe(0);
+    expect(conversation.colliderId).toBe('bystander-occupancy');
+    expect(conversation.fraction).toBeGreaterThan(0);
+  });
+
   it('uses the same oriented boxes for deterministic visibility queries', () => {
     const world = new StaticCollisionWorld();
     world.addDefinition({

@@ -26,7 +26,12 @@ import {
   calculateConversationFraming,
   resolveConversationCameraProfile,
 } from './ConversationCameraProfile';
-import type { ConversationCameraProfile } from './ConversationCameraProfile';
+import type {
+  ConversationCameraProfile,
+  ConversationFramingDiagnostics,
+  ConversationFramingFallbackReason,
+  ConversationSafeFrameStatus,
+} from './ConversationCameraProfile';
 
 export interface ThirdPersonCameraConfig {
   readonly targetHeight: number;
@@ -168,6 +173,13 @@ export interface ThirdPersonCameraDebugSnapshot {
   readonly adjustedPosition: WorldPosition;
   readonly sweepStart: WorldPosition;
   readonly obstructionColliderId: string | undefined;
+  readonly participantSeparation: number | undefined;
+  readonly conversationChosenSide: CameraShoulderSide | undefined;
+  readonly conversationFallbackReason:
+    ConversationFramingFallbackReason | undefined;
+  readonly conversationSafeFrameStatus: ConversationSafeFrameStatus | undefined;
+  readonly conversationRequiredDistance: number | undefined;
+  readonly conversationPitch: number | undefined;
 }
 
 interface InternalRequest extends CameraControlRequest {
@@ -215,6 +227,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
   private readonly desiredTarget = new Vector3();
   private readonly unobstructedPosition = new Vector3();
   private obstructionColliderId: string | undefined;
+  private conversationDiagnostics: ConversationFramingDiagnostics | undefined;
   private readonly transitionStartPosition = new Vector3();
   private readonly transitionStartTarget = new Vector3();
   private transitionStartFov: number;
@@ -429,6 +442,15 @@ export class ThirdPersonCameraSystem implements GameSystem {
       adjustedPosition: vectorSnapshot(this.desiredPosition),
       sweepStart: vectorSnapshot(this.desiredTarget),
       obstructionColliderId: this.obstructionColliderId,
+      participantSeparation:
+        this.conversationDiagnostics?.participantSeparation,
+      conversationChosenSide: this.conversationDiagnostics?.chosenSide,
+      conversationFallbackReason: this.conversationDiagnostics?.fallbackReason,
+      conversationSafeFrameStatus:
+        this.conversationDiagnostics?.safeFrameStatus,
+      conversationRequiredDistance:
+        this.conversationDiagnostics?.requiredDistance,
+      conversationPitch: this.conversationDiagnostics?.pitch,
     };
   }
 
@@ -486,6 +508,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
     },
     acceptsInput: boolean,
   ): void {
+    this.conversationDiagnostics = undefined;
     const switchShoulderRequested =
       acceptsInput && this.input?.wasPressed('cameraSwitchShoulder') === true;
     const restoreInterrupted =
@@ -679,6 +702,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
   ): void {
     const anchor = validAnchor(request.anchor) ? request.anchor : undefined;
     if (anchor) {
+      this.conversationDiagnostics = undefined;
       this.desiredPosition.copy(asVector(anchor.position));
       this.desiredTarget.copy(asVector(anchor.lookAt));
     } else {
@@ -688,7 +712,26 @@ export class ThirdPersonCameraSystem implements GameSystem {
       );
     }
     this.unobstructedPosition.copy(this.desiredPosition);
-    this.applyDirectedCollision(this.desiredTarget, this.desiredPosition);
+    this.applyDirectedCollision(
+      this.desiredTarget,
+      this.desiredPosition,
+      request.mode === 'conversation',
+    );
+    if (request.mode === 'conversation' && this.conversationDiagnostics) {
+      const adjustedHorizontalDistance = Math.hypot(
+        this.desiredPosition.x - this.desiredTarget.x,
+        this.desiredPosition.z - this.desiredTarget.z,
+      );
+      if (
+        adjustedHorizontalDistance + 1e-3 <
+        this.conversationDiagnostics.requiredDistance
+      ) {
+        this.conversationDiagnostics = {
+          ...this.conversationDiagnostics,
+          safeFrameStatus: 'obstruction-constrained',
+        };
+      }
+    }
     this.actualDistance = this.desiredPosition.distanceTo(this.desiredTarget);
     const desiredFov =
       anchor?.fieldOfView && isFiniteNumber(anchor.fieldOfView)
@@ -722,6 +765,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
         profile,
         this.preferences.current.shoulderSide,
         this.camera.aspect,
+        profile.fieldOfView ?? this.camera.fov,
       );
       const alternate = calculateConversationFraming(
         playerPose,
@@ -729,19 +773,30 @@ export class ThirdPersonCameraSystem implements GameSystem {
         profile,
         this.preferences.current.shoulderSide === 'right' ? 'left' : 'right',
         this.camera.aspect,
+        profile.fieldOfView ?? this.camera.fov,
       );
       const preferredClearance = this.collision.castCamera(
         framing.lookAt,
         framing.position,
         this.config.collisionRadius,
+        { ignoreInitialOverlapTags: ['npc-occupancy'] },
       ).fraction;
       const alternateClearance = this.collision.castCamera(
         alternate.lookAt,
         alternate.position,
         this.config.collisionRadius,
+        { ignoreInitialOverlapTags: ['npc-occupancy'] },
       ).fraction;
-      const selected =
-        alternateClearance > preferredClearance + 0.05 ? alternate : framing;
+      const alternateSelected = alternateClearance > preferredClearance + 0.05;
+      const selected = alternateSelected ? alternate : framing;
+      this.conversationDiagnostics = {
+        ...selected.diagnostics,
+        chosenSide: alternateSelected
+          ? this.preferences.current.shoulderSide === 'right'
+            ? 'left'
+            : 'right'
+          : this.preferences.current.shoulderSide,
+      };
       this.desiredTarget.copy(selected.lookAt);
       this.desiredPosition.copy(selected.position);
       return;
@@ -752,6 +807,16 @@ export class ThirdPersonCameraSystem implements GameSystem {
       : new Vector3(0, 0, 1);
     forward.y = 0;
     if (forward.lengthSq() < Number.EPSILON) forward.set(0, 0, 1);
+    this.conversationDiagnostics = {
+      participantSeparation: 0,
+      chosenSide: this.preferences.current.shoulderSide,
+      fallbackReason: 'coincident-player-facing',
+      safeFrameStatus: 'unavailable',
+      requiredDistance: 4,
+      cameraDistance: 4,
+      pitch: Math.atan2(0.8, 4),
+      nearDistance: true,
+    };
     forward.normalize();
     const side = new Vector3(-forward.z, 0, forward.x).multiplyScalar(
       shoulderSign(this.preferences.current.shoulderSide),
@@ -822,11 +887,15 @@ export class ThirdPersonCameraSystem implements GameSystem {
   private applyDirectedCollision(
     from: Readonly<Vector3>,
     desired: Vector3,
+    ignoreParticipantOccupancy = false,
   ): void {
     const cast = this.collision.castCamera(
       from,
       desired,
       this.config.collisionRadius,
+      ignoreParticipantOccupancy
+        ? { ignoreInitialOverlapTags: ['npc-occupancy'] }
+        : undefined,
     );
     this.obstructionColliderId = cast.colliderId;
     this.obstructed = cast.obstructed;

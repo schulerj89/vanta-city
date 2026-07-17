@@ -80,13 +80,79 @@ describe('conversation camera profiles', () => {
     expect(portrait.position.distanceTo(portrait.lookAt)).toBeGreaterThan(
       desktop.position.distanceTo(desktop.lookAt),
     );
-    expect(
-      horizontalDistance(portrait.position, portrait.lookAt) /
-        horizontalDistance(desktop.position, desktop.lookAt),
-    ).toBeCloseTo(profile.narrowAspectMaxScale);
+    expect(portrait.diagnostics.safeFrameStatus).toBe('distance-clamped');
+    expect(portrait.diagnostics.cameraDistance).toBeLessThan(
+      portrait.diagnostics.requiredDistance,
+    );
+    expect(portrait.diagnostics.cameraDistance).toBeLessThanOrEqual(
+      profile.maxDistance * profile.narrowAspectMaxScale,
+    );
+  });
+
+  it('uses one close-safe three-quarter policy at capsule-to-capsule distance', () => {
+    const profile = resolveConversationCameraProfile('close');
+    const player = pose(-0.4, 0, Math.PI / 2);
+    const npc = pose(0.4, 0, -Math.PI / 2);
+    const framing = calculateConversationFraming(player, npc, profile, 'right');
+    const offset = framing.position.clone().sub(framing.lookAt);
+
+    expect(framing.diagnostics).toMatchObject({
+      participantSeparation: 0.8,
+      chosenSide: 'right',
+      nearDistance: true,
+      safeFrameStatus: 'inside',
+    });
+    expect(framing.diagnostics.cameraDistance).toBeGreaterThanOrEqual(
+      profile.minimumCameraBackoff,
+    );
+    expect(Math.abs(offset.x)).toBeGreaterThan(0.25);
+    expect(Math.abs(offset.z)).toBeGreaterThan(2);
+    expect(framing.diagnostics.pitch).toBeGreaterThanOrEqual(profile.minPitch);
+    expect(framing.diagnostics.pitch).toBeLessThanOrEqual(profile.maxPitch);
+  });
+
+  it('stays stable for tiny close-range participant shifts', () => {
+    const profile = resolveConversationCameraProfile();
+    const original = calculateConversationFraming(
+      pose(-0.31, 0, Math.PI / 2),
+      pose(0.31, 0, -Math.PI / 2),
+      profile,
+      'left',
+    );
+    const shifted = calculateConversationFraming(
+      pose(-0.305, 0.004, Math.PI / 2),
+      pose(0.315, 0.006, -Math.PI / 2),
+      profile,
+      'left',
+    );
+
+    expect(shifted.position.distanceTo(original.position)).toBeLessThan(0.03);
+    expect(shifted.diagnostics.fallbackReason).toBe('near-facing-stabilized');
+  });
+
+  it('uses facing and then world-forward deterministic coincident fallbacks', () => {
+    const profile = resolveConversationCameraProfile();
+    const facing = calculateConversationFraming(
+      pose(0, 0, 0),
+      pose(0, 0, Math.PI),
+      profile,
+      'right',
+    );
+    const degeneratePose: WorldPose = {
+      position: { x: 0, y: 0, z: 0 },
+      forward: { x: 0, y: 0, z: 0 },
+    };
+    const worldForward = calculateConversationFraming(
+      degeneratePose,
+      degeneratePose,
+      profile,
+      'right',
+    );
+
+    expect(facing.diagnostics.fallbackReason).toBe('coincident-facing-axis');
+    expect(worldForward.diagnostics.fallbackReason).toBe(
+      'coincident-world-forward',
+    );
+    expect(worldForward.position.toArray().every(Number.isFinite)).toBe(true);
   });
 });
-
-function horizontalDistance(a: Vector3, b: Vector3): number {
-  return Math.hypot(a.x - b.x, a.z - b.z);
-}

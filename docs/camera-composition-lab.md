@@ -17,7 +17,7 @@ The visible panel and `camera-lab.*` debug commands cover:
 - paired alley blockers with movable position and yaw, registered through the authoritative oriented-box collision query;
 - conversation acquisition and normal gameplay-camera restoration.
 
-The `default`, `nox-alley`, `narrow-mobile`, and `restoration` presets provide stable starting states. The Nox-like alley blocks both candidate shoulders so the camera still performs its ordinary shoulder-clearance selection and then shortens the selected sweep.
+The `close-minimum`, `normal`, and `obstructed` presets exercise the standard composition policy at capsule-to-capsule spacing, ordinary talk distance, and a constrained Nox-like alley. The legacy `default` and `nox-alley` fixtures remain available alongside `narrow-mobile` and `restoration`. The alley blockers cover both candidate shoulders so the camera still performs its ordinary shoulder-clearance selection and then shortens the selected sweep.
 
 ## Visualization legend
 
@@ -29,10 +29,10 @@ The `default`, `nox-alley`, `narrow-mobile`, and `restoration` presets provide s
 - Cyan/NPC-colored arrows: authored participant facing.
 - Screen overlay: action-safe frame, thirds, and center guide.
 
-The status overlay reports active owner/priority, NPC/profile/shoulder, blocker ID, saved gameplay position, and restoration error. `window.__VANTA_CAMERA_LAB__` is a development-only browser harness used by Playwright for deterministic snapshots and commands.
+The status overlay reports active owner/priority, participant separation, selected shoulder, safe-frame state, fallback reason, desired/adjusted poses, blocker ID, saved gameplay position, and restoration error. `window.__VANTA_CAMERA_LAB__` is a development-only browser harness used by Playwright for deterministic snapshots and commands.
 
 ## Baselines
 
-`e2e/camera-composition-lab.spec.ts` asserts camera ownership, shared collision blocker selection, adjusted versus desired pose, responsive stage size, saved gameplay state, exact restoration, and clean page diagnostics. Its four visual baselines live beside the spec under `e2e/camera-composition-lab.spec.ts-snapshots/`.
+`e2e/camera-composition-lab.spec.ts` asserts camera ownership, shared collision blocker selection, adjusted versus desired pose, responsive stage size, saved gameplay state, exact restoration, and clean page diagnostics. Its six active visual baselines (default, close, normal, obstructed, narrow, and restoration) live beside the spec under `e2e/camera-composition-lab.spec.ts-snapshots/`.
 
 Primitive fixtures are intentional: they remove model-loading and animation variance from composition tuning. Current character/NPC models can still be evaluated in the normal conversation slice; the lab does not duplicate their loader or become a cinematic editor.

@@ -32,6 +32,7 @@ const cases = [
 test('live participant framing and exact gameplay camera restoration', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(60_000);
   const consoleIssues: string[] = [];
   const pageErrors: string[] = [];
   page.on('console', (message: ConsoleMessage) => {
@@ -46,25 +47,29 @@ test('live participant framing and exact gameplay camera restoration', async ({
   await command(page, 'camera.set-shoulder', 'left');
 
   for (const npcCase of cases) {
-    for (const [sideIndex, side] of [-1, 1].entries()) {
+    for (const [rangeIndex, range] of [
+      { name: 'minimum', offset: 0.55 },
+      { name: 'normal', offset: 1.5 },
+    ].entries()) {
+      const side = rangeIndex === 0 ? -1 : 1;
       const playerPosition = {
-        x: npcCase.npc.x + side * 1.5,
+        x: npcCase.npc.x + side * range.offset,
         y: npcCase.npc.y,
-        z: npcCase.npc.z + 1.5,
+        z: npcCase.npc.z + range.offset,
       };
       await command(
         page,
         'player.teleport-position',
-        `${playerPosition.x},${playerPosition.y},${playerPosition.z},${Math.atan2(-side * 1.5, -1.5)}`,
+        `${playerPosition.x},${playerPosition.y},${playerPosition.z},${Math.atan2(-side * range.offset, -range.offset)}`,
       );
       await expect
         .poll(async () => (await snapshot(page)).interaction.activeTargetId)
         .toBe(npcCase.interactionId);
       await page.waitForTimeout(750);
 
-      await page.keyboard.down(sideIndex === 0 ? 'q' : 'e');
+      await page.keyboard.down(rangeIndex === 0 ? 'q' : 'e');
       await page.waitForTimeout(180);
-      await page.keyboard.up(sideIndex === 0 ? 'q' : 'e');
+      await page.keyboard.up(rangeIndex === 0 ? 'q' : 'e');
       await page.waitForTimeout(350);
       const gameplay = (await snapshot(page)).camera;
       const simulationYaw = (await snapshot(page)).player.facingYaw;
@@ -88,6 +93,18 @@ test('live participant framing and exact gameplay camera restoration', async ({
       });
       expect(talking.camera.gameplayReturnPosition).toBeDefined();
       expect(talking.camera.gameplayReturnTarget).toBeDefined();
+      if (range.name === 'minimum') {
+        expect(talking.camera.participantSeparation).toBeLessThan(1.15);
+      } else {
+        expect(talking.camera.participantSeparation).toBeGreaterThan(1.8);
+      }
+      expect(talking.camera.conversationChosenSide).toMatch(/left|right/);
+      expect(talking.camera.conversationSafeFrameStatus).toMatch(
+        /inside|obstruction-constrained/,
+      );
+      expect(talking.camera.obstructionColliderId).not.toBe(
+        `c.npc-${npcCase.id}`,
+      );
       expect(talking.player.facingYaw).toBeCloseTo(simulationYaw, 5);
       expectAngleClose(
         talking.player.presentationFacingYaw,
@@ -113,16 +130,27 @@ test('live participant framing and exact gameplay camera restoration', async ({
       ).toBeLessThan(0.08);
       expect(Math.abs(talking.player.footClearance ?? 1)).toBeLessThan(0.12);
 
-      const screenshot = testInfo.outputPath(
-        `${npcCase.id}-approach-${sideIndex + 1}.png`,
-      );
+      const screenshot = testInfo.outputPath(`${npcCase.id}-${range.name}.png`);
       await page.screenshot({ path: screenshot, fullPage: true });
-      await testInfo.attach(`${npcCase.id}-approach-${sideIndex + 1}`, {
+      await testInfo.attach(`${npcCase.id}-${range.name}`, {
         path: screenshot,
         contentType: 'image/png',
       });
+      if (npcCase.id === 'mack' && range.name === 'minimum') {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(350);
+        await expect(page.getByTestId('dialogue-box')).toBeVisible();
+        const narrowScreenshot = testInfo.outputPath('mack-minimum-narrow.png');
+        await page.screenshot({ path: narrowScreenshot, fullPage: true });
+        await testInfo.attach('mack-minimum-narrow', {
+          path: narrowScreenshot,
+          contentType: 'image/png',
+        });
+        await page.setViewportSize({ width: 1280, height: 720 });
+        await page.waitForTimeout(350);
+      }
 
-      if (sideIndex === 0) {
+      if (rangeIndex === 0) {
         await page.keyboard.press('Escape');
       } else {
         while ((await snapshot(page)).gameState === 'dialogue') {

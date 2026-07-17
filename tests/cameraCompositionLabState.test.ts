@@ -29,6 +29,23 @@ describe('Camera Composition Lab fixtures', () => {
     });
   });
 
+  it('provides standard close, normal, and obstructed framing fixtures', () => {
+    expect(createCameraLabPreset('close-minimum')).toMatchObject({
+      spacing: 0.8,
+      profileId: 'close',
+      obstruction: { enabled: false },
+    });
+    expect(createCameraLabPreset('normal')).toMatchObject({
+      spacing: 3,
+      obstruction: { enabled: false },
+    });
+    expect(createCameraLabPreset('obstructed')).toMatchObject({
+      spacing: 1.2,
+      npcId: 'nox',
+      obstruction: { enabled: true },
+    });
+  });
+
   it.each([
     ['left', -3, 0, Math.PI / 2],
     ['right', 3, 0, -Math.PI / 2],

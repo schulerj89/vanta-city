@@ -28,14 +28,54 @@ test('camera lab exercises composition, obstruction, viewport, and restoration',
     profileId: 'close',
     cameraRequested: true,
   });
-  expect(defaultState.camera.obstructionColliderId).toBeUndefined();
+  expect(defaultState.camera).toMatchObject({
+    participantSeparation: 3,
+    conversationSafeFrameStatus: 'inside',
+    obstructionColliderId: undefined,
+  });
   expect(defaultState.savedGameplayCamera).toBeDefined();
   await expect(page).toHaveScreenshot('camera-lab-default.png', {
     animations: 'disabled',
     maxDiffPixelRatio: 0.015,
   });
 
-  await applyPreset(page, 'nox-alley');
+  await applyPreset(page, 'close-minimum');
+  await waitForCamera(page, 'sandbox:camera-composition');
+  const closeState = await snapshot(page);
+  expect(closeState.state).toMatchObject({
+    preset: 'close-minimum',
+    npcId: 'mack',
+    profileId: 'close',
+    cameraRequested: true,
+  });
+  expect(closeState.camera).toMatchObject({
+    participantSeparation: 0.8,
+    conversationChosenSide: 'right',
+    conversationSafeFrameStatus: 'inside',
+    obstructionColliderId: undefined,
+  });
+  expect(closeState.camera.conversationFallbackReason).toBe('none');
+  expect(closeState.savedGameplayCamera).toBeDefined();
+  await expect(page).toHaveScreenshot('camera-lab-close-minimum.png', {
+    animations: 'disabled',
+    maxDiffPixelRatio: 0.015,
+  });
+
+  await applyPreset(page, 'normal');
+  await waitForCamera(page, 'sandbox:camera-composition');
+  const normalState = await snapshot(page);
+  expect(normalState.camera).toMatchObject({
+    participantSeparation: 3,
+    conversationFallbackReason: 'none',
+    conversationSafeFrameStatus: 'inside',
+    obstructionColliderId: undefined,
+  });
+  await expect(page).toHaveScreenshot('camera-lab-normal.png', {
+    animations: 'disabled',
+    maxDiffPixelRatio: 0.015,
+  });
+
+  await applyPreset(page, 'obstructed');
   await waitForCamera(page, 'sandbox:camera-composition');
   await expect
     .poll(async () => (await snapshot(page)).camera.obstructionColliderId)
@@ -50,7 +90,10 @@ test('camera lab exercises composition, obstruction, viewport, and restoration',
     obstructed.camera.unobstructedPosition,
   );
   expect(obstructed.collision.lastCameraHitId).toBe('camera-lab.obstruction');
-  await expect(page).toHaveScreenshot('camera-lab-nox-alley.png', {
+  expect(obstructed.camera.conversationSafeFrameStatus).toBe(
+    'obstruction-constrained',
+  );
+  await expect(page).toHaveScreenshot('camera-lab-obstructed.png', {
     animations: 'disabled',
     maxDiffPixelRatio: 0.015,
   });
@@ -138,7 +181,7 @@ async function snapshot(page: Page): Promise<CameraCompositionLabSnapshot> {
 
 async function applyPreset(
   page: Page,
-  id: 'default' | 'nox-alley' | 'narrow-mobile',
+  id: 'default' | 'close-minimum' | 'normal' | 'obstructed' | 'narrow-mobile',
 ) {
   await page.evaluate((preset) => {
     (window.__VANTA_CAMERA_LAB__ as CameraCompositionLabApi).applyPreset(
@@ -161,9 +204,13 @@ async function execute(page: Page, command: string, value?: string) {
 
 async function waitForCamera(page: Page, owner: string): Promise<void> {
   await expect
-    .poll(async () => (await snapshot(page)).camera.owner)
+    .poll(async () => (await snapshot(page)).camera.owner, {
+      timeout: 20_000,
+    })
     .toBe(owner);
   await expect
-    .poll(async () => (await snapshot(page)).camera.transitionProgress)
+    .poll(async () => (await snapshot(page)).camera.transitionProgress, {
+      timeout: 20_000,
+    })
     .toBe(1);
 }

@@ -398,7 +398,7 @@ class CameraCompositionLabSystem implements GameSystem<GameContext> {
     panel.innerHTML = `
       <header><strong>Camera Composition Lab</strong><span>dev-only sandbox</span></header>
       <div class="camera-lab-panel__grid">
-        ${select('preset', 'Preset', ['default', 'nox-alley', 'narrow-mobile', 'restoration'])}
+        ${select('preset', 'Preset', ['default', 'close-minimum', 'normal', 'obstructed', 'nox-alley', 'narrow-mobile', 'restoration'])}
         ${select('npc', 'NPC', ['mack', 'nox', 'raze'])}
         ${select('profile', 'Profile', ['default', 'close', 'wide'])}
         ${select('shoulder', 'Shoulder', ['right', 'left'])}
@@ -498,7 +498,7 @@ class CameraCompositionLabSystem implements GameSystem<GameContext> {
       registerCommand(
         'preset',
         'Apply composition preset',
-        'default, nox-alley, narrow-mobile, restoration',
+        'default, close-minimum, normal, obstructed, nox-alley, narrow-mobile, restoration',
       ),
       registerCommand('npc', 'Set active NPC', 'mack, nox, raze'),
       registerCommand('profile', 'Set profile', 'default, close, wide'),
@@ -788,6 +788,14 @@ class CameraCompositionLabSystem implements GameSystem<GameContext> {
     this.status.textContent = [
       `${snapshot.camera.owner} · priority ${snapshot.ownerPriority}`,
       `${snapshot.state.npcId} / ${snapshot.state.profileId} · ${snapshot.camera.shoulderSide} shoulder`,
+      snapshot.camera.participantSeparation === undefined
+        ? ''
+        : `separation ${snapshot.camera.participantSeparation.toFixed(2)}m · chosen ${snapshot.camera.conversationChosenSide} · safe-frame ${snapshot.camera.conversationSafeFrameStatus}`,
+      snapshot.camera.conversationFallbackReason &&
+      snapshot.camera.conversationFallbackReason !== 'none'
+        ? `fallback ${snapshot.camera.conversationFallbackReason}`
+        : 'relative participant axis',
+      `desired ${point(snapshot.camera.unobstructedPosition)} · adjusted ${point(snapshot.camera.adjustedPosition)}`,
       snapshot.camera.obstructionColliderId
         ? `blocked by ${snapshot.camera.obstructionColliderId}`
         : 'sweep clear',
@@ -902,7 +910,10 @@ class CameraCompositionLabSystem implements GameSystem<GameContext> {
     const value = new URLSearchParams(window.location.search).get(
       'cameraPreset',
     );
-    return value === 'nox-alley' ||
+    return value === 'close-minimum' ||
+      value === 'normal' ||
+      value === 'obstructed' ||
+      value === 'nox-alley' ||
       value === 'narrow-mobile' ||
       value === 'restoration'
       ? value
