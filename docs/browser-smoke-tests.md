@@ -7,14 +7,23 @@ The Playwright suite validates the integrated debug district through determinist
 ```sh
 pnpm install
 pnpm test:e2e:install
-pnpm test:e2e
+pnpm test:e2e:smoke
 ```
+
+The browser suite has four local lanes. They partition by intent without deleting or weakening the full suite:
+
+- `pnpm test:e2e:smoke` runs four tagged checks: playable readiness, keyboard-only picker confirmation, deterministic interaction selection, and asset-failure fallback. Use it for the fastest cross-system signal.
+- `pnpm test:e2e:feature` runs every non-visual test. It retains gameplay, fallback, accessibility, camera, collision, dialogue, combat, equipment, diagnostic, console, and runtime-error assertions while omitting only committed pixel comparisons.
+- `pnpm test:e2e:visual` runs the camera-composition and character-animation visual tests, including all committed screenshot oracles.
+- `pnpm test:e2e:full` (and the compatibility alias `pnpm test:e2e`) runs all tests. This is the required pre-merge browser lane.
 
 Run `pnpm test:e2e:debug` for Playwright Inspector. Failure traces, screenshots, video, page errors, and the HTML report are written beneath `test-results/` and `playwright-report/`. Open the report with `pnpm exec playwright show-report`.
 
 Run `pnpm exec playwright test e2e/district-location-hud.spec.ts` for Ashfall Junction alone. It attaches all four approaches, Signal Corner and its coordinate HUD, an overhead collision/spawn/trigger view, and a narrow health/location HUD layout. Its grounding, resolver, signal-interaction, default-NPC-absence, camera-recovery, pause/help, and responsive-layout checks use public snapshot polling rather than fixed delays.
 
-The suite starts Vite on `127.0.0.1:4174`. It uses one Chromium worker and condition-based polling for game readiness, grounding, movement, character loading, and interaction selection. The one bounded 350 ms observation verifies that a paused simulation remains stationary.
+The suite starts Vite on `127.0.0.1:4174`. It deliberately defaults to one Chromium worker. A two-worker profile was faster in one full run (269 seconds versus a 339-second one-worker median) but timed out a screenshot-heavy interaction test on repeat (324 seconds), while increasing individual SwiftShader test duration. `pnpm test:e2e:profile:parallel` remains an opt-in measurement command, not a stability gate. Use a unique `VANTA_E2E_PORT` for cold repeated profiles so a stale local Vite process cannot be reused.
+
+Readiness and positive progress use bridge snapshots or DOM assertions: bridge availability, rendered state, movement distance, camera transition, interaction selection, animation state, and heading changes. Bounded waits remain only when elapsed time is the behavior under test (paused/input/depleted-state immobility, release suppression, or a deliberately timed visual capture). Trace, screenshot, and video retention on failure remain enabled; those artifacts cost some passing-run setup time but are important for diagnosing software-WebGL failures.
 
 Chromium launches with ANGLE SwiftShader (`--use-angle=swiftshader`, `--use-gl=angle`) and `LIBGL_ALWAYS_SOFTWARE=1`, matching CI's software-rendered WebGL configuration. Tests use the generated placeholder character and a deliberately unknown logical asset ID, so no external network asset is required.
 

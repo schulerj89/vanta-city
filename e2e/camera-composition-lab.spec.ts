@@ -5,7 +5,7 @@ import type {
   CameraCompositionLabSnapshot,
 } from '../src/sandbox/scenarios/cameraCompositionLab';
 
-test('camera lab exercises composition, obstruction, viewport, and restoration', async ({
+test('camera lab exercises composition, obstruction, viewport, and restoration @visual', async ({
   page,
 }) => {
   const consoleIssues: string[] = [];

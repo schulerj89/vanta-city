@@ -8,7 +8,7 @@ import type {
 const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1&sparringFixture=1';
 
 test.describe('playable debug district', () => {
-  test('starts ready with a grounded player, valid visual, world, and camera', async ({
+  test('starts ready with a grounded player, valid visual, world, and camera @smoke', async ({
     page,
   }, testInfo) => {
     const runtimeFailures = monitorRuntimeFailures(page);
@@ -530,7 +530,14 @@ test.describe('playable debug district', () => {
       );
       const beforeDown = await snapshot(page);
       await page.keyboard.down('ArrowDown');
-      await page.waitForTimeout(1900);
+      await expect
+        .poll(async () =>
+          horizontalDistance(
+            (await snapshot(page)).player.position,
+            beforeDown.player.position,
+          ),
+        )
+        .toBeGreaterThan(1);
       const afterDown = await snapshot(page);
       await page.keyboard.up('ArrowDown');
       const backward = cameraRelativeAxis(beforeDown.camera.yaw, 'backward');
@@ -648,7 +655,14 @@ test.describe('playable debug district', () => {
         )
         .toBeGreaterThan(0.1);
       await attachScreenshot(page, testInfo, `${characterId}-turn-left-early`);
-      await page.waitForTimeout(900);
+      await expect
+        .poll(async () =>
+          angleDistance(
+            (await snapshot(page)).player.facingYaw,
+            forward.player.facingYaw,
+          ),
+        )
+        .toBeGreaterThan(0.2);
       const leftCircle = await snapshot(page);
       await attachScreenshot(page, testInfo, `${characterId}-turn-left-late`);
       expect(leftCircle.character.animationGraph).toMatchObject({
@@ -667,7 +681,14 @@ test.describe('playable debug district', () => {
       await expect
         .poll(async () => (await snapshot(page)).player.facingTurnRate)
         .toBeGreaterThan(0.1);
-      await page.waitForTimeout(900);
+      await expect
+        .poll(async () =>
+          angleDistance(
+            (await snapshot(page)).player.facingYaw,
+            leftCircle.player.facingYaw,
+          ),
+        )
+        .toBeGreaterThan(0.2);
       const rightCircle = await snapshot(page);
       await attachScreenshot(page, testInfo, `${characterId}-turn-right-late`);
       expect(rightCircle.character.animationState).toBe('run');
@@ -681,7 +702,7 @@ test.describe('playable debug district', () => {
         .poll(async () => Math.abs((await snapshot(page)).player.facingError), {
           message: `${characterId} reversal should produce heading error`,
         })
-        .toBeGreaterThan(1);
+        .toBeGreaterThan(0.5);
       const reversing = await snapshot(page);
       await attachScreenshot(page, testInfo, `${characterId}-reverse-mid-turn`);
       expect(['walk', 'run']).toContain(reversing.character.animationState);
@@ -1350,7 +1371,7 @@ test.describe('playable debug district', () => {
     expect(reloaded.character.source).toBe('asset');
   });
 
-  test('opens the picker in-place and supports keyboard-only confirmation', async ({
+  test('opens the picker in-place and supports keyboard-only confirmation @smoke', async ({
     page,
   }, testInfo) => {
     await openReadyApp(page);

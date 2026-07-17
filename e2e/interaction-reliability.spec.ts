@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
     .toBe('interaction.debug.anchor');
 });
 
-test('keeps a stable candidate until a decisive challenger wins', async ({
+test('keeps a stable candidate until a decisive challenger wins @smoke', async ({
   page,
 }) => {
   const initial = (await snapshot(page)).interaction.diagnostics;

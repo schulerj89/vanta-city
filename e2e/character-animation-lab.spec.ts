@@ -109,7 +109,7 @@ test('supports deterministic action lock, impact, scrub, speed, and mixer releas
   ]);
 });
 
-test('renders stable playable and NPC grounding diagnostics', async ({
+test('renders stable playable and NPC grounding diagnostics @visual', async ({
   page,
 }, testInfo) => {
   await page.evaluate(() => {

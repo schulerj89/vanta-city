@@ -65,12 +65,15 @@ test('live participant framing and exact gameplay camera restoration', async ({
       await expect
         .poll(async () => (await snapshot(page)).interaction.activeTargetId)
         .toBe(npcCase.interactionId);
-      await page.waitForTimeout(750);
 
+      const yawBeforeOrbit = (await snapshot(page)).camera.yaw;
       await page.keyboard.down(rangeIndex === 0 ? 'q' : 'e');
-      await page.waitForTimeout(180);
+      await expect
+        .poll(async () =>
+          angleDistance((await snapshot(page)).camera.yaw, yawBeforeOrbit),
+        )
+        .toBeGreaterThan(0.03);
       await page.keyboard.up(rangeIndex === 0 ? 'q' : 'e');
-      await page.waitForTimeout(350);
       const gameplay = (await snapshot(page)).camera;
       const simulationYaw = (await snapshot(page)).player.facingYaw;
 
@@ -138,7 +141,10 @@ test('live participant framing and exact gameplay camera restoration', async ({
       });
       if (npcCase.id === 'mack' && range.name === 'minimum') {
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.waitForTimeout(350);
+        await expect(page.locator('#game')).toHaveJSProperty(
+          'clientWidth',
+          390,
+        );
         await expect(page.getByTestId('dialogue-box')).toBeVisible();
         const narrowScreenshot = testInfo.outputPath('mack-minimum-narrow.png');
         await page.screenshot({ path: narrowScreenshot, fullPage: true });
@@ -147,7 +153,10 @@ test('live participant framing and exact gameplay camera restoration', async ({
           contentType: 'image/png',
         });
         await page.setViewportSize({ width: 1280, height: 720 });
-        await page.waitForTimeout(350);
+        await expect(page.locator('#game')).toHaveJSProperty(
+          'clientWidth',
+          1280,
+        );
       }
 
       if (rangeIndex === 0) {
@@ -251,6 +260,10 @@ function expectAngleClose(
     Math.cos(actual - expected),
   );
   expect(Math.abs(difference)).toBeLessThan(tolerance);
+}
+
+function angleDistance(left: number, right: number): number {
+  return Math.abs(Math.atan2(Math.sin(left - right), Math.cos(left - right)));
 }
 
 function expectVectorClose(

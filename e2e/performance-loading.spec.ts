@@ -33,7 +33,7 @@ test('reports controlled slow progress and clean loading disposal', async ({
   expect(state.performance.renderer.triangles).toBeGreaterThan(0);
 });
 
-test('simulates selected logical failure and reaches placeholder gameplay', async ({
+test('simulates selected logical failure and reaches placeholder gameplay @smoke', async ({
   page,
 }) => {
   await page.goto(`${base}&loadDelayMs=300&loadFail=character.casual.model`);

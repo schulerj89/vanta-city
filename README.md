@@ -93,7 +93,10 @@ pnpm validate:characters
 pnpm build
 pnpm size
 pnpm test:e2e:install # first time only
-pnpm test:e2e
+pnpm test:e2e:smoke
+pnpm test:e2e:feature
+pnpm test:e2e:visual
+pnpm test:e2e:full
 ```
 
 Use `pnpm preview` for a final manual check of the production build when relevant.
