@@ -1267,7 +1267,7 @@ canvas {
 
 @media (max-width: 40rem) {
   .debug-panel {
-    inset: auto 0.5rem max(5.25rem, calc(env(safe-area-inset-bottom) + 4.5rem));
+    inset: auto 0.5rem max(8.25rem, calc(env(safe-area-inset-bottom) + 7.5rem));
     width: calc(100% - 1rem);
     max-height: min(42dvh, 24rem);
     padding: 0.7rem max(0.75rem, env(safe-area-inset-right)) 0.7rem
