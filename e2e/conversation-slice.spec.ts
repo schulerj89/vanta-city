@@ -11,7 +11,7 @@ test('character picker through repeatable Mack conversation', async ({
   const uncaught: string[] = [];
   const consoleIssues = monitorConsoleIssues(page);
   page.on('pageerror', (error) => uncaught.push(error.message));
-  await page.goto('/?e2e=1&debug=1&dialogueTypewriter=0');
+  await page.goto('/?e2e=1&debug=1&dialogueTypewriter=0&npcFixtures=1');
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
 
   await expect.poll(async () => (await snapshot(page)).picker.open).toBe(true);
@@ -201,7 +201,7 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   const uncaught: string[] = [];
   const consoleIssues = monitorConsoleIssues(page);
   page.on('pageerror', (error) => uncaught.push(error.message));
-  await page.goto('/?e2e=1&debug=1&skipPicker=1');
+  await page.goto('/?e2e=1&debug=1&skipPicker=1&npcFixtures=1');
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
 
   await expect
@@ -304,7 +304,9 @@ test('Nox and Raze complete and repeat their registered Talk conversations', asy
   const uncaught: string[] = [];
   const consoleIssues = monitorConsoleIssues(page);
   page.on('pageerror', (error) => uncaught.push(error.message));
-  await page.goto('/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0');
+  await page.goto(
+    '/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0&npcFixtures=1',
+  );
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
 
   for (const npc of [
@@ -431,7 +433,7 @@ test('dialogue panel remains stable and portraits stay clear responsively', asyn
       width: presentation.width,
       height: presentation.height,
     });
-    await page.goto('/?e2e=1&skipPicker=1');
+    await page.goto('/?e2e=1&skipPicker=1&npcFixtures=1');
     await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
     await command(page, 'player.select-character', presentation.character);
     await command(page, 'player.teleport-position', '-11.5,0.2,5.5,0.785');

@@ -1,4 +1,4 @@
-import { Scene } from 'three';
+import { Group, Scene } from 'three';
 import type { GameAssetLoader } from '../../src/assets/AssetLoader';
 import { EventBus } from '../../src/core/events';
 import { LevelRegistry } from '../../src/world/LevelRegistry';
@@ -8,7 +8,8 @@ import { testDistrict } from '../../src/world/levels/testDistrict';
 
 const unusedAssets: GameAssetLoader = {
   loadTexture: () => Promise.reject(new Error('Unexpected texture load')),
-  loadGltf: () => Promise.reject(new Error('Unexpected glTF load')),
+  loadGltf: () =>
+    Promise.resolve({ scene: new Group(), animations: [] } as never),
   instantiateModel: () =>
     Promise.reject(new Error('Unexpected model instantiation')),
   getStatus: (id) => ({ id, phase: 'idle', progress: 0 }),

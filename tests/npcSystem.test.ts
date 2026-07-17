@@ -337,7 +337,7 @@ describe('NPC foundation', () => {
       equipment: { useSequence: 1, lastUseAccepted: true },
     });
     expect(system.getWorldPoseSource('mack')?.getWorldPose()).toMatchObject({
-      position: { x: -10, y: 0.2, z: 4 },
+      position: { x: -9, y: 0.22, z: 10 },
     });
 
     system.dispose();

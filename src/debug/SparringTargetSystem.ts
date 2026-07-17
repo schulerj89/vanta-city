@@ -74,6 +74,8 @@ export interface SparringCameraFocusSurface {
 }
 
 export interface SparringTargetOptions {
+  /** Keeps the combat fixture absent unless explicitly requested by development tooling. */
+  readonly fixtureEnabled?: boolean;
   readonly camera?: SparringCameraFocusSurface;
   readonly gameplayAvailable?: () => boolean;
 }
@@ -182,6 +184,7 @@ export class SparringTargetSystem implements GameSystem {
   ) {}
 
   public async init(): Promise<void> {
+    if (this.options.fixtureEnabled === false) return;
     const level = this.levels.activeLevel;
     if (level?.id !== 'test-district') return;
     const spawn = level.spawns.find(

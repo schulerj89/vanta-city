@@ -2,25 +2,22 @@ import { Vector3 } from 'three';
 import { StaticCollisionWorld } from '../../src/physics/CollisionWorld';
 import { defaultPlayerMovementConfig } from '../../src/player/PlayerMovement';
 import { findSpawn } from '../../src/world/LevelQueries';
+import { intersectionLayout } from '../../src/world/levels/intersectionLayout';
 import { testDistrict } from '../../src/world/levels/testDistrict';
 
-const outerSpawns = [
-  'spawn.outer-north-gate',
-  'spawn.outer-south-gate',
-  'spawn.outer-east-plaza',
-  'spawn.outer-west-yard',
-  'spawn.outer-overlook',
+const approaches = [
+  'spawn.approach-north',
+  'spawn.approach-east',
+  'spawn.approach-south',
+  'spawn.approach-west',
 ] as const;
 
-describe('expanded test district', () => {
-  it('keeps named outer spawns on authored collision near ±40m', () => {
+describe('Ashfall Junction intersection', () => {
+  it('grounds every named approach on authoritative road collision', () => {
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
-    for (const id of outerSpawns) {
+    for (const id of approaches) {
       const spawn = findSpawn(testDistrict.definition, id);
-      expect(
-        Math.max(Math.abs(spawn.position[0]), Math.abs(spawn.position[2])),
-      ).toBeGreaterThanOrEqual(30);
       const result = collision.moveCharacter(
         new Vector3(...spawn.position),
         new Vector3(0, -1, 0),
@@ -28,48 +25,70 @@ describe('expanded test district', () => {
         false,
       );
       expect(result.grounded, id).toBe(true);
-      expect(result.groundColliderId, id).not.toBe('world-floor');
+      expect(result.groundColliderId, id).toMatch(/c\.road-/);
     }
   });
 
-  it('pairs every expansion visual with equivalent collision geometry', () => {
+  it('pairs structural primitive visuals with equivalent collision geometry', () => {
     const visuals = new Map(
       testDistrict.definition.environment.map((entry) => [entry.id, entry]),
     );
-    const expanded = testDistrict.definition.staticCollision.filter(
+    const structural = testDistrict.definition.staticCollision.filter(
       ({ id }) =>
-        id.includes('north') ||
-        id.includes('south') ||
-        id.includes('east-plaza') ||
-        id.includes('west-yard') ||
-        id.includes('overlook'),
+        id.startsWith('c.road-') ||
+        id.startsWith('c.sidewalk-') ||
+        id.startsWith('c.ruin-') ||
+        id.startsWith('c.boundary-'),
     );
-    expect(expanded.length).toBeGreaterThan(15);
-    for (const collider of expanded) {
-      const visual = visuals.get(collider.id.replace(/^c\./, 'v.'));
-      expect(visual, collider.id).toBeDefined();
-      expect(visual?.position, collider.id).toEqual(collider.position);
-      if (visual?.kind === 'box') {
-        expect(visual.size, collider.id).toEqual(collider.size);
-        expect(visual.rotation, collider.id).toEqual(collider.rotation);
-      }
+    expect(structural).toHaveLength(14);
+    for (const definition of structural) {
+      const visual = visuals.get(definition.id.replace(/^c\./, 'v.'));
+      expect(visual, definition.id).toBeDefined();
+      expect(visual?.position, definition.id).toEqual(definition.position);
+      if (visual?.kind === 'box') expect(visual.size).toEqual(definition.size);
     }
   });
 
-  it('closes representative route edges with visible boundary collision', () => {
+  it('closes all four visible outer edges with boundary collision', () => {
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
-    const probes = [
-      [[0, 1, 38], [0, 1, 46], 'c.boundary-north'],
-      [[27.5, 1, 4], [27.5, 1, 14], 'c.boundary-east-link-north'],
-      [[-27.5, 1, -30], [-27.5, 1, -20], 'c.boundary-west-link-north'],
-      [[38, 1, -10], [45, 1, -10], 'c.boundary-overlook-approach-east'],
-    ] as const;
-    for (const [from, to, expected] of probes) {
+    for (const [from, to, expected] of [
+      [[0, 1, 25], [0, 1, 30], 'c.boundary-north'],
+      [[0, 1, -25], [0, 1, -30], 'c.boundary-south'],
+      [[25, 1, 0], [30, 1, 0], 'c.boundary-east'],
+      [[-25, 1, 0], [-30, 1, 0], 'c.boundary-west'],
+    ] as const) {
       expect(
         collision.castSegment(new Vector3(...from), new Vector3(...to))
           .colliderId,
       ).toBe(expected);
+    }
+  });
+
+  it('keeps level bounds, zone, and traffic-light transform on shared constants', () => {
+    expect(testDistrict.definition.zones).toContainEqual(
+      expect.objectContaining({
+        id: 'zone.ashfall-junction',
+        size: [intersectionLayout.footprint, 10, intersectionLayout.footprint],
+      }),
+    );
+    expect(testDistrict.definition.environment).toContainEqual(
+      expect.objectContaining({
+        id: 'v.traffic-light',
+        position: intersectionLayout.trafficLight,
+      }),
+    );
+  });
+
+  it('registers only local, documented CC0 environment assets', () => {
+    for (const descriptor of Object.values(testDistrict.assets)) {
+      expect(descriptor.attribution?.license).toBe('CC0 1.0');
+      expect(descriptor.attribution?.sourceUrl).toMatch(
+        /^https:\/\/poly\.pizza\/m\//,
+      );
+      expect(descriptor.url).toMatch(
+        /^\/assets\/environment\/intersection\/[^/]+\.glb$/,
+      );
     }
   });
 });

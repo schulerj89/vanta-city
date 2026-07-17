@@ -12,7 +12,7 @@ test('records movement through dialogue restore, freezes, exports, and reads bac
     if (message.type() === 'error') failures.push(`console: ${message.text()}`);
   });
 
-  await page.goto('/?e2e=1&debug=1&skipPicker=1');
+  await page.goto('/?e2e=1&debug=1&skipPicker=1&npcFixtures=1');
   await expect.poll(() => hasReadyBridge(page)).toBe(true);
   await command(page, 'diagnostics.start', '5');
 
@@ -32,6 +32,11 @@ test('records movement through dialogue restore, freezes, exports, and reads bac
   await expect
     .poll(() => cameraOwner(page))
     .toBe('dialogue:conversation.mack.introduction');
+  await expect
+    .poll(() => traceHasCameraMode(page, 'conversation'), {
+      message: 'recorder should sample the conversation camera before release',
+    })
+    .toBe(true);
 
   await command(page, 'conversation.end');
   await expect.poll(() => gameState(page)).toBe('playing');
@@ -137,6 +142,17 @@ async function cameraTransition(page: Page) {
   return page.evaluate(
     () => window.__VANTA_TEST__!.snapshot().camera.transitionProgress,
   );
+}
+
+async function traceHasCameraMode(
+  page: Page,
+  mode: DiagnosticTrace['frames'][number]['camera']['mode'],
+): Promise<boolean> {
+  return page.evaluate((expectedMode) => {
+    const serialized = window.__VANTA_TEST__!.exportDiagnosticTrace();
+    const trace = JSON.parse(serialized) as DiagnosticTrace;
+    return trace.frames.some(({ camera }) => camera.mode === expectedMode);
+  }, mode);
 }
 
 function distance(

@@ -11,21 +11,21 @@ const cases = [
     interactionId: 'interaction.npc.mack',
     conversationId: 'conversation.mack.introduction',
     profileId: 'close',
-    npc: { x: -10, y: 0.2, z: 4 },
+    npc: { x: -9, y: 0.22, z: 10 },
   },
   {
     id: 'nox',
     interactionId: 'interaction.npc.nox',
     conversationId: 'conversation.nox.check-in',
     profileId: 'default',
-    npc: { x: -19, y: 0.2, z: 12 },
+    npc: { x: -9, y: 0.22, z: -10 },
   },
   {
     id: 'raze',
     interactionId: 'interaction.npc.raze',
     conversationId: 'conversation.raze.check-in',
     profileId: 'wide',
-    npc: { x: 14, y: 3, z: -8 },
+    npc: { x: 9, y: 0.22, z: -10 },
   },
 ] as const;
 
@@ -41,7 +41,7 @@ test('live participant framing and exact gameplay camera restoration', async ({
     }
   });
   page.on('pageerror', (error) => pageErrors.push(error.message));
-  await page.goto('/?e2e=1&skipPicker=1&dialogueTypewriter=0');
+  await page.goto('/?e2e=1&skipPicker=1&dialogueTypewriter=0&npcFixtures=1');
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
   await command(page, 'camera.set-follow-distance', '7');
   await command(page, 'camera.set-shoulder', 'left');

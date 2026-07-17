@@ -5,14 +5,14 @@ import { testDistrict } from '../../src/world/levels/testDistrict';
 describe('resolveLevelLocation', () => {
   it('resolves outer landmarks and inclusive zone boundaries', () => {
     expect(
-      resolveLevelLocation(testDistrict.definition, { x: 38, y: 0, z: 4 }),
+      resolveLevelLocation(testDistrict.definition, { x: 8.2, y: 0.2, z: 8.2 }),
     ).toMatchObject({
-      id: 'landmark.exchange-beacon',
+      id: 'landmark.signal-corner',
       kind: 'landmark',
     });
     expect(
-      resolveLevelLocation(testDistrict.definition, { x: 21, y: 0, z: 32 }),
-    ).toMatchObject({ id: 'zone.north-market', kind: 'zone' });
+      resolveLevelLocation(testDistrict.definition, { x: 28, y: 0, z: 28 }),
+    ).toMatchObject({ id: 'zone.ashfall-junction', kind: 'zone' });
   });
 
   it('uses priority, then smaller volume, then id for overlaps', () => {
@@ -74,7 +74,7 @@ describe('resolveLevelLocation', () => {
       resolveLevelLocation(testDistrict.definition, { x: 100, y: 0, z: 100 }),
     ).toMatchObject({
       id: 'test-district',
-      name: 'Foundry Test Block',
+      name: 'Ashfall Junction',
       kind: 'level',
     });
   });

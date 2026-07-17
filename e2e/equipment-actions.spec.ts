@@ -5,7 +5,7 @@ import type {
   BrowserTestSnapshot,
 } from '../src/debug/BrowserTestBridge';
 
-const appUrl = '/?e2e=1&debug=1&skipPicker=1';
+const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1';
 
 test.describe('reusable equipment and character actions', () => {
   test('equips, uses, rolls, dies, and revives both playable characters', async ({

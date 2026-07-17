@@ -7,7 +7,7 @@ import type {
 } from '../src/debug/BrowserTestBridge';
 
 const appUrl =
-  '/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0&interactionScenario=1';
+  '/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0&interactionScenario=1&npcFixtures=1';
 
 test.beforeEach(async ({ page }) => {
   await page.goto(appUrl);
@@ -97,28 +97,28 @@ test('captures exact Talk and prop range edges', async ({ page }, testInfo) => {
     },
     {
       name: 'talk-edge',
-      position: '-10,0.2,5.86,3.141592653589793',
+      position: '-9,0.22,11.86,3.141592653589793',
       target: 'interaction.npc.mack',
     },
     {
       name: 'talk-inside',
-      position: '-10,0.2,5.45,3.141592653589793',
+      position: '-9,0.22,11.45,3.141592653589793',
       target: 'interaction.npc.mack',
     },
     {
       name: 'prop-outside',
-      position: '-13,0.15,2.89,3.141592653589793',
+      position: '10.2,0.22,9.69,3.141592653589793',
       target: undefined,
     },
     {
       name: 'prop-edge',
-      position: '-13,0.15,2.88,3.141592653589793',
-      target: 'interaction.garage-door',
+      position: '10.2,0.22,9.68,3.141592653589793',
+      target: 'interaction.signal-controller',
     },
     {
       name: 'prop-inside-narrow',
-      position: '-13,0.15,2.65,3.141592653589793',
-      target: 'interaction.garage-door',
+      position: '10.2,0.22,9.5,3.141592653589793',
+      target: 'interaction.signal-controller',
       narrow: true,
     },
   ] as const) {

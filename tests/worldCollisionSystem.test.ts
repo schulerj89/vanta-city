@@ -32,8 +32,8 @@ describe('WorldCollisionSystem', () => {
     events.emit('level:loaded', { level: testDistrict.definition });
     expect(
       collision.castCamera(
-        new Vector3(7.2, 0.7, 6),
-        new Vector3(7.2, 0.7, 10),
+        new Vector3(8.25, 1, 6),
+        new Vector3(8.25, 1, 10),
         0.1,
       ).obstructed,
     ).toBe(true);
@@ -43,8 +43,8 @@ describe('WorldCollisionSystem', () => {
     events.emit('level:unloaded', { levelId: testDistrict.definition.id });
     expect(
       collision.castCamera(
-        new Vector3(7.2, 0.7, 6),
-        new Vector3(7.2, 0.7, 10),
+        new Vector3(8.25, 1, 6),
+        new Vector3(8.25, 1, 10),
         0.1,
       ).obstructed,
     ).toBe(false);

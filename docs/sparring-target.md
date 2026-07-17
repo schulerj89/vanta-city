@@ -1,6 +1,6 @@
 # Debug sparring target
 
-The Foundry debug district contains one inactive, stationary sparring target at `spawn.debug-sparring-target`. It is a test hook for completed character actions, not a combat system. Enable **Activate debug sparring target** in `Commands / Actions`; **Reset debug sparring target** clears response and ignored-event counters and returns its presentation to idle.
+Ashfall Junction declares a development spawn for one stationary sparring target, but normal startup creates no target object or health bar. Launch a Vite development build with `?sparringFixture=1` to load it at `spawn.debug-sparring-target`; production ignores this parameter. It is a test hook for completed character actions, not a combat system. Enable **Activate debug sparring target** in `Commands / Actions`; **Reset debug sparring target** clears response and ignored-event counters and returns its presentation to idle.
 
 `CharacterActionTarget` is the gameplay-facing response contract. `SparringTargetSystem` listens only to `PlayerControllerSystem`'s animation-timed `character-action:impact` event and delegates an accepted response to the target. It does not inspect keyboard input or register a listener. Disabled, game-state-owned, target-busy, out-of-range, vertically separated, and not-facing impacts are counted with explicit reasons.
 

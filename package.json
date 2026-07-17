@@ -21,7 +21,8 @@
     "camera-lab": "vite --open '/?sandbox=camera-composition&debug=1'",
     "lab:characters": "vite --open '/?sandbox=character-animation-lab&debug=1'",
     "size": "node scripts/report-bundle-size.mjs",
-    "validate:characters": "tsx scripts/validate-characters.ts"
+    "validate:characters": "tsx scripts/validate-characters.ts",
+    "validate:intersection": "tsx scripts/validate-intersection-assets.ts"
   },
   "dependencies": {
     "three": "^0.185.1"

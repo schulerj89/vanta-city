@@ -2,7 +2,9 @@
 
 NPCs are data-defined static district actors. `NpcSystem` listens to level load/unload events, resolves each definition's authored NPC spawn, loads its shared `CharacterDefinition` through the existing `CharacterLoader`, adds one `NpcEntity` to `GameObjectWorld`, and registers one generic Talk interaction. It does not implement navigation, schedules, combat, missions, traffic, or runtime network loading.
 
-## Debug district roster
+## Development fixture roster
+
+The production/default Ashfall Junction startup passes an empty definition list to `NpcSystem`, so no ordinary NPC model, Talk prompt, occupancy, or health UI is present. The reusable definitions below remain system-test fixtures and are instantiated only in a Vite development build when the URL explicitly contains `?npcFixtures=1`. Production ignores the parameter.
 
 | NPC  | NPC character definition | Poly Pizza model                                       |   Scale | Portrait asset      | Camera profile | Spawn                | Conversation                     |
 | ---- | ------------------------ | ------------------------------------------------------ | ------: | ------------------- | -------------- | -------------------- | -------------------------------- |
@@ -12,7 +14,7 @@ NPCs are data-defined static district actors. `NpcSystem` listens to level load/
 
 All three are selected from Quaternius's [Animated Men Pack](https://poly.pizza/bundle/Animated-Men-Pack-DAC9SDgMQT), a CC0/Public Domain source distinct from the playable Casual/Punk **Ultimate Modular Men Pack**. The three self-contained GLBs, CC0 legal text, archive hash, individual hashes, sizes, and full clip inventory are committed under `public/assets/characters/animated-men/`. No model conversion was needed.
 
-`npcDefinitions` remains authoritative for Mack, Nox, and Raze identity, character reference, spawn, Talk prompt, conversation, and idle facing. `NpcSystem` applies the shared Talk range profile; `interactionRadius` exists only as an optional surface-gap override for exceptional geometry. `npcCharacterDefinitions` contains their non-selectable presentation definitions. The playable `characterDefinitions` remains exactly Casual and Punk.
+`npcDefinitions` remains authoritative for Mack, Nox, and Raze fixture identity, character reference, spawn, Talk prompt, conversation, and idle facing. `NpcSystem` applies the shared Talk range profile; `interactionRadius` exists only as an optional surface-gap override for exceptional geometry. `npcCharacterDefinitions` contains their non-selectable presentation definitions. The playable `characterDefinitions` remains exactly Casual and Punk.
 
 ## Animation and grounding
 

@@ -278,27 +278,25 @@ describe('PlayerMovementSimulation', () => {
     expect(movement.position.y).toBeGreaterThan(0.1);
   });
 
-  it('uses the visible upper face of a rotated ramp as the foot-contact plane', () => {
+  it('grounds on each authored intersection approach and raised corner', () => {
     const collision = new StaticCollisionWorld();
-    const ramp = testDistrict.definition.staticCollision.find(
-      ({ id }) => id === 'c.deck-ramp',
-    );
-    expect(ramp).toBeDefined();
-    collision.addDefinition(ramp!);
+    collision.addDefinitions(testDistrict.definition.staticCollision);
     const movement = new PlayerMovementSimulation(collision);
-
-    movement.teleport(new Vector3(13.5, 0.1, 5.95));
-    expect(movement.grounded).toBe(true);
-    expect(movement.groundColliderId).toBe('c.deck-ramp');
-    expect(movement.position.y).toBeGreaterThanOrEqual(0);
-    expect(movement.position.y).toBeLessThanOrEqual(0.02);
-
-    movement.teleport(new Vector3(13.5, 2.9, -3));
-    expect(movement.grounded).toBe(true);
-    expect(movement.position.y).toBeCloseTo(2.8, 5);
+    for (const [position, support, height] of [
+      [[0, 0.1, 20], 'c.road-north-south', 0],
+      [[20, 0.1, 0], 'c.road-east-west', 0],
+      [[0, 0.1, -20], 'c.road-north-south', 0],
+      [[-20, 0.1, 0], 'c.road-east-west', 0],
+      [[9, 0.3, 9], 'c.sidewalk-northeast', 0.2],
+    ] as const) {
+      movement.teleport(new Vector3(...position));
+      expect(movement.grounded, support).toBe(true);
+      expect(movement.groundColliderId, support).toBe(support);
+      expect(movement.position.y, support).toBeCloseTo(height, 5);
+    }
   });
 
-  it('keeps named curb, ramp, stair, and deck transitions grounded in both directions', () => {
+  it('keeps the crossing grounded while walking through the center seam', () => {
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
     const movement = new PlayerMovementSimulation(collision);
@@ -321,29 +319,10 @@ describe('PlayerMovementSimulation', () => {
       return supports;
     };
 
-    movement.teleport(new Vector3(-4.6, 0, 8));
-    const curbSupports = walk(1, 45, Math.PI / 2);
-    expect(curbSupports).toContain('c.curb-west');
-    expect(curbSupports).toContain('c.sidewalk-west');
-    expect(movement.position.y).toBeCloseTo(0.2, 5);
-
-    movement.teleport(new Vector3(13.5, 0.1, 5.8));
-    const uphillSupports = walk(1, 180);
-    expect(uphillSupports).toContain('c.deck-ramp');
-    expect(uphillSupports).toContain('c.loading-deck');
-    expect(movement.position.y).toBeCloseTo(2.8, 5);
-    const downhillSupports = walk(-1, 220);
-    expect(downhillSupports).toContain('c.deck-ramp');
-    expect(downhillSupports).toContain('c.east-lot');
-    expect(movement.position.y).toBeCloseTo(0, 5);
-
-    movement.teleport(new Vector3(9.5, 0.35, 1.2));
-    const stairSupports = walk(1, 110);
-    expect(stairSupports).toContain('c.stair-1');
-    expect(stairSupports).toContain('c.stair-8');
-    expect(stairSupports).toContain('c.loading-deck');
-    expect(movement.position.y).toBeCloseTo(2.8, 5);
-    walk(-1, 150);
+    movement.teleport(new Vector3(0, 0, 5));
+    const supports = walk(1, 220);
+    expect(supports).toContain('c.road-north-south');
+    expect(movement.position.z).toBeLessThan(0);
     expect(movement.position.y).toBeCloseTo(0, 5);
   });
 

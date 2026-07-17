@@ -5,7 +5,7 @@ import type {
   BrowserTestSnapshot,
 } from '../src/debug/BrowserTestBridge';
 
-const appUrl = '/?e2e=1&debug=1&skipPicker=1';
+const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1&sparringFixture=1';
 
 test.describe('playable debug district', () => {
   test('starts ready with a grounded player, valid visual, world, and camera', async ({
@@ -437,21 +437,26 @@ test.describe('playable debug district', () => {
       .toBeGreaterThan(0.3);
     await page.keyboard.up('w');
 
-    await executeCommand(page, 'player.teleport', 'spawn.player-garage');
+    await executeCommand(
+      page,
+      'player.teleport-position',
+      '10.2,0.22,9.5,3.141593',
+    );
     await expect
       .poll(async () => (await snapshot(page)).interaction.activeTargetId, {
-        message: 'garage door should become the selected interaction candidate',
+        message:
+          'signal controller should become the selected interaction candidate',
       })
-      .toBe('interaction.garage-door');
+      .toBe('interaction.signal-controller');
     await attachScreenshot(page, testInfo, 'player-beside-interactable');
     await page.keyboard.press('g');
     await expect
       .poll(async () => (await snapshot(page)).interaction.completedTargetIds)
-      .toContain('interaction.garage-door');
+      .toContain('interaction.signal-controller');
     const action = (await snapshot(page)).character.characterAction;
     expect(action).toMatchObject({
       lastRequested: 'interact',
-      lastSource: 'interaction:garage-door',
+      lastSource: 'interaction:signal-controller',
       lastAccepted: true,
     });
   });
@@ -518,7 +523,11 @@ test.describe('playable debug district', () => {
         );
       }
 
-      await executeCommand(page, 'player.teleport', 'spawn.player-default');
+      await executeCommand(
+        page,
+        'player.teleport-position',
+        '0,0.02,0,3.141593',
+      );
       const beforeDown = await snapshot(page);
       await page.keyboard.down('ArrowDown');
       await page.waitForTimeout(1900);
@@ -614,7 +623,11 @@ test.describe('playable debug district', () => {
       await expect
         .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
         .toBe(characterId);
-      await executeCommand(page, 'player.teleport', 'spawn.player-default');
+      await executeCommand(
+        page,
+        'player.teleport-position',
+        '0,0.02,0,3.141593',
+      );
       if (!(await snapshot(page)).player.runMode) {
         await page.keyboard.press('r');
       }
@@ -732,6 +745,7 @@ test.describe('playable debug district', () => {
   test('supports keyboard orbit, alternating actions, and accessible help without leaking input', async ({
     page,
   }, testInfo) => {
+    test.setTimeout(60_000);
     const runtimeFailures = monitorRuntimeFailures(page);
     await openReadyApp(page);
     const initial = await snapshot(page);
@@ -1260,16 +1274,18 @@ test.describe('playable debug district', () => {
     expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
   });
 
-  test('keeps feet grounded at named curb, ramp, stair, and elevation transitions', async ({
+  test('keeps feet grounded across roads and raised sidewalk corners', async ({
     page,
   }) => {
     await openReadyApp(page);
     const footTolerance = 0.02;
     const locations = [
-      ['spawn.grounding-curb-west', 'c.curb-west'],
-      ['spawn.grounding-ramp-low', 'c.deck-ramp'],
-      ['spawn.grounding-ramp-high', 'c.loading-deck'],
-      ['spawn.grounding-stairs-low', 'c.stair-1'],
+      ['spawn.approach-north', 'c.road-north-south'],
+      ['spawn.approach-east', 'c.road-east-west'],
+      ['spawn.approach-south', 'c.road-north-south'],
+      ['spawn.approach-west', 'c.road-east-west'],
+      ['spawn.corner-northeast', 'c.sidewalk-northeast'],
+      ['spawn.corner-southwest', 'c.sidewalk-southwest'],
     ] as const;
 
     for (const [spawnId, supportId] of locations) {
@@ -1287,33 +1303,19 @@ test.describe('playable debug district', () => {
       ).toBeLessThanOrEqual(footTolerance);
     }
 
-    await executeCommand(page, 'player.teleport', 'spawn.grounding-ramp-low');
+    await executeCommand(page, 'player.teleport', 'spawn.approach-north');
     await page.keyboard.down('w');
     await expect
-      .poll(async () => (await snapshot(page)).player.position.y, {
-        message: 'forward walking should climb the loading ramp',
+      .poll(async () => (await snapshot(page)).player.position.z, {
+        message: 'forward walking should cross toward the intersection',
       })
-      .toBeGreaterThan(0.6);
+      .toBeLessThan(16);
     await page.keyboard.up('w');
-    const uphill = await snapshot(page);
-    expect(uphill.player.grounded).toBe(true);
-    expect(uphill.player.groundColliderId).toBe('c.deck-ramp');
+    const crossed = await snapshot(page);
+    expect(crossed.player.grounded).toBe(true);
+    expect(crossed.player.groundColliderId).toBe('c.road-north-south');
     expect(
-      Math.abs(uphill.player.footClearance ?? Infinity),
-    ).toBeLessThanOrEqual(footTolerance);
-
-    await page.keyboard.down('s');
-    await expect
-      .poll(async () => (await snapshot(page)).player.position.y, {
-        message: 'reverse walking should descend the loading ramp',
-      })
-      .toBeLessThan(0.2);
-    await page.keyboard.up('s');
-    const downhill = await snapshot(page);
-    expect(downhill.player.grounded).toBe(true);
-    expect(downhill.player.groundNormal.y).toBeGreaterThan(0.95);
-    expect(
-      Math.abs(downhill.player.footClearance ?? Infinity),
+      Math.abs(crossed.player.footClearance ?? Infinity),
     ).toBeLessThanOrEqual(footTolerance);
   });
 

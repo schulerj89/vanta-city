@@ -8,7 +8,9 @@ test('inspects gameplay, help, picker, and dialogue ownership', async ({
 }, testInfo) => {
   const gamepad = virtualGamepad();
   await installPointerLockStub(page);
-  await page.goto('/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0');
+  await page.goto(
+    '/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0&npcFixtures=1',
+  );
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
   await expect
     .poll(async () => (await snapshot(page)).gameState)
@@ -106,11 +108,7 @@ test('inspects gameplay, help, picker, and dialogue ownership', async ({
   // Turning is authoritative for interaction facing, so make this fixture's
   // intended east-facing dialogue setup explicit instead of inheriting the
   // heading from the earlier input-ownership exercise.
-  await command(
-    page,
-    'player.teleport-position',
-    '-10,0.2,4,1.5707963267948966',
-  );
+  await command(page, 'player.teleport', 'spawn.player-talk-mack');
   await expect
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.npc.mack');

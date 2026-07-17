@@ -30,7 +30,7 @@ describe('LocationHudSystem', () => {
     const locations = new DefinitionLevelLocations(testDistrict.definition);
     const pose = {
       getWorldPose: () => ({
-        position: { x: 38, y: 0.15, z: 4 },
+        position: { x: 8.2, y: 0.2, z: 8.2 },
         forward: { x: 0, y: 0, z: -1 },
       }),
     };
@@ -46,11 +46,11 @@ describe('LocationHudSystem', () => {
     hud.update({ delta: 0.1, elapsed: 0.1, frame: 2 });
     expect(hud.getSnapshot()).toMatchObject({
       visible: true,
-      locationId: 'landmark.exchange-beacon',
-      coordinates: 'X +38.0 · Y +0.2 · Z +4.0',
+      locationId: 'landmark.signal-corner',
+      coordinates: 'X +8.2 · Y +0.2 · Z +8.2',
       updateCount: 1,
     });
-    expect(mount.textContent).toContain('Exchange Beacon');
+    expect(mount.textContent).toContain('Signal Corner');
 
     state.transition('character-select');
     hud.update({ delta: 0.1, elapsed: 0.2, frame: 3 });

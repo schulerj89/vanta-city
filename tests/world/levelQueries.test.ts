@@ -20,11 +20,15 @@ describe('level location lookup', () => {
 
   it('provides semantic locations without scene traversal', () => {
     const locations = new DefinitionLevelLocations(level);
-    expect(locations.getLocation('mission.loading-deck').kind).toBe('mission');
-    expect(locations.getTrigger('trigger.deck-zone').tags).toContain('mission');
-    expect(locations.getCinematicAnchor('camera.deck-reveal').fieldOfView).toBe(
-      42,
+    expect(locations.getLocation('mission.intersection-center').kind).toBe(
+      'mission',
     );
-    expect(locations.getStaticColliders().length).toBeGreaterThan(20);
+    expect(locations.getTrigger('trigger.intersection-center').tags).toContain(
+      'future-mission',
+    );
+    expect(
+      locations.getCinematicAnchor('camera.intersection-overhead').fieldOfView,
+    ).toBe(50);
+    expect(locations.getStaticColliders().length).toBeGreaterThan(15);
   });
 });

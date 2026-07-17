@@ -249,8 +249,11 @@ async function bootstrap(): Promise<void> {
     conversationCatalog,
     runtime.state,
   );
+  const npcFixturesEnabled =
+    import.meta.env.DEV && developmentParameters?.get('npcFixtures') === '1';
+  const activeNpcDefinitions = npcFixturesEnabled ? npcDefinitions : [];
   const npcs = new NpcSystem(
-    npcDefinitions,
+    activeNpcDefinitions,
     npcCharacterDefinitions,
     new CharacterLoader(assets),
     objects,
@@ -271,6 +274,7 @@ async function bootstrap(): Promise<void> {
       levelSystem,
       {
         camera,
+        fixtureEnabled: developmentParameters?.get('sparringFixture') === '1',
         gameplayAvailable: () =>
           runtime.state.current === 'playing' && !input.isUiFocused(),
       },
@@ -343,7 +347,7 @@ async function bootstrap(): Promise<void> {
     );
   }
   const dialoguePortraits = new DialoguePortraitResolver(
-    await createDialogueSpeakers(npcDefinitions, assetCatalog),
+    await createDialogueSpeakers(activeNpcDefinitions, assetCatalog),
     {
       getSelectedIdentity: () => {
         const definition = characterSelection.getSelectedDefinition();
@@ -357,19 +361,22 @@ async function bootstrap(): Promise<void> {
   );
   const dialogueUI = new DialogueUISystem(mount, dialogue, dialoguePortraits);
   interactions.register({
-    id: 'interaction.garage-door',
-    prompt: 'Inspect garage door',
+    id: 'interaction.signal-controller',
+    prompt: 'Inspect signal controller',
     location: () => {
       const [x, y, z] = levelSystem.getLocation(
-        'interaction.garage-door',
+        'interaction.signal-controller',
       ).position;
       return { x, y, z };
     },
     rangeProfile: 'inspect',
     repeatable: false,
-    collisionIgnoreIds: ['c.garage-door'],
+    collisionIgnoreIds: ['c.signal-controller'],
     interact: () => {
-      player.triggerCharacterAction('interact', 'interaction:garage-door');
+      player.triggerCharacterAction(
+        'interact',
+        'interaction:signal-controller',
+      );
     },
   });
   let interactionDebug:
@@ -499,7 +506,7 @@ async function bootstrap(): Promise<void> {
           camera,
           interactions,
           npcs,
-          npcDefinitions,
+          npcDefinitions: activeNpcDefinitions,
           sparringTarget,
           healthHud,
           quickbar,
