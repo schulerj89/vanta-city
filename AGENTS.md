@@ -38,6 +38,20 @@ These rules apply to the entire repository.
 - Commit integration corrections separately when they express a distinct conflict-resolution decision.
 - Push only when the user explicitly asks to push. Do not delete branches during routine worktree cleanup.
 
+## Efficient validation
+
+- Match validation scope to the change while iterating. Run affected unit tests, targeted lint/format checks, and the relevant browser feature suite instead of repeatedly running every check after each small edit.
+- Use three validation tiers:
+  - Quick: affected unit tests plus targeted formatting/linting and type-checking when public TypeScript contracts changed.
+  - Smoke: the complete unit suite plus the smallest critical browser path covering picker, gameplay readiness, movement, and interaction.
+  - Full: repository formatting, linting, type-checking, unit tests, character/asset validation, production build and size reporting, and the complete browser suite.
+- Run the full tier before integrating shared gameplay changes, before declaring a worker complete, and after combining branches whose contracts overlap. It is not required after every intermediate commit.
+- Keep unit, browser, visual, and performance coverage distinct. Do not make fast unit checks launch a browser, and do not run screenshot-heavy visual harnesses unless the change affects rendering, layout, camera composition, animation, or another visual contract.
+- Prefer deterministic readiness/state assertions over fixed sleeps. New browser tests must not add arbitrary `waitForTimeout` delays when a DOM state, test-bridge snapshot, event, animation state, or polling assertion can express readiness.
+- Profile before changing concurrency. Preserve test isolation, and benchmark Playwright worker-count changes under the software-rendered WebGL configuration rather than assuming more workers are faster.
+- Avoid duplicate compilation in a single validation sequence. If TypeScript has already passed unchanged, use the production bundling step that does not repeat the same type-check when an equivalent documented command exists.
+- Never delete meaningful regression coverage solely to reduce file count or elapsed time. Consolidate only proven duplication and record the retained behavioral owner.
+
 ## User controls
 
 - No trigger phrase is required for ordinary substantial requests; apply these delegation rules automatically.
