@@ -32,6 +32,7 @@ import type { LocationHudSystem } from '../ui/LocationHudSystem';
 import type { PlayerMoneyAccount } from '../economy/PlayerMoneyAccount';
 import type { MoneyHudSystem } from '../ui/MoneyHudSystem';
 import type { DebugCashPickup } from '../economy/DebugCashPickup';
+import type { ProximityPickupSystem } from '../pickups/ProximityPickupSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -129,6 +130,7 @@ export interface BrowserTestSnapshot {
     readonly account: ReturnType<PlayerMoneyAccount['getSnapshot']>;
     readonly hud: ReturnType<MoneyHudSystem['getSnapshot']>;
     readonly cashPickup: ReturnType<DebugCashPickup['getSnapshot']>;
+    readonly proximityPickups: ReturnType<ProximityPickupSystem['getSnapshot']>;
   };
   readonly locationHud: ReturnType<LocationHudSystem['getSnapshot']>;
   readonly conversation: {
@@ -186,6 +188,7 @@ export interface BrowserTestBridgeDependencies {
   readonly account: PlayerMoneyAccount;
   readonly moneyHud: MoneyHudSystem;
   readonly cashPickup: DebugCashPickup;
+  readonly proximityPickups: ProximityPickupSystem;
   readonly locationHud: LocationHudSystem;
   readonly conversations: ConversationCoordinator;
   readonly characterSelection: CharacterSelectionReader;
@@ -339,6 +342,7 @@ function createSnapshot(
       account: dependencies.account.getSnapshot(),
       hud: dependencies.moneyHud.getSnapshot(),
       cashPickup: dependencies.cashPickup.getSnapshot(),
+      proximityPickups: dependencies.proximityPickups.getSnapshot(),
     },
     locationHud: dependencies.locationHud.getSnapshot(),
     conversation: {

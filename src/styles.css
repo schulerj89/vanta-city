@@ -27,13 +27,33 @@ canvas {
   height: 100%;
 }
 
-.money-hud {
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.player-hud-cluster {
   position: absolute;
   z-index: 27;
   top: max(5rem, calc(env(safe-area-inset-top) + 4rem));
   right: max(1rem, env(safe-area-inset-right));
   display: grid;
-  min-width: 10.5rem;
+  width: min(15rem, calc(100vw - 2rem));
+  gap: 1.35rem;
+  pointer-events: none;
+}
+
+.money-hud {
+  position: relative;
+  order: 1;
+  display: grid;
+  width: 100%;
   min-height: 3.25rem;
   align-items: center;
   padding: 0.55rem 0.85rem;
@@ -55,11 +75,20 @@ canvas {
 }
 
 .money-hud__balance {
-  min-width: 8.5ch;
+  width: 12ch;
+  justify-self: end;
+  overflow: hidden;
   font-size: 1.55rem;
   line-height: 1;
   text-align: right;
   text-shadow: 0 0 0.7rem rgb(66 255 133 / 34%);
+  white-space: nowrap;
+  transform-origin: right center;
+}
+
+.money-hud[data-direction='increase'] .money-hud__balance,
+.money-hud[data-direction='decrease'] .money-hud__balance {
+  animation: money-ticker-pulse 180ms ease-out infinite alternate;
 }
 
 .money-hud__delta {
@@ -94,17 +123,36 @@ canvas {
   }
 }
 
+@keyframes money-ticker-pulse {
+  from {
+    opacity: 0.82;
+    transform: translateY(0.04rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-0.04rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .money-hud__delta {
     animation: none;
   }
+
+  .money-hud__balance {
+    animation: none !important;
+  }
 }
 
 @media (max-width: 34rem) {
-  .money-hud {
+  .player-hud-cluster {
     top: max(4.5rem, calc(env(safe-area-inset-top) + 3.85rem));
     right: max(0.65rem, env(safe-area-inset-right));
-    min-width: 8.5rem;
+    width: min(12.5rem, calc(100vw - 1.3rem));
+    gap: 1.15rem;
+  }
+
+  .money-hud {
     min-height: 2.8rem;
   }
 
@@ -282,21 +330,14 @@ canvas {
 }
 
 .health-hud__player {
-  position: absolute;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
+  position: relative;
+  order: 2;
+  width: 100%;
   padding: 0.65rem 0.75rem;
   border: 1px solid rgb(216 255 235 / 24%);
   border-radius: 0.7rem;
   background: rgb(5 12 18 / 72%);
   backdrop-filter: blur(10px);
-}
-
-@media (max-width: 560px), (max-height: 500px) {
-  .health-hud__player {
-    right: max(0.55rem, env(safe-area-inset-right));
-    bottom: max(4.55rem, calc(env(safe-area-inset-bottom) + 4rem));
-  }
 }
 
 .location-hud {

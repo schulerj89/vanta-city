@@ -1,28 +1,29 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { GameObjectWorld } from '../entities/GameObjectWorld';
-import type { InteractionSystem } from '../interactions/InteractionSystem';
+import type { ProximityPickupSystem } from '../pickups/ProximityPickupSystem';
 import type { WorldPoseSource } from '../world/Spatial';
 import type { PlayerMoneyAccount } from './PlayerMoneyAccount';
 
 export const DEBUG_CASH_PICKUP_AMOUNT = 100;
-export const DEBUG_CASH_PICKUP_ID = 'interaction.debug-cash-pickup';
+export const DEBUG_CASH_PICKUP_ID = 'pickup.debug-cash';
 
 export interface DebugCashPickupSnapshot {
   readonly spawned: boolean;
   readonly collected: boolean;
   readonly amount: number;
+  readonly position:
+    { readonly x: number; readonly y: number; readonly z: number } | undefined;
 }
 
-/** Development fixture that composes world visuals with the interaction contract. */
+/** Development cash fixture composed over the reusable proximity contract. */
 export class DebugCashPickup {
   private unregister: (() => void) | undefined;
   private visual: ReturnType<typeof createCashVisual> | undefined;
   private collected = false;
-  private removalTimer: ReturnType<typeof setTimeout> | undefined;
 
   public constructor(
     private readonly account: PlayerMoneyAccount,
-    private readonly interactions: InteractionSystem,
+    private readonly pickups: ProximityPickupSystem,
     private readonly objects: GameObjectWorld,
     private readonly player: WorldPoseSource,
   ) {}
@@ -39,26 +40,27 @@ export class DebugCashPickup {
       pose.position.z + pose.forward.z * 0.8,
     );
     this.objects.add(this.visual);
-    this.unregister = this.interactions.register({
+    const position = this.visual.object3d.position;
+    this.unregister = this.pickups.register({
       id: DEBUG_CASH_PICKUP_ID,
-      prompt: `Pick up ${DEBUG_CASH_PICKUP_AMOUNT} cash`,
-      location: () => {
-        const position = this.visual?.object3d.position ?? pose.position;
-        return { x: position.x, y: position.y, z: position.z };
-      },
-      rangeProfile: 'use',
-      repeatable: false,
-      interact: () => {
-        if (this.collected) return;
-        const credited = this.account.credit(DEBUG_CASH_PICKUP_AMOUNT, {
+      position: { x: position.x, y: position.y, z: position.z },
+      radius: 0.28,
+      halfHeight: 0.55,
+      payload: DEBUG_CASH_PICKUP_AMOUNT,
+      collect: (amount) => {
+        if (this.collected) return false;
+        const credited = this.account.credit(amount, {
           reason: 'cash-pickup',
           source: DEBUG_CASH_PICKUP_ID,
         });
-        if (!credited) return;
+        if (!credited) return false;
         this.collected = true;
         if (this.visual) this.visual.object3d.visible = false;
-        // Let InteractionSystem complete its one-shot before unregistering.
-        this.removalTimer = setTimeout(() => this.remove(), 0);
+        // The registry removes its atomic contract after this callback returns.
+        this.unregister = undefined;
+        this.objects.remove(DEBUG_CASH_PICKUP_ID);
+        this.visual = undefined;
+        return true;
       },
     });
     return true;
@@ -66,8 +68,6 @@ export class DebugCashPickup {
 
   public remove(): boolean {
     if (!this.unregister && !this.visual) return false;
-    if (this.removalTimer !== undefined) clearTimeout(this.removalTimer);
-    this.removalTimer = undefined;
     this.unregister?.();
     this.unregister = undefined;
     this.objects.remove(DEBUG_CASH_PICKUP_ID);
@@ -80,6 +80,13 @@ export class DebugCashPickup {
       spawned: this.unregister !== undefined,
       collected: this.collected,
       amount: DEBUG_CASH_PICKUP_AMOUNT,
+      position: this.visual
+        ? {
+            x: this.visual.object3d.position.x,
+            y: this.visual.object3d.position.y,
+            z: this.visual.object3d.position.z,
+          }
+        : undefined,
     };
   }
 

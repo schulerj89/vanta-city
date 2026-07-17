@@ -41,15 +41,17 @@ export class HealthHudSystem implements GameSystem {
     },
     private readonly camera: PerspectiveCamera,
     private readonly collision: CollisionWorld,
+    private readonly playerMount: HTMLElement = mount,
   ) {
     this.root.className = 'health-hud';
-    this.root.setAttribute('aria-label', 'Gameplay health');
-    this.root.append(this.playerBar.root, this.targetBar.root);
+    this.root.setAttribute('aria-label', 'World health indicators');
+    this.root.append(this.targetBar.root);
     this.targetBar.root.hidden = true;
   }
 
   public init(): void {
     this.mount.append(this.root);
+    this.playerMount.append(this.playerBar.root);
     this.unsubscribePlayer = this.playerHealth.events.on('changed', () =>
       syncHealthBar(this.playerBar, this.playerHealth.getSnapshot()),
     );
@@ -95,7 +97,8 @@ export class HealthHudSystem implements GameSystem {
   public getSnapshot(): HealthHudSnapshot {
     return {
       player: this.playerHealth.getSnapshot(),
-      playerHudVisible: this.root.isConnected && !this.playerBar.root.hidden,
+      playerHudVisible:
+        this.playerBar.root.isConnected && !this.playerBar.root.hidden,
       targetHudVisible: this.targetHudVisible,
       targetOccluded: this.targetOccluded,
       targetScreen: this.targetScreen,
@@ -105,6 +108,7 @@ export class HealthHudSystem implements GameSystem {
   public dispose(): void {
     this.unsubscribePlayer?.();
     this.unsubscribePlayer = undefined;
+    this.playerBar.root.remove();
     this.root.remove();
   }
 

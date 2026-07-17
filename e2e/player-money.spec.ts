@@ -24,16 +24,19 @@ test('player money, pickup, and handgun purchase remain authoritative', async ({
   });
   expect(state.player.equipment.ownedIds).toEqual(['knife']);
   expect(state.quickbar.slots[0]).toMatchObject({ owned: false });
+  await assertPlayerHudLayout(page, 1280);
   await attach(page, testInfo, 'money-desktop-before');
 
   await executeCommand(page, 'player.money-credit', '100');
   state = await snapshot(page);
   expect(state.money.account.balance).toBe(600);
   expect(state.money.hud).toMatchObject({
-    formattedBalance: '$600',
+    authoritativeBalance: 600,
+    animating: true,
     delta: '+$100',
     deltaKind: 'credit',
   });
+  await waitForDisplayedBalance(page, 600);
   await attach(page, testInfo, 'money-desktop-after-credit');
   await waitForDeltaToClear(page);
 
@@ -41,10 +44,11 @@ test('player money, pickup, and handgun purchase remain authoritative', async ({
   state = await snapshot(page);
   expect(state.money.account.balance).toBe(550);
   expect(state.money.hud).toMatchObject({
-    formattedBalance: '$550',
+    authoritativeBalance: 550,
     delta: '−$50',
     deltaKind: 'debit',
   });
+  await waitForDisplayedBalance(page, 550);
   await waitForDeltaToClear(page);
 
   await executeCommand(page, 'player.money-reset');
@@ -60,19 +64,22 @@ test('player money, pickup, and handgun purchase remain authoritative', async ({
   await executeCommand(page, 'player.money-reset');
   await executeCommand(page, 'player.cash-pickup-spawn');
   await expect
-    .poll(async () => (await snapshot(page)).interaction.activeTargetId)
-    .toBe('interaction.debug-cash-pickup');
-  await page.keyboard.press('KeyG');
+    .poll(async () => (await snapshot(page)).money.cashPickup.spawned)
+    .toBe(true);
+  await page.keyboard.down('KeyW');
   await expect
     .poll(async () => (await snapshot(page)).money.account.balance)
     .toBe(PLAYER_STARTING_BALANCE + 100);
+  await page.keyboard.up('KeyW');
   await expect
     .poll(async () => (await snapshot(page)).money.cashPickup.spawned)
     .toBe(false);
   state = await snapshot(page);
-  expect(state.interaction.completedTargetIds).toContain(
-    'interaction.debug-cash-pickup',
-  );
+  expect(state.interaction.activeTargetId).not.toBe('pickup.debug-cash');
+  expect(state.money.proximityPickups).toMatchObject({
+    count: 0,
+    collectedCount: 1,
+  });
 
   await page.setViewportSize({ width: 390, height: 720 });
   await attach(page, testInfo, 'money-narrow-before-purchase');
@@ -102,6 +109,8 @@ test('player money, pickup, and handgun purchase remain authoritative', async ({
   expect(state.money.account.transactionSequence).toBe(transactionSequence);
   expect(state.gameState).toBe('playing');
   await attach(page, testInfo, 'money-narrow-after-purchase');
+
+  await assertPlayerHudLayout(page, 390);
 
   expect(state.runtimeErrors.count, state.runtimeErrors.last).toBe(0);
   expect(failures, failures.join('\n')).toEqual([]);
@@ -144,6 +153,29 @@ async function waitForDeltaToClear(page: Page): Promise<void> {
       timeout: 3_000,
     })
     .toBeUndefined();
+}
+
+async function waitForDisplayedBalance(
+  page: Page,
+  expected: number,
+): Promise<void> {
+  await expect
+    .poll(async () => (await snapshot(page)).money.hud.displayedBalance)
+    .toBe(expected);
+}
+
+async function assertPlayerHudLayout(page: Page, viewportWidth: number) {
+  for (const selector of ['.money-hud', '.health-hud__player']) {
+    await expect(page.locator(selector)).toBeVisible();
+  }
+  const moneyBox = await page.locator('.money-hud').boundingBox();
+  const healthBox = await page.locator('.health-hud__player').boundingBox();
+  expect(moneyBox).not.toBeNull();
+  expect(healthBox).not.toBeNull();
+  expect(moneyBox!.y + moneyBox!.height).toBeLessThanOrEqual(healthBox!.y);
+  expect(healthBox!.x + healthBox!.width).toBeLessThanOrEqual(viewportWidth);
+  expect(Math.abs(moneyBox!.x - healthBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(moneyBox!.width - healthBox!.width)).toBeLessThanOrEqual(1);
 }
 
 async function attach(

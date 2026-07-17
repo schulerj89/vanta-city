@@ -1,60 +1,45 @@
 // @vitest-environment jsdom
-import type { Interactable } from '../src/interactions/Interactable';
 import { DebugCashPickup } from '../src/economy/DebugCashPickup';
 import { PlayerMoneyAccount } from '../src/economy/PlayerMoneyAccount';
+import { ProximityPickupSystem } from '../src/pickups/ProximityPickupSystem';
+import type { GameContext } from '../src/game/GameRuntime';
 
 describe('DebugCashPickup', () => {
-  afterEach(() => vi.useRealTimers());
-
-  it('credits exactly once and cleans its world and interaction registrations', async () => {
-    vi.useFakeTimers();
-    let interactable: Interactable | undefined;
-    const unregister = vi.fn();
-    const interactions = {
-      register: vi.fn((value: Interactable) => {
-        interactable = value;
-        return unregister;
-      }),
-    };
+  it('credits exactly once on overlap and cleans its world registration', () => {
     const objects = { add: vi.fn(), remove: vi.fn(() => true) };
+    let position = { x: 1, y: 0, z: 2 };
     const player = {
       getWorldPose: () => ({
-        position: { x: 1, y: 0, z: 2 },
+        position,
         forward: { x: 0, y: 0, z: -1 },
         radius: 0.38,
       }),
     };
+    const system = new ProximityPickupSystem(player);
+    system.init({ state: { current: 'playing' } } as GameContext);
     const account = new PlayerMoneyAccount('player', 500);
     const pickup = new DebugCashPickup(
       account,
-      interactions as never,
+      system,
       objects as never,
       player,
     );
+
     expect(pickup.spawn()).toBe(true);
     expect(pickup.spawn()).toBe(false);
-    await interactable?.interact({
-      gameState: 'playing',
-      targetId: 'interaction.debug-cash-pickup',
-      signal: new AbortController().signal,
-    });
-    await interactable?.interact({
-      gameState: 'playing',
-      targetId: 'interaction.debug-cash-pickup',
-      signal: new AbortController().signal,
-    });
+    position = { x: 1, y: 0, z: 1.2 };
+    system.update();
+    system.update();
+
     expect(account.balance).toBe(600);
     expect(account.getSnapshot().transactionSequence).toBe(1);
     expect(pickup.getSnapshot()).toMatchObject({
-      spawned: true,
+      spawned: false,
       collected: true,
     });
-    vi.runAllTimers();
-    expect(unregister).toHaveBeenCalledOnce();
-    expect(objects.remove).toHaveBeenCalledWith(
-      'interaction.debug-cash-pickup',
-    );
-    expect(pickup.getSnapshot().spawned).toBe(false);
+    expect(system.getSnapshot()).toMatchObject({ count: 0, collectedCount: 1 });
+    expect(objects.remove).toHaveBeenCalledWith('pickup.debug-cash');
     pickup.dispose();
+    system.dispose();
   });
 });

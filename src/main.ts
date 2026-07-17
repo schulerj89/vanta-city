@@ -60,8 +60,10 @@ import { isEquipmentId } from './equipment/EquipmentDefinition';
 import { QuickbarSystem } from './ui/QuickbarSystem';
 import { PlayerMoneyAccount } from './economy/PlayerMoneyAccount';
 import { MoneyHudSystem } from './ui/MoneyHudSystem';
+import { PlayerHudClusterSystem } from './ui/PlayerHudClusterSystem';
 import { HandgunPurchase } from './economy/HandgunPurchase';
 import type { DebugCashPickup } from './economy/DebugCashPickup';
+import { ProximityPickupSystem } from './pickups/ProximityPickupSystem';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -211,9 +213,10 @@ async function bootstrap(): Promise<void> {
     spawn.rotation?.[1] ?? 0,
     playerEquipment,
   );
+  const playerHudCluster = new PlayerHudClusterSystem(mount);
   const quickbar = new QuickbarSystem(mount, playerEquipment);
   const moneyHud = new MoneyHudSystem(
-    mount,
+    playerHudCluster.element,
     playerAccount,
     prefersReducedMotion,
   );
@@ -241,12 +244,14 @@ async function bootstrap(): Promise<void> {
     player,
     collision,
   );
+  const proximityPickups = new ProximityPickupSystem(player);
+  render.scene.add(proximityPickups.getVisualization());
   let cashPickup: DebugCashPickup | undefined;
   if (development) {
     const { DebugCashPickup } = await import('./economy/DebugCashPickup');
     cashPickup = new DebugCashPickup(
       playerAccount,
-      interactions,
+      proximityPickups,
       objects,
       player,
     );
@@ -310,6 +315,7 @@ async function bootstrap(): Promise<void> {
     },
     render.camera,
     collision,
+    playerHudCluster.element,
   );
   const locationHud = new LocationHudSystem(mount, player, levelSystem);
   const unregisterCombatVolumes =
@@ -319,6 +325,12 @@ async function bootstrap(): Promise<void> {
             sparringTarget?.setVisualizationVisible(visible),
         })
       : undefined;
+  const unregisterPickupVolumes = development
+    ? development.visualHelpers.register('triggers', {
+        setVisible: (visible) =>
+          proximityPickups.setVisualizationVisible(visible),
+      })
+    : undefined;
   let dialogueCamera:
     ReturnType<ThirdPersonCameraSystem['requestConversation']> | undefined;
   const dialogue = new DialogueSessionController(input, conversations, {
@@ -472,12 +484,14 @@ async function bootstrap(): Promise<void> {
     .register(levelSystem)
     .register(objects)
     .register(help)
-    .register(player);
+    .register(player)
+    .register(proximityPickups);
   if (sparringTarget) runtime.register(sparringTarget);
   runtime
     .register(camera)
-    .register(healthHud)
+    .register(playerHudCluster)
     .register(moneyHud)
+    .register(healthHud)
     .register(quickbar)
     .register(locationHud)
     .register(interactions)
@@ -539,6 +553,7 @@ async function bootstrap(): Promise<void> {
           account: playerAccount,
           moneyHud,
           cashPickup: cashPickup!,
+          proximityPickups,
           locationHud,
           conversations,
           characterSelection,
@@ -566,6 +581,7 @@ async function bootstrap(): Promise<void> {
     disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
     unregisterCombatVolumes?.();
+    unregisterPickupVolumes?.();
     for (const unregister of performanceUnregister) unregister();
     worldEvents.clear();
     loading.dispose();
