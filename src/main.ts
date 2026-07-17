@@ -58,6 +58,10 @@ import type { DiagnosticRecorder } from './debug/DiagnosticRecorder';
 import { CharacterEquipment } from './equipment/CharacterEquipment';
 import { isEquipmentId } from './equipment/EquipmentDefinition';
 import { QuickbarSystem } from './ui/QuickbarSystem';
+import { PlayerMoneyAccount } from './economy/PlayerMoneyAccount';
+import { MoneyHudSystem } from './ui/MoneyHudSystem';
+import { HandgunPurchase } from './economy/HandgunPurchase';
+import type { DebugCashPickup } from './economy/DebugCashPickup';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -183,7 +187,8 @@ async function bootstrap(): Promise<void> {
     'casual',
     window.localStorage,
   );
-  const playerEquipment = new CharacterEquipment('player');
+  const playerEquipment = new CharacterEquipment('player', ['knife']);
+  const playerAccount = new PlayerMoneyAccount('player');
   const characterVisual = new CharacterPlayerVisual(
     characterSelection,
     new CharacterLoader(assets),
@@ -207,6 +212,12 @@ async function bootstrap(): Promise<void> {
     playerEquipment,
   );
   const quickbar = new QuickbarSystem(mount, playerEquipment);
+  const moneyHud = new MoneyHudSystem(
+    mount,
+    playerAccount,
+    prefersReducedMotion,
+  );
+  const handgunPurchase = new HandgunPurchase(playerAccount, playerEquipment);
   const camera = new ThirdPersonCameraSystem(
     render.camera,
     input,
@@ -230,6 +241,16 @@ async function bootstrap(): Promise<void> {
     player,
     collision,
   );
+  let cashPickup: DebugCashPickup | undefined;
+  if (development) {
+    const { DebugCashPickup } = await import('./economy/DebugCashPickup');
+    cashPickup = new DebugCashPickup(
+      playerAccount,
+      interactions,
+      objects,
+      player,
+    );
+  }
   let interactionScenario:
     | import('./interactions/InteractionReliabilityScenario').InteractionReliabilityScenario
     | undefined;
@@ -419,6 +440,10 @@ async function bootstrap(): Promise<void> {
           characterAlignmentDebug,
           help,
           quickbar,
+          playerAccount,
+          moneyHud,
+          handgunPurchase,
+          cashPickup,
         )
       : [];
 
@@ -452,6 +477,7 @@ async function bootstrap(): Promise<void> {
   runtime
     .register(camera)
     .register(healthHud)
+    .register(moneyHud)
     .register(quickbar)
     .register(locationHud)
     .register(interactions)
@@ -510,6 +536,9 @@ async function bootstrap(): Promise<void> {
           sparringTarget,
           healthHud,
           quickbar,
+          account: playerAccount,
+          moneyHud,
+          cashPickup: cashPickup!,
           locationHud,
           conversations,
           characterSelection,
@@ -532,6 +561,8 @@ async function bootstrap(): Promise<void> {
 
   installHotDisposal(runtime, assets, development, () => {
     unsubscribeAccessibility();
+    cashPickup?.dispose();
+    playerAccount.dispose();
     disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
     unregisterCombatVolumes?.();
@@ -560,6 +591,10 @@ function registerVerticalSliceDebug(
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
   help?: HelpOverlayController,
   quickbar?: QuickbarSystem,
+  account?: PlayerMoneyAccount,
+  moneyHud?: MoneyHudSystem,
+  handgunPurchase?: HandgunPurchase,
+  cashPickup?: DebugCashPickup,
 ): (() => void)[] {
   const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
@@ -678,6 +713,40 @@ function registerVerticalSliceDebug(
       read: () => {
         const health = player.health.getSnapshot();
         return `${health.current}/${health.maximum} · ${health.alive ? 'alive' : 'depleted'} · ${(health.normalized * 100).toFixed(0)}%`;
+      },
+    }),
+    debug.registerValue({
+      id: 'player.money',
+      label: 'Money balance',
+      group: sections.player,
+      read: () => account?.balance ?? 'unavailable',
+    }),
+    debug.registerValue({
+      id: 'player.money-last-transaction',
+      label: 'Last money transaction',
+      group: sections.player,
+      read: () => {
+        const transaction = account?.getSnapshot().lastTransaction;
+        return transaction
+          ? `${transaction.delta > 0 ? '+' : ''}${transaction.delta} · ${transaction.reason} · ${transaction.source ?? 'unknown'}`
+          : 'none';
+      },
+    }),
+    debug.registerValue({
+      id: 'player.money-hud',
+      label: 'Money HUD',
+      group: sections.player,
+      read: () => moneyHud?.getSnapshot().formattedBalance ?? 'unavailable',
+    }),
+    debug.registerValue({
+      id: 'player.cash-pickup',
+      label: 'Cash pickup',
+      group: sections.interactions,
+      read: () => {
+        const pickup = cashPickup?.getSnapshot();
+        return pickup
+          ? `${pickup.spawned ? 'spawned' : 'absent'} · ${pickup.collected ? 'collected' : 'available'}`
+          : 'unavailable';
       },
     }),
     debug.registerValue({
@@ -968,6 +1037,65 @@ function registerVerticalSliceDebug(
       group: sections.actions,
       run: () => {
         player.health.damage(10, 'debug-command');
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.money-credit',
+      label: 'Credit player money',
+      group: sections.actions,
+      argumentLabel: 'positive integer (default 100)',
+      run: (value) => {
+        account?.credit(parsePositiveInteger(value, 100), {
+          reason: 'debug-credit',
+          source: 'debug-command',
+        });
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.money-spend',
+      label: 'Spend player money',
+      group: sections.actions,
+      argumentLabel: 'positive integer (default 100)',
+      run: (value) => {
+        account?.debit(parsePositiveInteger(value, 100), {
+          reason: 'debug-spend',
+          source: 'debug-command',
+        });
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.money-reset',
+      label: 'Reset player money',
+      group: sections.actions,
+      run: () => {
+        account?.reset(undefined, {
+          reason: 'debug-reset',
+          source: 'debug-command',
+        });
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.cash-pickup-spawn',
+      label: 'Spawn cash pickup',
+      group: sections.actions,
+      run: () => {
+        cashPickup?.spawn();
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.cash-pickup-remove',
+      label: 'Remove cash pickup',
+      group: sections.actions,
+      run: () => {
+        cashPickup?.remove();
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.handgun-purchase',
+      label: 'Purchase and equip handgun',
+      group: sections.actions,
+      run: () => {
+        handgunPurchase?.purchase();
       },
     }),
     debug.registerCommand({
@@ -1625,6 +1753,18 @@ function registerVerticalSliceDebug(
 
 function formatOptionalNumber(value: number | undefined): string {
   return value === undefined ? 'loading' : value.toFixed(3);
+}
+
+function parsePositiveInteger(
+  value: string | undefined,
+  fallback: number,
+): number {
+  const parsed =
+    value === undefined || value.trim() === '' ? fallback : Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error('Expected a positive integer');
+  }
+  return parsed;
 }
 
 function formatVector(value: {

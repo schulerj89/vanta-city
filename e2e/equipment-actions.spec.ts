@@ -434,6 +434,8 @@ async function openReadyApp(page: Page): Promise<void> {
   await expect
     .poll(async () => (await snapshot(page)).character.source)
     .not.toBe('loading');
+  await executeCommand(page, 'player.handgun-purchase');
+  await executeCommand(page, 'player.equip-item', 'none');
 }
 
 async function snapshot(page: Page): Promise<BrowserTestSnapshot> {

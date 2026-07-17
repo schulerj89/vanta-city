@@ -40,4 +40,29 @@ describe('QuickbarSystem', () => {
     equipment.dispose();
     mount.remove();
   });
+
+  it('keeps stable slots while exposing an unowned item as locked', () => {
+    const mount = document.createElement('main');
+    document.body.append(mount);
+    const equipment = new CharacterEquipment('player', ['knife']);
+    const quickbar = new QuickbarSystem(mount, equipment);
+    quickbar.init();
+    const handgun = mount.querySelector<HTMLElement>(
+      '[data-item-id="handgun"]',
+    );
+    expect(handgun?.dataset.owned).toBe('false');
+    expect(handgun?.getAttribute('aria-label')).toBe('Slot 1: Handgun, locked');
+    expect(quickbar.getSnapshot().slots[0]).toMatchObject({
+      owned: false,
+      ammunition: undefined,
+    });
+    equipment.acquire('handgun');
+    expect(handgun?.dataset.owned).toBe('true');
+    expect(handgun?.getAttribute('aria-label')).toBe(
+      'Slot 1: Handgun, 8 of 8 rounds',
+    );
+    quickbar.dispose();
+    equipment.dispose();
+    mount.remove();
+  });
 });

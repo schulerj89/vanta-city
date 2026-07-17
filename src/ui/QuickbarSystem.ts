@@ -12,6 +12,7 @@ export interface QuickbarSnapshot {
     readonly itemId: string;
     readonly label: string;
     readonly icon: string;
+    readonly owned: boolean;
     readonly selected: boolean;
     readonly ammunition?: { readonly current: number; readonly max: number };
   }[];
@@ -63,6 +64,7 @@ export class QuickbarSystem implements GameSystem {
     this.mount.append(this.root);
     this.unsubscribers.push(
       this.equipment.events.on('changed', () => this.sync()),
+      this.equipment.events.on('ownershipChanged', () => this.sync()),
       this.equipment.events.on('ammunitionChanged', () => this.sync()),
     );
     this.sync();
@@ -76,12 +78,15 @@ export class QuickbarSystem implements GameSystem {
       equippedId: equipment.equippedId,
       selectedSlot: equipment.equippedSlot,
       slots: equipmentDefinitions.map((definition) => {
-        const ammunition = this.equipment.getAmmunition(definition.id);
+        const ammunition = this.equipment.owns(definition.id)
+          ? this.equipment.getAmmunition(definition.id)
+          : undefined;
         return {
           slot: definition.quickbarSlot,
           itemId: definition.id,
           label: definition.displayName,
           icon: definition.id,
+          owned: this.equipment.owns(definition.id),
           selected: equipment.equippedSlot === definition.quickbarSlot,
           ammunition: ammunition
             ? { current: ammunition.current, max: ammunition.max }
@@ -101,14 +106,17 @@ export class QuickbarSystem implements GameSystem {
     const selected = this.equipment.getSnapshot().equippedSlot;
     for (const [slotNumber, slot] of this.slots) {
       const active = selected === slotNumber;
-      slot.dataset.selected = String(active);
-      slot.setAttribute('aria-current', active ? 'true' : 'false');
       const definition = equipmentDefinitions.find(
         ({ quickbarSlot }) => quickbarSlot === slotNumber,
       );
-      const ammunition = definition
-        ? this.equipment.getAmmunition(definition.id)
-        : undefined;
+      const owned = definition ? this.equipment.owns(definition.id) : false;
+      slot.dataset.selected = String(active);
+      slot.dataset.owned = String(owned);
+      slot.setAttribute('aria-current', active ? 'true' : 'false');
+      const ammunition =
+        definition && owned
+          ? this.equipment.getAmmunition(definition.id)
+          : undefined;
       const ammo = slot.querySelector<HTMLElement>('.quickbar__ammo');
       if (ammo) {
         ammo.textContent = ammunition
@@ -120,6 +128,8 @@ export class QuickbarSystem implements GameSystem {
         slot.setAttribute(
           'aria-label',
           `Slot ${slotNumber}: ${definition.displayName}${
+            owned ? '' : ', locked'
+          }${
             ammunition
               ? `, ${ammunition.current} of ${ammunition.max} rounds`
               : ''

@@ -27,6 +27,92 @@ canvas {
   height: 100%;
 }
 
+.money-hud {
+  position: absolute;
+  z-index: 27;
+  top: max(5rem, calc(env(safe-area-inset-top) + 4rem));
+  right: max(1rem, env(safe-area-inset-right));
+  display: grid;
+  min-width: 10.5rem;
+  min-height: 3.25rem;
+  align-items: center;
+  padding: 0.55rem 0.85rem;
+  overflow: visible;
+  border: 1px solid rgb(93 255 151 / 38%);
+  border-radius: 0.65rem;
+  color: #91ffb7;
+  background: linear-gradient(135deg, rgb(5 30 18 / 92%), rgb(5 14 12 / 82%));
+  box-shadow:
+    0 0.5rem 1.2rem rgb(0 0 0 / 42%),
+    inset 0 0 1rem rgb(64 255 132 / 7%);
+  font-family:
+    Impact, Haettenschweiler, 'Arial Narrow Bold', ui-monospace, SFMono-Regular,
+    Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.045em;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.money-hud__balance {
+  min-width: 8.5ch;
+  font-size: 1.55rem;
+  line-height: 1;
+  text-align: right;
+  text-shadow: 0 0 0.7rem rgb(66 255 133 / 34%);
+}
+
+.money-hud__delta {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0.7rem;
+  font-size: 1rem;
+  line-height: 1;
+  animation: money-delta-rise 1.4s ease-out both;
+}
+
+.money-hud__delta[data-kind='debit'] {
+  color: #ff8f8f;
+}
+
+.money-hud__delta[hidden] {
+  display: none;
+}
+
+@keyframes money-delta-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  15%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.65rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .money-hud__delta {
+    animation: none;
+  }
+}
+
+@media (max-width: 34rem) {
+  .money-hud {
+    top: max(4.5rem, calc(env(safe-area-inset-top) + 3.85rem));
+    right: max(0.65rem, env(safe-area-inset-right));
+    min-width: 8.5rem;
+    min-height: 2.8rem;
+  }
+
+  .money-hud__balance {
+    font-size: 1.3rem;
+  }
+}
+
 .quickbar {
   position: absolute;
   z-index: 26;
@@ -59,6 +145,13 @@ canvas {
   box-shadow:
     0 0 0 2px rgb(124 226 198 / 22%),
     0 0.55rem 1.25rem rgb(0 0 0 / 35%);
+}
+
+.quickbar__slot[data-owned='false'] {
+  color: #68766f;
+  border-style: dashed;
+  background: rgb(5 12 18 / 54%);
+  filter: saturate(0.25);
 }
 
 .quickbar__slot kbd {

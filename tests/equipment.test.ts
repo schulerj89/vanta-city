@@ -4,6 +4,22 @@ import { CharacterEquipment } from '../src/equipment/CharacterEquipment';
 import { EquipmentPresentation } from '../src/equipment/EquipmentPresentation';
 
 describe('CharacterEquipment', () => {
+  it('enforces explicit ownership for equip and quickbar acquisition', () => {
+    const equipment = new CharacterEquipment('player', ['knife']);
+    const ownership = vi.fn();
+    equipment.events.on('ownershipChanged', ownership);
+    expect(equipment.equip('handgun')).toBe(false);
+    expect(equipment.toggleQuickbarSlot(1)).toBe(false);
+    expect(equipment.getSnapshot().ownedIds).toEqual(['knife']);
+    expect(equipment.acquire('handgun')).toBe(true);
+    expect(equipment.acquire('handgun')).toBe(false);
+    expect(equipment.equip('handgun')).toBe(true);
+    expect(ownership).toHaveBeenCalledWith(
+      expect.objectContaining({ itemId: 'handgun', owned: true }),
+    );
+    equipment.dispose();
+  });
+
   it('shares deterministic quickbar toggle and typed use semantics for any owner', () => {
     const equipment = new CharacterEquipment('npc.mack');
     const changes = vi.fn();

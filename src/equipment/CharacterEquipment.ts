@@ -7,6 +7,7 @@ export interface EquipmentSnapshot {
   readonly ownerId: string;
   readonly equippedId: EquipmentId | undefined;
   readonly equippedSlot: number | undefined;
+  readonly ownedIds: readonly EquipmentId[];
   readonly changeSequence: number;
   readonly useSequence: number;
   readonly lastUseAccepted: boolean;
@@ -34,6 +35,10 @@ export type EquipmentUseRejection =
 
 export interface EquipmentEvents {
   changed: EquipmentSnapshot;
+  ownershipChanged: EquipmentSnapshot & {
+    readonly itemId: EquipmentId;
+    readonly owned: boolean;
+  };
   used: EquipmentSnapshot & {
     readonly itemId: EquipmentId;
     readonly action: EquipmentDefinition['useAction'];
@@ -52,6 +57,7 @@ export class CharacterEquipment {
   public readonly events = new EventBus<EquipmentEvents>();
 
   private equippedId: EquipmentId | undefined;
+  private readonly ownedIds = new Set<EquipmentId>();
   private changeSequence = 0;
   private useSequence = 0;
   private lastUseAccepted = false;
@@ -62,7 +68,16 @@ export class CharacterEquipment {
   private lastRejection: EquipmentUseRejection | undefined;
   private disposed = false;
 
-  public constructor(public readonly ownerId: string) {
+  public constructor(
+    public readonly ownerId: string,
+    initialOwned: readonly EquipmentId[] = equipmentDefinitionsOwnedByDefault(),
+  ) {
+    for (const itemId of initialOwned) {
+      if (!equipmentById.has(itemId)) {
+        throw new Error(`Unknown initial equipment: ${itemId}`);
+      }
+      this.ownedIds.add(itemId);
+    }
     for (const definition of equipmentById.values()) {
       if (definition.ammunition) {
         this.ammunition.set(definition.id, definition.ammunition.capacity);
@@ -74,9 +89,46 @@ export class CharacterEquipment {
     return this.equippedId ? equipmentById.get(this.equippedId) : undefined;
   }
 
+  public owns(itemId: EquipmentId): boolean {
+    return this.ownedIds.has(itemId);
+  }
+
+  public acquire(itemId: EquipmentId): boolean {
+    this.assertAvailable();
+    if (!equipmentById.has(itemId) || this.ownedIds.has(itemId)) return false;
+    this.ownedIds.add(itemId);
+    this.publishOwnership(itemId, true);
+    return true;
+  }
+
+  /** Grants and equips as one equipment-side operation for purchase callers. */
+  public acquireAndEquip(
+    itemId: EquipmentId,
+  ): EquipmentAcquisition | undefined {
+    this.assertAvailable();
+    if (!equipmentById.has(itemId) || this.ownedIds.has(itemId))
+      return undefined;
+    const acquisition = { itemId, previousEquippedId: this.equippedId };
+    this.ownedIds.add(itemId);
+    this.equippedId = itemId;
+    this.publishOwnership(itemId, true);
+    this.publishChange();
+    return acquisition;
+  }
+
+  /** Compensation hook for a caller whose surrounding transaction could not commit. */
+  public rollbackAcquisition(acquisition: EquipmentAcquisition): void {
+    this.assertAvailable();
+    if (!this.ownedIds.has(acquisition.itemId)) return;
+    this.ownedIds.delete(acquisition.itemId);
+    this.equippedId = acquisition.previousEquippedId;
+    this.publishOwnership(acquisition.itemId, false);
+    this.publishChange();
+  }
+
   public equip(itemId: EquipmentId): boolean {
     this.assertAvailable();
-    if (!equipmentById.has(itemId)) return false;
+    if (!equipmentById.has(itemId) || !this.ownedIds.has(itemId)) return false;
     if (this.equippedId === itemId) return false;
     this.equippedId = itemId;
     this.publishChange();
@@ -95,7 +147,7 @@ export class CharacterEquipment {
   public toggleQuickbarSlot(slot: number): boolean {
     this.assertAvailable();
     const definition = equipmentForQuickbarSlot(slot);
-    if (!definition) return false;
+    if (!definition || !this.owns(definition.id)) return false;
     return this.equippedId === definition.id
       ? this.unequip()
       : this.equip(definition.id);
@@ -207,6 +259,7 @@ export class CharacterEquipment {
       ownerId: this.ownerId,
       equippedId: this.equippedId,
       equippedSlot: this.equipped?.quickbarSlot,
+      ownedIds: [...this.ownedIds],
       changeSequence: this.changeSequence,
       useSequence: this.useSequence,
       lastUseAccepted: this.lastUseAccepted,
@@ -235,6 +288,14 @@ export class CharacterEquipment {
     this.events.emit('changed', this.getSnapshot());
   }
 
+  private publishOwnership(itemId: EquipmentId, owned: boolean): void {
+    this.events.emit('ownershipChanged', {
+      ...this.getSnapshot(),
+      itemId,
+      owned,
+    });
+  }
+
   private publishAmmunition(
     itemId: EquipmentId,
     reason: 'consumed' | 'reloaded' | 'reset',
@@ -261,4 +322,13 @@ export class CharacterEquipment {
       throw new Error(`Equipment owner "${this.ownerId}" is disposed`);
     }
   }
+}
+
+export interface EquipmentAcquisition {
+  readonly itemId: EquipmentId;
+  readonly previousEquippedId: EquipmentId | undefined;
+}
+
+function equipmentDefinitionsOwnedByDefault(): EquipmentId[] {
+  return [...equipmentById.keys()];
 }
