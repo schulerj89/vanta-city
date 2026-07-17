@@ -12,7 +12,7 @@ NPCs are data-defined static district actors. `NpcSystem` listens to level load/
 
 All three are selected from Quaternius's [Animated Men Pack](https://poly.pizza/bundle/Animated-Men-Pack-DAC9SDgMQT), a CC0/Public Domain source distinct from the playable Casual/Punk **Ultimate Modular Men Pack**. The three self-contained GLBs, CC0 legal text, archive hash, individual hashes, sizes, and full clip inventory are committed under `public/assets/characters/animated-men/`. No model conversion was needed.
 
-`npcDefinitions` remains authoritative for Mack, Nox, and Raze identity, character reference, spawn, Talk prompt, conversation, radius, and idle facing. `npcCharacterDefinitions` contains their non-selectable presentation definitions. The playable `characterDefinitions` remains exactly Casual and Punk.
+`npcDefinitions` remains authoritative for Mack, Nox, and Raze identity, character reference, spawn, Talk prompt, conversation, and idle facing. `NpcSystem` applies the shared Talk range profile; `interactionRadius` exists only as an optional surface-gap override for exceptional geometry. `npcCharacterDefinitions` contains their non-selectable presentation definitions. The playable `characterDefinitions` remains exactly Casual and Punk.
 
 ## Animation and grounding
 
@@ -50,7 +50,7 @@ Missing portraits resolve through the dialogue UI's initials fallback.
 5. Add a conversation definition to `src/conversations/conversations.ts`.
 6. Add the authoritative `NpcDefinition`, including `defaultAnimation` and `gestureAnimation`.
 
-`validateNpcDefinitions` rejects duplicate/invalid IDs, missing character or conversation definitions, blank labels/animations, and non-positive radii.
+`validateNpcDefinitions` rejects duplicate/invalid IDs, missing character or conversation definitions, blank labels/animations, and any provided non-positive range override.
 
 ## Conversation and ownership boundary
 

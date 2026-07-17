@@ -356,7 +356,7 @@ async function bootstrap(): Promise<void> {
       ).position;
       return { x, y, z };
     },
-    range: 2.75,
+    rangeProfile: 'inspect',
     repeatable: false,
     collisionIgnoreIds: ['c.garage-door'],
     interact: () => {
@@ -1181,6 +1181,28 @@ function registerVerticalSliceDebug(
               `${id}: ${rejectionReason}${blockerId ? ` (${blockerId})` : ''}`,
           )
           .join(', ') || 'none',
+    }),
+    debug.registerValue({
+      id: 'interaction.measurements',
+      label: 'Distance / allowed / profile / LOS / facing',
+      group: sections.interactions,
+      read: () =>
+        interactions
+          .getDebugSnapshot()
+          .targets.map(
+            ({
+              id,
+              distance,
+              range,
+              rangeProfile,
+              rangeSource,
+              lineOfSight,
+              facing,
+              rejectionReason,
+            }) =>
+              `${id}: ${distance?.toFixed(2) ?? '-'} / ${range.toFixed(2)} ${rangeProfile}:${rangeSource} LOS=${lineOfSight} face=${facing?.toFixed(2) ?? '-'} ${rejectionReason ?? 'accepted'}`,
+          )
+          .join(', '),
     }),
     debug.registerValue({
       id: 'level.current',

@@ -1315,7 +1315,7 @@ test.describe('playable debug district', () => {
       );
     }
 
-    await executeCommand(page, 'player.teleport', 'spawn.npc-mechanic');
+    await executeCommand(page, 'player.teleport', 'spawn.player-talk-mack');
     await expect
       .poll(async () => (await snapshot(page)).interaction.activeTargetId)
       .toBe('interaction.npc.mack');
@@ -1348,8 +1348,8 @@ test.describe('playable debug district', () => {
     expect((await snapshot(page)).conversation.npcId).toBeUndefined();
 
     for (const [spawnId, npcId, conversationId] of [
-      ['spawn.npc-alley', 'nox', 'conversation.nox.check-in'],
-      ['spawn.npc-deck', 'raze', 'conversation.raze.check-in'],
+      ['spawn.player-talk-nox', 'nox', 'conversation.nox.check-in'],
+      ['spawn.player-talk-raze', 'raze', 'conversation.raze.check-in'],
     ] as const) {
       await executeCommand(page, 'player.teleport', spawnId);
       await expect

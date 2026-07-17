@@ -13,7 +13,8 @@ export interface NpcDefinition {
   readonly spawnId: string;
   readonly interactionLabel: string;
   readonly conversationId: string;
-  readonly interactionRadius: number;
+  /** Optional Talk surface-gap override; omit for the shared Talk profile. */
+  readonly interactionRadius?: number;
   readonly idleYaw?: number;
   readonly ambientYaw?: number;
   readonly conversationCameraProfileId?: ConversationCameraProfileId;
@@ -63,8 +64,9 @@ export function validateNpcDefinitions(
       throw new Error(`NPC "${definition.id}" needs an interaction label`);
     }
     if (
-      !Number.isFinite(definition.interactionRadius) ||
-      definition.interactionRadius <= 0
+      definition.interactionRadius !== undefined &&
+      (!Number.isFinite(definition.interactionRadius) ||
+        definition.interactionRadius <= 0)
     ) {
       throw new Error(`NPC "${definition.id}" has invalid interaction radius`);
     }

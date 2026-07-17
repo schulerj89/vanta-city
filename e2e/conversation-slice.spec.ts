@@ -87,7 +87,7 @@ test('character picker through repeatable Mack conversation', async ({
     { definitionId: 'raze', modelSource: 'asset', currentAnimation: 'idle' },
   ]);
 
-  await command(page, 'player.teleport', 'spawn.npc-mechanic');
+  await command(page, 'player.teleport', 'spawn.player-talk-mack');
   await expect
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.npc.mack');
@@ -207,7 +207,7 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   await expect
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('playing');
-  await command(page, 'player.teleport', 'spawn.npc-mechanic');
+  await command(page, 'player.teleport', 'spawn.player-talk-mack');
   await expect
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.npc.mack');
@@ -311,14 +311,14 @@ test('Nox and Raze complete and repeat their registered Talk conversations', asy
     {
       id: 'nox',
       displayName: 'Nox',
-      spawnId: 'spawn.npc-alley',
+      spawnId: 'spawn.player-talk-nox',
       conversationId: 'conversation.nox.check-in',
       text: 'Alley’s clear. Keep moving.',
     },
     {
       id: 'raze',
       displayName: 'Raze',
-      spawnId: 'spawn.npc-deck',
+      spawnId: 'spawn.player-talk-raze',
       conversationId: 'conversation.raze.check-in',
       text: 'Deck’s quiet. Don’t make it loud.',
     },

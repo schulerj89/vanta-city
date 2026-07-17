@@ -27,5 +27,5 @@ The first-wave feature branches all began at the same foundation commit and were
 - Static collision supports authored axis-aligned boxes plus tagged planar ramps; arbitrary rotated meshes and moving platforms require a future backend behind `CollisionWorld`.
 - The camera obstruction query uses the same static approximation and may need richer geometry in tight art-authored spaces.
 - Character playback uses a compact priority graph for locomotion, explicit airborne/landing fallbacks, locked one-shot actions, target reactions, and deterministic restoration. The current playable assets still have no authored airborne or landing clips, and layered animation remains future work.
-- Interaction visibility is injectable but the test interaction currently relies on range and facing only.
+- Interaction visibility uses the shared collision-world segment query; range uses the player capsule and the target's profile footprint before facing and LOS rejection.
 - The district is loaded as one unit; streaming and large-world ownership are future work.

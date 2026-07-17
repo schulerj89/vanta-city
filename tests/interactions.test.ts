@@ -97,15 +97,22 @@ describe('InteractionSystem', () => {
   it('ranks overlapping candidates and exposes only the best target', () => {
     const harness = createHarness();
     harness.system.register(
-      target('near-off-axis', { location: { x: 0.8, y: 0, z: 1 } }),
+      target('near-off-axis', {
+        location: { x: 0.8, y: 0, z: 1 },
+        range: 1.6,
+      }),
     );
     harness.system.register(
-      target('centered', { location: { x: 0, y: 0, z: 1.2 } }),
+      target('centered', {
+        location: { x: 0, y: 0, z: 1.2 },
+        range: 1.5,
+      }),
     );
     harness.system.register(
       target('priority', {
         location: { x: 0.6, y: 0, z: 1.8 },
         priority: 1,
+        range: 1.6,
       }),
     );
 
@@ -132,7 +139,7 @@ describe('InteractionSystem', () => {
     expect(harness.system.getActiveTarget()?.id).toBe('anchor');
 
     challenger.x = 0;
-    challenger.z = 0.9;
+    challenger.z = 0.96;
     harness.system.update();
     expect(harness.system.getActiveTarget()?.id).toBe('anchor');
     expect(harness.system.getDebugSnapshot()).toMatchObject({
@@ -148,6 +155,64 @@ describe('InteractionSystem', () => {
     );
   });
 
+  it('uses profile surface boundaries and explicit overrides deterministically', () => {
+    const harness = createHarness();
+    harness.system.register(
+      target('talk-boundary', {
+        location: { x: 0, y: 0, z: 0 },
+        rangeProfile: 'talk',
+      }),
+    );
+    harness.pose.current = {
+      position: { x: 0, y: 0, z: -1.86 },
+      forward: { x: 0, y: 0, z: 1 },
+      radius: 0.38,
+    };
+    harness.system.update();
+    expect(harness.system.getActiveTarget()?.id).toBe('talk-boundary');
+    const talkBoundary = harness.system.getDebugSnapshot().targets[0]!;
+    expect(talkBoundary).toMatchObject({
+      rangeProfile: 'talk',
+      rangeSource: 'profile',
+      range: 1.1,
+      targetRadius: 0.38,
+    });
+    expect(talkBoundary.activationRadius).toBeCloseTo(1.86);
+    expect(talkBoundary.distance).toBeCloseTo(1.1);
+
+    harness.pose.current = {
+      ...harness.pose.current,
+      position: { x: 0, y: 0, z: -1.861 },
+    };
+    harness.system.update();
+    expect(harness.system.getActiveTarget()).toBeUndefined();
+    expect(harness.system.getDebugSnapshot().targets[0]).toMatchObject({
+      rejectionReason: 'out-of-range',
+    });
+
+    harness.system.unregister('talk-boundary');
+    harness.system.register(
+      target('wide-sign', {
+        location: { x: 0, y: 0, z: 0 },
+        rangeProfile: 'sign',
+        range: 1.2,
+      }),
+    );
+    harness.pose.current = {
+      ...harness.pose.current,
+      position: { x: 0, y: 0, z: -1.58 },
+    };
+    harness.system.update();
+    expect(harness.system.getActiveTarget()?.id).toBe('wide-sign');
+    const wideSign = harness.system.getDebugSnapshot().targets[0]!;
+    expect(wideSign).toMatchObject({
+      rangeProfile: 'sign',
+      rangeSource: 'override',
+      range: 1.2,
+    });
+    expect(wideSign.activationRadius).toBeCloseTo(1.58);
+  });
+
   it('uses collision-world LOS and reports the blocking collider', () => {
     const harness = createHarness();
     harness.collision.addDefinition({
@@ -156,11 +221,12 @@ describe('InteractionSystem', () => {
       size: [1, 2, 0.2],
     });
     harness.system.register(
-      target('hidden', { location: { x: 0, y: 0, z: 2 } }),
+      target('hidden', { location: { x: 0, y: 0, z: 2 }, range: 2 }),
     );
     harness.system.register(
       target('owned-collider', {
         location: { x: 0, y: 0, z: 2 },
+        range: 2,
         collisionIgnoreIds: ['wall'],
       }),
     );
@@ -208,7 +274,7 @@ describe('InteractionSystem', () => {
   it('keeps prompt visibility coherent across occlusion and removal', () => {
     const harness = createHarness();
     harness.system.register(
-      target('terminal', { location: { x: 0, y: 0, z: 2 } }),
+      target('terminal', { location: { x: 0, y: 0, z: 2 }, range: 2 }),
     );
     const mount = document.createElement('div');
     const prompt = new InteractionPromptSystem(mount, harness.system);

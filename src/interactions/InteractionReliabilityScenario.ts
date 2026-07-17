@@ -12,7 +12,7 @@ export class InteractionReliabilityScenario implements GameSystem {
   public readonly id = 'interaction-reliability-scenario';
 
   private readonly unregister: (() => void)[] = [];
-  private challengerZ = -9.35;
+  private challengerZ = -9.5;
   private selectedBlocked = false;
   private activations = 0;
 
@@ -24,23 +24,23 @@ export class InteractionReliabilityScenario implements GameSystem {
 
   public init(): void {
     this.collision.addDefinition(
-      box(OCCLUDED_BLOCKER_ID, [0.58, 1.2, -10.7], [0.3, 2.4, 0.3]),
+      box(OCCLUDED_BLOCKER_ID, [0.35, 1.2, -10.35], [0.16, 2.4, 0.16]),
     );
     this.unregister.push(
       this.interactions.register({
         id: 'interaction.debug.anchor',
         prompt: 'Use stable target',
-        location: { x: -0.15, y: 0.15, z: -9.5 },
-        range: 4,
+        location: { x: -0.15, y: 0.15, z: -10 },
+        rangeProfile: 'use',
         interact: () => {
           this.activations += 1;
         },
       }),
       this.interactions.register({
         id: 'interaction.debug.challenger',
-        prompt: 'Use challenger',
+        prompt: 'Use challenger switch',
         location: () => ({ x: 0.35, y: 0.15, z: this.challengerZ }),
-        range: 4,
+        rangeProfile: 'sign',
         interact: () => {
           this.activations += 1;
         },
@@ -48,8 +48,8 @@ export class InteractionReliabilityScenario implements GameSystem {
       this.interactions.register({
         id: 'interaction.debug.occluded',
         prompt: 'Hidden target',
-        location: { x: 1.3, y: 0.15, z: -9.1 },
-        range: 4,
+        location: { x: 0.7, y: 0.15, z: -9.9 },
+        rangeProfile: 'inspect',
         interact: () => {
           this.activations += 1;
         },
@@ -58,7 +58,7 @@ export class InteractionReliabilityScenario implements GameSystem {
         id: 'interaction-scenario.challenge',
         label: 'Challenge selected interaction',
         run: () => {
-          this.challengerZ = -10.15;
+          this.challengerZ = -10;
         },
       }),
       this.debug.registerToggle({
@@ -86,7 +86,7 @@ export class InteractionReliabilityScenario implements GameSystem {
     this.selectedBlocked = enabled;
     if (enabled) {
       this.collision.addDefinition(
-        box(SELECTED_BLOCKER_ID, [-0.15, 1.2, -10.65], [0.25, 2.4, 0.25]),
+        box(SELECTED_BLOCKER_ID, [-0.075, 1.2, -10.4], [0.18, 2.4, 0.18]),
       );
     } else {
       this.collision.remove(SELECTED_BLOCKER_ID);

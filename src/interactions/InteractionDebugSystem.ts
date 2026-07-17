@@ -60,7 +60,10 @@ export class InteractionDebugSystem implements GameSystem, DebugVisualHelper {
             : target.available
               ? 0x6196ff
               : 0x666b73;
-      this.root.add(this.createRange(target.location, target.range, color));
+      this.root.add(
+        this.createRange(target.location, target.activationRadius, color),
+      );
+      this.root.add(this.createRange(target.location, 0.06, 0xffffff));
     }
     if (snapshot.pose) {
       for (const target of snapshot.targets) {

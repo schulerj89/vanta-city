@@ -23,7 +23,7 @@ test('records movement through dialogue restore, freezes, exports, and reads bac
     .toBeGreaterThan(0.2);
   await page.keyboard.up('w');
 
-  await command(page, 'player.teleport', 'spawn.npc-mechanic');
+  await command(page, 'player.teleport', 'spawn.player-talk-mack');
   await expect
     .poll(() => selectedInteraction(page))
     .toBe('interaction.npc.mack');

@@ -203,8 +203,29 @@ export const testDistrict = {
       {
         id: 'spawn.player-garage',
         kind: 'player',
-        position: [-13, 0.15, 4],
+        position: [-13, 0.15, 2.65],
         rotation: [0, Math.PI, 0],
+      },
+      {
+        id: 'spawn.player-talk-mack',
+        kind: 'player',
+        position: [-10, 0.2, 5.45],
+        rotation: [0, Math.PI, 0],
+        tags: ['interaction', 'talk'],
+      },
+      {
+        id: 'spawn.player-talk-nox',
+        kind: 'player',
+        position: [-19, 0.2, 13.45],
+        rotation: [0, Math.PI, 0],
+        tags: ['interaction', 'talk'],
+      },
+      {
+        id: 'spawn.player-talk-raze',
+        kind: 'player',
+        position: [14, 3, -6.55],
+        rotation: [0, Math.PI, 0],
+        tags: ['interaction', 'talk'],
       },
       {
         id: 'spawn.grounding-curb-west',
@@ -258,7 +279,7 @@ export const testDistrict = {
       {
         id: 'spawn.debug-interactions',
         kind: 'player',
-        position: [0, 0.15, -12],
+        position: [0, 0.15, -10.8],
         rotation: [0, 0, 0],
         tags: ['debug', 'interaction'],
       },

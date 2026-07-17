@@ -49,7 +49,7 @@ test('standard gamepad owns picker, gameplay, dialogue, restore, and narrow help
     .toBeGreaterThan(0.2);
   await setAxes(page, [0, 0, 0, 0]);
 
-  await command(page, 'player.teleport', 'spawn.npc-mechanic');
+  await command(page, 'player.teleport', 'spawn.player-talk-mack');
   await expect
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.npc.mack');

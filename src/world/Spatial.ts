@@ -9,6 +9,8 @@ export interface WorldPosition {
 export interface WorldPose {
   readonly position: WorldPosition;
   readonly forward: WorldPosition;
+  /** Horizontal collision radius used by proximity queries. */
+  readonly radius?: number;
 }
 
 export interface WorldPoseSource {

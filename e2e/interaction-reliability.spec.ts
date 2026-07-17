@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import type { TestInfo } from '@playwright/test';
 import type {
   BrowserTestApi,
   BrowserTestSnapshot,
@@ -60,7 +61,7 @@ test('removes an obstructed prompt target and keeps repeat input healthy', async
     blockerId: 'c.debug-interaction-selected',
   });
   await expect(page.locator('.interaction-prompt')).toContainText(
-    'Use challenger',
+    'Use challenger switch',
   );
 
   await page.keyboard.press('g');
@@ -79,6 +80,59 @@ test('removes an obstructed prompt target and keeps repeat input healthy', async
         .textContent(),
     )
     .toContain('2');
+  expect((await snapshot(page)).runtimeErrors.count).toBe(0);
+});
+
+test('captures exact Talk and prop range edges', async ({ page }, testInfo) => {
+  await toggle(page, 'visual.interactionRanges', true);
+  await page.keyboard.press('Backquote');
+  await expect(
+    page.getByRole('complementary', { name: 'Developer tools' }),
+  ).toBeHidden();
+  for (const sample of [
+    {
+      name: 'talk-outside',
+      position: '-10,0.2,5.97,3.141592653589793',
+      target: undefined,
+    },
+    {
+      name: 'talk-edge',
+      position: '-10,0.2,5.86,3.141592653589793',
+      target: 'interaction.npc.mack',
+    },
+    {
+      name: 'talk-inside',
+      position: '-10,0.2,5.45,3.141592653589793',
+      target: 'interaction.npc.mack',
+    },
+    {
+      name: 'prop-outside',
+      position: '-13,0.15,2.89,3.141592653589793',
+      target: undefined,
+    },
+    {
+      name: 'prop-edge',
+      position: '-13,0.15,2.88,3.141592653589793',
+      target: 'interaction.garage-door',
+    },
+    {
+      name: 'prop-inside-narrow',
+      position: '-13,0.15,2.65,3.141592653589793',
+      target: 'interaction.garage-door',
+      narrow: true,
+    },
+  ] as const) {
+    if ('narrow' in sample)
+      await page.setViewportSize({ width: 390, height: 844 });
+    await command(page, 'player.teleport-position', sample.position);
+    await expect
+      .poll(async () => (await snapshot(page)).interaction.activeTargetId)
+      .toBe(sample.target);
+    if (sample.target)
+      await expect(page.locator('.interaction-prompt')).toBeVisible();
+    else await expect(page.locator('.interaction-prompt')).toBeHidden();
+    await attachScreenshot(page, testInfo, sample.name);
+  }
   expect((await snapshot(page)).runtimeErrors.count).toBe(0);
 });
 
@@ -108,6 +162,19 @@ async function toggle(page: Page, id: string, enabled: boolean): Promise<void> {
       window.__VANTA_TEST__!.setDebugToggle(toggleId, value),
     { toggleId: id, value: enabled },
   );
+}
+
+async function attachScreenshot(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+): Promise<void> {
+  const path = testInfo.outputPath(`${name}.png`);
+  await page.screenshot({ path });
+  await testInfo.attach(name, {
+    path,
+    contentType: 'image/png',
+  });
 }
 
 declare global {

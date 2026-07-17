@@ -48,8 +48,8 @@ test('live participant framing and exact gameplay camera restoration', async ({
 
   for (const npcCase of cases) {
     for (const [rangeIndex, range] of [
-      { name: 'minimum', offset: 0.55 },
-      { name: 'normal', offset: 1.5 },
+      { name: 'minimum', offset: 0.58 },
+      { name: 'normal', offset: 1.3 },
     ].entries()) {
       const side = rangeIndex === 0 ? -1 : 1;
       const playerPosition = {

@@ -231,6 +231,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   public getWorldPose(): WorldPose {
     return {
       position: this.getPlayerPosition(),
+      radius: this.movement.config.radius,
       forward: {
         x: Math.sin(this.movement.facingYaw),
         y: 0,

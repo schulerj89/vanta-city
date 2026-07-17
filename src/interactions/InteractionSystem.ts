@@ -5,6 +5,7 @@ import type { GameSystem } from '../core/lifecycle';
 import type { InputReader } from '../input/InputSystem';
 import { Vector3 } from 'three';
 import type { CollisionWorld } from '../physics/CollisionWorld';
+import { interactionRangeProfiles } from './Interactable';
 import type {
   Interactable,
   InteractionCandidate,
@@ -19,8 +20,9 @@ import type {
   WorldPosition,
 } from '../world/Spatial';
 
-const DEFAULT_RANGE = 2.5;
+const DEFAULT_PLAYER_RADIUS = 0.38;
 const MIN_FACING = -0.25;
+const RANGE_EPSILON = 1e-6;
 const DEFAULT_LINE_OF_SIGHT_HEIGHT = 1.2;
 export const INTERACTION_SWITCH_SCORE_MARGIN = 0.75;
 
@@ -46,24 +48,18 @@ function locationOf(interactable: Interactable): WorldPosition {
     : interactable.location;
 }
 
-function distanceBetween(a: WorldPosition, b: WorldPosition): number {
-  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+function horizontalDistance(a: WorldPosition, b: WorldPosition): number {
+  return Math.hypot(a.x - b.x, a.z - b.z);
 }
 
 function normalizedDotToTarget(pose: WorldPose, target: WorldPosition): number {
   const dx = target.x - pose.position.x;
-  const dy = target.y - pose.position.y;
   const dz = target.z - pose.position.z;
-  const targetLength = Math.hypot(dx, dy, dz);
-  const forwardLength = Math.hypot(
-    pose.forward.x,
-    pose.forward.y,
-    pose.forward.z,
-  );
+  const targetLength = Math.hypot(dx, dz);
+  const forwardLength = Math.hypot(pose.forward.x, pose.forward.z);
   if (targetLength === 0 || forwardLength === 0) return 1;
   return (
-    (dx * pose.forward.x + dy * pose.forward.y + dz * pose.forward.z) /
-    (targetLength * forwardLength)
+    (dx * pose.forward.x + dz * pose.forward.z) / (targetLength * forwardLength)
   );
 }
 
@@ -228,14 +224,32 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
     for (const registration of this.registrations.values()) {
       const target = registration.definition;
       const location = locationOf(target);
-      const range = target.range ?? DEFAULT_RANGE;
-      const base = { id: target.id, location, range };
+      const profileId = target.rangeProfile ?? 'use';
+      const profile = interactionRangeProfiles[profileId];
+      const range = target.range ?? profile.surfaceRange;
+      const targetRadius = target.targetRadius ?? profile.targetRadius;
+      const playerRadius = pose?.radius ?? DEFAULT_PLAYER_RADIUS;
+      const activationRadius = range + targetRadius + playerRadius;
+      const base = {
+        id: target.id,
+        location,
+        range,
+        rangeProfile: profileId,
+        rangeSource:
+          target.range === undefined
+            ? ('profile' as const)
+            : ('override' as const),
+        targetRadius,
+        playerRadius,
+        activationRadius,
+      };
       const unavailable = this.unavailableReason(registration);
       if (unavailable) {
         targets.push({
           ...base,
           available: false,
           distance: undefined,
+          centerDistance: undefined,
           facing: undefined,
           lineOfSight: 'not-tested',
           blockerId: undefined,
@@ -249,6 +263,7 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
           ...base,
           available: true,
           distance: undefined,
+          centerDistance: undefined,
           facing: undefined,
           lineOfSight: 'not-tested',
           blockerId: undefined,
@@ -257,18 +272,24 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
         });
         continue;
       }
-      const distance = distanceBetween(pose.position, location);
+      const centerDistance = horizontalDistance(pose.position, location);
+      const distance = Math.max(
+        0,
+        centerDistance - playerRadius - targetRadius,
+      );
       const facing = normalizedDotToTarget(pose, location);
-      if (distance > range || facing < MIN_FACING) {
+      if (distance > range + RANGE_EPSILON || facing < MIN_FACING) {
         targets.push({
           ...base,
           available: true,
           distance,
+          centerDistance,
           facing,
           lineOfSight: 'not-tested',
           blockerId: undefined,
           score: undefined,
-          rejectionReason: distance > range ? 'out-of-range' : 'behind',
+          rejectionReason:
+            distance > range + RANGE_EPSILON ? 'out-of-range' : 'behind',
         });
         continue;
       }
@@ -278,6 +299,7 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
           ...base,
           available: true,
           distance,
+          centerDistance,
           facing,
           lineOfSight: 'blocked',
           blockerId: los.colliderId,
@@ -306,6 +328,7 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
         ...base,
         available: true,
         distance,
+        centerDistance,
         facing,
         lineOfSight: 'clear',
         blockerId: undefined,
@@ -439,10 +462,18 @@ export class InteractionSystem implements GameSystem<InteractionRuntimeContext> 
       return;
     }
     const pose = this.player.getWorldPose();
+    const profile = interactionRangeProfiles[target.rangeProfile ?? 'use'];
+    const targetRadius = target.targetRadius ?? profile.targetRadius;
+    const playerRadius = pose?.radius ?? DEFAULT_PLAYER_RADIUS;
     if (
       !pose ||
-      distanceBetween(pose.position, locationOf(target)) >
-        (target.range ?? DEFAULT_RANGE)
+      Math.max(
+        0,
+        horizontalDistance(pose.position, locationOf(target)) -
+          playerRadius -
+          targetRadius,
+      ) >
+        (target.range ?? profile.surfaceRange) + RANGE_EPSILON
     ) {
       this.cancelRunning('out-of-range');
       return;

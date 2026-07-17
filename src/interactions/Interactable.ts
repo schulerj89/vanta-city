@@ -14,11 +14,32 @@ export type InteractionAvailabilityPredicate = (
   context: InteractionAvailabilityContext,
 ) => boolean;
 
+export type InteractionRangeProfile = 'inspect' | 'sign' | 'talk' | 'use';
+
+export interface InteractionRangeProfileDefinition {
+  readonly surfaceRange: number;
+  readonly targetRadius: number;
+}
+
+export const interactionRangeProfiles = {
+  talk: { surfaceRange: 1.1, targetRadius: 0.38 },
+  inspect: { surfaceRange: 0.8, targetRadius: 0 },
+  sign: { surfaceRange: 1.05, targetRadius: 0 },
+  use: { surfaceRange: 0.7, targetRadius: 0 },
+} as const satisfies Readonly<
+  Record<InteractionRangeProfile, InteractionRangeProfileDefinition>
+>;
+
 export interface Interactable {
   readonly id: string;
   readonly prompt: string;
   readonly location: WorldPosition | (() => WorldPosition);
+  /** Profile default; `use` when omitted. */
+  readonly rangeProfile?: InteractionRangeProfile;
+  /** Explicit horizontal surface-gap override in world units. */
   readonly range?: number;
+  /** Explicit horizontal target footprint override in world units. */
+  readonly targetRadius?: number;
   readonly priority?: number;
   readonly enabled?: boolean;
   readonly requiredStates?: readonly GameState[];
@@ -76,6 +97,12 @@ export interface InteractionDebugTarget {
   readonly id: string;
   readonly location: WorldPosition;
   readonly range: number;
+  readonly rangeProfile: InteractionRangeProfile;
+  readonly rangeSource: 'profile' | 'override';
+  readonly targetRadius: number;
+  readonly playerRadius: number;
+  readonly centerDistance: number | undefined;
+  readonly activationRadius: number;
   readonly available: boolean;
   readonly distance: number | undefined;
   readonly facing: number | undefined;
