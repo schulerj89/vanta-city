@@ -20,6 +20,14 @@ These rules apply to the entire repository.
 - Never edit a worktree owned by an active worker. Never remove a dirty or active worktree.
 - Workers should make focused commits and report commit hashes, checks, decisions, screenshots when visual behavior changes, and remaining limitations.
 
+## Session and disk tracking
+
+- After creating, integrating, or cleaning workers, report the number of active Codex workers, registered Git worktrees, and which worktrees remain active.
+- Periodically measure physical worktree usage with `du -sh`, calling out `node_modules`, generated reports, build output, and local asset downloads separately. Codex thread history is not the main repository disk cost; duplicated worktree dependencies usually are.
+- Warn when more than five worktrees are registered, total Vanta City worktree usage exceeds roughly 2 GiB, or a completed inactive worktree exceeds roughly 500 MiB.
+- Recommend cleanup after a worker is integrated, but never remove an active or dirty worktree. Preserve its branch unless the user explicitly requests branch deletion.
+- Keep resource reports concise: active/idle session counts, total worktree count, total measured size, the largest consumers, and safe cleanup candidates.
+
 ## Review and integration
 
 - Do not merge a worker merely because it compiled independently. Review its history, changed files, public APIs, tests, and overlap with current `main` first.
