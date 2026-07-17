@@ -28,6 +28,7 @@ import type {
   CharacterActionRequestState,
 } from '../characters/CharacterActions';
 import { HealthComponent } from '../health/Health';
+import { CharacterEquipment } from '../equipment/CharacterEquipment';
 
 const idleCharacterActionState: CharacterActionRequestState = {
   active: undefined,
@@ -92,6 +93,8 @@ export interface PlayerDebugSnapshot {
   readonly presentationFacingYaw: number;
   readonly runMode: boolean;
   readonly actionBusy: boolean;
+  readonly depleted: boolean;
+  readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
 }
 
 const controlledStates: readonly GameState[] = ['playing'];
@@ -114,6 +117,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   private publishedCompletionSequence = 0;
   private presentationFacingTarget: WorldPoseSource | undefined;
   private presentationFacingYaw: number;
+  private unsubscribeHealth: (() => void) | undefined;
+  public readonly equipment: CharacterEquipment;
 
   public constructor(
     private readonly objects: GameObjectWorld,
@@ -123,16 +128,24 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     private readonly cameraYaw: () => number = () => 0,
     public readonly visual: PlayerVisual = new PlaceholderPlayerVisual(),
     private readonly spawnFacingYaw = 0,
+    equipment?: CharacterEquipment,
   ) {
     this.spawnPosition = spawnPosition.clone();
     this.movement = new PlayerMovementSimulation(collision, config);
     this.presentationFacingYaw = spawnFacingYaw;
+    this.equipment =
+      equipment ?? visual.equipment ?? new CharacterEquipment('player');
   }
 
   public async init(context: GameContext): Promise<void> {
     this.input = context.input;
     this.state = context.state;
     await this.visual.init?.();
+    this.visual.setDepleted?.(!this.health.alive);
+    this.unsubscribeHealth = this.health.events.on('changed', ({ alive }) => {
+      this.visual.setDepleted?.(!alive);
+      if (!alive) this.movement.haltHorizontalMovement();
+    });
     this.objects.add(this.visual);
     this.visualAdded = true;
     this.reset();
@@ -141,6 +154,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   public update(time: FrameTime): void {
     const acceptsInput =
       this.controlEnabled &&
+      this.health.alive &&
       this.state !== undefined &&
       controlledStates.includes(this.state.current) &&
       this.input?.isUiFocused?.() !== true;
@@ -159,8 +173,21 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         this.nextKickSide = this.nextKickSide === 'Left' ? 'Right' : 'Left';
       }
     }
+    if (acceptsInput && this.input?.wasPressed('roll')) {
+      this.triggerCharacterAction('roll', 'keyboard:roll');
+    }
+    if (acceptsInput && this.input?.wasPressed('quickbar1')) {
+      this.equipment.toggleQuickbarSlot(1);
+    }
+    if (acceptsInput && this.input?.wasPressed('quickbar2')) {
+      this.equipment.toggleQuickbarSlot(2);
+    }
+    if (acceptsInput && this.input?.wasPressed('useEquipment')) {
+      this.useEquippedItem('keyboard:equipment');
+    }
+    const actionBeforeMovement = this.getCharacterActionState().active;
     const intent =
-      acceptsInput && this.input
+      acceptsInput && this.input && actionBeforeMovement !== 'roll'
         ? readPlayerIntent(this.input, this.runMode)
         : idlePlayerIntent;
     this.movement.simulate(intent, this.cameraYaw(), time.delta);
@@ -219,6 +246,16 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     return accepted;
   }
 
+  public useEquippedItem(source = 'player-controller'): boolean {
+    if (!this.health.alive) return false;
+    return this.equipment.use(this, source);
+  }
+
+  public toggleQuickbarSlot(slot: number): boolean {
+    if (!this.health.alive) return false;
+    return this.equipment.toggleQuickbarSlot(slot);
+  }
+
   public getCharacterActionState(): CharacterActionRequestState {
     return this.visual.getCharacterActionState?.() ?? idleCharacterActionState;
   }
@@ -267,6 +304,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       presentationFacingYaw: this.presentationFacingYaw,
       runMode: this.runMode,
       actionBusy: this.getCharacterActionState().busy,
+      depleted: !this.health.alive,
+      equipment: this.equipment.getSnapshot(),
     };
   }
 
@@ -286,9 +325,12 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     else this.visual.dispose?.();
     this.visualAdded = false;
     this.presentationFacingTarget = undefined;
+    this.unsubscribeHealth?.();
+    this.unsubscribeHealth = undefined;
     this.input = undefined;
     this.state = undefined;
     this.events.clear();
+    this.equipment.dispose();
     this.health.dispose();
   }
 

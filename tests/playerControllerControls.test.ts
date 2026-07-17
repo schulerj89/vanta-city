@@ -36,6 +36,7 @@ class ActionVisual implements PlayerVisual {
   public readonly visualRoot = new Group();
   public readonly loadedModelRoot = new Group();
   public readonly actions: CharacterActionName[] = [];
+  public depleted = false;
   private actionState: CharacterActionRequestState = {
     active: undefined,
     busy: false,
@@ -62,7 +63,18 @@ class ActionVisual implements PlayerVisual {
   }
   public triggerCharacterAction(action: CharacterActionName): boolean {
     this.actions.push(action);
+    this.actionState = {
+      ...this.actionState,
+      active: action,
+      busy: true,
+      lastRequested: action,
+      lastAccepted: true,
+      sequence: this.actionState.sequence + 1,
+    };
     return true;
+  }
+  public setDepleted(depleted: boolean): void {
+    this.depleted = depleted;
   }
   public getCharacterActionState(): CharacterActionRequestState {
     return this.actionState;
@@ -206,5 +218,50 @@ describe('PlayerControllerSystem controls', () => {
     expect(Math.abs(resumed.facingError)).toBeLessThan(
       Math.abs(beforePause.facingError),
     );
+  });
+
+  it('toggles both quickbar slots, uses equipment, and locks locomotion for roll', async () => {
+    const { input, player, visual } = await harness();
+    input.pressed.add('quickbar1');
+    player.update(frame);
+    expect(player.equipment.getSnapshot().equippedId).toBe('handgun');
+    input.pressed.add('useEquipment');
+    player.update(frame);
+    expect(visual.actions).toContain('gunFire');
+
+    input.pressed.add('quickbar1');
+    player.update(frame);
+    expect(player.equipment.getSnapshot().equippedId).toBeUndefined();
+    input.pressed.add('quickbar2');
+    player.update(frame);
+    expect(player.equipment.getSnapshot().equippedId).toBe('knife');
+
+    input.down.add('moveForward');
+    input.pressed.add('roll');
+    player.update(frame);
+    expect(visual.actions).toContain('roll');
+    expect(player.movement.velocity.x).toBeCloseTo(0);
+    expect(player.movement.velocity.z).toBeCloseTo(0);
+  });
+
+  it('gates movement, actions, equipment, and roll while depleted then revives', async () => {
+    const { input, player, visual } = await harness();
+    player.health.set(0, 'unit-test');
+    expect(visual.depleted).toBe(true);
+    input.down.add('moveForward');
+    for (const action of ['punch', 'roll', 'quickbar1']) {
+      input.pressed.add(action);
+    }
+    player.update(frame);
+    expect(visual.actions).toEqual([]);
+    expect(player.movement.velocity.lengthSq()).toBe(0);
+    expect(player.equipment.getSnapshot().equippedId).toBeUndefined();
+
+    player.health.reset('unit-test');
+    expect(visual.depleted).toBe(false);
+    input.pressed.clear();
+    input.pressed.add('roll');
+    player.update(frame);
+    expect(visual.actions).toEqual(['roll']);
   });
 });

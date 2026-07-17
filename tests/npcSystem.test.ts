@@ -43,9 +43,13 @@ function characterLoader(
     ): Promise<LoadedCharacter> => {
       const dispose = vi.fn();
       disposals.push(dispose);
+      const root = new Group();
+      const palm = new Group();
+      palm.name = 'PalmR';
+      root.add(palm);
       return {
         definition,
-        root: new Group(),
+        root,
         animationClips,
         discoveredClipNames: [...animationClips.values()].map(
           ({ name }) => name,
@@ -62,6 +66,7 @@ function npcAnimationClips(): ReadonlyMap<string, AnimationClip> {
   return new Map([
     ['idle', new AnimationClip('HumanArmature|Man_Idle', 1, [])],
     ['gesture', new AnimationClip('HumanArmature|Man_Clapping', 0.6, [])],
+    ['knifeSlash', new AnimationClip('HumanArmature|Man_SwordSlash', 1.04, [])],
   ]);
 }
 
@@ -288,6 +293,53 @@ describe('NPC foundation', () => {
       expect(state.current).toBe('playing');
     }
     expect(started).toHaveBeenCalledTimes(2);
+    system.dispose();
+    conversations.dispose();
+  });
+
+  it('equips and uses the shared knife definition on Mack without adding AI', async () => {
+    const scene = new Scene();
+    const objects = new GameObjectWorld(scene);
+    const interactions = interactionRegistry();
+    const worldEvents = new EventBus<WorldEvents>();
+    const { state } = stateHarness();
+    const conversations = new ConversationCoordinator(
+      conversationCatalog,
+      state,
+    );
+    const system = new NpcSystem(
+      npcDefinitions,
+      npcCharacterDefinitions,
+      characterLoader('asset', npcAnimationClips()),
+      objects,
+      interactions,
+      conversations,
+      { getWorldPose: () => undefined },
+      { activeLevel: testDistrict.definition },
+      worldEvents,
+    );
+    await system.init();
+
+    expect(system.equip('mack', 'knife')).toBe(true);
+    expect(system.getDebugSnapshot('mack')).toMatchObject({
+      equipment: { ownerId: 'npc.mack', equippedId: 'knife' },
+      equipmentPresentation: {
+        attached: true,
+        compatible: true,
+        socketName: 'PalmR',
+      },
+    });
+    expect(system.useEquipment('mack', 'unit-test')).toBe(true);
+    expect(system.getDebugSnapshot('mack')).toMatchObject({
+      currentAnimation: 'knifeSlash',
+      gestureActive: true,
+      lastGestureSource: 'unit-test',
+      equipment: { useSequence: 1, lastUseAccepted: true },
+    });
+    expect(system.getWorldPoseSource('mack')?.getWorldPose()).toMatchObject({
+      position: { x: -10, y: 0.2, z: 4 },
+    });
+
     system.dispose();
     conversations.dispose();
   });

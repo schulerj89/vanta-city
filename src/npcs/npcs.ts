@@ -13,6 +13,14 @@ const npcAnimations = {
     clipNames: ['HumanArmature|Man_Clapping'],
     required: true,
   },
+  death: {
+    clipNames: ['HumanArmature|Man_Death'],
+    required: true,
+  },
+  knifeSlash: {
+    clipNames: ['HumanArmature|Man_SwordSlash'],
+    required: true,
+  },
 } as const;
 
 export const npcCharacterDefinitions = validateCharacterDefinitions([
@@ -20,6 +28,7 @@ export const npcCharacterDefinitions = validateCharacterDefinitions([
     id: 'npc-worker',
     displayName: 'Worker',
     modelAssetId: 'character.npc-worker.model',
+    equipmentRigId: 'animated-men',
     animations: npcAnimations,
     transform: { scale: 0.37, rotation: [0, Math.PI, 0] },
     fallback: 'placeholder',
@@ -28,6 +37,7 @@ export const npcCharacterDefinitions = validateCharacterDefinitions([
     id: 'npc-hoodie',
     displayName: 'Hoodie Character',
     modelAssetId: 'character.npc-hoodie.model',
+    equipmentRigId: 'animated-men',
     animations: npcAnimations,
     transform: { scale: 0.368, rotation: [0, Math.PI, 0] },
     fallback: 'placeholder',
@@ -36,6 +46,7 @@ export const npcCharacterDefinitions = validateCharacterDefinitions([
     id: 'npc-punk',
     displayName: 'Punk',
     modelAssetId: 'character.npc-punk.model',
+    equipmentRigId: 'animated-men',
     animations: npcAnimations,
     transform: { scale: 0.369, rotation: [0, Math.PI, 0] },
     fallback: 'placeholder',

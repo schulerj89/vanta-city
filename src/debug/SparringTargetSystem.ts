@@ -557,6 +557,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   private readonly clips = new Map<string, AnimationClip>();
   private readonly animationGraph = new CharacterAnimationStateMachine();
   private activeReaction: string | undefined;
+  private readonly unsubscribeHealth: (() => void)[] = [];
 
   public get isBusy(): boolean {
     return this.busy;
@@ -598,6 +599,15 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
       this.mixer = new AnimationMixer(loaded.root);
       this.mixer.addEventListener('finished', this.onMixerFinished);
     }
+    this.unsubscribeHealth.push(
+      this.health.events.on('depleted', () => {
+        this.busy = false;
+        this.activeReaction = undefined;
+        this.fallbackRemaining = 0;
+        this.applyGraphTransition();
+      }),
+      this.health.events.on('restored', () => this.playIdle()),
+    );
     this.playIdle();
   }
 
@@ -617,7 +627,12 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   }
 
   public receiveActionImpact(impact: CharacterActionImpact): boolean {
-    if (!this.enabled || this.busy || !isStrikeAction(impact.action)) {
+    if (
+      !this.enabled ||
+      !this.health.alive ||
+      this.busy ||
+      !isStrikeAction(impact.action)
+    ) {
       return false;
     }
     const logicalClip = 'getHit';
@@ -680,6 +695,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
       if (this.loaded) this.mixer.uncacheRoot(this.loaded.root);
     }
     this.action = undefined;
+    for (const unsubscribe of this.unsubscribeHealth.splice(0)) unsubscribe();
     this.mixer = undefined;
     this.loaded?.dispose();
     this.loaded = undefined;
@@ -694,7 +710,9 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   private readonly onMixerFinished = (event: {
     readonly action: AnimationAction;
   }): void => {
-    if (event.action === this.action && this.busy) this.finishResponse();
+    if (event.action === this.action && this.busy && this.health.alive) {
+      this.finishResponse();
+    }
   };
 
   private finishResponse(): void {
@@ -715,7 +733,11 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     const mixer = this.mixer;
     if (!mixer) return;
     const transition = this.animationGraph.transition(
-      { movement: 'idle', reaction: this.activeReaction },
+      {
+        movement: 'idle',
+        reaction: this.activeReaction,
+        depleted: !this.health.alive,
+      },
       (logicalName) => this.clips.has(logicalName),
     );
     this.animation = transition.state.label;
@@ -727,7 +749,10 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     this.action = clip ? mixer.clipAction(clip) : undefined;
     if (!this.action) return;
     this.action.reset().fadeIn(0.08);
-    if (transition.state.phase === 'reaction') {
+    if (
+      transition.state.phase === 'reaction' ||
+      transition.state.phase === 'death'
+    ) {
       this.action.setLoop(LoopOnce, 1);
       this.action.clampWhenFinished = true;
     } else {

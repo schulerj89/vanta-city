@@ -88,6 +88,24 @@ export const controlActions = {
     'Kick (alternates side; one action at a time)',
     'Actions',
   ),
+  roll: control(
+    ['KeyB'],
+    ['B'],
+    'Roll in place (animation locked)',
+    'Actions',
+    ['LB'],
+    [4],
+  ),
+  useEquipment: control(
+    ['KeyU'],
+    ['U'],
+    'Use equipped item',
+    'Actions',
+    ['RT'],
+    [7],
+  ),
+  quickbar1: control(['Digit1'], ['1'], 'Equip / unequip handgun', 'Actions'),
+  quickbar2: control(['Digit2'], ['2'], 'Equip / unequip knife', 'Actions'),
   toggleHelp: control(
     ['KeyH'],
     ['H'],
@@ -234,6 +252,8 @@ export const characterControlSummary = [
   `${bindingLabel('toggleRun')} run`,
   `${bindingLabel('interact')} interact`,
   `${bindingLabel('punch')}/${bindingLabel('kick')} actions`,
+  `${bindingLabel('roll')} roll`,
+  `${bindingLabel('quickbar1')}/${bindingLabel('quickbar2')} equipment · ${bindingLabel('useEquipment')} use`,
   `${bindingLabel('toggleHelp')} help`,
 ].join(' · ');
 

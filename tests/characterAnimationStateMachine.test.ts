@@ -66,4 +66,57 @@ describe('CharacterAnimationStateMachine', () => {
       label: 'idle (fallback for landing)',
     });
   });
+
+  it('uses equipment locomotion with explicit normal-run fallback', () => {
+    const graph = new CharacterAnimationStateMachine();
+    const hasClip = (name: string) => ['idle', 'run', 'gunIdle'].includes(name);
+    expect(
+      graph.transition(
+        {
+          movement: 'idle',
+          equipment: { idleAnimation: 'gunIdle', runAnimation: 'gunRun' },
+        },
+        hasClip,
+      ).state,
+    ).toMatchObject({ requestedClip: 'gunIdle', resolvedClip: 'gunIdle' });
+    expect(
+      graph.transition(
+        {
+          movement: 'running',
+          equipment: { idleAnimation: 'gunIdle', runAnimation: 'gunRun' },
+        },
+        hasClip,
+      ).state,
+    ).toMatchObject({
+      requestedClip: 'gunRun',
+      resolvedClip: 'run',
+      fallback: 'run',
+    });
+  });
+
+  it('prioritizes native death and exposes static fade fallback when absent', () => {
+    const native = new CharacterAnimationStateMachine();
+    expect(
+      native.transition(
+        { movement: 'running', action: 'roll', depleted: true },
+        (name) => name === 'death',
+      ).state,
+    ).toMatchObject({
+      phase: 'death',
+      requestedClip: 'death',
+      resolvedClip: 'death',
+      fallback: 'none',
+    });
+    const missing = new CharacterAnimationStateMachine();
+    expect(
+      missing.transition(
+        { movement: 'idle', depleted: true },
+        (name) => name === 'idle',
+      ).state,
+    ).toMatchObject({
+      phase: 'death',
+      resolvedClip: undefined,
+      fallback: 'static',
+    });
+  });
 });

@@ -11,6 +11,7 @@ import type { NpcDebugSnapshot } from './NpcEntity';
 import { NpcEntity } from './NpcEntity';
 import type { NpcCharacterLoader } from './NpcEntity';
 import type { NpcDefinition } from './NpcDefinition';
+import type { EquipmentId } from '../equipment/EquipmentDefinition';
 
 export interface NpcInteractionRegistry {
   register(interactable: Interactable): () => void;
@@ -78,6 +79,14 @@ export class NpcSystem implements GameSystem {
 
   public getDefinition(id: string): NpcDefinition | undefined {
     return this.definitions.find((definition) => definition.id === id);
+  }
+
+  public equip(id: string, itemId: EquipmentId): boolean {
+    return this.spawned.get(id)?.entity.equip(itemId) ?? false;
+  }
+
+  public useEquipment(id: string, source = 'npc-debug'): boolean {
+    return this.spawned.get(id)?.entity.useEquipment(source) ?? false;
   }
 
   public get count(): number {

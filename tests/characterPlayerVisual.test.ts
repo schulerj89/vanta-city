@@ -1,4 +1,12 @@
-import { AnimationClip, Group, Vector3, VectorKeyframeTrack } from 'three';
+import {
+  AnimationClip,
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  Vector3,
+  VectorKeyframeTrack,
+} from 'three';
 import type { LoadedCharacter } from '../src/characters/CharacterLoader';
 import { CharacterSelectionStore } from '../src/characters/CharacterSelection';
 import type { CharacterDefinition } from '../src/characters/CharacterDefinition';
@@ -7,10 +15,21 @@ import {
   CharacterPlayerVisual,
   type CharacterInstanceLoader,
 } from '../src/player/CharacterPlayerVisual';
+import { CharacterEquipment } from '../src/equipment/CharacterEquipment';
 
 const definitions = [
-  { id: 'first', displayName: 'First', fallback: 'placeholder' },
-  { id: 'second', displayName: 'Second', fallback: 'placeholder' },
+  {
+    id: 'first',
+    displayName: 'First',
+    equipmentRigId: 'ultimate-men',
+    fallback: 'placeholder',
+  },
+  {
+    id: 'second',
+    displayName: 'Second',
+    equipmentRigId: 'ultimate-men',
+    fallback: 'placeholder',
+  },
   { id: 'third', displayName: 'Third', fallback: 'placeholder' },
 ] as const satisfies readonly CharacterDefinition[];
 
@@ -399,5 +418,137 @@ describe('CharacterPlayerVisual', () => {
       sequence: 0,
     });
     visual.dispose();
+  });
+
+  it('locks a native roll, strips its root motion, and restores equipped idle', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const equipment = new CharacterEquipment('player');
+    equipment.equip('handgun');
+    const roll = new AnimationClip('Roll', 0.3, [
+      new VectorKeyframeTrack('.position', [0, 0.3], [0, 0, 0, 5, 0, 5]),
+    ]);
+    const instance = loadedCharacter(
+      definitions[0],
+      'asset',
+      new Map([
+        ['roll', roll],
+        ['gunIdle', new AnimationClip('Gun idle', 1, [])],
+      ]),
+    );
+    instance.root.position.set(0, 0.2, 0);
+    const wrist = new Group();
+    wrist.name = 'WristR';
+    instance.root.add(wrist);
+    const visual = new CharacterPlayerVisual(
+      selection,
+      { instantiate: vi.fn(async () => instance) },
+      equipment,
+    );
+    await visual.init();
+    visual.sync(movement('idle'), 0.01);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'gunIdle',
+      equipmentPresentation: { attached: true, socketName: 'WristR' },
+    });
+
+    expect(visual.triggerCharacterAction('roll', 'unit-test')).toBe(true);
+    visual.sync(movement('idle'), 0.15);
+    expect(instance.root.position.toArray()).toEqual([0, 0.2, 0]);
+    expect(visual.getDebugSnapshot().animationState).toBe('action:roll');
+    visual.sync(movement('idle'), 0.2);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'gunIdle',
+      characterAction: { active: undefined, lastCompleted: 'roll' },
+    });
+    visual.dispose();
+    equipment.dispose();
+  });
+
+  it('uses native death when mapped and rejects actions until revived', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const instance = loadedCharacter(
+      definitions[0],
+      'asset',
+      new Map([
+        ['idle', new AnimationClip('Idle', 1, [])],
+        ['death', new AnimationClip('Death', 0.5, [])],
+        ['roll', new AnimationClip('Roll', 0.3, [])],
+      ]),
+    );
+    const visual = new CharacterPlayerVisual(selection, {
+      instantiate: vi.fn(async () => instance),
+    });
+    await visual.init();
+
+    visual.setDepleted(true);
+    visual.sync(movement('idle'), 0.1);
+    expect(visual.triggerCharacterAction('roll', 'unit-test')).toBe(false);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'death:death',
+      death: { depleted: true, nativeClip: true, fadeFallback: false },
+      characterAction: { lastRejection: 'depleted' },
+    });
+    visual.setDepleted(false);
+    visual.sync(movement('idle'), 0.1);
+    expect(visual.triggerCharacterAction('roll', 'unit-test')).toBe(true);
+    visual.dispose();
+  });
+
+  it('restores fade materials and replaces equipped props on character switch', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const equipment = new CharacterEquipment('player');
+    equipment.equip('knife');
+    const first = loadedCharacter(definitions[0], 'placeholder');
+    const second = loadedCharacter(definitions[1], 'placeholder');
+    for (const instance of [first, second]) {
+      const wrist = new Group();
+      wrist.name = 'WristR';
+      const material = new MeshBasicMaterial({ color: 0xffffff });
+      const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
+      instance.root.add(wrist, mesh);
+    }
+    const visual = new CharacterPlayerVisual(
+      selection,
+      {
+        instantiate: vi
+          .fn()
+          .mockResolvedValueOnce(first)
+          .mockResolvedValueOnce(second),
+      },
+      equipment,
+    );
+    await visual.init();
+    visual.setDepleted(true);
+    visual.sync(movement('idle'), 0.4);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      death: { fadeFallback: true },
+      equipmentPresentation: { attached: true, createdCount: 1 },
+    });
+    expect(visual.getDebugSnapshot().death.clonedMaterialCount).toBeGreaterThan(
+      0,
+    );
+
+    selection.select('second');
+    await vi.waitFor(() => {
+      expect(visual.getDebugSnapshot().loadedDefinitionId).toBe('second');
+    });
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      death: { fadeFallback: true },
+      equipmentPresentation: {
+        attached: true,
+        createdCount: 2,
+        disposedCount: 1,
+      },
+    });
+    expect(visual.getDebugSnapshot().death.clonedMaterialCount).toBeGreaterThan(
+      0,
+    );
+    visual.setDepleted(false);
+    expect(visual.getDebugSnapshot().death.clonedMaterialCount).toBe(0);
+    visual.dispose();
+    expect(visual.getDebugSnapshot().equipmentPresentation.disposedCount).toBe(
+      2,
+    );
+    equipment.dispose();
   });
 });

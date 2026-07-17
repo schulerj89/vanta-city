@@ -11,12 +11,14 @@ import type {
   CharacterActionName,
   CharacterActionRequestState,
 } from '../characters/CharacterActions';
+import type { CharacterEquipment } from '../equipment/CharacterEquipment';
 
 export interface PlayerVisual extends GameObject {
   /** Rotates presentation without changing the simulation transform. */
   readonly visualRoot: Group;
   /** Receives the one-time bounds-derived alignment translation. */
   readonly loadedModelRoot: Group;
+  readonly equipment?: CharacterEquipment;
   init?(): void | Promise<void>;
   sync(movement: PlayerMovementSimulation, delta?: number): void;
   triggerCharacterAction?(
@@ -24,6 +26,7 @@ export interface PlayerVisual extends GameObject {
     source?: string,
   ): boolean;
   getCharacterActionState?(): CharacterActionRequestState;
+  setDepleted?(depleted: boolean): void;
   getAlignmentReport(): CharacterAlignmentReport | undefined;
 }
 

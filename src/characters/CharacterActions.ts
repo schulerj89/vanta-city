@@ -5,11 +5,14 @@ export const characterActionNames = [
   'punchRight',
   'kickLeft',
   'kickRight',
+  'roll',
+  'gunFire',
+  'knifeSlash',
 ] as const;
 
 export type CharacterActionName = (typeof characterActionNames)[number];
 
-export type CharacterActionRejection = 'busy' | 'unavailable';
+export type CharacterActionRejection = 'busy' | 'unavailable' | 'depleted';
 export type CharacterActionCompletionRelease =
   'mixer-finished' | 'duration-fallback';
 
@@ -26,6 +29,9 @@ export const characterActionTimings: Readonly<
   punchRight: { impactNormalizedTime: 0.55 },
   kickLeft: { impactNormalizedTime: 0.62 },
   kickRight: { impactNormalizedTime: 0.62 },
+  roll: { impactNormalizedTime: undefined },
+  gunFire: { impactNormalizedTime: 0.45 },
+  knifeSlash: { impactNormalizedTime: 0.55 },
 };
 
 export interface CharacterActionRequestState {

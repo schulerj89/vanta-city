@@ -6,6 +6,7 @@ export const characterDefinitionEntries = [
     id: 'casual',
     displayName: 'Casual',
     modelAssetId: 'character.casual.model',
+    equipmentRigId: 'ultimate-men',
     animations: {
       idle: { clipNames: ['CharacterArmature|Idle'], required: true },
       walk: { clipNames: ['CharacterArmature|Walk'], required: true },
@@ -30,6 +31,28 @@ export const characterDefinitionEntries = [
       },
       kickRight: {
         clipNames: ['CharacterArmature|Kick_Right'],
+        required: true,
+      },
+      death: { clipNames: ['CharacterArmature|Death'], required: true },
+      roll: { clipNames: ['CharacterArmature|Roll'], required: true },
+      gunIdle: { clipNames: ['CharacterArmature|Idle_Gun'], required: true },
+      gunFire: {
+        clipNames: [
+          'CharacterArmature|Idle_Gun_Shoot',
+          'CharacterArmature|Gun_Shoot',
+        ],
+        required: true,
+      },
+      gunRun: {
+        clipNames: ['CharacterArmature|Run_Shoot'],
+        required: true,
+      },
+      knifeIdle: {
+        clipNames: ['CharacterArmature|Idle_Sword'],
+        required: true,
+      },
+      knifeSlash: {
+        clipNames: ['CharacterArmature|Sword_Slash'],
         required: true,
       },
     },
@@ -43,6 +66,7 @@ export const characterDefinitionEntries = [
     id: 'punk',
     displayName: 'Punk',
     modelAssetId: 'character.punk.model',
+    equipmentRigId: 'ultimate-men',
     animations: {
       idle: { clipNames: ['CharacterArmature|Idle'], required: true },
       walk: { clipNames: ['CharacterArmature|Walk'], required: true },
@@ -67,6 +91,28 @@ export const characterDefinitionEntries = [
       },
       kickRight: {
         clipNames: ['CharacterArmature|Kick_Right'],
+        required: true,
+      },
+      death: { clipNames: ['CharacterArmature|Death'], required: true },
+      roll: { clipNames: ['CharacterArmature|Roll'], required: true },
+      gunIdle: { clipNames: ['CharacterArmature|Idle_Gun'], required: true },
+      gunFire: {
+        clipNames: [
+          'CharacterArmature|Idle_Gun_Shoot',
+          'CharacterArmature|Gun_Shoot',
+        ],
+        required: true,
+      },
+      gunRun: {
+        clipNames: ['CharacterArmature|Run_Shoot'],
+        required: true,
+      },
+      knifeIdle: {
+        clipNames: ['CharacterArmature|Idle_Sword'],
+        required: true,
+      },
+      knifeSlash: {
+        clipNames: ['CharacterArmature|Sword_Slash'],
         required: true,
       },
     },

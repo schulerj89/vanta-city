@@ -27,6 +27,89 @@ canvas {
   height: 100%;
 }
 
+.quickbar {
+  position: absolute;
+  z-index: 26;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: 50%;
+  display: flex;
+  gap: 0.55rem;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.quickbar__slot {
+  position: relative;
+  display: grid;
+  width: 4.2rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgb(216 255 235 / 28%);
+  border-radius: 0.75rem;
+  color: #d9e8e2;
+  background: rgb(5 12 18 / 76%);
+  box-shadow: 0 0.55rem 1.25rem rgb(0 0 0 / 35%);
+  backdrop-filter: blur(10px);
+}
+
+.quickbar__slot[data-selected='true'] {
+  border-color: #7ce2c6;
+  color: #effff8;
+  background: rgb(18 48 46 / 92%);
+  box-shadow:
+    0 0 0 2px rgb(124 226 198 / 22%),
+    0 0.55rem 1.25rem rgb(0 0 0 / 35%);
+}
+
+.quickbar__slot kbd {
+  position: absolute;
+  top: 0.3rem;
+  left: 0.42rem;
+  color: #9fb7ae;
+  font:
+    700 0.68rem/1 ui-monospace,
+    monospace;
+}
+
+.quickbar__icon {
+  font-size: 1.65rem;
+  line-height: 1;
+  transform: translateY(-0.22rem);
+}
+
+.quickbar__label {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.3rem;
+  left: 0.25rem;
+  overflow: hidden;
+  font:
+    700 0.58rem/1 ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px), (max-height: 500px) {
+  .quickbar {
+    bottom: max(0.55rem, env(safe-area-inset-bottom));
+    gap: 0.38rem;
+  }
+
+  .quickbar__slot {
+    width: 3.35rem;
+    border-radius: 0.6rem;
+  }
+
+  .quickbar__label {
+    font-size: 0.48rem;
+  }
+}
+
 .health-hud {
   position: absolute;
   z-index: 25;

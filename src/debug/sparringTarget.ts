@@ -5,6 +5,7 @@ export const sparringTargetCharacterDefinition = {
   displayName: 'Debug Sparring Target',
   pickerVisible: false,
   modelAssetId: 'character.casual.model',
+  equipmentRigId: 'ultimate-men',
   animations: {
     idle: {
       clipNames: ['CharacterArmature|Idle'],
@@ -12,6 +13,10 @@ export const sparringTargetCharacterDefinition = {
     },
     getHit: {
       clipNames: ['CharacterArmature|HitRecieve'],
+      required: true,
+    },
+    death: {
+      clipNames: ['CharacterArmature|Death'],
       required: true,
     },
   },

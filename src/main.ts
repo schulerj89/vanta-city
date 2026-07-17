@@ -54,6 +54,9 @@ import type { WorldEvents } from './world/WorldEvents';
 import { testDistrict } from './world/levels/testDistrict';
 import { AccessibilityPreferenceStore } from './accessibility/AccessibilityPreferences';
 import type { DiagnosticRecorder } from './debug/DiagnosticRecorder';
+import { CharacterEquipment } from './equipment/CharacterEquipment';
+import { isEquipmentId } from './equipment/EquipmentDefinition';
+import { QuickbarSystem } from './ui/QuickbarSystem';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -179,9 +182,11 @@ async function bootstrap(): Promise<void> {
     'casual',
     window.localStorage,
   );
+  const playerEquipment = new CharacterEquipment('player');
   const characterVisual = new CharacterPlayerVisual(
     characterSelection,
     new CharacterLoader(assets),
+    playerEquipment,
   );
   const characterPicker = new CharacterPickerSystem(
     mount,
@@ -198,7 +203,9 @@ async function bootstrap(): Promise<void> {
     () => cameraReference.current?.getYaw() ?? 0,
     characterVisual,
     spawn.rotation?.[1] ?? 0,
+    playerEquipment,
   );
+  const quickbar = new QuickbarSystem(mount, playerEquipment);
   const camera = new ThirdPersonCameraSystem(
     render.camera,
     input,
@@ -402,6 +409,7 @@ async function bootstrap(): Promise<void> {
           interactionDebug,
           characterAlignmentDebug,
           help,
+          quickbar,
         )
       : [];
 
@@ -435,6 +443,7 @@ async function bootstrap(): Promise<void> {
   runtime
     .register(camera)
     .register(healthHud)
+    .register(quickbar)
     .register(interactions)
     .register(conversations)
     .register(npcs);
@@ -490,6 +499,7 @@ async function bootstrap(): Promise<void> {
           npcDefinitions,
           sparringTarget,
           healthHud,
+          quickbar,
           conversations,
           characterSelection,
           characterVisual,
@@ -538,6 +548,7 @@ function registerVerticalSliceDebug(
   interactionDebug?: import('./interactions/InteractionDebugSystem').InteractionDebugSystem,
   characterAlignmentDebug?: import('./debug/CharacterAlignmentDebugSystem').CharacterAlignmentDebugSystem,
   help?: HelpOverlayController,
+  quickbar?: QuickbarSystem,
 ): (() => void)[] {
   const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
@@ -556,6 +567,17 @@ function registerVerticalSliceDebug(
         label: `${definition.displayName} · NPC ID`,
         group: sections.characters,
         read: () => read(({ npcId }) => npcId, 'loading'),
+      }),
+      debug.registerValue({
+        id: `npc.${definition.id}.equipment`,
+        label: `${definition.displayName} · Equipment`,
+        group: sections.characters,
+        read: () =>
+          read(
+            ({ equipment, equipmentPresentation }) =>
+              `${equipment.equippedId ?? 'none'} · ${equipmentPresentation.attached ? equipmentPresentation.socketName : equipmentPresentation.compatible ? 'pending' : 'incompatible'}`,
+            'none',
+          ),
       }),
       debug.registerValue({
         id: `npc.${definition.id}.definition`,
@@ -642,6 +664,39 @@ function registerVerticalSliceDebug(
       read: () => {
         const health = player.health.getSnapshot();
         return `${health.current}/${health.maximum} · ${health.alive ? 'alive' : 'depleted'} · ${(health.normalized * 100).toFixed(0)}%`;
+      },
+    }),
+    debug.registerValue({
+      id: 'player.equipment',
+      label: 'Equipped item',
+      group: sections.player,
+      read: () => {
+        const snapshot = characterVisual.getDebugSnapshot();
+        return `${snapshot.equipment.equippedId ?? 'none'} · ${snapshot.equipmentPresentation.attached ? snapshot.equipmentPresentation.socketName : snapshot.equipmentPresentation.compatible ? 'pending' : 'incompatible'}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'player.quickbar',
+      label: 'Quickbar',
+      group: sections.player,
+      read: () => {
+        const snapshot = quickbar?.getSnapshot();
+        return snapshot
+          ? `${snapshot.slotCount} slots · ${snapshot.selectedSlot ?? 'none'} selected`
+          : 'unavailable';
+      },
+    }),
+    debug.registerValue({
+      id: 'player.death-presentation',
+      label: 'Death presentation',
+      group: sections.characters,
+      read: () => {
+        const death = characterVisual.getDebugSnapshot().death;
+        return death.depleted
+          ? death.nativeClip
+            ? 'native clip'
+            : `fade fallback · ${death.opacity.toFixed(2)}`
+          : 'alive';
       },
     }),
     debug.registerValue({
@@ -899,6 +954,14 @@ function registerVerticalSliceDebug(
       },
     }),
     debug.registerCommand({
+      id: 'player.health-deplete',
+      label: 'Deplete player health',
+      group: sections.actions,
+      run: () => {
+        player.health.set(0, 'debug-command');
+      },
+    }),
+    debug.registerCommand({
       id: 'sparring-target.health-damage',
       label: 'Damage sparring target health (10)',
       group: sections.actions,
@@ -912,6 +975,14 @@ function registerVerticalSliceDebug(
       group: sections.actions,
       run: () => {
         sparringTarget.getHealth()?.heal(10, 'debug-command');
+      },
+    }),
+    debug.registerCommand({
+      id: 'sparring-target.health-deplete',
+      label: 'Deplete sparring target health',
+      group: sections.actions,
+      run: () => {
+        sparringTarget.getHealth()?.set(0, 'debug-command');
       },
     }),
     debug.registerValue({
@@ -1288,11 +1359,11 @@ function registerVerticalSliceDebug(
       label: 'Play character action',
       group: sections.actions,
       argumentLabel:
-        'wave, interact, punchLeft, punchRight, kickLeft, or kickRight',
+        'wave, interact, punchLeft, punchRight, kickLeft, kickRight, roll, gunFire, or knifeSlash',
       run: (action) => {
         if (!isCharacterActionName(action)) {
           throw new Error(
-            'Expected character action: wave, interact, punchLeft, punchRight, kickLeft, or kickRight',
+            'Expected character action: wave, interact, punchLeft, punchRight, kickLeft, kickRight, roll, gunFire, or knifeSlash',
           );
         }
         if (!player.triggerCharacterAction(action, 'debug-command')) {
@@ -1300,6 +1371,56 @@ function registerVerticalSliceDebug(
           throw new Error(
             `Character action "${action}" was rejected: ${reason ?? 'unavailable'}`,
           );
+        }
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.equip-item',
+      label: 'Equip player item',
+      group: sections.actions,
+      argumentLabel: 'handgun, knife, or none',
+      run: (value) => {
+        if (value === 'none') {
+          player.equipment.unequip();
+          return;
+        }
+        if (!isEquipmentId(value))
+          throw new Error('Expected handgun, knife, or none');
+        player.equipment.equip(value);
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.use-equipment',
+      label: 'Use equipped player item',
+      group: sections.actions,
+      run: () => {
+        if (!player.useEquippedItem('debug-command')) {
+          throw new Error('Equipped item use was rejected');
+        }
+      },
+    }),
+    debug.registerCommand({
+      id: 'npc.equip-item',
+      label: 'Equip NPC item',
+      group: sections.actions,
+      argumentLabel: 'npc id,item id',
+      run: (value) => {
+        const [npcId, itemId] = (value ?? '').split(',');
+        if (!npcId || !isEquipmentId(itemId)) {
+          throw new Error('Expected npc id and handgun or knife');
+        }
+        if (!npcs.equip(npcId, itemId))
+          throw new Error('NPC equipment rejected');
+      },
+    }),
+    debug.registerCommand({
+      id: 'npc.use-equipment',
+      label: 'Use NPC equipment',
+      group: sections.actions,
+      argumentLabel: 'npc id',
+      run: (value) => {
+        if (!value || !npcs.useEquipment(value, 'debug-command')) {
+          throw new Error('NPC equipment use rejected');
         }
       },
     }),

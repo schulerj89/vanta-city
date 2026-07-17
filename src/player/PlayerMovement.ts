@@ -249,6 +249,16 @@ export class PlayerMovementSimulation {
     this.state = this.grounded ? 'idle' : 'airborne';
   }
 
+  public haltHorizontalMovement(): void {
+    this.velocity.x = 0;
+    this.velocity.z = 0;
+    this.desiredFacingYaw = this.facingYaw;
+    this.facingTurnRate = 0;
+    this.facingError = 0;
+    this.facingSmoothingActive = false;
+    if (this.grounded) this.state = 'idle';
+  }
+
   private updateFacing(delta: number): void {
     const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
     if (horizontalSpeed < this.config.movingSpeedThreshold) {

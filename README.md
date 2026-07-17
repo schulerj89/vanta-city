@@ -22,6 +22,10 @@ The character picker opens before entering the district and can be reopened with
 
 ## On-foot controls
 
+- `1` / `2`: equip or toggle off Handgun / Knife
+- `U`: use the equipped item
+- `B`: roll in place (native locked animation; no invulnerability)
+
 - `WASD` or arrow keys: camera-relative movement
 - `R`: toggle persistent walk/run mode
 - `Space`: jump

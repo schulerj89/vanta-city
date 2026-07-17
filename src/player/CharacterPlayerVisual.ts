@@ -28,6 +28,11 @@ import {
   measureModelBounds,
 } from '../characters/CharacterVisualAlignment';
 import type { CharacterAlignmentReport } from '../characters/CharacterVisualAlignment';
+import { CharacterEquipment } from '../equipment/CharacterEquipment';
+import { EquipmentPresentation } from '../equipment/EquipmentPresentation';
+import type { EquipmentPresentationSnapshot } from '../equipment/EquipmentPresentation';
+import { CharacterDeathPresentation } from '../characters/CharacterDeathPresentation';
+import type { CharacterDeathPresentationSnapshot } from '../characters/CharacterDeathPresentation';
 
 export interface CharacterInstanceLoader {
   instantiate(definition: CharacterDefinition): Promise<LoadedCharacter>;
@@ -62,6 +67,9 @@ export interface CharacterPlayerVisualDebugSnapshot {
   readonly animationState: string;
   readonly animationGraph: CharacterAnimationGraphState;
   readonly characterAction: CharacterActionRequestState;
+  readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
+  readonly equipmentPresentation: EquipmentPresentationSnapshot;
+  readonly death: CharacterDeathPresentationSnapshot;
   readonly appliedScale: string;
   readonly appliedRotation: string;
   readonly verticalOffset: number;
@@ -137,16 +145,21 @@ export class CharacterPlayerVisual
   private movementState: PlayerMovementState = 'idle';
   private readonly animationGraph = new CharacterAnimationStateMachine();
   private readonly modelOffset = new Vector3();
+  private readonly equipmentPresentation: EquipmentPresentation;
+  private readonly deathPresentation = new CharacterDeathPresentation();
+  private depleted = false;
 
   public constructor(
     private readonly selection: CharacterSelectionReader,
     private readonly loader: CharacterInstanceLoader,
+    public readonly equipment = new CharacterEquipment('player'),
   ) {
     this.object3d.name = 'Player simulation transform';
     this.visualRoot.name = 'Player visual root';
     this.loadedModelRoot.name = 'Loaded character alignment root';
     this.visualRoot.add(this.loadedModelRoot);
     this.object3d.add(this.visualRoot);
+    this.equipmentPresentation = new EquipmentPresentation(equipment);
   }
 
   public async init(): Promise<void> {
@@ -197,6 +210,9 @@ export class CharacterPlayerVisual
       animationState: this.animationState,
       animationGraph: this.animationGraph.getState(),
       characterAction: this.getCharacterActionState(),
+      equipment: this.equipment.getSnapshot(),
+      equipmentPresentation: this.equipmentPresentation.getSnapshot(),
+      death: this.deathPresentation.getSnapshot(),
       appliedScale: root
         ? formatVector(root.scale.x, root.scale.y, root.scale.z)
         : 'pending',
@@ -215,6 +231,16 @@ export class CharacterPlayerVisual
     action: CharacterActionName,
     source = 'runtime',
   ): boolean {
+    if (this.depleted) {
+      this.characterAction = {
+        ...this.characterAction,
+        lastRequested: action,
+        lastSource: source,
+        lastAccepted: false,
+        lastRejection: 'depleted',
+      };
+      return false;
+    }
     if (this.characterAction.busy) {
       this.characterAction = {
         ...this.characterAction,
@@ -256,10 +282,22 @@ export class CharacterPlayerVisual
     return { ...this.characterAction };
   }
 
+  public setDepleted(depleted: boolean): void {
+    if (this.depleted === depleted) return;
+    this.depleted = depleted;
+    if (depleted) this.cancelActiveAction();
+    const nativeClip = Boolean(this.loaded?.animationClips.has('death'));
+    this.deathPresentation.setDepleted(depleted, nativeClip);
+    this.animationState = 'static';
+    this.applyGraphTransition();
+  }
+
   public dispose(): void {
     this.loadVersion += 1;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
+    this.equipmentPresentation.dispose();
+    this.deathPresentation.dispose();
     this.disposeLoaded();
     this.loadStatus = 'idle';
     this.alignment = undefined;
@@ -289,6 +327,12 @@ export class CharacterPlayerVisual
       ...calculated,
     };
     this.loadedModelRoot.add(next.root);
+    this.equipmentPresentation.bind(next.root, definition.equipmentRigId);
+    this.deathPresentation.bind(next.root);
+    this.deathPresentation.setDepleted(
+      this.depleted,
+      next.animationClips.has('death'),
+    );
     this.loadStatus = next.source === 'asset' ? 'loaded' : 'fallback';
     this.animationState = 'static';
     this.animationGraph.reset();
@@ -301,9 +345,11 @@ export class CharacterPlayerVisual
   private updateAnimation(state: PlayerMovementState, delta: number): void {
     const loaded = this.loaded;
     const mixer = this.mixer;
-    if (!loaded || !mixer) return;
     this.movementState = state;
     const frameDelta = Math.max(0, delta);
+    this.equipmentPresentation.update(frameDelta);
+    this.deathPresentation.update(frameDelta);
+    if (!loaded || !mixer) return;
     if (this.characterAction.active) {
       this.updateActiveActionTiming(frameDelta);
     }
@@ -329,6 +375,8 @@ export class CharacterPlayerVisual
   }
 
   private disposeLoaded(): void {
+    this.equipmentPresentation.unbind();
+    this.deathPresentation.unbind();
     if (this.mixer && this.loaded) {
       this.mixer.removeEventListener('finished', this.onMixerFinished);
       this.mixer.stopAllAction();
@@ -431,6 +479,8 @@ export class CharacterPlayerVisual
       {
         movement: this.movementState,
         action: this.characterAction.active,
+        equipment: this.equipment.equipped,
+        depleted: this.depleted,
       },
       (logicalName) => loaded.animationClips.has(logicalName),
     );
@@ -444,7 +494,10 @@ export class CharacterPlayerVisual
     this.action = clip ? mixer.clipAction(clip) : undefined;
     if (!this.action) return;
     this.action.reset().setEffectiveTimeScale(1).fadeIn(0.12);
-    if (transition.state.phase === 'action') {
+    if (
+      transition.state.phase === 'action' ||
+      transition.state.phase === 'death'
+    ) {
       this.action.setLoop(LoopOnce, 1);
       this.action.clampWhenFinished = true;
     } else {
@@ -452,5 +505,21 @@ export class CharacterPlayerVisual
       this.action.clampWhenFinished = false;
     }
     this.action.play();
+  }
+
+  private cancelActiveAction(): void {
+    this.action?.stop();
+    this.action = undefined;
+    this.activeActionRemaining = 0;
+    this.activeActionElapsed = 0;
+    this.activeActionDuration = 0;
+    this.activeActionImpacted = false;
+    this.activeActionSource = undefined;
+    this.characterAction = {
+      ...this.characterAction,
+      active: undefined,
+      busy: false,
+      activeNormalizedTime: 0,
+    };
   }
 }

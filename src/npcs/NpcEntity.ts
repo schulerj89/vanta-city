@@ -16,6 +16,9 @@ import type {
 } from '../world/Spatial';
 import type { SpawnPointDefinition } from '../world/LevelDefinition';
 import type { NpcDefinition } from './NpcDefinition';
+import { CharacterEquipment } from '../equipment/CharacterEquipment';
+import { EquipmentPresentation } from '../equipment/EquipmentPresentation';
+import type { EquipmentId } from '../equipment/EquipmentDefinition';
 
 export interface NpcCharacterLoader {
   instantiate(definition: CharacterDefinition): Promise<LoadedCharacter>;
@@ -48,6 +51,10 @@ export interface NpcDebugSnapshot {
   readonly conversationState: NpcConversationState;
   readonly modelFallback: boolean;
   readonly facingYaw: number;
+  readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
+  readonly equipmentPresentation: ReturnType<
+    EquipmentPresentation['getSnapshot']
+  >;
 }
 
 export function calculateFacingYaw(
@@ -76,6 +83,7 @@ export function smoothFacingYaw(
 export class NpcEntity implements GameObject {
   public readonly id: string;
   public readonly object3d = new Group();
+  public readonly equipment: CharacterEquipment;
 
   private readonly visualRoot = new Group();
   private readonly idleYaw: number;
@@ -92,6 +100,7 @@ export class NpcEntity implements GameObject {
   private gestureSequence = 0;
   private elapsed = 0;
   private readonly modelOffset = new Vector3();
+  private readonly equipmentPresentation: EquipmentPresentation;
 
   public constructor(
     public readonly definition: NpcDefinition,
@@ -102,6 +111,8 @@ export class NpcEntity implements GameObject {
     private readonly player: WorldPoseSource,
   ) {
     this.id = `npc.${definition.id}`;
+    this.equipment = new CharacterEquipment(this.id);
+    this.equipmentPresentation = new EquipmentPresentation(this.equipment);
     this.idleYaw = definition.idleYaw ?? spawn.rotation?.[1] ?? 0;
     this.object3d.name = `${definition.displayName} NPC`;
     this.object3d.position.set(...spawn.position);
@@ -129,6 +140,10 @@ export class NpcEntity implements GameObject {
         groundedMinY: bounds.min.y + alignment.appliedVisualOffset,
       };
       this.visualRoot.add(loaded.root);
+      this.equipmentPresentation.bind(
+        loaded.root,
+        this.character.equipmentRigId,
+      );
 
       if (loaded.animationClips.size > 0) {
         this.mixer = new AnimationMixer(loaded.root);
@@ -169,6 +184,7 @@ export class NpcEntity implements GameObject {
       : 0;
     const delta = Math.max(0, time.delta);
     this.mixer?.update(delta);
+    this.equipmentPresentation.update(delta);
     if (this.loaded) this.loaded.root.position.copy(this.modelOffset);
     if (this.gestureActive) {
       this.gestureRemaining = Math.max(0, this.gestureRemaining - delta);
@@ -180,9 +196,22 @@ export class NpcEntity implements GameObject {
   }
 
   public triggerGesture(source = 'interaction'): boolean {
-    const clip = this.loaded?.animationClips.get(
-      this.definition.gestureAnimation,
+    return this.triggerOneShot(this.definition.gestureAnimation, source);
+  }
+
+  public equip(itemId: EquipmentId): boolean {
+    return this.equipment.equip(itemId);
+  }
+
+  public useEquipment(source = 'npc-equipment'): boolean {
+    return this.equipment.useWithTrigger(
+      (action, requestSource) => this.triggerOneShot(action, requestSource),
+      source,
     );
+  }
+
+  private triggerOneShot(logicalClip: string, source: string): boolean {
+    const clip = this.loaded?.animationClips.get(logicalClip);
     const accepted = Boolean(this.mixer && clip);
     this.lastGestureSource = source;
     this.lastGestureAccepted = accepted;
@@ -200,7 +229,7 @@ export class NpcEntity implements GameObject {
     this.gestureActive = true;
     this.gestureRemaining = Math.max(0.05, clip.duration);
     this.gestureSequence += 1;
-    this.currentAnimation = this.definition.gestureAnimation;
+    this.currentAnimation = logicalClip;
     return true;
   }
 
@@ -253,11 +282,15 @@ export class NpcEntity implements GameObject {
       conversationState,
       modelFallback: this.loaded?.source !== 'asset',
       facingYaw: this.object3d.rotation.y,
+      equipment: this.equipment.getSnapshot(),
+      equipmentPresentation: this.equipmentPresentation.getSnapshot(),
     };
   }
 
   public dispose(): void {
     this.action?.stop();
+    this.equipmentPresentation.dispose();
+    this.equipment.dispose();
     if (this.mixer && this.loaded) {
       this.mixer.stopAllAction();
       this.mixer.uncacheRoot(this.loaded.root);

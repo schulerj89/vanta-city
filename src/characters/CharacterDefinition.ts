@@ -40,6 +40,8 @@ export interface CharacterDefinition {
   readonly portraitAssetId?: string;
   readonly modelAssetId?: string;
   readonly animations?: Readonly<Record<string, CharacterAnimationBinding>>;
+  /** Explicit socket convention used by generated equipment props. */
+  readonly equipmentRigId?: 'ultimate-men' | 'animated-men';
   readonly transform?: CharacterTransform;
   readonly attachments?: readonly CharacterAttachment[];
   readonly materialVariations?: readonly CharacterMaterialVariation[];
