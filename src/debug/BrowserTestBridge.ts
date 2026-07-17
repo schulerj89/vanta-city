@@ -28,6 +28,7 @@ import type { DiagnosticRecorder } from './DiagnosticRecorder';
 import type { DiagnosticTraceSummary } from './DiagnosticTrace';
 import type { HealthHudSystem } from '../ui/HealthHudSystem';
 import type { QuickbarSystem } from '../ui/QuickbarSystem';
+import type { LocationHudSystem } from '../ui/LocationHudSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -115,6 +116,7 @@ export interface BrowserTestSnapshot {
   readonly sparringTarget: ReturnType<SparringTargetSystem['getSnapshot']>;
   readonly healthHud: ReturnType<HealthHudSystem['getSnapshot']>;
   readonly quickbar: ReturnType<QuickbarSystem['getSnapshot']>;
+  readonly locationHud: ReturnType<LocationHudSystem['getSnapshot']>;
   readonly conversation: {
     readonly npcId: string | undefined;
     readonly conversationId: string | undefined;
@@ -167,6 +169,7 @@ export interface BrowserTestBridgeDependencies {
   readonly sparringTarget: SparringTargetSystem;
   readonly healthHud: HealthHudSystem;
   readonly quickbar: QuickbarSystem;
+  readonly locationHud: LocationHudSystem;
   readonly conversations: ConversationCoordinator;
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
@@ -313,6 +316,7 @@ function createSnapshot(
     sparringTarget: dependencies.sparringTarget.getSnapshot(),
     healthHud: dependencies.healthHud.getSnapshot(),
     quickbar: dependencies.quickbar.getSnapshot(),
+    locationHud: dependencies.locationHud.getSnapshot(),
     conversation: {
       npcId: dependencies.conversations.active?.npcId,
       conversationId: dependencies.conversations.active?.definition.id,

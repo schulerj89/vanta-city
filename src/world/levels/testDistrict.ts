@@ -15,6 +15,11 @@ const colors = {
   metal: 0x3d5d58,
   obstacle: 0xd56b42,
   marking: 0xe9d36f,
+  plaza: 0x78958d,
+  yard: 0x48545a,
+  overlook: 0x71828d,
+  boundary: 0x4b646b,
+  greenery: 0x52785a,
 } as const;
 
 const rampAngle = Math.atan2(2.8, 9);
@@ -23,6 +28,13 @@ const rampThickness = 0.35;
 const rampCenterY = 1.4 - (rampThickness / 2) * Math.cos(rampAngle);
 const rampCenterZ = 1.5 - (rampThickness / 2) * Math.sin(rampAngle);
 const servicePassageYaw = Math.PI / 4;
+
+const overlookRampAngle = Math.atan2(3, 9);
+const overlookRampLength = Math.hypot(3, 9);
+const overlookRampCenterY =
+  1.5 - (rampThickness / 2) * Math.cos(overlookRampAngle);
+const overlookRampCenterZ =
+  -19.5 - (rampThickness / 2) * Math.sin(overlookRampAngle);
 
 const stairs = Array.from({ length: 8 }, (_, index) => {
   const height = (index + 1) * 0.35;
@@ -33,6 +45,344 @@ const stairs = Array.from({ length: 8 }, (_, index) => {
     collider: collider(`c.stair-${index + 1}`, position, size, ['walkable']),
   };
 });
+
+const districtExpansion = [
+  // North and south street extensions keep the original block's readable lanes.
+  pairedBox('street-north', [0, -0.25, 32], [10, 0.5, 20], colors.asphalt, [
+    'walkable',
+  ]),
+  pairedBox('sidewalk-west-north', [-7, 0, 32], [4, 0.4, 20], colors.concrete, [
+    'walkable',
+  ]),
+  pairedBox('sidewalk-east-north', [7, 0, 32], [4, 0.4, 20], colors.concrete, [
+    'walkable',
+  ]),
+  pairedBox('lot-west-north', [-15, -0.15, 32], [12, 0.3, 20], colors.yard, [
+    'walkable',
+  ]),
+  pairedBox('lot-east-north', [15, -0.15, 32], [12, 0.3, 20], colors.plaza, [
+    'walkable',
+  ]),
+  pairedBox('street-south', [0, -0.25, -32], [10, 0.5, 20], colors.asphalt, [
+    'walkable',
+  ]),
+  pairedBox(
+    'sidewalk-west-south',
+    [-7, 0, -32],
+    [4, 0.4, 20],
+    colors.concrete,
+    ['walkable'],
+  ),
+  pairedBox('sidewalk-east-south', [7, 0, -32], [4, 0.4, 20], colors.concrete, [
+    'walkable',
+  ]),
+  pairedBox('lot-west-south', [-15, -0.15, -32], [12, 0.3, 20], colors.yard, [
+    'walkable',
+  ]),
+  pairedBox('lot-east-south', [15, -0.15, -32], [12, 0.3, 20], colors.yard, [
+    'walkable',
+  ]),
+
+  // East exchange: a compact plaza linked to the existing lot.
+  pairedBox('east-plaza-link', [27.5, -0.15, 4], [13, 0.3, 10], colors.plaza, [
+    'walkable',
+  ]),
+  pairedBox('east-plaza', [38, -0.15, 4], [8, 0.3, 18], colors.plaza, [
+    'walkable',
+  ]),
+  pairedBox(
+    'east-planter-a',
+    [37.5, 0.45, 10.5],
+    [4, 0.9, 1.2],
+    colors.greenery,
+    ['obstacle'],
+  ),
+  pairedBox(
+    'east-planter-b',
+    [37.5, 0.45, -2.5],
+    [4, 0.9, 1.2],
+    colors.greenery,
+    ['obstacle'],
+  ),
+  pairedBox('east-plaza-pillar', [40.2, 1.5, 4], [1, 3, 1], colors.garageTrim, [
+    'obstacle',
+  ]),
+
+  // West service yard branches from the south lot and creates a tight route.
+  pairedBox('west-yard-link', [-27.5, -0.15, -30], [13, 0.3, 10], colors.yard, [
+    'walkable',
+  ]),
+  pairedBox('west-yard', [-38, -0.15, -30], [8, 0.3, 18], colors.yard, [
+    'walkable',
+  ]),
+  pairedBox(
+    'west-container-a',
+    [-39.5, 1.2, -34],
+    [3.5, 2.4, 5],
+    colors.obstacle,
+    ['obstacle'],
+  ),
+  pairedBox(
+    'west-container-b',
+    [-36, 0.8, -25.5],
+    [2.5, 1.6, 2.5],
+    colors.metal,
+    ['obstacle'],
+  ),
+
+  // An eastern promenade and ramp lead to a 3m raised overlook.
+  pairedBox('overlook-approach', [38, -0.15, -10], [8, 0.3, 10], colors.yard, [
+    'walkable',
+  ]),
+  pairedBox(
+    'overlook-ramp',
+    [38, overlookRampCenterY, overlookRampCenterZ],
+    [4, rampThickness, overlookRampLength],
+    colors.overlook,
+    ['walkable', 'ramp'],
+    [overlookRampAngle, 0, 0],
+  ),
+  pairedBox('overlook-deck', [38, 1.5, -32], [8, 3, 16], colors.overlook, [
+    'walkable',
+  ]),
+  pairedBox(
+    'overlook-bench',
+    [40.5, 3.45, -34],
+    [1, 0.9, 4],
+    colors.garageTrim,
+    ['obstacle'],
+  ),
+
+  // Visible guard walls make every authored outer edge legible and solid.
+  pairedBox('boundary-north', [0, 0.7, 42], [42.5, 1.4, 0.5], colors.boundary, [
+    'boundary',
+  ]),
+  pairedBox(
+    'boundary-south',
+    [0, 0.7, -42],
+    [42.5, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-north-west',
+    [-21, 0.7, 32],
+    [0.5, 1.4, 20],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-north-east',
+    [21, 0.7, 32],
+    [0.5, 1.4, 20],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-south-east',
+    [21, 0.7, -35.5],
+    [0.5, 1.4, 13],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-east-plaza',
+    [42, 0.7, 4],
+    [0.5, 1.4, 18.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-east-plaza-north',
+    [37.5, 0.7, 13],
+    [9.5, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-west-yard',
+    [-42, 0.7, -30],
+    [0.5, 1.4, 18.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-west-yard-north',
+    [-37.5, 0.7, -21],
+    [9.5, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-west-yard-south',
+    [-37.5, 0.7, -39],
+    [9.5, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-east',
+    [42, 3.7, -32],
+    [0.5, 1.4, 16],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-south',
+    [38, 3.7, -40],
+    [8, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-west',
+    [34, 3.7, -32],
+    [0.5, 1.4, 16],
+    colors.boundary,
+    ['boundary'],
+  ),
+  // Segment inner edge rails around the three intentional route openings.
+  pairedBox(
+    'boundary-core-east-north',
+    [21, 0.7, 15.5],
+    [0.5, 1.4, 13],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-core-east-south',
+    [21, 0.7, -11.5],
+    [0.5, 1.4, 21],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-core-east-far-south',
+    [21, 0.7, -25.5],
+    [0.5, 1.4, 7],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-core-west-gap',
+    [-21, 0.7, -20],
+    [0.5, 1.4, 4],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-core-west-south',
+    [-21, 0.7, -23.5],
+    [0.5, 1.4, 3],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-core-west-far-south',
+    [-21, 0.7, -38.5],
+    [0.5, 1.4, 7],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-east-link-north',
+    [27.5, 0.7, 9],
+    [13, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-east-link-south',
+    [27.5, 0.7, -1],
+    [13, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-east-plaza-west-north',
+    [34, 0.7, 11],
+    [0.5, 1.4, 4],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-east-plaza-west-south',
+    [34, 0.7, -3],
+    [0.5, 1.4, 4],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-west-link-north',
+    [-27.5, 0.7, -25],
+    [13, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-west-link-south',
+    [-27.5, 0.7, -35],
+    [13, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-west-yard-east-north',
+    [-34, 0.7, -23],
+    [0.5, 1.4, 4],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-west-yard-east-south',
+    [-34, 0.7, -37],
+    [0.5, 1.4, 4],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-approach-west',
+    [34, 0.7, -10],
+    [0.5, 1.4, 10],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-approach-east',
+    [42, 0.7, -10],
+    [0.5, 1.4, 10],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-ramp-left',
+    [35, 0.7, -15],
+    [2, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-ramp-right',
+    [41, 0.7, -15],
+    [2, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-deck-left',
+    [35, 3.7, -24],
+    [2, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+  pairedBox(
+    'boundary-overlook-deck-right',
+    [41, 3.7, -24],
+    [2, 1.4, 0.5],
+    colors.boundary,
+    ['boundary'],
+  ),
+] as const;
 
 const environment: readonly BoxVisualDefinition[] = [
   box('v.street', [0, -0.25, 0], [10, 0.5, 44], colors.asphalt),
@@ -109,6 +459,7 @@ const environment: readonly BoxVisualDefinition[] = [
     colors.metal,
     [0, servicePassageYaw, 0],
   ),
+  ...districtExpansion.map(({ visual }) => visual),
 ];
 
 const staticCollision: readonly StaticColliderDefinition[] = [
@@ -182,6 +533,7 @@ const staticCollision: readonly StaticColliderDefinition[] = [
   collider('c.npc-mack', [-10, 1.1, 4], [0.75, 1.8, 0.75], ['npc-occupancy']),
   collider('c.npc-nox', [-19, 1.1, 12], [0.75, 1.8, 0.75], ['npc-occupancy']),
   collider('c.npc-raze', [14, 3.9, -8], [0.75, 1.8, 0.75], ['npc-occupancy']),
+  ...districtExpansion.map(({ collider: definition }) => definition),
 ];
 
 export const testDistrict = {
@@ -283,6 +635,41 @@ export const testDistrict = {
         rotation: [0, 0, 0],
         tags: ['debug', 'interaction'],
       },
+      {
+        id: 'spawn.outer-north-gate',
+        kind: 'player',
+        position: [0, 0.15, 38],
+        rotation: [0, Math.PI, 0],
+        tags: ['exploration', 'outer', 'north'],
+      },
+      {
+        id: 'spawn.outer-south-gate',
+        kind: 'player',
+        position: [0, 0.15, -38],
+        rotation: [0, 0, 0],
+        tags: ['exploration', 'outer', 'south'],
+      },
+      {
+        id: 'spawn.outer-east-plaza',
+        kind: 'player',
+        position: [38, 0.15, 4],
+        rotation: [0, -Math.PI / 2, 0],
+        tags: ['exploration', 'outer', 'plaza'],
+      },
+      {
+        id: 'spawn.outer-west-yard',
+        kind: 'player',
+        position: [-38, 0.15, -30],
+        rotation: [0, Math.PI / 2, 0],
+        tags: ['exploration', 'outer', 'yard'],
+      },
+      {
+        id: 'spawn.outer-overlook',
+        kind: 'player',
+        position: [37, 3, -32],
+        rotation: [0, Math.PI, 0],
+        tags: ['exploration', 'outer', 'elevated'],
+      },
       { id: 'spawn.npc-mechanic', kind: 'npc', position: [-10, 0.2, 4] },
       { id: 'spawn.npc-alley', kind: 'npc', position: [-19, 0.2, 12] },
       { id: 'spawn.npc-deck', kind: 'npc', position: [14, 3, -8] },
@@ -320,6 +707,99 @@ export const testDistrict = {
         tags: ['elevated'],
       },
     ],
+    zones: [
+      {
+        id: 'zone.foundry-core',
+        name: 'Foundry Core',
+        position: [0, 3, 0],
+        size: [42, 14, 44],
+      },
+      {
+        id: 'zone.garage-row',
+        name: 'Garage Row',
+        position: [-14, 3, -5],
+        size: [15, 12, 17],
+        priority: 5,
+      },
+      {
+        id: 'zone.loading-deck',
+        name: 'Loading Deck',
+        position: [13.5, 3.5, -8],
+        size: [10, 7, 11],
+        priority: 5,
+      },
+      {
+        id: 'zone.north-market',
+        name: 'North Market',
+        position: [0, 3, 32],
+        size: [42, 12, 20],
+      },
+      {
+        id: 'zone.south-gate',
+        name: 'South Gate',
+        position: [0, 3, -32],
+        size: [42, 12, 20],
+      },
+      {
+        id: 'zone.east-exchange',
+        name: 'East Exchange',
+        position: [32, 3, 4],
+        size: [22, 12, 18],
+      },
+      {
+        id: 'zone.west-service-yard',
+        name: 'West Service Yard',
+        position: [-32, 3, -30],
+        size: [22, 12, 18],
+      },
+      {
+        id: 'zone.overlook-route',
+        name: 'Overlook Route',
+        position: [38, 3, -17],
+        size: [9, 12, 25],
+      },
+      {
+        id: 'zone.raised-overlook',
+        name: 'Raised Overlook',
+        position: [38, 4, -32],
+        size: [9, 8, 16],
+        priority: 10,
+      },
+    ],
+    landmarks: [
+      {
+        id: 'landmark.north-gate',
+        name: 'North Gate',
+        position: [0, 0, 38],
+        radius: 4,
+      },
+      {
+        id: 'landmark.south-gate',
+        name: 'South Gate',
+        position: [0, 0, -38],
+        radius: 4,
+      },
+      {
+        id: 'landmark.exchange-beacon',
+        name: 'Exchange Beacon',
+        position: [40.2, 0, 4],
+        radius: 4.5,
+      },
+      {
+        id: 'landmark.freight-stack',
+        name: 'Freight Stack',
+        position: [-39, 0, -34],
+        radius: 4.5,
+      },
+      {
+        id: 'landmark.skyline-bench',
+        name: 'Skyline Bench',
+        position: [38, 3, -34],
+        radius: 4,
+        heightTolerance: 3,
+        priority: 5,
+      },
+    ],
     triggers: [
       {
         id: 'trigger.garage-approach',
@@ -342,6 +822,27 @@ export const testDistrict = {
         size: [8, 2, 8],
         tags: ['mission', 'elevated'],
       },
+      {
+        id: 'trigger.east-exchange',
+        shape: 'box',
+        position: [38, 2, 4],
+        size: [8, 4, 18],
+        tags: ['exploration', 'landmark'],
+      },
+      {
+        id: 'trigger.west-service-yard',
+        shape: 'box',
+        position: [-38, 2, -30],
+        size: [8, 4, 18],
+        tags: ['exploration', 'landmark'],
+      },
+      {
+        id: 'trigger.raised-overlook',
+        shape: 'box',
+        position: [38, 4, -32],
+        size: [8, 2, 16],
+        tags: ['exploration', 'elevated'],
+      },
     ],
     cinematicAnchors: [
       {
@@ -361,6 +862,21 @@ export const testDistrict = {
         position: [5, 7, 4],
         lookAt: [13.5, 2.5, -8],
         fieldOfView: 42,
+      },
+      {
+        id: 'camera.district-overhead',
+        position: [0, 105, 0],
+        // Keep the directed cast clear of floor geometry while framing ±42m.
+        lookAt: [0, 5, 0],
+        fieldOfView: 55,
+        tags: ['debug', 'map'],
+      },
+      {
+        id: 'camera.overlook-wide',
+        position: [27, 11, -20],
+        lookAt: [38, 3, -32],
+        fieldOfView: 48,
+        tags: ['exploration'],
       },
     ],
   },
@@ -384,4 +900,21 @@ function collider(
   rotation?: Vector3Tuple,
 ): StaticColliderDefinition {
   return { id, position, size, tags, rotation };
+}
+
+function pairedBox(
+  id: string,
+  position: Vector3Tuple,
+  size: Vector3Tuple,
+  color: number,
+  tags: readonly string[],
+  rotation?: Vector3Tuple,
+): {
+  readonly visual: BoxVisualDefinition;
+  readonly collider: StaticColliderDefinition;
+} {
+  return {
+    visual: box(`v.${id}`, position, size, color, rotation),
+    collider: collider(`c.${id}`, position, size, tags, rotation),
+  };
 }

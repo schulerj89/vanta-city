@@ -46,6 +46,7 @@ import { LazyHelpOverlaySystem } from './ui/LazyHelpOverlaySystem';
 import type { HelpOverlayController } from './ui/LazyHelpOverlaySystem';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { HealthHudSystem } from './ui/HealthHudSystem';
+import { LocationHudSystem } from './ui/LocationHudSystem';
 import type { SparringTargetSystem } from './debug/SparringTargetSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
@@ -285,6 +286,7 @@ async function bootstrap(): Promise<void> {
     render.camera,
     collision,
   );
+  const locationHud = new LocationHudSystem(mount, player, levelSystem);
   const unregisterCombatVolumes =
     development && sparringTarget
       ? development.visualHelpers.register('combatVolumes', {
@@ -444,6 +446,7 @@ async function bootstrap(): Promise<void> {
     .register(camera)
     .register(healthHud)
     .register(quickbar)
+    .register(locationHud)
     .register(interactions)
     .register(conversations)
     .register(npcs);
@@ -500,6 +503,7 @@ async function bootstrap(): Promise<void> {
           sparringTarget,
           healthHud,
           quickbar,
+          locationHud,
           conversations,
           characterSelection,
           characterVisual,
@@ -649,7 +653,10 @@ function registerVerticalSliceDebug(
       }),
     ];
   });
+  let cameraPreview:
+    ReturnType<ThirdPersonCameraSystem['requestCamera']> | undefined;
   return [
+    () => cameraPreview?.release(),
     ...npcDebug,
     debug.registerValue({
       id: 'player.run-mode',
@@ -1522,6 +1529,44 @@ function registerVerticalSliceDebug(
           new Vector3(x, y, z),
           Number.isFinite(yaw) ? yaw : undefined,
         );
+      },
+    }),
+    debug.registerCommand({
+      id: 'camera.preview-anchor',
+      label: 'Preview camera anchor',
+      group: sections.actions,
+      argumentLabel: 'camera anchor id',
+      run: (id) => {
+        if (!id) throw new Error('A camera anchor id is required');
+        const anchor = level.getCinematicAnchor(id);
+        cameraPreview?.release();
+        cameraPreview = camera.requestCamera({
+          owner: 'debug:camera-anchor-preview',
+          mode: 'cinematic',
+          anchor: {
+            id: anchor.id,
+            position: {
+              x: anchor.position[0],
+              y: anchor.position[1],
+              z: anchor.position[2],
+            },
+            lookAt: {
+              x: anchor.lookAt[0],
+              y: anchor.lookAt[1],
+              z: anchor.lookAt[2],
+            },
+            fieldOfView: anchor.fieldOfView,
+          },
+        });
+      },
+    }),
+    debug.registerCommand({
+      id: 'camera.release-preview',
+      label: 'Release camera anchor preview',
+      group: sections.actions,
+      run: () => {
+        cameraPreview?.release();
+        cameraPreview = undefined;
       },
     }),
     visualHelpers.register('collision', {

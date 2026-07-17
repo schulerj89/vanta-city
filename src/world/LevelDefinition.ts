@@ -44,6 +44,23 @@ export interface NamedLocationDefinition extends WorldEntry {
   readonly tags?: readonly string[];
 }
 
+/** Axis-aligned authored region used for gameplay location naming. */
+export interface LevelZoneDefinition extends WorldEntry {
+  readonly name: string;
+  readonly size: Vector3Tuple;
+  /** Higher values win when authored zones overlap. Defaults to zero. */
+  readonly priority?: number;
+}
+
+/** A named point of interest that takes precedence while inside its radius. */
+export interface LevelLandmarkDefinition extends WorldEntry {
+  readonly name: string;
+  readonly radius: number;
+  /** Vertical distance accepted when resolving this landmark. Defaults to 6m. */
+  readonly heightTolerance?: number;
+  readonly priority?: number;
+}
+
 export interface TriggerVolumeDefinition extends WorldEntry {
   readonly shape: 'box';
   readonly size: Vector3Tuple;
@@ -63,6 +80,8 @@ export interface LevelDefinition {
   readonly staticCollision: readonly StaticColliderDefinition[];
   readonly spawns: readonly SpawnPointDefinition[];
   readonly locations: readonly NamedLocationDefinition[];
+  readonly zones: readonly LevelZoneDefinition[];
+  readonly landmarks: readonly LevelLandmarkDefinition[];
   readonly triggers: readonly TriggerVolumeDefinition[];
   readonly cinematicAnchors: readonly CinematicAnchorDefinition[];
 }
@@ -92,6 +111,8 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
     ...definition.staticCollision,
     ...definition.spawns,
     ...definition.locations,
+    ...definition.zones,
+    ...definition.landmarks,
     ...definition.triggers,
     ...definition.cinematicAnchors,
   ];
@@ -114,6 +135,28 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
     if (visual.kind === 'gltf' && visual.assetId.trim().length === 0) {
       issues.push(`${visual.id}.assetId is empty`);
     }
+  }
+  for (const zone of definition.zones) {
+    if (zone.name.trim().length === 0) issues.push(`${zone.id}.name is empty`);
+    validateOptionalPriority(zone.priority, `${zone.id}.priority`, issues);
+  }
+  for (const landmark of definition.landmarks) {
+    if (landmark.name.trim().length === 0)
+      issues.push(`${landmark.id}.name is empty`);
+    if (!Number.isFinite(landmark.radius) || landmark.radius <= 0)
+      issues.push(`${landmark.id}.radius must be a positive number`);
+    if (
+      landmark.heightTolerance !== undefined &&
+      (!Number.isFinite(landmark.heightTolerance) ||
+        landmark.heightTolerance <= 0)
+    ) {
+      issues.push(`${landmark.id}.heightTolerance must be a positive number`);
+    }
+    validateOptionalPriority(
+      landmark.priority,
+      `${landmark.id}.priority`,
+      issues,
+    );
   }
   for (const collider of definition.staticCollision) {
     const [pitch = 0, yaw = 0, roll = 0] = collider.rotation ?? [0, 0, 0];
@@ -147,6 +190,15 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
   }
 
   if (issues.length > 0) throw new LevelDefinitionError(issues);
+}
+
+function validateOptionalPriority(
+  value: number | undefined,
+  label: string,
+  issues: string[],
+): void {
+  if (value !== undefined && !Number.isFinite(value))
+    issues.push(`${label} must be finite`);
 }
 
 function validateId(value: string, label: string, issues: string[]): void {

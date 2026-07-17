@@ -71,4 +71,33 @@ describe('validateLevelDefinition', () => {
       /ramps support pitch only/,
     );
   });
+
+  it('validates location metadata names, bounds, radius, and priority', () => {
+    const invalid: LevelDefinition = {
+      ...testDistrict.definition,
+      zones: [
+        {
+          id: 'zone.invalid',
+          name: ' ',
+          position: [0, 0, 0],
+          size: [1, 0, 1],
+          priority: Number.NaN,
+        },
+      ],
+      landmarks: [
+        {
+          id: 'landmark.invalid',
+          name: '',
+          position: [0, 0, 0],
+          radius: 0,
+          heightTolerance: -1,
+        },
+      ],
+    };
+    expect(() => validateLevelDefinition(invalid)).toThrow(/zone.invalid.name/);
+    expect(() => validateLevelDefinition(invalid)).toThrow(/radius must be/);
+    expect(() => validateLevelDefinition(invalid)).toThrow(
+      /priority must be finite/,
+    );
+  });
 });

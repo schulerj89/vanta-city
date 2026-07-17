@@ -36,6 +36,8 @@ import { validateLevelDefinition } from './LevelDefinition';
 import { DefinitionLevelLocations, type LevelLocations } from './LevelQueries';
 import type { LevelRegistry } from './LevelRegistry';
 import type { WorldEvents } from './WorldEvents';
+import type { WorldPosition } from './Spatial';
+import type { ResolvedLevelLocation } from './LocationResolver';
 
 interface LoadedLevel {
   readonly definition: LevelDefinition;
@@ -149,6 +151,10 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   public getStaticColliders(): readonly StaticColliderDefinition[] {
     return this.requireLocations().getStaticColliders();
+  }
+
+  public resolveLocation(position: WorldPosition): ResolvedLevelLocation {
+    return this.requireLocations().resolveLocation(position);
   }
 
   private requireLocations(): DefinitionLevelLocations {
@@ -267,6 +273,15 @@ function buildDebug(
     const color = location.kind === 'mission' ? 0xff4fc8 : 0x41e5e0;
     const marker = createSphereMarker(location, color, resources);
     marker.name = `${location.kind}:${location.id}`;
+    markers.add(marker);
+  }
+  for (const zone of definition.zones) {
+    markers.add(createWireBox(zone, 0x72f1b8, `zone:${zone.id}`, resources));
+  }
+  for (const landmark of definition.landmarks) {
+    const marker = createSphereMarker(landmark, 0xffdd70, resources);
+    marker.name = `landmark:${landmark.id}`;
+    marker.scale.setScalar(Math.max(0.7, landmark.radius / 4));
     markers.add(marker);
   }
 
