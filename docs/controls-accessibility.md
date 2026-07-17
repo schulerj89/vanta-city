@@ -10,10 +10,11 @@
 - X: interact in gameplay, preview the next picker pose, and reveal a typing dialogue line.
 - Y: open the character picker.
 - D-pad left/right: navigate the character picker.
+- LB: directional roll. RT: use equipment and hold to repeat Handgun fire. D-pad down: reload Handgun.
 - L3: toggle walk/run. R3: recenter the gameplay camera. RB: switch camera shoulder.
 - View: open or close controls help. Menu: pause or resume gameplay.
 
-Combat actions and developer tools remain keyboard-only. This keeps gamepad face buttons contextual and avoids making destructive or debug actions easy to trigger accidentally.
+Punch, kick, quickbar selection, and developer tools remain keyboard-only. Gamepad equipment actions use the existing named-action ownership and remain inert while modal UI owns input.
 
 The poller accepts the first connected standard-layout gamepad. Both sticks use a radial `0.20` deadzone, then rescale the remaining travel to the full output range. Buttons become named-action edges at a value of `0.50`; holding a button produces one `wasPressed` edge until it is released. Keyboard/mouse and gamepad state are combined, so either device can be used at any time.
 

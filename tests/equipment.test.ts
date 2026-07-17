@@ -68,6 +68,43 @@ describe('CharacterEquipment', () => {
     presentation.dispose();
     equipment.dispose();
   });
+
+  it('owns persistent clamped ammunition, typed dry-fire, reload, and reset state', () => {
+    const equipment = new CharacterEquipment('owner');
+    const ammoChanges = vi.fn();
+    const dryFire = vi.fn();
+    const reloads = vi.fn();
+    equipment.events.on('ammunitionChanged', ammoChanges);
+    equipment.events.on('dryFire', dryFire);
+    equipment.events.on('reloaded', reloads);
+    equipment.equip('handgun');
+
+    for (let index = 0; index < 8; index += 1) {
+      expect(equipment.useWithTrigger(() => true, 'unit-test')).toBe(true);
+    }
+    expect(equipment.getAmmunition('handgun')).toEqual({
+      current: 0,
+      max: 8,
+      empty: true,
+    });
+    expect(equipment.useWithTrigger(() => true, 'unit-test')).toBe(false);
+    expect(dryFire).toHaveBeenCalledOnce();
+    expect(equipment.consume('handgun')).toBe(false);
+    expect(equipment.getAmmunition('handgun')?.current).toBe(0);
+
+    equipment.unequip();
+    equipment.equip('handgun');
+    expect(equipment.getAmmunition('handgun')?.current).toBe(0);
+    expect(equipment.reload('handgun')).toBe(true);
+    expect(equipment.getAmmunition('handgun')?.current).toBe(8);
+    expect(reloads).toHaveBeenCalledOnce();
+    expect(equipment.reload('handgun')).toBe(false);
+    expect(equipment.getSnapshot().lastRejection).toBe('already-full');
+    expect(ammoChanges).toHaveBeenCalledTimes(9);
+    equipment.resetAmmunition();
+    expect(equipment.getAmmunition('handgun')?.current).toBe(8);
+    equipment.dispose();
+  });
 });
 
 describe('CharacterDeathPresentation', () => {

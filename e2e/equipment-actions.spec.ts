@@ -11,6 +11,7 @@ test.describe('reusable equipment and character actions', () => {
   test('equips, uses, rolls, dies, and revives both playable characters', async ({
     page,
   }, testInfo) => {
+    test.setTimeout(60_000);
     const failures = monitorRuntimeFailures(page);
     await openReadyApp(page);
     await attach(page, testInfo, 'quickbar-empty');
@@ -55,6 +56,40 @@ test.describe('reusable equipment and character actions', () => {
         .poll(async () => (await snapshot(page)).player.actionBusy)
         .toBe(false);
 
+      const beforeHold = (await snapshot(page)).player.fire.acceptedShotCount;
+      await page.keyboard.down('KeyU');
+      await expect
+        .poll(async () => (await snapshot(page)).player.fire.holding)
+        .toBe(true);
+      await expect
+        .poll(
+          async () => (await snapshot(page)).player.fire.acceptedShotCount,
+          { timeout: 3_000 },
+        )
+        .toBeGreaterThanOrEqual(beforeHold + 2);
+      await attach(page, testInfo, `${characterId}-held-fire-ammo`);
+      await page.keyboard.up('KeyU');
+      await expect
+        .poll(async () => (await snapshot(page)).player.fire.holding)
+        .toBe(false);
+      await expect
+        .poll(async () => (await snapshot(page)).player.actionBusy)
+        .toBe(false);
+      const shotsAfterRelease = (await snapshot(page)).player.fire
+        .acceptedShotCount;
+      await page.waitForTimeout(900);
+      expect((await snapshot(page)).player.fire.acceptedShotCount).toBe(
+        shotsAfterRelease,
+      );
+      await page.keyboard.press('KeyT');
+      await expect
+        .poll(
+          async () =>
+            (await snapshot(page)).player.equipment.ammunition.handgun?.current,
+        )
+        .toBe(8);
+      await attach(page, testInfo, `${characterId}-reloaded`);
+
       await page.keyboard.press('KeyR');
       await page.keyboard.down('KeyW');
       await expect
@@ -93,18 +128,34 @@ test.describe('reusable equipment and character actions', () => {
         .toBe(false);
 
       const beforeRoll = (await snapshot(page)).player.position;
+      await page.keyboard.down('KeyW');
       await page.keyboard.press('KeyB');
       await expect
         .poll(async () => (await snapshot(page)).character.animationState)
         .toBe('action:roll');
       await attach(page, testInfo, `${characterId}-roll`);
-      state = await snapshot(page);
-      expect(
-        horizontalDistance(state.player.position, beforeRoll),
-      ).toBeLessThan(0.02);
+      await page.waitForTimeout(250);
+      await attach(page, testInfo, `${characterId}-roll-mid`);
+      await page.keyboard.up('KeyW');
       await expect
         .poll(async () => (await snapshot(page)).player.actionBusy)
         .toBe(false);
+      state = await snapshot(page);
+      expect(state.player.roll.source).toBe('movement-intent');
+      expect(state.player.roll.blocked).toBe(true);
+      expect(state.player.roll.blockedBy).toBeTruthy();
+      expect(state.player.roll.actualDistance).toBeGreaterThanOrEqual(0);
+      expect(state.player.roll.actualDistance).toBeLessThan(3);
+      // W may contribute one browser frame before B is admitted; the roll's
+      // own requested/actual counters exclude that pre-admission locomotion.
+      expect(
+        Math.abs(
+          horizontalDistance(state.player.position, beforeRoll) -
+            state.player.roll.actualDistance,
+        ),
+      ).toBeLessThan(0.12);
+      expect(state.player.grounded).toBe(true);
+      await attach(page, testInfo, `${characterId}-roll-wall-stop`);
       await expect
         .poll(async () => (await snapshot(page)).character.animationState)
         .toBe('knifeIdle');
@@ -157,6 +208,19 @@ test.describe('reusable equipment and character actions', () => {
     expect(slotBoxes.every((box) => Math.abs(box.width - box.height) < 1)).toBe(
       true,
     );
+    const hudLayout = await page.evaluate(() => {
+      const quickbar = document
+        .querySelector('.quickbar')!
+        .getBoundingClientRect();
+      const health = document
+        .querySelector('.health-hud__player')!
+        .getBoundingClientRect();
+      return {
+        quickbarTop: quickbar.top,
+        healthBottom: health.bottom,
+      };
+    });
+    expect(hudLayout.healthBottom).toBeLessThan(hudLayout.quickbarTop);
     await attach(page, testInfo, 'quickbar-narrow-selected');
 
     const beforeHelp = (await snapshot(page)).quickbar.equippedId;
@@ -167,6 +231,107 @@ test.describe('reusable equipment and character actions', () => {
     await page.keyboard.press('Digit2');
     expect((await snapshot(page)).quickbar.equippedId).toBe(beforeHelp);
     await page.keyboard.press('Escape');
+    expect(failures).toEqual([]);
+    expect((await snapshot(page)).runtimeErrors.count).toBe(0);
+  });
+
+  test('bounds dry fire at empty and restores handgun capacity through reload', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(45_000);
+    const failures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+    await page.keyboard.press('Digit1');
+    await page.keyboard.down('KeyU');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).player.equipment.ammunition.handgun?.current,
+        { timeout: 16_000 },
+      )
+      .toBe(0);
+    await page.keyboard.up('KeyU');
+    await expect
+      .poll(async () => (await snapshot(page)).player.actionBusy)
+      .toBe(false);
+    let state = await snapshot(page);
+    const useSequence = state.player.equipment.useSequence;
+    const dryFireSequence = state.player.equipment.dryFireSequence;
+    const actionSequence = state.character.characterAction.sequence;
+    await attach(page, testInfo, 'handgun-empty');
+
+    await page.keyboard.press('KeyU');
+    await expect
+      .poll(async () => (await snapshot(page)).player.equipment.dryFireSequence)
+      .toBe(dryFireSequence + 1);
+    state = await snapshot(page);
+    expect(state.player.equipment.useSequence).toBe(useSequence);
+    expect(state.character.characterAction.sequence).toBe(actionSequence);
+    expect(state.player.equipment.ammunition.handgun?.current).toBe(0);
+    expect(state.player.fire.latestRejection).toBe('empty');
+
+    await page.keyboard.press('KeyT');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).player.equipment.ammunition.handgun?.current,
+      )
+      .toBe(8);
+    expect((await snapshot(page)).player.fire.reloadCount).toBe(1);
+    await attach(page, testInfo, 'handgun-reloaded-after-empty');
+    expect(failures).toEqual([]);
+    expect((await snapshot(page)).runtimeErrors.count).toBe(0);
+  });
+
+  test('rolls both playable rigs in four locked camera-relative directions', async ({
+    page,
+  }) => {
+    const failures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+    const directions = [
+      ['KeyW', { x: 0, z: -1 }],
+      ['KeyS', { x: 0, z: 1 }],
+      ['KeyA', { x: -1, z: 0 }],
+      ['KeyD', { x: 1, z: 0 }],
+    ] as const;
+
+    for (const characterId of ['casual', 'punk']) {
+      await executeCommand(page, 'player.select-character', characterId);
+      await expect
+        .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+        .toBe(characterId);
+      for (const [key, expectedDirection] of directions) {
+        await executeCommand(page, 'player.teleport-position', '0,0.2,7,0');
+        const start = (await snapshot(page)).player.position;
+        await page.keyboard.down(key);
+        await page.keyboard.press('KeyB');
+        await expect
+          .poll(async () => (await snapshot(page)).player.roll.active)
+          .toBe(true);
+        await page.keyboard.up(key);
+        await expect
+          .poll(async () => (await snapshot(page)).player.actionBusy)
+          .toBe(false);
+        const state = await snapshot(page);
+        expect(state.player.roll).toMatchObject({
+          source: 'movement-intent',
+          blocked: false,
+        });
+        expect(state.player.roll.direction?.x).toBeCloseTo(
+          expectedDirection.x,
+          2,
+        );
+        expect(state.player.roll.direction?.z).toBeCloseTo(
+          expectedDirection.z,
+          2,
+        );
+        expect(state.player.roll.actualDistance).toBeGreaterThan(2.8);
+        expect(
+          horizontalDistance(state.player.position, start),
+        ).toBeGreaterThan(2.8);
+        expect(state.player.grounded).toBe(true);
+      }
+    }
     expect(failures).toEqual([]);
     expect((await snapshot(page)).runtimeErrors.count).toBe(0);
   });

@@ -19,6 +19,10 @@ export interface EquipmentDefinition {
   readonly quickbarSlot: 1 | 2;
   readonly prop: 'handgun' | 'knife';
   readonly useAction: CharacterActionName;
+  readonly ammunition?: {
+    readonly capacity: number;
+    readonly repeatCadenceSeconds: number;
+  };
   readonly idleAnimation?: string;
   readonly runAnimation?: string;
   readonly presentations: Readonly<
@@ -35,6 +39,7 @@ export const equipmentDefinitions = [
     quickbarSlot: 1,
     prop: 'handgun',
     useAction: 'gunFire',
+    ammunition: { capacity: 8, repeatCadenceSeconds: 0.72 },
     idleAnimation: 'gunIdle',
     runAnimation: 'gunRun',
     presentations: {

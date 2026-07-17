@@ -14,6 +14,7 @@ import type { PlayerVisual } from '../src/player/PlayerVisual';
 class ControlInput implements InputReader {
   public readonly down = new Set<string>();
   public readonly pressed = new Set<string>();
+  public readonly released = new Set<string>();
   public uiFocused = false;
 
   public isDown(action: string): boolean {
@@ -22,8 +23,8 @@ class ControlInput implements InputReader {
   public wasPressed(action: string): boolean {
     return this.pressed.delete(action);
   }
-  public wasReleased(): boolean {
-    return false;
+  public wasReleased(action: string): boolean {
+    return this.released.delete(action);
   }
   public isUiFocused(): boolean {
     return this.uiFocused;
@@ -82,6 +83,8 @@ class ActionVisual implements PlayerVisual {
   public complete(action: CharacterActionName): void {
     this.actionState = {
       ...this.actionState,
+      active: undefined,
+      busy: false,
       lastCompleted: action,
       lastCompletedSource: 'unit-test',
       completedSequence: this.actionState.completedSequence + 1,
@@ -228,6 +231,8 @@ describe('PlayerControllerSystem controls', () => {
     input.pressed.add('useEquipment');
     player.update(frame);
     expect(visual.actions).toContain('gunFire');
+    visual.complete('gunFire');
+    player.update(frame);
 
     input.pressed.add('quickbar1');
     player.update(frame);
@@ -242,6 +247,103 @@ describe('PlayerControllerSystem controls', () => {
     expect(visual.actions).toContain('roll');
     expect(player.movement.velocity.x).toBeCloseTo(0);
     expect(player.movement.velocity.z).toBeCloseTo(0);
+  });
+
+  it.each([30, 60, 120])(
+    'captures camera-relative roll intent with stable displacement at %i Hz',
+    async (hz) => {
+      const { input, player } = await harness(() => Math.PI / 2);
+      const start = player.movement.position.clone();
+      input.down.add('moveForward');
+      input.pressed.add('roll');
+      const step = { delta: 1 / hz, elapsed: 1, frame: 1 };
+      for (let index = 0; index < hz; index += 1) player.update(step);
+      const roll = player.getDebugSnapshot().roll;
+      expect(roll.source).toBe('movement-intent');
+      expect(roll.direction?.x).toBeCloseTo(-1, 5);
+      expect(roll.actualDistance).toBeCloseTo(3, 3);
+      expect(player.movement.position.x - start.x).toBeCloseTo(-3, 3);
+      expect(player.movement.position.z - start.z).toBeCloseTo(0, 3);
+      expect(player.movement.grounded).toBe(true);
+    },
+  );
+
+  it('uses authoritative facing for neutral roll and rejects airborne/state-locked rolls', async () => {
+    const { player, state, visual } = await harness();
+    expect(player.triggerCharacterAction('roll', 'unit-test')).toBe(true);
+    for (let index = 0; index < 60; index += 1) player.update(frame);
+    expect(player.getDebugSnapshot().roll).toMatchObject({
+      source: 'facing-fallback',
+      blocked: false,
+    });
+    expect(player.getDebugSnapshot().roll.actualDistance).toBeCloseTo(3, 5);
+    visual.complete('roll');
+    player.update(frame);
+
+    player.teleport(new Group().position.set(0, 3, 7));
+    expect(player.triggerCharacterAction('roll', 'unit-test')).toBe(false);
+    expect(player.getDebugSnapshot().roll.latestRejection).toBe('airborne');
+    state.transition('paused');
+    expect(player.triggerCharacterAction('roll', 'unit-test')).toBe(false);
+    expect(player.getDebugSnapshot().roll.latestRejection).toBe('state-gated');
+  });
+
+  it('repeats held handgun fire by completed cycles, stops on release, and keeps knife edge-triggered', async () => {
+    const { input, player, visual } = await harness();
+    player.equipment.equip('handgun');
+    input.down.add('useEquipment');
+    input.pressed.add('useEquipment');
+    player.update(frame);
+    expect(player.equipment.getAmmunition('handgun')?.current).toBe(7);
+    visual.complete('gunFire');
+    for (let index = 0; index < 50; index += 1) player.update(frame);
+    expect(
+      visual.actions.filter((action) => action === 'gunFire'),
+    ).toHaveLength(2);
+    expect(player.equipment.getAmmunition('handgun')?.current).toBe(6);
+
+    input.down.delete('useEquipment');
+    input.released.add('useEquipment');
+    visual.complete('gunFire');
+    for (let index = 0; index < 60; index += 1) player.update(frame);
+    expect(
+      visual.actions.filter((action) => action === 'gunFire'),
+    ).toHaveLength(2);
+
+    player.equipment.equip('knife');
+    input.down.add('useEquipment');
+    input.pressed.add('useEquipment');
+    player.update(frame);
+    visual.complete('knifeSlash');
+    for (let index = 0; index < 90; index += 1) player.update(frame);
+    expect(
+      visual.actions.filter((action) => action === 'knifeSlash'),
+    ).toHaveLength(1);
+  });
+
+  it('drops held-fire ownership on modal entry and reloads only while idle', async () => {
+    const { input, player, state, visual } = await harness();
+    player.equipment.equip('handgun');
+    input.down.add('useEquipment');
+    input.pressed.add('useEquipment');
+    player.update(frame);
+    expect(player.getDebugSnapshot().fire.holding).toBe(true);
+    expect(player.reloadEquippedItem('unit-test')).toBe(false);
+    expect(player.getDebugSnapshot().fire.latestRejection).toBe('reload-busy');
+
+    visual.complete('gunFire');
+    state.transition('paused');
+    expect(player.getDebugSnapshot().fire.holding).toBe(false);
+    state.transition('playing');
+    for (let index = 0; index < 90; index += 1) player.update(frame);
+    expect(player.getDebugSnapshot().fire.acceptedShotCount).toBe(1);
+
+    input.down.delete('useEquipment');
+    input.released.add('useEquipment');
+    player.update(frame);
+    expect(player.reloadEquippedItem('unit-test')).toBe(true);
+    expect(player.equipment.getAmmunition('handgun')?.current).toBe(8);
+    expect(player.getDebugSnapshot().fire.reloadCount).toBe(1);
   });
 
   it('gates movement, actions, equipment, and roll while depleted then revives', async () => {

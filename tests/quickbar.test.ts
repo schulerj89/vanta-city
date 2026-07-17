@@ -13,7 +13,7 @@ describe('QuickbarSystem', () => {
     const slots = [...mount.querySelectorAll('.quickbar__slot')];
     expect(slots).toHaveLength(2);
     expect(slots.map((slot) => slot.getAttribute('aria-label'))).toEqual([
-      'Slot 1: Handgun',
+      'Slot 1: Handgun, 8 of 8 rounds',
       'Slot 2: Knife',
     ]);
     expect(quickbar.getSnapshot()).toMatchObject({
@@ -27,6 +27,10 @@ describe('QuickbarSystem', () => {
     expect(quickbar.getSnapshot()).toMatchObject({
       equippedId: 'knife',
       selectedSlot: 2,
+    });
+    expect(quickbar.getSnapshot().slots[0]?.ammunition).toEqual({
+      current: 8,
+      max: 8,
     });
     equipment.toggleQuickbarSlot(2);
     expect(slots[1]?.getAttribute('aria-current')).toBe('false');

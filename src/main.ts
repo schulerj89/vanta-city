@@ -683,6 +683,25 @@ function registerVerticalSliceDebug(
       },
     }),
     debug.registerValue({
+      id: 'player.roll',
+      label: 'Directional roll',
+      group: sections.player,
+      read: () => {
+        const roll = player.getDebugSnapshot().roll;
+        return `${roll.active ? 'active' : 'idle'} · ${roll.actualDistance.toFixed(2)}/${roll.requestedDistance.toFixed(2)} m${roll.blocked ? ` · blocked ${roll.blockedBy ?? ''}` : ''}${roll.latestRejection ? ` · rejected ${roll.latestRejection}` : ''}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'player.fire-ammo',
+      label: 'Fire / ammunition',
+      group: sections.player,
+      read: () => {
+        const snapshot = player.getDebugSnapshot();
+        const ammo = snapshot.equipment.ammunition.handgun;
+        return `${snapshot.fire.holding ? 'held' : 'released'} · ${ammo?.current ?? 0}/${ammo?.max ?? 0} · ${snapshot.fire.acceptedShotCount} shots${snapshot.fire.latestRejection ? ` · ${snapshot.fire.latestRejection}` : ''}`;
+      },
+    }),
+    debug.registerValue({
       id: 'player.quickbar',
       label: 'Quickbar',
       group: sections.player,
@@ -1403,6 +1422,16 @@ function registerVerticalSliceDebug(
       run: () => {
         if (!player.useEquippedItem('debug-command')) {
           throw new Error('Equipped item use was rejected');
+        }
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.reload-equipment',
+      label: 'Reload equipped player item',
+      group: sections.actions,
+      run: () => {
+        if (!player.reloadEquippedItem('debug-command')) {
+          throw new Error('Equipped item reload was rejected');
         }
       },
     }),

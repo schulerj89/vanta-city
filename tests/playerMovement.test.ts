@@ -189,6 +189,46 @@ describe('PlayerMovementSimulation', () => {
     expect(movement.blocked).toBe(true);
   });
 
+  it('uses the character sweep for collision-shortened grounded kinematic movement', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addBox({
+      id: 'roll-wall',
+      min: new Vector3(-1, 0, -2),
+      max: new Vector3(1, 3, -1),
+    });
+    const movement = new PlayerMovementSimulation(collision);
+    movement.teleport(new Vector3(0, 0, 0));
+    const result = movement.moveKinematicGrounded(new Vector3(0, 0, -1), 3);
+
+    expect(result.blocked).toBe(true);
+    expect(result.blockedColliderIds).toContain('roll-wall');
+    expect(result.actualDistance).toBeLessThan(3);
+    expect(movement.position.z).toBeGreaterThanOrEqual(-0.62);
+    expect(result.grounded).toBe(true);
+  });
+
+  it('keeps game-owned kinematic movement grounded along a walkable slope', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addRamp({
+      id: 'roll-ramp',
+      minX: -1,
+      maxX: 1,
+      minZ: -3,
+      maxZ: 0,
+      baseHeight: 0.6,
+      slopeX: 0,
+      slopeZ: -0.2,
+    });
+    const movement = new PlayerMovementSimulation(collision);
+    movement.teleport(new Vector3(0, 0.5, -0.5));
+    const initialHeight = movement.position.y;
+    const result = movement.moveKinematicGrounded(new Vector3(0, 0, -1), 2);
+
+    expect(result.grounded).toBe(true);
+    expect(result.groundColliderId).toBe('roll-ramp');
+    expect(movement.position.y).toBeGreaterThan(initialHeight);
+  });
+
   it('supports grounded jumps and returns to a stable floor', () => {
     const movement = new PlayerMovementSimulation(new StaticCollisionWorld());
     movement.teleport(new Vector3(0, 0, 0));

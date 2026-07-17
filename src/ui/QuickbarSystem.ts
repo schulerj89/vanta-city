@@ -7,6 +7,14 @@ export interface QuickbarSnapshot {
   readonly slotCount: number;
   readonly equippedId: string | undefined;
   readonly selectedSlot: number | undefined;
+  readonly slots: readonly {
+    readonly slot: number;
+    readonly itemId: string;
+    readonly label: string;
+    readonly icon: string;
+    readonly selected: boolean;
+    readonly ammunition?: { readonly current: number; readonly max: number };
+  }[];
 }
 
 /** Player-only HUD projection of reusable equipment state. */
@@ -16,7 +24,7 @@ export class QuickbarSystem implements GameSystem {
 
   private readonly root = document.createElement('section');
   private readonly slots = new Map<number, HTMLElement>();
-  private unsubscribe: (() => void) | undefined;
+  private readonly unsubscribers: (() => void)[] = [];
 
   public constructor(
     private readonly mount: HTMLElement,
@@ -38,13 +46,14 @@ export class QuickbarSystem implements GameSystem {
       const key = document.createElement('kbd');
       key.textContent = String(definition.quickbarSlot);
       const icon = document.createElement('span');
-      icon.className = 'quickbar__icon';
+      icon.className = `quickbar__icon quickbar__icon--${definition.id}`;
       icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = definition.icon;
       const label = document.createElement('span');
       label.className = 'quickbar__label';
       label.textContent = definition.displayName;
-      slot.append(key, icon, label);
+      const ammo = document.createElement('span');
+      ammo.className = 'quickbar__ammo';
+      slot.append(key, icon, label, ammo);
       this.slots.set(definition.quickbarSlot, slot);
       this.root.append(slot);
     }
@@ -52,7 +61,10 @@ export class QuickbarSystem implements GameSystem {
 
   public init(): void {
     this.mount.append(this.root);
-    this.unsubscribe = this.equipment.events.on('changed', () => this.sync());
+    this.unsubscribers.push(
+      this.equipment.events.on('changed', () => this.sync()),
+      this.equipment.events.on('ammunitionChanged', () => this.sync()),
+    );
     this.sync();
   }
 
@@ -63,12 +75,24 @@ export class QuickbarSystem implements GameSystem {
       slotCount: this.slots.size,
       equippedId: equipment.equippedId,
       selectedSlot: equipment.equippedSlot,
+      slots: equipmentDefinitions.map((definition) => {
+        const ammunition = this.equipment.getAmmunition(definition.id);
+        return {
+          slot: definition.quickbarSlot,
+          itemId: definition.id,
+          label: definition.displayName,
+          icon: definition.id,
+          selected: equipment.equippedSlot === definition.quickbarSlot,
+          ammunition: ammunition
+            ? { current: ammunition.current, max: ammunition.max }
+            : undefined,
+        };
+      }),
     };
   }
 
   public dispose(): void {
-    this.unsubscribe?.();
-    this.unsubscribe = undefined;
+    for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
     this.root.remove();
     this.slots.clear();
   }
@@ -79,6 +103,29 @@ export class QuickbarSystem implements GameSystem {
       const active = selected === slotNumber;
       slot.dataset.selected = String(active);
       slot.setAttribute('aria-current', active ? 'true' : 'false');
+      const definition = equipmentDefinitions.find(
+        ({ quickbarSlot }) => quickbarSlot === slotNumber,
+      );
+      const ammunition = definition
+        ? this.equipment.getAmmunition(definition.id)
+        : undefined;
+      const ammo = slot.querySelector<HTMLElement>('.quickbar__ammo');
+      if (ammo) {
+        ammo.textContent = ammunition
+          ? `${ammunition.current} / ${ammunition.max}`
+          : '';
+        ammo.hidden = ammunition === undefined;
+      }
+      if (definition) {
+        slot.setAttribute(
+          'aria-label',
+          `Slot ${slotNumber}: ${definition.displayName}${
+            ammunition
+              ? `, ${ammunition.current} of ${ammunition.max} rounds`
+              : ''
+          }${active ? ', equipped' : ''}`,
+        );
+      }
     }
   }
 }

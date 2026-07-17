@@ -51,6 +51,7 @@ export interface CharacterMoveResult {
   readonly groundNormal: Vector3;
   readonly groundColliderId: string;
   readonly blocked: boolean;
+  readonly blockedColliderIds: readonly string[];
   readonly hitCeiling: boolean;
 }
 
@@ -283,6 +284,7 @@ export class StaticCollisionWorld implements CollisionWorld {
       groundNormal: ground.normal.clone(),
       groundColliderId: ground.colliderId,
       blocked,
+      blockedColliderIds: [...blockedIds].sort(),
       hitCeiling,
     };
   }

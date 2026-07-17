@@ -91,6 +91,12 @@ export interface BrowserTestSnapshot {
     readonly equipment: ReturnType<
       PlayerControllerSystem['equipment']['getSnapshot']
     >;
+    readonly roll: ReturnType<
+      PlayerControllerSystem['getDebugSnapshot']
+    >['roll'];
+    readonly fire: ReturnType<
+      PlayerControllerSystem['getDebugSnapshot']
+    >['fire'];
   };
   readonly controls: {
     readonly bindings: typeof defaultBindings;
@@ -290,6 +296,8 @@ function createSnapshot(
       actionBusy: movement.actionBusy,
       depleted: movement.depleted,
       equipment: movement.equipment,
+      roll: movement.roll,
+      fire: movement.fire,
     },
     controls: {
       bindings: defaultBindings,

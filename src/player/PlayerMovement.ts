@@ -48,6 +48,15 @@ export interface SmoothedHeadingStep {
   readonly active: boolean;
 }
 
+export interface KinematicMovementResult {
+  readonly requestedDistance: number;
+  readonly actualDistance: number;
+  readonly blocked: boolean;
+  readonly blockedColliderIds: readonly string[];
+  readonly grounded: boolean;
+  readonly groundColliderId: string;
+}
+
 /** Exact critically damped step for a fixed heading target over this frame. */
 export function stepSmoothedHeading(
   heading: number,
@@ -257,6 +266,42 @@ export class PlayerMovementSimulation {
     this.facingError = 0;
     this.facingSmoothingActive = false;
     if (this.grounded) this.state = 'idle';
+  }
+
+  /** Moves through the authoritative character collider without root motion. */
+  public moveKinematicGrounded(
+    direction: Readonly<Vector3>,
+    distance: number,
+  ): KinematicMovementResult {
+    const requestedDistance = Math.max(0, distance);
+    const before = this.position.clone();
+    this.haltHorizontalMovement();
+    const displacement = new Vector3(direction.x, 0, direction.z);
+    if (displacement.lengthSq() > 0) displacement.normalize();
+    displacement.multiplyScalar(requestedDistance);
+    const result = this.collision.moveCharacter(
+      this.position,
+      displacement,
+      this.config,
+      this.grounded,
+    );
+    this.position.copy(result.position);
+    this.grounded = result.grounded;
+    this.groundNormal.copy(result.groundNormal);
+    this.groundColliderId = result.groundColliderId;
+    this.blocked = result.blocked;
+    this.state = result.grounded ? 'idle' : 'airborne';
+    return {
+      requestedDistance,
+      actualDistance: Math.hypot(
+        this.position.x - before.x,
+        this.position.z - before.z,
+      ),
+      blocked: result.blocked,
+      blockedColliderIds: result.blockedColliderIds,
+      grounded: result.grounded,
+      groundColliderId: result.groundColliderId,
+    };
   }
 
   private updateFacing(delta: number): void {

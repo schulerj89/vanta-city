@@ -72,9 +72,58 @@ canvas {
 }
 
 .quickbar__icon {
-  font-size: 1.65rem;
-  line-height: 1;
+  position: relative;
+  width: 2rem;
+  height: 1.2rem;
   transform: translateY(-0.22rem);
+}
+
+.quickbar__icon--handgun::before {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.15rem;
+  width: 1.65rem;
+  height: 0.48rem;
+  border-radius: 0.15rem 0.3rem 0.12rem 0.12rem;
+  background: currentcolor;
+  box-shadow: 0.55rem 0.35rem 0 -0.08rem currentcolor;
+  content: '';
+}
+
+.quickbar__icon--handgun::after {
+  position: absolute;
+  top: 0.57rem;
+  left: 0.92rem;
+  width: 0.42rem;
+  height: 0.62rem;
+  border-radius: 0.05rem 0.05rem 0.18rem 0.18rem;
+  background: currentcolor;
+  transform: skew(-9deg);
+  content: '';
+}
+
+.quickbar__icon--knife::before {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.15rem;
+  width: 1.45rem;
+  height: 0.35rem;
+  border-radius: 100% 0.12rem 0.12rem 0;
+  background: currentcolor;
+  transform: rotate(-25deg);
+  content: '';
+}
+
+.quickbar__icon--knife::after {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.08rem;
+  width: 0.75rem;
+  height: 0.25rem;
+  border-radius: 0.12rem;
+  background: #879790;
+  transform: rotate(-25deg);
+  content: '';
 }
 
 .quickbar__label {
@@ -92,6 +141,16 @@ canvas {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.quickbar__ammo {
+  position: absolute;
+  right: 0.3rem;
+  top: 0.28rem;
+  color: #dffff5;
+  font:
+    750 0.6rem/1 ui-monospace,
+    monospace;
 }
 
 @media (max-width: 560px), (max-height: 500px) {
@@ -138,6 +197,13 @@ canvas {
   border-radius: 0.7rem;
   background: rgb(5 12 18 / 72%);
   backdrop-filter: blur(10px);
+}
+
+@media (max-width: 560px), (max-height: 500px) {
+  .health-hud__player {
+    right: max(0.55rem, env(safe-area-inset-right));
+    bottom: max(4.55rem, calc(env(safe-area-inset-bottom) + 4rem));
+  }
 }
 
 .location-hud {

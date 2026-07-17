@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { Vector2, Vector3 } from 'three';
 import { EventBus } from '../core/events';
 import type { GameState } from '../core/gameState';
 import type { GameSystem } from '../core/lifecycle';
@@ -95,6 +95,43 @@ export interface PlayerDebugSnapshot {
   readonly actionBusy: boolean;
   readonly depleted: boolean;
   readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
+  readonly roll: RollDebugSnapshot;
+  readonly fire: FireDebugSnapshot;
+}
+
+export const playerRollConfig = {
+  distance: 3,
+  movementDuration: 0.75,
+} as const;
+
+export interface RollDebugSnapshot {
+  readonly active: boolean;
+  readonly direction: { readonly x: number; readonly z: number } | undefined;
+  readonly source: 'movement-intent' | 'facing-fallback' | undefined;
+  readonly requestedDistance: number;
+  readonly actualDistance: number;
+  readonly blocked: boolean;
+  readonly blockedBy: string | undefined;
+  readonly latestRejection: string | undefined;
+}
+
+export interface FireDebugSnapshot {
+  readonly holding: boolean;
+  readonly cadenceSeconds: number | undefined;
+  readonly cooldownRemaining: number;
+  readonly acceptedShotCount: number;
+  readonly reloadCount: number;
+  readonly latestRejection: string | undefined;
+}
+
+interface ActiveRoll {
+  readonly direction: Vector3;
+  readonly source: 'movement-intent' | 'facing-fallback';
+  elapsed: number;
+  requestedDistance: number;
+  actualDistance: number;
+  blocked: boolean;
+  blockedBy: string | undefined;
 }
 
 const controlledStates: readonly GameState[] = ['playing'];
@@ -118,6 +155,15 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   private presentationFacingTarget: WorldPoseSource | undefined;
   private presentationFacingYaw: number;
   private unsubscribeHealth: (() => void) | undefined;
+  private unsubscribeState: (() => void) | undefined;
+  private activeRoll: ActiveRoll | undefined;
+  private lastRoll: ActiveRoll | undefined;
+  private lastRollRejection: string | undefined;
+  private fireHolding = false;
+  private fireCooldownRemaining = 0;
+  private acceptedShotCount = 0;
+  private reloadCount = 0;
+  private lastFireRejection: string | undefined;
   public readonly equipment: CharacterEquipment;
 
   public constructor(
@@ -145,7 +191,17 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     this.unsubscribeHealth = this.health.events.on('changed', ({ alive }) => {
       this.visual.setDepleted?.(!alive);
       if (!alive) this.movement.haltHorizontalMovement();
+      if (!alive) {
+        this.finishRoll();
+        this.cancelTransientActions('depleted');
+      }
     });
+    this.unsubscribeState = context.events.on(
+      'game-state:changed',
+      ({ to }) => {
+        if (to !== 'playing') this.cancelTransientActions(`state:${to}`);
+      },
+    );
     this.objects.add(this.visual);
     this.visualAdded = true;
     this.reset();
@@ -174,7 +230,10 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       }
     }
     if (acceptsInput && this.input?.wasPressed('roll')) {
-      this.triggerCharacterAction('roll', 'keyboard:roll');
+      const intent = this.input
+        ? readPlayerIntent(this.input, this.runMode).move
+        : new Vector2();
+      this.startRoll(intent, 'keyboard:roll');
     }
     if (acceptsInput && this.input?.wasPressed('quickbar1')) {
       this.equipment.toggleQuickbarSlot(1);
@@ -182,15 +241,17 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     if (acceptsInput && this.input?.wasPressed('quickbar2')) {
       this.equipment.toggleQuickbarSlot(2);
     }
-    if (acceptsInput && this.input?.wasPressed('useEquipment')) {
-      this.useEquippedItem('keyboard:equipment');
-    }
+    this.updateEquipmentInput(acceptsInput, time.delta);
     const actionBeforeMovement = this.getCharacterActionState().active;
     const intent =
       acceptsInput && this.input && actionBeforeMovement !== 'roll'
         ? readPlayerIntent(this.input, this.runMode)
         : idlePlayerIntent;
-    this.movement.simulate(intent, this.cameraYaw(), time.delta);
+    if (acceptsInput && this.activeRoll && !this.activeRoll.blocked) {
+      this.advanceRoll(time.delta);
+    } else if (!this.activeRoll || !acceptsInput) {
+      this.movement.simulate(intent, this.cameraYaw(), time.delta);
+    }
     this.visual.sync(this.movement, time.delta);
     const actionState = this.getCharacterActionState();
     if (
@@ -216,6 +277,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         source: actionState.lastCompletedSource,
         sequence: actionState.completedSequence,
       });
+      if (actionState.lastCompleted === 'roll') this.finishRoll();
     }
     this.updatePresentationFacing();
   }
@@ -233,6 +295,14 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     action: CharacterActionName,
     source = 'player-controller',
   ): boolean {
+    if (action === 'roll') return this.startRoll(new Vector2(), source);
+    return this.admitCharacterAction(action, source);
+  }
+
+  private admitCharacterAction(
+    action: CharacterActionName,
+    source: string,
+  ): boolean {
     const accepted =
       this.visual.triggerCharacterAction?.(action, source) ?? false;
     if (accepted) {
@@ -247,8 +317,43 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   }
 
   public useEquippedItem(source = 'player-controller'): boolean {
-    if (!this.health.alive) return false;
-    return this.equipment.use(this, source);
+    if (!this.health.alive) {
+      this.lastFireRejection = 'depleted';
+      return false;
+    }
+    const accepted = this.equipment.useWithTrigger(
+      (action, requestSource) =>
+        this.admitCharacterAction(action, requestSource),
+      source,
+    );
+    if (accepted) {
+      this.acceptedShotCount += Number(
+        this.equipment.equipped?.id === 'handgun',
+      );
+      this.lastFireRejection = undefined;
+    } else {
+      this.lastFireRejection = this.equipment.getSnapshot().lastRejection;
+    }
+    return accepted;
+  }
+
+  public reloadEquippedItem(source = 'player-controller'): boolean {
+    if (!this.health.alive || this.state?.current !== 'playing') {
+      this.lastFireRejection = !this.health.alive ? 'depleted' : 'state-gated';
+      return false;
+    }
+    if (this.getCharacterActionState().busy || this.fireHolding) {
+      this.lastFireRejection = 'reload-busy';
+      return false;
+    }
+    const itemId = this.equipment.equipped?.id;
+    if (!itemId || !this.equipment.reload(itemId, source)) {
+      this.lastFireRejection = this.equipment.getSnapshot().lastRejection;
+      return false;
+    }
+    this.reloadCount += 1;
+    this.lastFireRejection = undefined;
+    return true;
   }
 
   public toggleQuickbarSlot(slot: number): boolean {
@@ -306,6 +411,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       actionBusy: this.getCharacterActionState().busy,
       depleted: !this.health.alive,
       equipment: this.equipment.getSnapshot(),
+      roll: this.rollSnapshot(),
+      fire: this.fireSnapshot(),
     };
   }
 
@@ -318,6 +425,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   public reset(): void {
     this.teleport(this.spawnPosition, this.spawnFacingYaw);
     this.health.reset('player:reset');
+    this.finishRoll();
+    this.cancelTransientActions('reset');
   }
 
   public dispose(): void {
@@ -327,6 +436,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     this.presentationFacingTarget = undefined;
     this.unsubscribeHealth?.();
     this.unsubscribeHealth = undefined;
+    this.unsubscribeState?.();
+    this.unsubscribeState = undefined;
     this.input = undefined;
     this.state = undefined;
     this.events.clear();
@@ -344,4 +455,170 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         : this.movement.facingYaw;
     this.visual.visualRoot.rotation.y = this.presentationFacingYaw;
   }
+
+  private startRoll(move: Readonly<Vector2>, source: string): boolean {
+    if (!this.health.alive) return this.rejectRoll('depleted');
+    if (this.state?.current !== 'playing')
+      return this.rejectRoll('state-gated');
+    if (!this.movement.grounded) return this.rejectRoll('airborne');
+    if (this.getCharacterActionState().busy)
+      return this.rejectRoll('action-locked');
+    const direction = this.cameraRelativeDirection(move);
+    const directionSource =
+      direction.lengthSq() > 1e-6 ? 'movement-intent' : 'facing-fallback';
+    if (directionSource === 'facing-fallback') {
+      direction.set(
+        Math.sin(this.movement.facingYaw),
+        0,
+        Math.cos(this.movement.facingYaw),
+      );
+    } else direction.normalize();
+    if (!this.admitCharacterAction('roll', source)) {
+      return this.rejectRoll(
+        this.getCharacterActionState().lastRejection ?? 'animation-unavailable',
+      );
+    }
+    this.movement.haltHorizontalMovement();
+    this.activeRoll = {
+      direction,
+      source: directionSource,
+      elapsed: 0,
+      requestedDistance: 0,
+      actualDistance: 0,
+      blocked: false,
+      blockedBy: undefined,
+    };
+    this.lastRoll = this.activeRoll;
+    this.lastRollRejection = undefined;
+    return true;
+  }
+
+  private advanceRoll(delta: number): void {
+    const roll = this.activeRoll;
+    if (!roll || delta <= 0) return;
+    const before = Math.min(
+      1,
+      roll.elapsed / playerRollConfig.movementDuration,
+    );
+    roll.elapsed = Math.min(
+      playerRollConfig.movementDuration,
+      roll.elapsed + delta,
+    );
+    const after = Math.min(1, roll.elapsed / playerRollConfig.movementDuration);
+    const requested =
+      playerRollConfig.distance * (smoothstep(after) - smoothstep(before));
+    const result = this.movement.moveKinematicGrounded(
+      roll.direction,
+      requested,
+    );
+    roll.requestedDistance += requested;
+    roll.actualDistance += result.actualDistance;
+    if (result.blocked || !result.grounded) {
+      roll.blocked = true;
+      roll.blockedBy = result.grounded
+        ? result.blockedColliderIds[0]
+        : 'left-ground';
+    }
+  }
+
+  private finishRoll(): void {
+    if (this.activeRoll) this.lastRoll = this.activeRoll;
+    this.activeRoll = undefined;
+  }
+
+  private rejectRoll(reason: string): false {
+    this.lastRollRejection = reason;
+    return false;
+  }
+
+  private cameraRelativeDirection(move: Readonly<Vector2>): Vector3 {
+    const yaw = this.cameraYaw();
+    return new Vector3(
+      Math.cos(yaw) * move.x - Math.sin(yaw) * move.y,
+      0,
+      -Math.sin(yaw) * move.x - Math.cos(yaw) * move.y,
+    );
+  }
+
+  private updateEquipmentInput(acceptsInput: boolean, delta: number): void {
+    const input = this.input;
+    this.fireCooldownRemaining = Math.max(
+      0,
+      this.fireCooldownRemaining - delta,
+    );
+    if (!acceptsInput || !input) {
+      this.fireHolding = false;
+      return;
+    }
+    if (input.wasPressed('reloadEquipment')) {
+      this.reloadEquippedItem('keyboard:reload');
+    }
+    const useDown = input.isDown('useEquipment');
+    if (input.wasReleased('useEquipment') || !useDown) {
+      this.fireHolding = false;
+    }
+    if (input.wasPressed('useEquipment')) {
+      const handgun = this.equipment.equipped?.id === 'handgun';
+      const accepted = this.useEquippedItem('keyboard:equipment');
+      this.fireHolding = handgun && accepted && useDown;
+      if (accepted && handgun) {
+        this.fireCooldownRemaining =
+          this.equipment.equipped?.ammunition?.repeatCadenceSeconds ?? 0;
+      }
+      return;
+    }
+    if (
+      this.fireHolding &&
+      useDown &&
+      this.equipment.equipped?.id === 'handgun' &&
+      this.fireCooldownRemaining <= 0 &&
+      !this.getCharacterActionState().busy
+    ) {
+      const accepted = this.useEquippedItem('held:equipment');
+      if (accepted) {
+        this.fireCooldownRemaining =
+          this.equipment.equipped.ammunition?.repeatCadenceSeconds ?? 0;
+      } else if (this.equipment.getSnapshot().lastRejection === 'empty') {
+        this.fireHolding = false;
+      }
+    }
+  }
+
+  private cancelTransientActions(reason: string): void {
+    this.fireHolding = false;
+    this.fireCooldownRemaining = 0;
+    this.lastFireRejection = reason;
+  }
+
+  private rollSnapshot(): RollDebugSnapshot {
+    const roll = this.activeRoll ?? this.lastRoll;
+    return {
+      active: Boolean(this.activeRoll),
+      direction: roll
+        ? { x: roll.direction.x, z: roll.direction.z }
+        : undefined,
+      source: roll?.source,
+      requestedDistance: roll?.requestedDistance ?? 0,
+      actualDistance: roll?.actualDistance ?? 0,
+      blocked: roll?.blocked ?? false,
+      blockedBy: roll?.blockedBy,
+      latestRejection: this.lastRollRejection,
+    };
+  }
+
+  private fireSnapshot(): FireDebugSnapshot {
+    return {
+      holding: this.fireHolding,
+      cadenceSeconds: this.equipment.equipped?.ammunition?.repeatCadenceSeconds,
+      cooldownRemaining: this.fireCooldownRemaining,
+      acceptedShotCount: this.acceptedShotCount,
+      reloadCount: this.reloadCount,
+      latestRejection: this.lastFireRejection,
+    };
+  }
+}
+
+export function smoothstep(value: number): number {
+  const clamped = Math.max(0, Math.min(1, value));
+  return clamped * clamped * (3 - 2 * clamped);
 }
