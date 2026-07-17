@@ -9,6 +9,7 @@ export const standardVisualHelpers = {
   interactionRanges: 'Interaction ranges',
   navigation: 'Navigation / movement',
   characterAlignment: 'Character grounding / alignment',
+  combatVolumes: 'Combat engagement / hit volumes',
 } as const;
 
 export type StandardVisualHelper = keyof typeof standardVisualHelpers;

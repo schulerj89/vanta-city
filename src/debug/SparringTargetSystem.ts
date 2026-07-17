@@ -1,10 +1,10 @@
 import {
   AnimationMixer,
-  BoxGeometry,
   BufferGeometry,
   CylinderGeometry,
   DoubleSide,
   Group,
+  ExtrudeGeometry,
   Line,
   LineBasicMaterial,
   LineSegments,
@@ -13,6 +13,8 @@ import {
   Mesh,
   MeshBasicMaterial,
   RingGeometry,
+  SphereGeometry,
+  Shape,
   Vector3,
 } from 'three';
 import type { AnimationAction } from 'three';
@@ -35,9 +37,15 @@ import type { FrameTime } from '../core/time';
 import type { GameObject } from '../entities/GameObject';
 import type { GameObjectWorld } from '../entities/GameObjectWorld';
 import type { PlayerActionEvents } from '../player/PlayerControllerSystem';
-import type { WorldPose, WorldPoseSource } from '../world/Spatial';
+import type {
+  WorldPose,
+  WorldPoseSource,
+  WorldPosition,
+} from '../world/Spatial';
 import type { LevelDefinition } from '../world/LevelDefinition';
 import type { EventBus } from '../core/events';
+import { HealthComponent } from '../health/Health';
+import type { HealthSnapshot } from '../health/Health';
 import { CharacterAnimationStateMachine } from '../characters/CharacterAnimationStateMachine';
 import type { CharacterAnimationGraphState } from '../characters/CharacterAnimationStateMachine';
 import {
@@ -103,6 +111,7 @@ export interface SparringTargetSnapshot {
   readonly verticalContact: boolean;
   readonly horizontalSeparation: number;
   readonly combinedRadius: number;
+  readonly horizontalGap: number;
   readonly verticalOverlap: number;
   readonly rejectionReason: ActionTargetEvaluation['rejectionReason'];
   readonly eligible: boolean;
@@ -110,6 +119,17 @@ export interface SparringTargetSnapshot {
   readonly attackStart: ActionTargetEvaluation['attackStart'];
   readonly attackEnd: ActionTargetEvaluation['attackEnd'];
   readonly closestContact: ActionTargetEvaluation['closestContact'];
+  readonly latestDecision:
+    | {
+        readonly action: 'punchLeft' | 'punchRight' | 'kickLeft' | 'kickRight';
+        readonly sequence: number;
+        readonly accepted: boolean;
+        readonly reason: SparringTargetSnapshot['lastIgnoredReason'];
+        readonly horizontalGap: number;
+        readonly verticalOverlap: number;
+        readonly facingDot: number;
+      }
+    | undefined;
   readonly engagement: {
     readonly engaged: boolean;
     readonly distance: number;
@@ -127,6 +147,7 @@ export interface SparringTargetSnapshot {
   readonly visualizationVisible: boolean;
   readonly groundedMinY: number | undefined;
   readonly height: number | undefined;
+  readonly health: HealthSnapshot | undefined;
 }
 
 export class SparringTargetSystem implements GameSystem {
@@ -134,7 +155,7 @@ export class SparringTargetSystem implements GameSystem {
   public readonly updateMode = 'always' as const;
 
   private entity: SparringTargetEntity | undefined;
-  private unsubscribePlayer: (() => void) | undefined;
+  private unsubscribePlayer: (() => void)[] = [];
   private ignoredSequence = 0;
   private lastIgnoredReason: SparringTargetSnapshot['lastIgnoredReason'];
   private lastEvaluation: ActionTargetEvaluation | undefined;
@@ -142,11 +163,13 @@ export class SparringTargetSystem implements GameSystem {
     'punchLeft';
   private cameraFocus: SparringCameraFocusHandle | undefined;
   private visualization: SparringEligibilityVisualization | undefined;
+  private visualizationRequested = false;
   private feedback: SparringTargetSnapshot['feedback'] = 'inactive';
   private feedbackSequence = 0;
   private impactSequence = 0;
   private lastImpactNormalizedTime: number | undefined;
   private feedbackRemaining = 0;
+  private latestDecision: SparringTargetSnapshot['latestDecision'];
 
   public constructor(
     private readonly loader: SparringCharacterLoader,
@@ -178,11 +201,19 @@ export class SparringTargetSystem implements GameSystem {
     this.entity = entity;
     this.objects.add(entity);
     this.visualization = new SparringEligibilityVisualization();
+    this.visualization.setVisible(this.visualizationRequested);
     this.objects.add(this.visualization);
-    this.unsubscribePlayer = this.player.events.on(
-      'character-action:impact',
-      (impact) => this.respond(impact),
-    );
+    this.unsubscribePlayer = [
+      this.player.events.on('character-action:started', (action) =>
+        this.onActionStarted(action),
+      ),
+      this.player.events.on('character-action:impact', (impact) =>
+        this.respond(impact),
+      ),
+      this.player.events.on('character-action:completed', ({ action }) => {
+        if (isStrikeAction(action)) this.releaseCameraFocus();
+      }),
+    ];
   }
 
   public update(time: FrameTime): void {
@@ -221,6 +252,7 @@ export class SparringTargetSystem implements GameSystem {
     this.feedbackSequence = 0;
     this.impactSequence = 0;
     this.lastImpactNormalizedTime = undefined;
+    this.latestDecision = undefined;
     this.feedback = this.entity?.enabled ? 'ready' : 'inactive';
     this.feedbackRemaining = 0;
     this.entity?.reset();
@@ -263,6 +295,7 @@ export class SparringTargetSystem implements GameSystem {
       verticalContact: evaluation?.verticalContact ?? false,
       horizontalSeparation: evaluation?.horizontalSeparation ?? Infinity,
       combinedRadius: evaluation?.combinedRadius ?? 0,
+      horizontalGap: evaluation?.horizontalGap ?? Infinity,
       verticalOverlap: evaluation?.verticalOverlap ?? 0,
       rejectionReason: evaluation?.rejectionReason,
       eligible: evaluation?.eligible ?? false,
@@ -270,6 +303,7 @@ export class SparringTargetSystem implements GameSystem {
       attackStart: evaluation?.attackStart ?? { x: 0, y: 0, z: 0 },
       attackEnd: evaluation?.attackEnd ?? { x: 0, y: 0, z: 0 },
       closestContact: evaluation?.closestContact ?? { x: 0, y: 0, z: 0 },
+      latestDecision: this.latestDecision,
       engagement: {
         ...engagement,
         cameraRequested: this.cameraFocus !== undefined,
@@ -282,13 +316,39 @@ export class SparringTargetSystem implements GameSystem {
       visualizationVisible: this.visualization?.object3d.visible ?? false,
       groundedMinY: presentation?.groundedMinY,
       height: presentation?.height,
+      health: entity?.health.getSnapshot(),
     };
+  }
+
+  public getHealth(): HealthComponent | undefined {
+    return this.entity?.health;
+  }
+
+  public getHealthAnchor(): WorldPosition | undefined {
+    const entity = this.entity;
+    if (!entity?.enabled) return undefined;
+    const pose = entity.getWorldPose();
+    return {
+      x: pose.position.x,
+      y: pose.position.y + (entity.getSnapshot().height ?? 1.8) + 0.18,
+      z: pose.position.z,
+    };
+  }
+
+  public setVisualizationVisible(visible: boolean): void {
+    this.visualizationRequested = visible;
+    this.visualization?.setVisible(visible);
+  }
+
+  public teleport(position: WorldPosition, yaw?: number): void {
+    this.entity?.teleport(position, yaw);
+    this.releaseCameraFocus();
   }
 
   public dispose(): void {
     this.releaseCameraFocus();
-    this.unsubscribePlayer?.();
-    this.unsubscribePlayer = undefined;
+    for (const unsubscribe of this.unsubscribePlayer) unsubscribe();
+    this.unsubscribePlayer = [];
     if (this.visualization) this.objects.remove(this.visualization.id);
     this.visualization = undefined;
     if (this.entity) this.objects.remove(this.entity.id);
@@ -301,30 +361,81 @@ export class SparringTargetSystem implements GameSystem {
     this.lastImpactNormalizedTime = impact.normalizedTime;
     this.lastStrike = impact.action;
     if (this.options.gameplayAvailable?.() === false) {
+      this.recordDecision(impact, false, 'game-state');
       this.ignore('game-state');
       return;
     }
     if (!this.entity.enabled) {
+      this.recordDecision(impact, false, 'disabled');
       this.ignore('disabled');
       return;
     }
     const playerPose = this.player.getWorldPose();
     if (!playerPose) {
+      this.recordDecision(impact, false, 'out-of-range');
       this.ignore('out-of-range');
       return;
     }
     const evaluation = this.evaluate(playerPose, impact.action);
     this.lastEvaluation = evaluation;
     if (!evaluation.eligible) {
+      this.recordDecision(
+        impact,
+        false,
+        evaluation.rejectionReason ?? 'out-of-range',
+        evaluation,
+      );
       this.ignore(evaluation.rejectionReason ?? 'out-of-range');
       return;
     }
     if (!this.entity.receiveActionImpact(impact)) {
+      this.recordDecision(impact, false, 'target-busy', evaluation);
       this.ignore('target-busy');
       return;
     }
+    this.entity.health.damage(
+      sparringTargetConfig.damage[evaluation.actionKind],
+      `sparring:${impact.action}`,
+    );
+    this.recordDecision(impact, true, undefined, evaluation);
     this.lastIgnoredReason = undefined;
     this.setFeedback('accepted');
+  }
+
+  private onActionStarted(
+    action: PlayerActionEvents['character-action:started'],
+  ): void {
+    if (!isStrikeAction(action.action) || this.cameraFocus) return;
+    const playerPose = this.player.getWorldPose();
+    const targetPose = this.entity?.getWorldPose();
+    const engagement = this.evaluateEngagement(
+      playerPose,
+      targetPose,
+      this.entity?.enabled ?? false,
+    );
+    if (!engagement.engaged) return;
+    this.cameraFocus = this.options.camera?.requestGameplayFocus({
+      owner: this.id,
+      maxDistance: sparringTargetConfig.focusedCameraDistance,
+    });
+  }
+
+  private recordDecision(
+    impact: CharacterActionImpact,
+    accepted: boolean,
+    reason: SparringTargetSnapshot['lastIgnoredReason'],
+    evaluation = this.lastEvaluation,
+  ): void {
+    if (!isStrikeAction(impact.action)) return;
+    this.latestDecision = {
+      action: impact.action,
+      sequence: impact.sequence,
+      accepted,
+      reason,
+      horizontalGap: evaluation?.horizontalGap ?? Infinity,
+      verticalOverlap: evaluation?.verticalOverlap ?? 0,
+      facingDot: evaluation?.facingDot ?? -1,
+    };
   }
 
   private evaluate(
@@ -388,12 +499,7 @@ export class SparringTargetSystem implements GameSystem {
       targetPose,
       this.entity?.enabled ?? false,
     );
-    if (engagement.engaged && !this.cameraFocus) {
-      this.cameraFocus = this.options.camera?.requestGameplayFocus({
-        owner: this.id,
-        maxDistance: sparringTargetConfig.focusedCameraDistance,
-      });
-    } else if (!engagement.engaged) {
+    if (!engagement.engaged) {
       this.releaseCameraFocus();
     }
   }
@@ -434,6 +540,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   public readonly id = 'debug.sparring-target';
   public readonly object3d = new Group();
   public enabled = false;
+  public readonly health = new HealthComponent('debug.sparring-target', 100);
 
   private readonly visualRoot = new Group();
   private loaded: LoadedCharacter | undefined;
@@ -528,6 +635,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   public reset(): void {
     this.responseSequence = 0;
     this.lastAction = undefined;
+    this.health.reset('sparring:reset');
     this.playIdle();
   }
 
@@ -544,6 +652,11 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
         z: Math.cos(this.object3d.rotation.y),
       },
     };
+  }
+
+  public teleport(position: WorldPosition, yaw?: number): void {
+    this.object3d.position.set(position.x, position.y, position.z);
+    if (yaw !== undefined) this.object3d.rotation.y = yaw;
   }
 
   public getSnapshot(): SparringPresentationSnapshot {
@@ -572,6 +685,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     this.loaded = undefined;
     this.clips.clear();
     this.animationGraph.reset();
+    this.health.dispose();
     this.activeReaction = undefined;
     this.visualRoot.clear();
     this.object3d.clear();
@@ -657,12 +771,21 @@ class SparringEligibilityVisualization implements GameObject {
     this.rangeMaterial,
   );
   private readonly attackVolume = new Mesh(
-    new BoxGeometry(1, 1, 1),
+    createStrikeVolumeGeometry('punch'),
     new MeshBasicMaterial({
       color: 0x35c8ff,
       transparent: true,
       opacity: 0.12,
       wireframe: true,
+      depthTest: false,
+    }),
+  );
+  private readonly impactMarker = new Mesh(
+    new SphereGeometry(0.08, 12, 8),
+    new MeshBasicMaterial({
+      color: 0xff9f43,
+      transparent: true,
+      opacity: 0.95,
       depthTest: false,
     }),
   );
@@ -695,6 +818,9 @@ class SparringEligibilityVisualization implements GameObject {
     new BufferGeometry(),
     this.statusMaterial,
   );
+  private requestedVisible = false;
+  private targetEnabled = false;
+  private attackKind: ActionTargetEvaluation['actionKind'] = 'punch';
 
   public constructor() {
     this.object3d.name = 'Debug sparring eligibility visualization';
@@ -714,7 +840,13 @@ class SparringEligibilityVisualization implements GameObject {
       this.targetRing,
       this.facingLines,
       this.targetLine,
+      this.impactMarker,
     );
+  }
+
+  public setVisible(visible: boolean): void {
+    this.requestedVisible = visible;
+    this.object3d.visible = visible && this.targetEnabled;
   }
 
   public sync(
@@ -724,19 +856,26 @@ class SparringEligibilityVisualization implements GameObject {
     enabled: boolean,
     feedback: SparringTargetSnapshot['feedback'],
   ): void {
-    this.object3d.visible = enabled;
+    this.targetEnabled = enabled;
+    this.object3d.visible = enabled && this.requestedVisible;
     if (!enabled) return;
     const actorY = actor.position.y + 0.04;
     const targetY = target.position.y + 0.04;
     this.engagementRing.position.set(
-      actor.position.x,
-      actorY,
-      actor.position.z,
+      target.position.x,
+      targetY,
+      target.position.z,
     );
     this.facingLines.position.set(actor.position.x, actorY, actor.position.z);
     this.facingLines.rotation.y = Math.atan2(actor.forward.x, actor.forward.z);
     this.targetRing.position.set(target.position.x, targetY, target.position.z);
-    const attack = sparringTargetConfig.volumes[evaluation.actionKind];
+    if (this.attackKind !== evaluation.actionKind) {
+      this.attackVolume.geometry.dispose();
+      this.attackVolume.geometry = createStrikeVolumeGeometry(
+        evaluation.actionKind,
+      );
+      this.attackKind = evaluation.actionKind;
+    }
     const start = evaluation.attackStart;
     const end = evaluation.attackEnd;
     this.attackVolume.position.set(
@@ -745,11 +884,6 @@ class SparringEligibilityVisualization implements GameObject {
       (start.z + end.z) / 2,
     );
     this.attackVolume.rotation.y = Math.atan2(actor.forward.x, actor.forward.z);
-    this.attackVolume.scale.set(
-      attack.radius * 2,
-      evaluation.attackMaximumY - evaluation.attackMinimumY,
-      attack.horizontalReach + attack.radius * 2,
-    );
     this.hurtVolume.position.set(
       target.position.x,
       target.position.y + sparringTargetConfig.volumes.hurt.height / 2,
@@ -759,6 +893,11 @@ class SparringEligibilityVisualization implements GameObject {
       new Vector3(actor.position.x, actorY, actor.position.z),
       new Vector3(target.position.x, targetY, target.position.z),
     ]);
+    this.impactMarker.position.set(
+      evaluation.closestContact.x,
+      evaluation.closestContact.y + evaluation.verticalOverlap / 2,
+      evaluation.closestContact.z,
+    );
     const color =
       feedback === 'accepted'
         ? 0xffd447
@@ -769,6 +908,7 @@ class SparringEligibilityVisualization implements GameObject {
             : 0xff9f43;
     this.statusMaterial.color.setHex(color);
     this.targetMaterial.color.setHex(color);
+    this.impactMarker.material.color.setHex(color);
   }
 
   public dispose(): void {
@@ -778,11 +918,13 @@ class SparringEligibilityVisualization implements GameObject {
     this.targetRing.geometry.dispose();
     this.facingLines.geometry.dispose();
     this.targetLine.geometry.dispose();
+    this.impactMarker.geometry.dispose();
     this.rangeMaterial.dispose();
     this.statusMaterial.dispose();
     this.targetMaterial.dispose();
     this.attackVolume.material.dispose();
     this.hurtVolume.material.dispose();
+    this.impactMarker.material.dispose();
     this.object3d.clear();
   }
 }
@@ -796,4 +938,28 @@ function createFacingGeometry(): BufferGeometry {
     new Vector3(0, 0.01, 0),
     new Vector3(Math.sin(angle) * distance, 0.01, Math.cos(angle) * distance),
   ]);
+}
+
+/** Exact extrusion of the authoritative horizontal swept circle and Y range. */
+function createStrikeVolumeGeometry(
+  kind: ActionTargetEvaluation['actionKind'],
+): ExtrudeGeometry {
+  const strike = sparringTargetConfig.volumes[kind];
+  const radius = strike.radius;
+  const halfReach = strike.horizontalReach / 2;
+  const shape = new Shape();
+  shape.moveTo(-radius, -halfReach);
+  shape.lineTo(-radius, halfReach);
+  shape.absarc(0, halfReach, radius, Math.PI, 0, true);
+  shape.lineTo(radius, -halfReach);
+  shape.absarc(0, -halfReach, radius, 0, Math.PI, true);
+  const height = strike.maximumY - strike.minimumY;
+  const geometry = new ExtrudeGeometry(shape, {
+    depth: height,
+    bevelEnabled: false,
+    curveSegments: 16,
+  });
+  geometry.translate(0, 0, -height / 2);
+  geometry.rotateX(Math.PI / 2);
+  return geometry;
 }

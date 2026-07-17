@@ -26,6 +26,7 @@ import type { InputOwnershipInspector } from './InputOwnershipInspector';
 import type { VirtualGamepadFixture } from '../input/GamepadInput';
 import type { DiagnosticRecorder } from './DiagnosticRecorder';
 import type { DiagnosticTraceSummary } from './DiagnosticTrace';
+import type { HealthHudSystem } from '../ui/HealthHudSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -104,6 +105,7 @@ export interface BrowserTestSnapshot {
     >[];
   };
   readonly sparringTarget: ReturnType<SparringTargetSystem['getSnapshot']>;
+  readonly healthHud: ReturnType<HealthHudSystem['getSnapshot']>;
   readonly conversation: {
     readonly npcId: string | undefined;
     readonly conversationId: string | undefined;
@@ -154,6 +156,7 @@ export interface BrowserTestBridgeDependencies {
   readonly npcs: NpcSystem;
   readonly npcDefinitions: typeof npcDefinitions;
   readonly sparringTarget: SparringTargetSystem;
+  readonly healthHud: HealthHudSystem;
   readonly conversations: ConversationCoordinator;
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
@@ -293,6 +296,7 @@ function createSnapshot(
       }),
     },
     sparringTarget: dependencies.sparringTarget.getSnapshot(),
+    healthHud: dependencies.healthHud.getSnapshot(),
     conversation: {
       npcId: dependencies.conversations.active?.npcId,
       conversationId: dependencies.conversations.active?.definition.id,

@@ -45,6 +45,7 @@ import { CharacterPickerSystem } from './ui/CharacterPickerSystem';
 import { LazyHelpOverlaySystem } from './ui/LazyHelpOverlaySystem';
 import type { HelpOverlayController } from './ui/LazyHelpOverlaySystem';
 import { LoadingScreen } from './ui/LoadingScreen';
+import { HealthHudSystem } from './ui/HealthHudSystem';
 import type { SparringTargetSystem } from './debug/SparringTargetSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
@@ -267,6 +268,23 @@ async function bootstrap(): Promise<void> {
       },
     );
   }
+  const healthHud = new HealthHudSystem(
+    mount,
+    player.health,
+    sparringTarget ?? {
+      getHealth: () => undefined,
+      getHealthAnchor: () => undefined,
+    },
+    render.camera,
+    collision,
+  );
+  const unregisterCombatVolumes =
+    development && sparringTarget
+      ? development.visualHelpers.register('combatVolumes', {
+          setVisible: (visible) =>
+            sparringTarget?.setVisualizationVisible(visible),
+        })
+      : undefined;
   let dialogueCamera:
     ReturnType<ThirdPersonCameraSystem['requestConversation']> | undefined;
   const dialogue = new DialogueSessionController(input, conversations, {
@@ -416,6 +434,7 @@ async function bootstrap(): Promise<void> {
   if (sparringTarget) runtime.register(sparringTarget);
   runtime
     .register(camera)
+    .register(healthHud)
     .register(interactions)
     .register(conversations)
     .register(npcs);
@@ -470,6 +489,7 @@ async function bootstrap(): Promise<void> {
           npcs,
           npcDefinitions,
           sparringTarget,
+          healthHud,
           conversations,
           characterSelection,
           characterVisual,
@@ -493,6 +513,7 @@ async function bootstrap(): Promise<void> {
     unsubscribeAccessibility();
     disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
+    unregisterCombatVolumes?.();
     for (const unregister of performanceUnregister) unregister();
     worldEvents.clear();
     loading.dispose();
@@ -613,6 +634,15 @@ function registerVerticalSliceDebug(
       label: 'Run mode',
       group: sections.player,
       read: () => player.getDebugSnapshot().runMode,
+    }),
+    debug.registerValue({
+      id: 'player.health',
+      label: 'Player health',
+      group: sections.player,
+      read: () => {
+        const health = player.health.getSnapshot();
+        return `${health.current}/${health.maximum} · ${health.alive ? 'alive' : 'depleted'} · ${(health.normalized * 100).toFixed(0)}%`;
+      },
     }),
     debug.registerValue({
       id: 'controls.bindings',
@@ -766,7 +796,18 @@ function registerVerticalSliceDebug(
       group: sections.interactions,
       read: () => {
         const target = sparringTarget.getSnapshot();
-        return `${target.distance.toFixed(2)}m · sweep ${target.horizontalSeparation.toFixed(2)}/${target.combinedRadius.toFixed(2)}m · vertical ${target.verticalOverlap.toFixed(2)}m · ${target.facingDot.toFixed(2)} facing · ${target.eligible ? 'contact' : (target.rejectionReason ?? 'blocked')}`;
+        return `${target.distance.toFixed(2)}m · gap ${target.horizontalGap.toFixed(2)}m · vertical ${target.verticalOverlap.toFixed(2)}m · facing ${target.facingDot.toFixed(2)} · ${target.eligible ? 'contact' : (target.rejectionReason ?? 'blocked')}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'sparring-target.health',
+      label: 'Sparring target · health',
+      group: sections.characters,
+      read: () => {
+        const health = sparringTarget.getSnapshot().health;
+        return health
+          ? `${health.current}/${health.maximum} · ${health.alive ? 'alive' : 'depleted'} · changes ${health.changeSequence}`
+          : 'pending';
       },
     }),
     debug.registerValue({
@@ -810,6 +851,68 @@ function registerVerticalSliceDebug(
       label: 'Reset debug sparring target',
       group: sections.actions,
       run: () => sparringTarget.reset(),
+    }),
+    debug.registerCommand({
+      id: 'sparring-target.teleport-position',
+      label: 'Teleport sparring target',
+      group: sections.actions,
+      argumentLabel: 'x,y,z,yaw',
+      run: (value) => {
+        const [rawX = '', rawY = '', rawZ = '', rawYaw] = (value ?? '').split(
+          ',',
+        );
+        const x = Number(rawX);
+        const y = Number(rawY);
+        const z = Number(rawZ);
+        const yaw = Number(rawYaw);
+        if (![x, y, z].every(Number.isFinite)) {
+          throw new Error('Expected x,y,z and optional yaw');
+        }
+        sparringTarget.teleport(
+          { x, y, z },
+          Number.isFinite(yaw) ? yaw : undefined,
+        );
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.health-damage',
+      label: 'Damage player health (10)',
+      group: sections.actions,
+      run: () => {
+        player.health.damage(10, 'debug-command');
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.health-heal',
+      label: 'Heal player health (10)',
+      group: sections.actions,
+      run: () => {
+        player.health.heal(10, 'debug-command');
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.health-reset',
+      label: 'Reset player health',
+      group: sections.actions,
+      run: () => {
+        player.health.reset('debug-command');
+      },
+    }),
+    debug.registerCommand({
+      id: 'sparring-target.health-damage',
+      label: 'Damage sparring target health (10)',
+      group: sections.actions,
+      run: () => {
+        sparringTarget.getHealth()?.damage(10, 'debug-command');
+      },
+    }),
+    debug.registerCommand({
+      id: 'sparring-target.health-heal',
+      label: 'Heal sparring target health (10)',
+      group: sections.actions,
+      run: () => {
+        sparringTarget.getHealth()?.heal(10, 'debug-command');
+      },
     }),
     debug.registerValue({
       id: 'player.character-scale',

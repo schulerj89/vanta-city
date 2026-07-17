@@ -94,6 +94,7 @@ export class GameRuntime {
 
   public resume(): void {
     if (this.state.current !== 'paused') return;
+    this.input.consumeTransientActions?.();
     this.state.transition('playing');
     this.clock.resetFrameDelta();
     this.systems.resume();

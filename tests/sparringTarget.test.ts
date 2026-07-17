@@ -83,13 +83,13 @@ describe('action target foundation', () => {
     expect(
       evaluateActionTarget(
         actor,
-        target(0, 0, 1.7),
+        target(0, 0, 0.9),
         'punchLeft',
         sparringTargetConfig.volumes,
         { enabled: true, targetBusy: false },
       ),
     ).toMatchObject({
-      distance: 1.7,
+      distance: 0.9,
       facingDot: 1,
       facing: true,
       horizontalContact: true,
@@ -97,10 +97,31 @@ describe('action target foundation', () => {
       eligible: true,
       rejectionReason: undefined,
     });
+    const punchMiss = evaluateActionTarget(
+      actor,
+      target(0, 0, 1),
+      'punchRight',
+      sparringTargetConfig.volumes,
+      { enabled: true, targetBusy: false },
+    );
+    expect(punchMiss).toMatchObject({
+      eligible: false,
+      rejectionReason: 'out-of-range',
+    });
+    expect(punchMiss.horizontalGap).toBeCloseTo(0.02);
+    const kickContact = evaluateActionTarget(
+      actor,
+      target(0, 0, 1.4),
+      'kickRight',
+      sparringTargetConfig.volumes,
+      { enabled: true, targetBusy: false },
+    );
+    expect(kickContact.eligible).toBe(true);
+    expect(kickContact.horizontalGap).toBeCloseTo(-0.04);
     expect(
       evaluateActionTarget(
         actor,
-        target(0, 4, 1.7),
+        target(0, 4, 0.9),
         'kickLeft',
         sparringTargetConfig.volumes,
         { enabled: true, targetBusy: false },
@@ -169,18 +190,37 @@ describe('action target foundation', () => {
     });
 
     system.setEnabled(true);
+    system.setVisualizationVisible(true);
     system.update({ delta: 0, elapsed: 0, frame: 0 });
     expect(system.getSnapshot()).toMatchObject({
       eligible: false,
       rejectionReason: 'out-of-range',
-      engagement: { engaged: true, cameraRequested: true },
+      engagement: { engaged: true, cameraRequested: false },
+    });
+    actor.events.emit('character-action:started', {
+      action: 'punchLeft',
+      source: 'keyboard',
+      sequence: 1,
     });
     expect(requestGameplayFocus).toHaveBeenCalledWith({
       owner: 'debug-sparring-target',
-      maxDistance: 4.1,
+      maxDistance: 4.25,
     });
+    actor.events.emit('character-action:completed', {
+      action: 'punchLeft',
+      source: 'keyboard',
+      sequence: 1,
+    });
+    expect(focusRelease).toHaveBeenCalledOnce();
+    expect(system.getSnapshot().engagement.cameraRequested).toBe(false);
+    actor.events.emit('character-action:started', {
+      action: 'punchLeft',
+      source: 'keyboard',
+      sequence: 2,
+    });
+    expect(requestGameplayFocus).toHaveBeenCalledTimes(2);
     actor.setPose({
-      position: { x: 3.5, y: 0.15, z: 13.5 },
+      position: { x: 3.5, y: 0.15, z: 12.7 },
       forward: { x: 0, y: 0, z: -1 },
     });
     actor.events.emit('character-action:impact', impact('punchLeft', 2));
@@ -193,6 +233,7 @@ describe('action target foundation', () => {
       animationGraph: { phase: 'reaction' },
       busy: true,
       responseSequence: 1,
+      health: { current: 92, changeSequence: 1 },
       lastAction: 'punchLeft',
       feedback: 'accepted',
       impactSequence: 2,
@@ -222,7 +263,7 @@ describe('action target foundation', () => {
       feedback: 'ignored-out-of-range',
     });
     actor.setPose({
-      position: { x: 3.5, y: 0.15, z: 13.5 },
+      position: { x: 3.5, y: 0.15, z: 12.7 },
       forward: { x: 0, y: 0, z: 1 },
     });
     actor.events.emit('character-action:impact', impact('kickRight', 5));
@@ -231,7 +272,7 @@ describe('action target foundation', () => {
       feedback: 'ignored-not-facing',
     });
     actor.setPose({
-      position: { x: 3.5, y: 4, z: 13.5 },
+      position: { x: 3.5, y: 4, z: 12.7 },
       forward: { x: 0, y: 0, z: -1 },
     });
     actor.events.emit('character-action:impact', impact('punchRight', 6));
@@ -247,7 +288,7 @@ describe('action target foundation', () => {
       gameplayAvailable: false,
       cameraRequested: false,
     });
-    expect(focusRelease).toHaveBeenCalledOnce();
+    expect(focusRelease).toHaveBeenCalledTimes(2);
     actor.events.emit('character-action:impact', impact('kickLeft', 7));
     expect(system.getSnapshot().lastIgnoredReason).toBe('game-state');
 

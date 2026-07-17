@@ -85,7 +85,7 @@ Standard helper categories are `collision`, `triggers`, `entityIds`, `spawnPoint
 
 The default development actions pause/resume, reload the current level, and toggle a helper by name. A mechanic may register `player.reset` or `player.teleport` through the same command API once it has a public reset or named-spawn operation. The foundation sandbox demonstrates both without coupling the panel to a player implementation.
 
-The debug district additionally registers **Activate debug sparring target** and **Reset debug sparring target** under `Commands / Actions`. Passive character, range/facing, response-count, and grounding diagnostics remain in their owning sections. Browser tests can drive the same generic registry toggle through the development-only bridge; the target owns no window listener or separate debug UI.
+The debug district additionally registers **Activate debug sparring target**, reset/teleport, and player/target health validation commands under `Commands / Actions`. The shared **Combat engagement / hit volumes** helper renders the exact engagement, strike, hurt, facing, and contact-decision math. Passive character, health, signed-gap/facing, response-count, camera-focus, and grounding diagnostics remain in their owning sections. Browser tests can drive the same generic registry through the development-only bridge; the target owns no window listener or separate debug UI.
 
 ## Diagnostic recorder
 

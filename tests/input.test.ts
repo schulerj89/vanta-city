@@ -19,6 +19,20 @@ describe('InputSystem', () => {
     input.dispose();
   });
 
+  it('discards paused transient edges without dropping held state', () => {
+    const input = new InputSystem({ punch: ['KeyJ'] });
+    input.init();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyJ' }));
+    expect(input.wasPressed('punch')).toBe(true);
+
+    input.consumeTransientActions();
+
+    expect(input.wasPressed('punch')).toBe(false);
+    expect(input.isDown('punch')).toBe(true);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyJ' }));
+    input.dispose();
+  });
+
   it('rejects unknown action names', () => {
     const input = new InputSystem({ interact: ['KeyE'] });
     expect(() => input.isDown('missing')).toThrow('Unknown input action');

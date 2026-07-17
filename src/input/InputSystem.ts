@@ -14,6 +14,8 @@ export type ActionBindings<Binding = string> = Readonly<
 
 export interface InputReader {
   prepareFrame?(): void;
+  /** Drops UI-owned pressed/released edges before simulation resumes. */
+  consumeTransientActions?(): void;
   isDown(action: ActionName): boolean;
   wasPressed(action: ActionName): boolean;
   wasReleased(action: ActionName): boolean;
@@ -285,6 +287,12 @@ export class InputSystem
     this.releasedCodes.clear();
     this.gamepad.lateUpdate();
     this.framePrepared = false;
+  }
+
+  public consumeTransientActions(): void {
+    this.pressedCodes.clear();
+    this.releasedCodes.clear();
+    this.gamepad.lateUpdate();
   }
 
   public dispose(): void {

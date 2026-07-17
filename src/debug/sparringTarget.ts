@@ -21,25 +21,28 @@ export const sparringTargetCharacterDefinition = {
 
 export const sparringTargetConfig = {
   spawnId: 'spawn.debug-sparring-target',
-  engagementDistance: 3.2,
+  engagementDistance: 3,
   engagementMinimumFacingDot: 0.2,
-  focusedCameraDistance: 4.1,
+  focusedCameraDistance: 4.25,
+  damage: { punch: 8, kick: 12 },
   volumes: {
     punch: {
-      forwardOffset: 0.25,
-      horizontalReach: 1.25,
-      radius: 0.18,
-      minimumY: 0.65,
-      maximumY: 1.6,
+      // Authored impact wrists are 0.41–0.44m forward; radius includes fist.
+      forwardOffset: 0.18,
+      horizontalReach: 0.38,
+      radius: 0.12,
+      minimumY: 1.15,
+      maximumY: 1.55,
     },
     kick: {
-      forwardOffset: 0.2,
-      horizontalReach: 1.35,
-      radius: 0.22,
-      minimumY: 0.3,
-      maximumY: 1.35,
+      // Authored impact feet are 0.92–0.98m forward; radius includes shoe.
+      forwardOffset: 0.28,
+      horizontalReach: 0.72,
+      radius: 0.14,
+      minimumY: 0.45,
+      maximumY: 0.95,
     },
-    hurt: { radius: 0.38, height: 1.8 },
+    hurt: { radius: 0.3, height: 1.8 },
     minimumFacingDot: 0.65,
   },
 } as const;

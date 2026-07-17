@@ -43,6 +43,8 @@ export interface ActionTargetEvaluation {
   readonly closestContact: WorldPosition;
   readonly horizontalSeparation: number;
   readonly combinedRadius: number;
+  /** Positive for a miss, zero at tangency, negative for penetration. */
+  readonly horizontalGap: number;
   readonly horizontalContact: boolean;
   readonly attackMinimumY: number;
   readonly attackMaximumY: number;
@@ -120,7 +122,8 @@ export function evaluateActionTarget(
     target.position.z - closestZ,
   );
   const combinedRadius = attack.radius + contract.hurt.radius;
-  const horizontalContact = horizontalSeparation <= combinedRadius;
+  const horizontalGap = horizontalSeparation - combinedRadius;
+  const horizontalContact = horizontalGap <= 0;
   const attackMinimumY = actor.position.y + attack.minimumY;
   const attackMaximumY = actor.position.y + attack.maximumY;
   const targetMinimumY = target.position.y;
@@ -156,6 +159,7 @@ export function evaluateActionTarget(
     },
     horizontalSeparation,
     combinedRadius,
+    horizontalGap,
     horizontalContact,
     attackMinimumY,
     attackMaximumY,

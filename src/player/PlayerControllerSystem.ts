@@ -27,6 +27,7 @@ import type {
   CharacterActionName,
   CharacterActionRequestState,
 } from '../characters/CharacterActions';
+import { HealthComponent } from '../health/Health';
 
 const idleCharacterActionState: CharacterActionRequestState = {
   active: undefined,
@@ -50,6 +51,11 @@ const idleCharacterActionState: CharacterActionRequestState = {
 };
 
 export interface PlayerActionEvents {
+  'character-action:started': {
+    readonly action: CharacterActionName;
+    readonly source: string | undefined;
+    readonly sequence: number;
+  };
   'character-action:impact': {
     readonly action: CharacterActionName;
     readonly source: string | undefined;
@@ -91,6 +97,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   public readonly id = 'player-controller';
   public readonly movement: PlayerMovementSimulation;
   public readonly events = new EventBus<PlayerActionEvents>();
+  public readonly health = new HealthComponent('player', 100);
 
   private readonly spawnPosition: Vector3;
   private input: InputReader | undefined;
@@ -196,7 +203,17 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     action: CharacterActionName,
     source = 'player-controller',
   ): boolean {
-    return this.visual.triggerCharacterAction?.(action, source) ?? false;
+    const accepted =
+      this.visual.triggerCharacterAction?.(action, source) ?? false;
+    if (accepted) {
+      const state = this.getCharacterActionState();
+      this.events.emit('character-action:started', {
+        action,
+        source,
+        sequence: state.sequence,
+      });
+    }
+    return accepted;
   }
 
   public getCharacterActionState(): CharacterActionRequestState {
@@ -257,6 +274,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
 
   public reset(): void {
     this.teleport(this.spawnPosition, this.spawnFacingYaw);
+    this.health.reset('player:reset');
   }
 
   public dispose(): void {
@@ -267,6 +285,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     this.input = undefined;
     this.state = undefined;
     this.events.clear();
+    this.health.dispose();
   }
 
   private updatePresentationFacing(): void {
