@@ -89,7 +89,7 @@ test.describe('playable debug district', () => {
     expect(reloaded.runtimeErrors.count, reloaded.runtimeErrors.last).toBe(0);
   });
 
-  test('groups the developer menu, retains actions, isolates focused input, and fits narrow screens', async ({
+  test('keeps the developer menu compact, reachable, stable, and clear of gameplay UI', async ({
     page,
   }) => {
     const runtimeFailures = monitorRuntimeFailures(page);
@@ -109,9 +109,44 @@ test.describe('playable debug district', () => {
       'Runtime / State',
       'Commands / Actions',
     ];
-    await expect(panel.locator('.debug-section__heading')).toHaveText(
+    await expect(panel.locator('.debug-section__label')).toHaveText(
       expectedSections,
     );
+    const sections = panel.locator('.debug-section');
+    await expect(sections).toHaveCount(expectedSections.length);
+    expect(
+      await sections.evaluateAll((items) =>
+        items.every((item) => !(item as HTMLDetailsElement).open),
+      ),
+      'every dynamic section should start collapsed',
+    ).toBe(true);
+    await expect(
+      panel.locator('.debug-glance').getByText('State', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.locator('.debug-glance').getByText('Player', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.locator('.debug-glance').getByText('Camera', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.locator('.debug-glance').getByText('Errors', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.locator('[data-debug-summary-value="runtime.state"]'),
+    ).toHaveText('playing');
+    await expect(
+      panel.locator('[data-debug-summary-value="errors.count"]'),
+    ).toHaveText('0');
+
+    const desktopPanelBox = await panel.boundingBox();
+    const desktopHelpBox = await page
+      .getByRole('button', { name: 'Help' })
+      .boundingBox();
+    if (!desktopPanelBox || !desktopHelpBox)
+      throw new Error('Developer panel or Help button has no visible bounds');
+    expect(desktopPanelBox.height).toBeLessThan(520);
+    expect(rectanglesOverlap(desktopPanelBox, desktopHelpBox)).toBe(false);
     await expect(
       panel
         .locator('[data-debug-value="player.position"]')
@@ -127,6 +162,26 @@ test.describe('playable debug district', () => {
         .locator('[data-debug-value="interaction.selected"]')
         .locator('xpath=ancestor::details'),
     ).toHaveAttribute('data-debug-section', 'Interactions');
+
+    const playerSection = panel.locator(
+      '[data-debug-section="Player / Coordinates"]',
+    );
+    await playerSection.locator('summary').press('Enter');
+    await expect(playerSection).toHaveAttribute('open', '');
+    const initialSummaryPosition = await panel
+      .locator('[data-debug-summary-value="player.position"]')
+      .textContent();
+    await executeCommand(page, 'player.teleport', 'spawn.player-garage');
+    await expect(
+      panel.locator('[data-debug-summary-value="player.position"]'),
+    ).not.toHaveText(initialSummaryPosition ?? '');
+    await expect(playerSection).toHaveAttribute('open', '');
+
+    await page.keyboard.press('Backquote');
+    await expect(panel).toBeHidden();
+    await page.keyboard.press('Backquote');
+    await expect(panel).toBeVisible();
+    await expect(playerSection).toHaveAttribute('open', '');
 
     const actions = panel.locator('[data-debug-section="Commands / Actions"]');
     await actions.locator('summary').press('Enter');
@@ -192,6 +247,9 @@ test.describe('playable debug district', () => {
       ),
       'typing a bound gameplay key into a command field must not move the player',
     ).toBeLessThan(0.02);
+    await page.keyboard.press('Escape');
+    expect((await snapshot(page)).gameState).toBe('playing');
+    await expect(actions).toHaveAttribute('open', '');
     await teleportField.fill('spawn.player-default');
     await teleportField.press('Enter');
     await expect(actions).toHaveAttribute('open', '');
@@ -201,12 +259,86 @@ test.describe('playable debug district', () => {
     await actions.locator('summary').press('Enter');
     await expect(actions).toHaveAttribute('open', '');
 
+    await panel.getByRole('button', { name: 'Collapse all' }).click();
+    expect(
+      await sections.evaluateAll((items) =>
+        items.every((item) => !(item as HTMLDetailsElement).open),
+      ),
+    ).toBe(true);
+    await panel.getByRole('button', { name: 'Expand all' }).click();
+    expect(
+      await sections.evaluateAll((items) =>
+        items.every((item) => (item as HTMLDetailsElement).open),
+      ),
+    ).toBe(true);
+    await panel.getByRole('button', { name: 'Collapse all' }).click();
+
+    const cameraSection = panel.locator('[data-debug-section="Camera"]');
+    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await page.keyboard.down('w');
+    await cameraSection.locator('summary').focus();
+    await page.keyboard.up('w');
+    await page.keyboard.press('Enter');
+    await expect(cameraSection).toHaveAttribute('open', '');
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).controls.ownership.actions.keyboard.down,
+      )
+      .not.toContain('moveForward');
+
+    const canvasBox = await page.locator('canvas').boundingBox();
+    const cameraSummaryBox = await cameraSection
+      .locator('summary')
+      .boundingBox();
+    if (!canvasBox || !cameraSummaryBox)
+      throw new Error('Canvas or debug summary has no visible bounds');
+    await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(
+      cameraSummaryBox.x + cameraSummaryBox.width / 2,
+      cameraSummaryBox.y + cameraSummaryBox.height / 2,
+    );
+    await page.mouse.up();
+    await expect
+      .poll(
+        async () =>
+          (await snapshot(page)).controls.ownership.actions.mouse.down,
+      )
+      .not.toContain('cameraOrbit');
+
+    await page.getByRole('button', { name: 'Help' }).click();
+    await expect
+      .poll(async () => (await snapshot(page)).controls.help.open)
+      .toBe(true);
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('paused');
+    await expect(panel).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect
+      .poll(async () => (await snapshot(page)).controls.help.open)
+      .toBe(false);
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
+
     await page.setViewportSize({ width: 390, height: 844 });
+    await panel.getByRole('button', { name: 'Collapse all' }).click();
     const box = await panel.boundingBox();
     if (!box) throw new Error('Developer panel has no visible bounds');
-    expect(box.width).toBeCloseTo(390, 0);
-    expect(box.y + box.height).toBeCloseTo(844, 0);
-    expect(box.height).toBeLessThanOrEqual(844 * 0.52 + 1);
+    expect(box.width).toBeCloseTo(374, -1);
+    expect(box.height).toBeLessThanOrEqual(844 * 0.42 + 1);
+    const narrowHelpBox = await page
+      .getByRole('button', { name: 'Help' })
+      .boundingBox();
+    const healthBox = await page.locator('.health-hud__player').boundingBox();
+    const quickbarBox = await page.locator('.quickbar').boundingBox();
+    if (!narrowHelpBox || !healthBox || !quickbarBox)
+      throw new Error('A narrow-screen HUD control has no visible bounds');
+    expect(rectanglesOverlap(box, narrowHelpBox)).toBe(false);
+    expect(rectanglesOverlap(box, healthBox)).toBe(false);
+    expect(rectanglesOverlap(box, quickbarBox)).toBe(false);
     expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
   });
 
@@ -1571,6 +1703,28 @@ function horizontalSpeed(velocity: {
   readonly z: number;
 }): number {
   return Math.hypot(velocity.x, velocity.z);
+}
+
+function rectanglesOverlap(
+  first: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  },
+  second: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  },
+): boolean {
+  return !(
+    first.x + first.width <= second.x ||
+    second.x + second.width <= first.x ||
+    first.y + first.height <= second.y ||
+    second.y + second.height <= first.y
+  );
 }
 
 function cameraRelativeAxis(

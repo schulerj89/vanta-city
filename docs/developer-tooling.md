@@ -10,20 +10,44 @@ The panel consumes only `DebugRegistry` snapshots and callbacks. It does not ins
 
 ## Panel information architecture
 
-The panel uses one ordered taxonomy: **Player / Coordinates**, **Collision / Physics**, **Camera**, **World / Level / Spawns**, **Characters / Assets**, **Interactions**, **Dialogue / Conversation**, **Runtime / State**, and **Commands / Actions**. Use the exported `debugSections` names instead of inventing a parallel synonym such as `Movement`, `Diagnostics`, `Camera settings`, or one section per NPC. This ordering follows a debugging pass from the controlled player and physical world through presentation and interaction systems to global runtime state. Unknown custom group names remain supported and appear after the standard sections for compatibility.
+The panel uses one ordered taxonomy: **Player / Coordinates**, **Input / Ownership**, **Collision / Physics**, **Camera**, **World / Level / Spawns**, **Characters / Assets**, **Interactions**, **Dialogue / Conversation**, **Runtime / State**, and **Commands / Actions**. Use the exported `debugSections` names instead of inventing a parallel synonym such as `Movement`, `Diagnostics`, `Camera settings`, or one section per NPC. This ordering follows a debugging pass from the controlled player and its input owner through the physical world, presentation, and interaction systems to global runtime state. Unknown custom group names remain supported and appear after the standard sections for compatibility.
 
 Major diagnostics are placed by ownership:
 
 - Player position, movement, and grounded state are **Player / Coordinates**, where moment-to-moment spatial state can be read together.
+- Active control owner, accepted/rejected actions, devices, pointer lock, focused UI, and accessibility input preferences are **Input / Ownership**, where input-routing decisions can be inspected without mixing them into player transforms.
 - Collider counts are **Collision / Physics**; level identity and spawn counts are **World / Level / Spawns**. This keeps physical constraints distinct from authored level structure.
 - Camera mode, owner, target, anchor, obstruction, and preferences are **Camera**. Mode and owner are first because they explain most camera handoff issues.
 - Selected/loaded player visuals, picker state, alignment measurements, animations, and NPC identity/model status are **Characters / Assets**. NPC spawn, interaction, and conversation rows follow their owning World, Interactions, and Dialogue sections instead. Every NPC row label includes the NPC name rather than creating a second section taxonomy.
 - The selected interaction, candidate count, and NPC interaction states are **Interactions**. Active conversation, per-NPC conversation states, dialogue line/speaker/state, and portrait resolution are **Dialogue / Conversation** because the coordinator and presentation describe one conversation flow.
 - Game state, FPS, and captured errors are **Runtime / State**.
 
-Passive values are the read-only rows in those eight subsystem sections. Every mutating toggle or command is isolated in **Commands / Actions**, even when it affects camera or visual-helper state. This makes it possible to scan diagnostics without accidentally treating a control as a value. Control labels retain their subsystem terminology, and stable IDs remain the automation interface.
+Passive values are the read-only rows in those subsystem sections. Every mutating toggle or command is isolated in **Commands / Actions**, even when it affects camera or visual-helper state. This makes it possible to scan diagnostics without accidentally treating a control as a value. Commands / Actions is collapsed by default like every other section, so potentially destructive controls are never exposed merely by opening the panel. Control labels retain their subsystem terminology, and stable IDs remain the automation interface.
 
-Each section is a native `details` element with a keyboard-operable `summary` exposed as a level-two heading. Player, Camera, Interactions, and Runtime / State start expanded because they contain the most frequently read state; all section states survive toggle updates. Commands are forms, so their explicitly labelled text inputs submit with Enter. Focused editable controls do not leak bound keys into player, camera, dialogue, or runtime input; backtick remains available to close the panel. Focus outlines are high contrast. On narrow viewports the panel becomes a bottom sheet capped at 52% of viewport height, uses safe-area padding, and increases control heights so it does not unnecessarily cover the canvas or core controls.
+Every dynamic section is a native `details` element with a keyboard-operable `summary` containing a level-two heading and a typed item count such as `14 values` or `11 toggles · 47 commands`. All sections, including sections first seen through late registration, start collapsed. A user's expanded state survives live value/toggle refreshes, overall panel hide/show, and later structural registrations for the panel lifecycle. Structure changes restore focus to the equivalent section, toggle, command field, or command button when it still exists. **Expand all** and **Collapse all** operate only on disclosures; they never invoke a toggle or command. Disclosure state is intentionally not written to production storage or telemetry.
+
+The always-visible `Critical runtime summary` reads four existing public registrations without registering or querying gameplay state itself:
+
+- **State** (`runtime.state`) identifies whether the runtime is playing, paused, in dialogue, or in another state.
+- **Player** (`player.position`) gives the authoritative coordinates needed to reproduce spatial problems.
+- **Camera** (`camera.owner`) makes ownership/handoff mistakes immediately apparent.
+- **Errors** (`errors.count`) shows whether the runtime has captured a failure.
+
+Only facts already present in the registry are rendered, in that fixed order. They remain duplicated visually in their full diagnostic sections so the taxonomy stays complete, but there is still one registration and one reader for each fact.
+
+Commands are forms, so their explicitly labelled text inputs submit with Enter. The panel locally contains text-entry keystrokes, native Enter/Space activation, pointer-down, and wheel events so disclosure navigation, command activation, and scrolling cannot become gameplay input or request pointer lock. Other established gameplay keys still work after a debug button retains focus, while keyup and pointer-up reach the existing input system to clear any control held before focus moved into the panel. Backtick passes through to close/reopen the panel. Hiding the panel blurs any focused descendant rather than leaving focus in hidden content. No new window/document listener is installed. Focus outlines are high contrast.
+
+At desktop sizes the panel stays in the upper-left, away from the upper-right Help control, with a capped width and scroll height. At narrow sizes it becomes a floating bottom sheet capped at 42% of dynamic viewport height, uses safe-area-aware offsets, and reserves the bottom HUD/quickbar band. Its content remains scrollable when a large section is expanded.
+
+### Compact-panel visual evidence
+
+| State                                 | Evidence                                                                           |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| Before: high-volume sections expanded | [Desktop before](screenshots/debug-panel-before-desktop.png)                       |
+| After: compact collapsed default      | [Desktop collapsed](screenshots/debug-panel-after-desktop-collapsed.png)           |
+| One passive diagnostic expanded       | [Player / Coordinates expanded](screenshots/debug-panel-after-player-expanded.png) |
+| Mutating controls explicitly revealed | [Commands / Actions expanded](screenshots/debug-panel-after-actions-expanded.png)  |
+| Safe-area/HUD-aware narrow layout     | [Narrow collapsed](screenshots/debug-panel-after-narrow-collapsed.png)             |
 
 Alternatives considered were free-form registration groups, a separate section for every NPC, keeping `Camera settings`/`Visual helpers` beside passive state, and a custom accordion. Free-form and per-entity sections made scanning depend on registration order and produced duplicate terminology. Mixed state and controls obscured which rows mutate the game. A custom accordion would duplicate browser keyboard and expanded-state semantics, so native disclosure controls were preferred.
 
