@@ -15,6 +15,7 @@ import { GameStateMachine } from '../src/core/gameState';
 import type { StateEvents } from '../src/core/gameState';
 import type { InputReader } from '../src/input/InputSystem';
 import { CharacterPickerSystem } from '../src/ui/CharacterPickerSystem';
+import { flushPromises } from './helpers/flushPromises';
 
 const definitions = [
   { id: 'first', displayName: 'First Resident', fallback: 'placeholder' },
@@ -117,11 +118,10 @@ describe('CharacterPickerSystem', () => {
     });
     harness.picker.open();
 
-    await vi.waitFor(() => {
-      expect(harness.picker.getSnapshot().unavailableCharacterIds).toEqual([
-        'second',
-      ]);
-    });
+    await flushPromises();
+    expect(harness.picker.getSnapshot().unavailableCharacterIds).toEqual([
+      'second',
+    ]);
     expect(harness.picker.getSnapshot()).toMatchObject({
       open: true,
       registeredCharacterIds: ['first', 'second'],
@@ -178,19 +178,17 @@ describe('CharacterPickerSystem', () => {
       },
     });
     harness.picker.open();
-    await vi.waitFor(() => {
-      expect(harness.picker.getSnapshot().fallbackCharacterIds).toEqual([
-        'second',
-      ]);
-    });
+    await flushPromises();
+    expect(harness.picker.getSnapshot().fallbackCharacterIds).toEqual([
+      'second',
+    ]);
 
     expect(harness.picker.getSnapshot().availableCharacterIds).toEqual([
       'first',
     ]);
     harness.picker.next();
-    await vi.waitFor(() => {
-      expect(harness.picker.getSnapshot().previewState).toBe('fallback');
-    });
+    await flushPromises();
+    expect(harness.picker.getSnapshot().previewState).toBe('fallback');
     expect(harness.picker.getSnapshot()).toMatchObject({
       selectedCharacterId: 'second',
       previewState: 'fallback',
@@ -365,7 +363,6 @@ async function waitForAvailability(
   picker: CharacterPickerSystem,
   count: number,
 ): Promise<void> {
-  await vi.waitFor(() => {
-    expect(picker.getSnapshot().availableCharacterIds).toHaveLength(count);
-  });
+  await flushPromises();
+  expect(picker.getSnapshot().availableCharacterIds).toHaveLength(count);
 }

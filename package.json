@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:profile": "node scripts/profile-tests.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:debug": "playwright test --debug",

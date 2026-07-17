@@ -16,6 +16,7 @@ import {
   type CharacterInstanceLoader,
 } from '../src/player/CharacterPlayerVisual';
 import { CharacterEquipment } from '../src/equipment/CharacterEquipment';
+import { flushPromises } from './helpers/flushPromises';
 
 const definitions = [
   {
@@ -305,9 +306,8 @@ describe('CharacterPlayerVisual', () => {
     expect(visual.loadedModelRoot.position.y).toBe(firstAlignmentY);
 
     selection.select('second');
-    await vi.waitFor(() => {
-      expect(visual.getDebugSnapshot().loadedDefinitionId).toBe('second');
-    });
+    await flushPromises();
+    expect(visual.getDebugSnapshot().loadedDefinitionId).toBe('second');
     visual.sync(movement('running', 1.6), 0.1);
     const secondAlignmentY = visual.loadedModelRoot.position.y;
     visual.sync(movement('running', 2.1), 0.1);
@@ -529,9 +529,8 @@ describe('CharacterPlayerVisual', () => {
     );
 
     selection.select('second');
-    await vi.waitFor(() => {
-      expect(visual.getDebugSnapshot().loadedDefinitionId).toBe('second');
-    });
+    await flushPromises();
+    expect(visual.getDebugSnapshot().loadedDefinitionId).toBe('second');
     expect(visual.getDebugSnapshot()).toMatchObject({
       death: { fadeFallback: true },
       equipmentPresentation: {

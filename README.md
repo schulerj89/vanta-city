@@ -88,6 +88,7 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:profile # advisory slow-file/test report; not a CI timing gate
 pnpm validate:characters
 pnpm build
 pnpm size
@@ -97,4 +98,4 @@ pnpm test:e2e
 
 Use `pnpm preview` for a final manual check of the production build when relevant.
 
-See [Architecture](docs/architecture.md) and [First-wave integration decisions](docs/first-wave-integration.md) for design decisions, [World levels](docs/world-levels.md) for level APIs and environment GLB registration, and [Browser smoke tests](docs/browser-smoke-tests.md) for deterministic playable-slice validation.
+See [Architecture](docs/architecture.md) and [First-wave integration decisions](docs/first-wave-integration.md) for design decisions, [World levels](docs/world-levels.md) for level APIs and environment GLB registration, [Unit-test performance](docs/test-suite-performance.md) for profiling and environment ownership, and [Browser smoke tests](docs/browser-smoke-tests.md) for deterministic playable-slice validation.

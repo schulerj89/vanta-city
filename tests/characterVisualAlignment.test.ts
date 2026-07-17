@@ -16,6 +16,7 @@ import { createPlaceholderCharacter } from '../src/characters/PlaceholderCharact
 import { StaticCollisionWorld } from '../src/physics/CollisionWorld';
 import { CharacterPlayerVisual } from '../src/player/CharacterPlayerVisual';
 import { PlayerMovementSimulation } from '../src/player/PlayerMovement';
+import { flushPromises } from './helpers/flushPromises';
 
 describe('calculateCharacterVisualAlignment', () => {
   it('leaves a feet-origin model on the contact plane', () => {
@@ -118,9 +119,8 @@ describe('CharacterPlayerVisual hierarchy', () => {
     expect(visual.getAlignmentReport()?.appliedVisualOffset).toBeCloseTo(0);
 
     selection.select('hips-model');
-    await vi.waitFor(() => {
-      expect(visual.getAlignmentReport()?.characterId).toBe('hips-model');
-    });
+    await flushPromises();
+    expect(visual.getAlignmentReport()?.characterId).toBe('hips-model');
     expect(visual.object3d.position).toEqual(simulationBefore);
     expect(visual.getAlignmentReport()?.appliedVisualOffset).toBeCloseTo(1);
 
