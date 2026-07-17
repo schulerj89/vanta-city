@@ -171,7 +171,7 @@ test.describe('playable debug district', () => {
     const initialSummaryPosition = await panel
       .locator('[data-debug-summary-value="player.position"]')
       .textContent();
-    await executeCommand(page, 'player.teleport', 'spawn.player-garage');
+    await executeCommand(page, 'player.teleport', 'spawn.approach-east');
     await expect(
       panel.locator('[data-debug-summary-value="player.position"]'),
     ).not.toHaveText(initialSummaryPosition ?? '');

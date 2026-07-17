@@ -127,6 +127,12 @@ test.describe('reusable equipment and character actions', () => {
         .poll(async () => (await snapshot(page)).player.actionBusy)
         .toBe(false);
 
+      // Put the roll on the north side of Ashfall Junction's authored signal
+      // controller so camera-forward movement has a deterministic blocker.
+      await executeCommand(page, 'player.teleport-position', '8.8,0.22,9.9,0');
+      await expect
+        .poll(async () => (await snapshot(page)).player.grounded)
+        .toBe(true);
       const beforeRoll = (await snapshot(page)).player.position;
       await page.keyboard.down('KeyW');
       await page.keyboard.press('KeyB');
@@ -191,6 +197,9 @@ test.describe('reusable equipment and character actions', () => {
         .toBe('knifeIdle');
 
       await page.keyboard.press('Digit2');
+      await expect
+        .poll(async () => (await snapshot(page)).quickbar.selectedSlot)
+        .toBeUndefined();
     }
 
     await page.setViewportSize({ width: 390, height: 700 });
