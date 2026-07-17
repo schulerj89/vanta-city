@@ -1,0 +1,45 @@
+# Vanta City Agent Operating Rules
+
+These rules apply to the entire repository.
+
+## Default delegation
+
+- Act as the integration lead for substantial implementation, debugging, visual, integration, or test-performance work.
+- Automatically delegate concrete, bounded work to sub-agents when the request has multiple independent workstreams or would benefit materially from a specialist review. The user does not need to ask for delegation explicitly.
+- Prefer reusing a relevant idle worker context before starting a new worker. Do not steer a worker that is still active on another task.
+- Use the smallest useful team. One coherent task normally gets one worker; use parallel workers only for genuinely independent ownership boundaries.
+- Keep small edits, simple answers, read-only inspections, and tightly coupled one-file fixes in the primary session unless the user explicitly requests workers.
+- The primary agent remains responsible for architecture decisions, overlap review, integration, validation, and the final report. Do not outsource integration judgment blindly.
+
+## Worktree isolation
+
+- Before delegating repository changes, inspect `git status`, `git worktree list`, active worker status, and relevant branches.
+- Give each concurrent filesystem-editing worker a dedicated clean Git worktree and branch created from the current intended integration base.
+- Use paths under `/Users/jschuler/Projects/vanta-city-worktrees/` and focused branch names such as `worker/<task-name>`.
+- Tell every worker its exact worktree, branch, base commit, scope, validation requirements, and prohibition on editing or pushing `main`.
+- Never edit a worktree owned by an active worker. Never remove a dirty or active worktree.
+- Workers should make focused commits and report commit hashes, checks, decisions, screenshots when visual behavior changes, and remaining limitations.
+
+## Review and integration
+
+- Do not merge a worker merely because it compiled independently. Review its history, changed files, public APIs, tests, and overlap with current `main` first.
+- Prefer one authoritative concept over adapters between duplicate unshipped abstractions. Resolve terminology, lifecycle, input, transform, camera, collision, asset, HUD, and debug ownership deliberately.
+- Integrate only completed, committed, clean worker results. Preserve unfinished work in its worktree.
+- After integration, run validation proportional to risk. For gameplay or shared-system changes, run formatting, lint, type-checking, unit tests, character/asset validation, production build and size reporting, plus the full browser suite.
+- For visual changes, inspect the live browser, console, and before/after screenshots rather than relying only on state assertions.
+- Commit integration corrections separately when they express a distinct conflict-resolution decision.
+- Push only when the user explicitly asks to push. Do not delete branches during routine worktree cleanup.
+
+## User controls
+
+- No trigger phrase is required for ordinary substantial requests; apply these delegation rules automatically.
+- Phrases such as `parallelize this`, `use workers`, `use worktrees`, or `reuse Codex sessions` explicitly force delegation when safe.
+- Phrases such as `do this directly`, `no workers`, `no sub-agents`, or `stay in this session` disable delegation for that request.
+- If the user asks only for an explanation, audit, diagnosis, or status report, do not infer permission to modify files, merge, commit, or push.
+
+## Scope and safety
+
+- Preserve existing user changes and unrelated dirty files.
+- Do not broaden gameplay scope beyond the request merely because another system has a convenient hook.
+- Keep development helpers development-only and keep runtime assets local unless the user explicitly requests a network-backed design.
+- Prefer public system APIs and composition over private-field access, duplicated event listeners, or visual nodes owning simulation state.
