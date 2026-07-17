@@ -63,6 +63,7 @@ export interface CameraCastResult {
 
 export interface CollisionDebugSnapshot {
   readonly colliderCount: number;
+  readonly dynamicCapsuleCount: number;
   readonly orientedBoxCount: number;
   readonly rampCount: number;
   readonly lastCameraHitId: string | undefined;
@@ -79,6 +80,14 @@ export interface SegmentCastOptions {
 
 export interface SegmentCastResult extends CameraCastResult {
   readonly colliderId: string | undefined;
+}
+
+export interface DynamicQueryCapsule {
+  readonly id: string;
+  readonly radius: number;
+  readonly height: number;
+  /** Live foot position; ownership remains with the registering system. */
+  readonly position: () => Readonly<Vector3>;
 }
 
 export interface CollisionWorld {
@@ -103,6 +112,14 @@ export interface CollisionWorld {
     to: Readonly<Vector3>,
     options?: SegmentCastOptions,
   ): SegmentCastResult;
+  /** Shared dynamic query boundary used by non-authoritative movers. */
+  registerDynamicCapsule?(capsule: DynamicQueryCapsule): () => void;
+  castDynamicSegment?(
+    from: Readonly<Vector3>,
+    to: Readonly<Vector3>,
+    radius?: number,
+    ignoreColliderIds?: readonly string[],
+  ): SegmentCastResult;
 }
 
 const UP = new Vector3(0, 1, 0);
@@ -116,6 +133,7 @@ const EPSILON = 1e-5;
 export class StaticCollisionWorld implements CollisionWorld {
   private readonly boxes = new Map<string, StaticOrientedBoxCollider>();
   private readonly ramps = new Map<string, StaticRampCollider>();
+  private readonly dynamicCapsules = new Map<string, DynamicQueryCapsule>();
   private lastCameraHitId: string | undefined;
   private lastCharacterBlockIds: readonly string[] = [];
   private lastGroundColliderId = 'world-floor';
@@ -195,6 +213,59 @@ export class StaticCollisionWorld implements CollisionWorld {
     this.lastGroundColliderId = 'world-floor';
   }
 
+  public registerDynamicCapsule(capsule: DynamicQueryCapsule): () => void {
+    if (this.dynamicCapsules.has(capsule.id)) {
+      throw new Error(`Duplicate dynamic query collider: ${capsule.id}`);
+    }
+    this.dynamicCapsules.set(capsule.id, capsule);
+    return () => {
+      if (this.dynamicCapsules.get(capsule.id) === capsule) {
+        this.dynamicCapsules.delete(capsule.id);
+      }
+    };
+  }
+
+  public castDynamicSegment(
+    from: Readonly<Vector3>,
+    to: Readonly<Vector3>,
+    radius = 0,
+    ignoreColliderIds: readonly string[] = [],
+  ): SegmentCastResult {
+    const ignored = new Set(ignoreColliderIds);
+    let nearest:
+      { readonly fraction: number; readonly colliderId: string } | undefined;
+    for (const capsule of this.dynamicCapsules.values()) {
+      if (ignored.has(capsule.id)) continue;
+      const position = capsule.position();
+      if (
+        Math.max(from.y, to.y) < position.y ||
+        Math.min(from.y, to.y) > position.y + capsule.height
+      ) {
+        continue;
+      }
+      const fraction = segmentCircleFraction(
+        from.x,
+        from.z,
+        to.x,
+        to.z,
+        position.x,
+        position.z,
+        radius + capsule.radius,
+      );
+      if (
+        fraction !== undefined &&
+        (nearest === undefined || fraction < nearest.fraction)
+      ) {
+        nearest = { fraction, colliderId: capsule.id };
+      }
+    }
+    return {
+      fraction: nearest?.fraction ?? 1,
+      obstructed: nearest !== undefined,
+      colliderId: nearest?.colliderId,
+    };
+  }
+
   public getColliderCount(): number {
     return this.boxes.size;
   }
@@ -202,6 +273,7 @@ export class StaticCollisionWorld implements CollisionWorld {
   public getDebugSnapshot(): CollisionDebugSnapshot {
     return {
       colliderCount: this.getColliderCount(),
+      dynamicCapsuleCount: this.dynamicCapsules.size,
       orientedBoxCount: [...this.boxes.values()].filter(
         ({ yaw }) => Math.abs(yaw) > EPSILON,
       ).length,
@@ -629,4 +701,28 @@ function segmentOrientedBoxFraction(
     if (near > far) return undefined;
   }
   return near >= 0 && near <= 1 ? near : undefined;
+}
+
+function segmentCircleFraction(
+  fromX: number,
+  fromZ: number,
+  toX: number,
+  toZ: number,
+  centerX: number,
+  centerZ: number,
+  radius: number,
+): number | undefined {
+  const dx = toX - fromX;
+  const dz = toZ - fromZ;
+  const ox = fromX - centerX;
+  const oz = fromZ - centerZ;
+  const c = ox * ox + oz * oz - radius * radius;
+  if (c <= 0) return 0;
+  const a = dx * dx + dz * dz;
+  if (a <= EPSILON) return undefined;
+  const b = 2 * (ox * dx + oz * dz);
+  const discriminant = b * b - 4 * a * c;
+  if (discriminant < 0) return undefined;
+  const fraction = (-b - Math.sqrt(discriminant)) / (2 * a);
+  return fraction >= 0 && fraction <= 1 ? fraction : undefined;
 }

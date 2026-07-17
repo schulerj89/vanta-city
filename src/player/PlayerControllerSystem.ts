@@ -156,6 +156,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   private presentationFacingYaw: number;
   private unsubscribeHealth: (() => void) | undefined;
   private unsubscribeState: (() => void) | undefined;
+  private unregisterQueryCapsule: (() => void) | undefined;
   private activeRoll: ActiveRoll | undefined;
   private lastRoll: ActiveRoll | undefined;
   private lastRollRejection: string | undefined;
@@ -168,7 +169,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
 
   public constructor(
     private readonly objects: GameObjectWorld,
-    collision: CollisionWorld,
+    private readonly collision: CollisionWorld,
     spawnPosition = new Vector3(0, 0, 7),
     config: PlayerMovementConfig = defaultPlayerMovementConfig,
     private readonly cameraYaw: () => number = () => 0,
@@ -205,6 +206,12 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
     this.objects.add(this.visual);
     this.visualAdded = true;
     this.reset();
+    this.unregisterQueryCapsule = this.collision.registerDynamicCapsule?.({
+      id: 'dynamic.player',
+      radius: this.movement.config.radius,
+      height: this.movement.config.height,
+      position: () => this.movement.position,
+    });
   }
 
   public update(time: FrameTime): void {
@@ -430,6 +437,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   }
 
   public dispose(): void {
+    this.unregisterQueryCapsule?.();
+    this.unregisterQueryCapsule = undefined;
     if (this.visualAdded) this.objects.remove(this.visual.id);
     else this.visual.dispose?.();
     this.visualAdded = false;

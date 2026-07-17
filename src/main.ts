@@ -64,6 +64,8 @@ import { PlayerHudClusterSystem } from './ui/PlayerHudClusterSystem';
 import { HandgunPurchase } from './economy/HandgunPurchase';
 import type { DebugCashPickup } from './economy/DebugCashPickup';
 import { ProximityPickupSystem } from './pickups/ProximityPickupSystem';
+import { TrafficSystem } from './traffic/TrafficSystem';
+import { defaultTrafficConfig } from './traffic/TrafficSimulation';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -214,6 +216,45 @@ async function bootstrap(): Promise<void> {
     playerEquipment,
   );
   const playerHudCluster = new PlayerHudClusterSystem(mount);
+  const trafficSeed = Number(pageParameters.get('trafficSeed'));
+  const trafficCadence = Number(pageParameters.get('trafficCadence'));
+  const trafficMaximum = Number(pageParameters.get('trafficMax'));
+  const trafficSpeed = Number(pageParameters.get('trafficSpeed'));
+  const trafficE2EInactive =
+    pageParameters.get('e2e') === '1' && pageParameters.get('traffic') !== '1';
+  const traffic = new TrafficSystem(
+    render.scene,
+    assets,
+    collision,
+    development?.debug,
+    {
+      ...defaultTrafficConfig,
+      enabled: !trafficE2EInactive && pageParameters.get('traffic') !== '0',
+      seed:
+        pageParameters.has('trafficSeed') && Number.isFinite(trafficSeed)
+          ? trafficSeed
+          : defaultTrafficConfig.seed,
+      spawnCadence:
+        pageParameters.has('trafficCadence') &&
+        Number.isFinite(trafficCadence) &&
+        trafficCadence >= 0
+          ? trafficCadence
+          : defaultTrafficConfig.spawnCadence,
+      maxPopulation: trafficE2EInactive
+        ? 0
+        : pageParameters.has('trafficMax') &&
+            Number.isInteger(trafficMaximum) &&
+            trafficMaximum >= 0
+          ? Math.min(12, trafficMaximum)
+          : defaultTrafficConfig.maxPopulation,
+      speed:
+        pageParameters.has('trafficSpeed') &&
+        Number.isFinite(trafficSpeed) &&
+        trafficSpeed > 0
+          ? Math.min(30, trafficSpeed)
+          : defaultTrafficConfig.speed,
+    },
+  );
   const quickbar = new QuickbarSystem(mount, playerEquipment);
   const moneyHud = new MoneyHudSystem(
     playerHudCluster.element,
@@ -331,6 +372,10 @@ async function bootstrap(): Promise<void> {
           proximityPickups.setVisualizationVisible(visible),
       })
     : undefined;
+  const unregisterTrafficVisualization = development?.visualHelpers.register(
+    'navigation',
+    { setVisible: (visible) => traffic.setVisualizationVisible(visible) },
+  );
   let dialogueCamera:
     ReturnType<ThirdPersonCameraSystem['requestConversation']> | undefined;
   const dialogue = new DialogueSessionController(input, conversations, {
@@ -485,7 +530,8 @@ async function bootstrap(): Promise<void> {
     .register(objects)
     .register(help)
     .register(player)
-    .register(proximityPickups);
+    .register(proximityPickups)
+    .register(traffic);
   if (sparringTarget) runtime.register(sparringTarget);
   runtime
     .register(camera)
@@ -566,6 +612,7 @@ async function bootstrap(): Promise<void> {
           errors: development.errors,
           inputInspector,
           diagnostics: diagnosticRecorder,
+          traffic,
         })
       : undefined;
 
@@ -582,6 +629,7 @@ async function bootstrap(): Promise<void> {
     for (const unregister of debugUnregister) unregister();
     unregisterCombatVolumes?.();
     unregisterPickupVolumes?.();
+    unregisterTrafficVisualization?.();
     for (const unregister of performanceUnregister) unregister();
     worldEvents.clear();
     loading.dispose();

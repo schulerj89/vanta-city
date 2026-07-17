@@ -5,6 +5,35 @@ import { defaultPlayerMovementConfig } from '../src/player/PlayerMovement';
 const shape = defaultPlayerMovementConfig;
 
 describe('StaticCollisionWorld oriented geometry', () => {
+  it('registers live dynamic capsules behind a separate shared query boundary', () => {
+    const world = new StaticCollisionWorld();
+    const player = new Vector3(0, 0, 2);
+    const unregister = world.registerDynamicCapsule({
+      id: 'dynamic.player',
+      radius: 0.4,
+      height: 1.8,
+      position: () => player,
+    });
+
+    expect(
+      world.castDynamicSegment(
+        new Vector3(0, 0.8, 5),
+        new Vector3(0, 0.8, 0),
+        0.9,
+      ),
+    ).toMatchObject({ obstructed: true, colliderId: 'dynamic.player' });
+    player.x = 5;
+    expect(
+      world.castDynamicSegment(
+        new Vector3(0, 0.8, 5),
+        new Vector3(0, 0.8, 0),
+        0.9,
+      ).obstructed,
+    ).toBe(false);
+    unregister();
+    expect(world.getDebugSnapshot().dynamicCapsuleCount).toBe(0);
+  });
+
   it('resolves a character capsule against a rotated wall in wall-local space', () => {
     const world = new StaticCollisionWorld();
     world.addDefinition({

@@ -33,6 +33,7 @@ import type { PlayerMoneyAccount } from '../economy/PlayerMoneyAccount';
 import type { MoneyHudSystem } from '../ui/MoneyHudSystem';
 import type { DebugCashPickup } from '../economy/DebugCashPickup';
 import type { ProximityPickupSystem } from '../pickups/ProximityPickupSystem';
+import type { TrafficSystem } from '../traffic/TrafficSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -152,6 +153,7 @@ export interface BrowserTestSnapshot {
     readonly assetFaults:
       ReturnType<DevelopmentAssetFaults['getSnapshot']> | undefined;
   };
+  readonly traffic: ReturnType<TrafficSystem['getSnapshot']>;
 }
 
 export interface BrowserTestApi {
@@ -201,6 +203,7 @@ export interface BrowserTestBridgeDependencies {
   readonly errors: RuntimeErrorReporter;
   readonly inputInspector: InputOwnershipInspector;
   readonly diagnostics: DiagnosticRecorder;
+  readonly traffic: TrafficSystem;
 }
 
 /** Installs the opt-in development bridge used by Playwright smoke tests. */
@@ -356,6 +359,7 @@ function createSnapshot(
       cancelledConversationIds: [...cancelledConversationIds],
     },
     runtimeErrors: dependencies.errors.getDebugSnapshot(),
+    traffic: dependencies.traffic.getSnapshot(),
     performance: {
       renderer: dependencies.render.getPerformanceSnapshot(),
       runtime: dependencies.runtime.getPerformanceSnapshot(),
