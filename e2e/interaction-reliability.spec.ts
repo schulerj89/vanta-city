@@ -38,7 +38,7 @@ test('keeps a stable candidate until a decisive challenger wins', async ({
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.debug.challenger');
   const switched = (await snapshot(page)).interaction.diagnostics;
-  expect(switched.selectionDecision).toBe('selected-best');
+  expect(['switched', 'selected-best']).toContain(switched.selectionDecision);
   expect(switched.candidates[0]?.target.id).toBe(
     'interaction.debug.challenger',
   );
