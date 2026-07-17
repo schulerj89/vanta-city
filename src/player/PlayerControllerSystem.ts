@@ -83,9 +83,12 @@ export interface PlayerDebugSnapshot {
     readonly z: number;
   };
   readonly movementState: PlayerMovementState;
-  readonly localMovementDirection: { readonly x: number; readonly y: number };
   readonly blocked: boolean;
+  readonly desiredFacingYaw: number;
   readonly facingYaw: number;
+  readonly facingError: number;
+  readonly facingTurnRate: number;
+  readonly facingSmoothingActive: boolean;
   readonly presentationFacingYaw: number;
   readonly runMode: boolean;
   readonly actionBusy: boolean;
@@ -254,12 +257,12 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         z: this.movement.groundNormal.z,
       },
       movementState: this.movement.state,
-      localMovementDirection: {
-        x: this.movement.localMovementDirection.x,
-        y: this.movement.localMovementDirection.y,
-      },
       blocked: this.movement.blocked,
+      desiredFacingYaw: this.movement.desiredFacingYaw,
       facingYaw: this.movement.facingYaw,
+      facingError: this.movement.facingError,
+      facingTurnRate: this.movement.facingTurnRate,
+      facingSmoothingActive: this.movement.facingSmoothingActive,
       presentationFacingYaw: this.presentationFacingYaw,
       runMode: this.runMode,
       actionBusy: this.getCharacterActionState().busy,

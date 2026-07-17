@@ -93,7 +93,7 @@ class ActionVisual implements PlayerVisual {
 
 const frame = { delta: 1 / 60, elapsed: 1, frame: 1 } as const;
 
-async function harness() {
+async function harness(cameraYaw: () => number = () => 0) {
   const events = new EventBus<StateEvents>();
   const state = new GameStateMachine(events);
   state.transition('playing');
@@ -104,7 +104,7 @@ async function harness() {
     new StaticCollisionWorld(),
     undefined,
     undefined,
-    undefined,
+    cameraYaw,
     visual,
   );
   await player.init({ events, state, input });
@@ -184,5 +184,27 @@ describe('PlayerControllerSystem controls', () => {
       sequence: 1,
       normalizedTime: 0.62,
     });
+  });
+
+  it('freezes heading state while paused and resumes the same smooth turn', async () => {
+    const { input, player, state } = await harness();
+    input.down.add('moveForward');
+    for (let index = 0; index < 5; index += 1) player.update(frame);
+    const beforePause = player.getDebugSnapshot();
+    expect(beforePause.facingSmoothingActive).toBe(true);
+
+    state.transition('paused');
+    const held = player.getDebugSnapshot();
+    expect(held.facingYaw).toBe(beforePause.facingYaw);
+    expect(held.desiredFacingYaw).toBe(beforePause.desiredFacingYaw);
+    expect(held.facingTurnRate).toBe(beforePause.facingTurnRate);
+
+    state.transition('playing');
+    player.update(frame);
+    const resumed = player.getDebugSnapshot();
+    expect(resumed.facingYaw).not.toBe(beforePause.facingYaw);
+    expect(Math.abs(resumed.facingError)).toBeLessThan(
+      Math.abs(beforePause.facingError),
+    );
   });
 });

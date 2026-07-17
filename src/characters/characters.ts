@@ -10,14 +10,6 @@ export const characterDefinitionEntries = [
       idle: { clipNames: ['CharacterArmature|Idle'], required: true },
       walk: { clipNames: ['CharacterArmature|Walk'], required: true },
       run: { clipNames: ['CharacterArmature|Run'], required: true },
-      runLeft: {
-        clipNames: ['CharacterArmature|Run_Left'],
-        required: true,
-      },
-      runRight: {
-        clipNames: ['CharacterArmature|Run_Right'],
-        required: true,
-      },
       previewIdle: {
         clipNames: ['CharacterArmature|Idle_Neutral'],
         required: true,
@@ -55,14 +47,6 @@ export const characterDefinitionEntries = [
       idle: { clipNames: ['CharacterArmature|Idle'], required: true },
       walk: { clipNames: ['CharacterArmature|Walk'], required: true },
       run: { clipNames: ['CharacterArmature|Run'], required: true },
-      runLeft: {
-        clipNames: ['CharacterArmature|Run_Left'],
-        required: true,
-      },
-      runRight: {
-        clipNames: ['CharacterArmature|Run_Right'],
-        required: true,
-      },
       previewIdle: {
         clipNames: ['CharacterArmature|Idle_Neutral'],
         required: true,

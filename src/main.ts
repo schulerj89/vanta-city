@@ -972,6 +972,40 @@ function registerVerticalSliceDebug(
       read: () => player.getDebugSnapshot().movementState,
     }),
     debug.registerValue({
+      id: 'player.heading-desired',
+      label: 'Desired heading',
+      group: sections.player,
+      read: () =>
+        `${MathUtils.radToDeg(player.getDebugSnapshot().desiredFacingYaw).toFixed(1)}°`,
+    }),
+    debug.registerValue({
+      id: 'player.heading-current',
+      label: 'Current heading',
+      group: sections.player,
+      read: () =>
+        `${MathUtils.radToDeg(player.getDebugSnapshot().facingYaw).toFixed(1)}°`,
+    }),
+    debug.registerValue({
+      id: 'player.heading-error',
+      label: 'Signed heading error',
+      group: sections.player,
+      read: () =>
+        `${MathUtils.radToDeg(player.getDebugSnapshot().facingError).toFixed(1)}°`,
+    }),
+    debug.registerValue({
+      id: 'player.heading-turn-rate',
+      label: 'Heading turn rate',
+      group: sections.player,
+      read: () =>
+        `${MathUtils.radToDeg(player.getDebugSnapshot().facingTurnRate).toFixed(1)}°/s`,
+    }),
+    debug.registerValue({
+      id: 'player.heading-smoothing',
+      label: 'Heading smoothing',
+      group: sections.player,
+      read: () => player.getDebugSnapshot().facingSmoothingActive,
+    }),
+    debug.registerValue({
       id: 'player.grounded',
       label: 'Grounded',
       group: sections.player,

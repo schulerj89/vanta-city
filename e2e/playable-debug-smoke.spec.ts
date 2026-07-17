@@ -374,10 +374,16 @@ test.describe('playable debug district', () => {
         expect(moving.player.movementState).toBe('walking');
         expect(moving.character.animationState).toBe('walk');
         expect(
-          moving.player.velocity.x * Math.sin(moving.player.facingYaw) +
-            moving.player.velocity.z * Math.cos(moving.player.facingYaw),
-          `${characterId} presentation facing should agree with simulation velocity`,
-        ).toBeGreaterThan(0);
+          angleDistance(
+            moving.player.desiredFacingYaw,
+            Math.atan2(moving.player.velocity.x, moving.player.velocity.z),
+          ),
+          `${characterId} desired heading should follow accelerated velocity`,
+        ).toBeLessThan(0.05);
+        expect(moving.player.presentationFacingYaw).toBeCloseTo(
+          moving.player.facingYaw,
+          5,
+        );
       }
 
       await executeCommand(page, 'player.teleport', 'spawn.player-default');
@@ -451,11 +457,25 @@ test.describe('playable debug district', () => {
     }
   });
 
-  test('cross-fades directional runs through arcs, reversals, and pause restoration', async ({
+  test('smooths sustained running circles, reversals, and pause restoration', async ({
     page,
-  }) => {
+  }, testInfo) => {
     const runtimeFailures = monitorRuntimeFailures(page);
     await openReadyApp(page);
+    const debugPanel = page.getByRole('complementary', {
+      name: 'Developer tools',
+    });
+    for (const id of [
+      'player.heading-desired',
+      'player.heading-current',
+      'player.heading-error',
+      'player.heading-turn-rate',
+      'player.heading-smoothing',
+    ]) {
+      await expect(
+        debugPanel.locator(`[data-debug-value="${id}"]`),
+      ).toHaveCount(1);
+    }
 
     for (const characterId of ['casual', 'punk']) {
       await executeCommand(page, 'player.select-character', characterId);
@@ -463,42 +483,73 @@ test.describe('playable debug district', () => {
         .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
         .toBe(characterId);
       await executeCommand(page, 'player.teleport', 'spawn.player-default');
-      await page.keyboard.press('r');
+      if (!(await snapshot(page)).player.runMode) {
+        await page.keyboard.press('r');
+      }
+      await expect
+        .poll(async () => (await snapshot(page)).player.runMode)
+        .toBe(true);
       await page.keyboard.down('w');
       await expect
         .poll(async () => (await snapshot(page)).character.animationState)
         .toBe('run');
-
       const forward = await snapshot(page);
-      await page.keyboard.down('a');
-      await expect
-        .poll(async () => (await snapshot(page)).character.animationState)
-        .toBe('runLeft');
-      const leftArc = await snapshot(page);
-      expect(leftArc.character.animationGraph).toMatchObject({
-        requestedClip: 'runLeft',
-        resolvedClip: 'runLeft',
-        fallback: 'none',
-        directionalLocomotion: 'left',
-      });
-      expect(leftArc.player.localMovementDirection.x).toBeLessThan(-0.5);
-      expect(
-        horizontalDistance(leftArc.player.position, forward.player.position),
-      ).toBeGreaterThan(0.15);
 
-      await page.keyboard.up('a');
-      await page.keyboard.down('d');
+      await page.keyboard.down('q');
+      await expect
+        .poll(
+          async () => Math.abs((await snapshot(page)).player.facingTurnRate),
+          { message: `${characterId} should enter a smooth left arc` },
+        )
+        .toBeGreaterThan(0.1);
+      await attachScreenshot(page, testInfo, `${characterId}-turn-left-early`);
+      await page.waitForTimeout(900);
+      const leftCircle = await snapshot(page);
+      await attachScreenshot(page, testInfo, `${characterId}-turn-left-late`);
+      expect(leftCircle.character.animationGraph).toMatchObject({
+        requestedClip: 'run',
+        resolvedClip: 'run',
+        fallback: 'none',
+      });
+      expect(leftCircle.character.animationState).toBe('run');
+      expect(leftCircle.player.grounded).toBe(true);
+      expect(
+        angleDistance(leftCircle.player.facingYaw, forward.player.facingYaw),
+      ).toBeGreaterThan(0.2);
+
+      await page.keyboard.up('q');
+      await page.keyboard.down('e');
+      await expect
+        .poll(async () => (await snapshot(page)).player.facingTurnRate)
+        .toBeGreaterThan(0.1);
+      await page.waitForTimeout(900);
+      const rightCircle = await snapshot(page);
+      await attachScreenshot(page, testInfo, `${characterId}-turn-right-late`);
+      expect(rightCircle.character.animationState).toBe('run');
+      expect(rightCircle.player.grounded).toBe(true);
+      expect(rightCircle.player.facingTurnRate).toBeGreaterThan(0);
+
+      await page.keyboard.up('e');
+      await page.keyboard.up('w');
+      await page.keyboard.down('s');
+      await expect
+        .poll(async () => Math.abs((await snapshot(page)).player.facingError), {
+          message: `${characterId} reversal should produce heading error`,
+        })
+        .toBeGreaterThan(1);
+      const reversing = await snapshot(page);
+      await attachScreenshot(page, testInfo, `${characterId}-reverse-mid-turn`);
+      expect(['walk', 'run']).toContain(reversing.character.animationState);
+      expect(
+        angleDistance(
+          reversing.player.facingYaw,
+          reversing.player.desiredFacingYaw,
+        ),
+        '180-degree reversal should retain visible current-to-desired lag',
+      ).toBeGreaterThan(0.5);
       await expect
         .poll(async () => (await snapshot(page)).character.animationState)
-        .toBe('runRight');
-      const rightArc = await snapshot(page);
-      expect(rightArc.character.animationGraph).toMatchObject({
-        requestedClip: 'runRight',
-        resolvedClip: 'runRight',
-        fallback: 'none',
-        directionalLocomotion: 'right',
-      });
-      expect(rightArc.player.localMovementDirection.x).toBeGreaterThan(0.5);
+        .toBe('run');
 
       await page.keyboard.press('p');
       await expect
@@ -510,24 +561,33 @@ test.describe('playable debug district', () => {
       expect(
         horizontalDistance(heldPaused.player.position, paused.player.position),
       ).toBeLessThan(0.02);
-      expect(heldPaused.character.animationState).toBe('runRight');
+      expect(heldPaused.player.facingYaw).toBeCloseTo(
+        paused.player.facingYaw,
+        6,
+      );
+      expect(heldPaused.player.desiredFacingYaw).toBeCloseTo(
+        paused.player.desiredFacingYaw,
+        6,
+      );
 
       await page.keyboard.press('p');
       await expect
         .poll(async () => (await snapshot(page)).gameState)
         .toBe('playing');
       await expect
-        .poll(async () => (await snapshot(page)).character.animationState)
-        .toBe('runRight');
+        .poll(async () => Math.abs((await snapshot(page)).player.facingError))
+        .toBeLessThan(0.08);
       const resumed = await snapshot(page);
+      expect(resumed.character.animationState).toBe('run');
       expect(resumed.player.grounded).toBe(true);
       expect(
         Math.abs(resumed.character.bounds!.min.y - resumed.player.position.y),
       ).toBeLessThanOrEqual(0.2);
 
-      await page.keyboard.up('d');
-      await page.keyboard.up('w');
-      await page.keyboard.press('r');
+      await page.keyboard.up('s');
+      if ((await snapshot(page)).player.runMode) {
+        await page.keyboard.press('r');
+      }
       await expect
         .poll(async () => (await snapshot(page)).player.runMode)
         .toBe(false);
@@ -947,7 +1007,7 @@ test.describe('playable debug district', () => {
       )
       .toBe(false);
     await page.keyboard.press('j');
-    await page.waitForTimeout(50);
+    await waitForAnimationFrames(page, 2);
     expect((await snapshot(page)).character.characterAction.sequence).toBe(
       gatedActionSequence,
     );
@@ -972,13 +1032,19 @@ test.describe('playable debug district', () => {
     await helpButton.click();
     await expect(page.getByRole('dialog', { name: 'Controls' })).toBeVisible();
     await expect
+      .poll(async () => (await snapshot(page)).controls.ownership.owner)
+      .toBe('help');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('paused');
+    await expect
       .poll(
         async () =>
           (await snapshot(page)).sparringTarget.engagement.cameraRequested,
       )
       .toBe(false);
     await page.keyboard.press('l');
-    await page.waitForTimeout(50);
+    await waitForAnimationFrames(page, 2);
     expect((await snapshot(page)).character.characterAction.sequence).toBe(
       postPauseActionSequence,
     );
@@ -995,7 +1061,7 @@ test.describe('playable debug district', () => {
       )
       .toBe(false);
     await page.keyboard.press('j');
-    await page.waitForTimeout(50);
+    await waitForAnimationFrames(page, 2);
     expect((await snapshot(page)).character.characterAction.sequence).toBe(
       postPauseActionSequence,
     );
@@ -1527,6 +1593,24 @@ function cameraRelativeAxis(
 
 function angleDistance(a: number, b: number): number {
   return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+}
+
+async function waitForAnimationFrames(
+  page: Page,
+  count: number,
+): Promise<void> {
+  await page.evaluate(
+    (remaining) =>
+      new Promise<void>((resolve) => {
+        const next = (): void => {
+          remaining -= 1;
+          if (remaining === 0) resolve();
+          else requestAnimationFrame(next);
+        };
+        requestAnimationFrame(next);
+      }),
+    count,
+  );
 }
 
 async function attachScreenshot(

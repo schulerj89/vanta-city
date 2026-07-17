@@ -1,4 +1,4 @@
-import { MathUtils, Vector2, Vector3 } from 'three';
+import { MathUtils, Vector3 } from 'three';
 import type { CollisionWorld, CharacterShape } from '../physics/CollisionWorld';
 import type { PlayerIntent } from './PlayerIntent';
 
@@ -17,6 +17,8 @@ export interface PlayerMovementConfig extends CharacterShape {
   readonly landingDuration: number;
   readonly movingSpeedThreshold: number;
   readonly runStateSpeedThreshold: number;
+  /** Time constant for the critically damped simulation/action heading. */
+  readonly facingSmoothTime: number;
 }
 
 export const defaultPlayerMovementConfig: PlayerMovementConfig = {
@@ -36,7 +38,52 @@ export const defaultPlayerMovementConfig: PlayerMovementConfig = {
   landingDuration: 0.12,
   movingSpeedThreshold: 0.15,
   runStateSpeedThreshold: 4.2,
+  facingSmoothTime: 0.24,
 };
+
+export interface SmoothedHeadingStep {
+  readonly heading: number;
+  readonly angularVelocity: number;
+  readonly signedError: number;
+  readonly active: boolean;
+}
+
+/** Exact critically damped step for a fixed heading target over this frame. */
+export function stepSmoothedHeading(
+  heading: number,
+  desiredHeading: number,
+  angularVelocity: number,
+  smoothTime: number,
+  delta: number,
+): SmoothedHeadingStep {
+  if (delta <= 0) {
+    const signedError = signedHeadingError(heading, desiredHeading);
+    return {
+      heading,
+      angularVelocity,
+      signedError,
+      active: isHeadingSmoothingActive(signedError, angularVelocity),
+    };
+  }
+  const omega = 2 / Math.max(0.001, smoothTime);
+  const displacement = signedHeadingError(desiredHeading, heading);
+  const decay = Math.exp(-omega * delta);
+  const temporary = (angularVelocity + omega * displacement) * delta;
+  const nextDisplacement = (displacement + temporary) * decay;
+  const nextAngularVelocity = (angularVelocity - omega * temporary) * decay;
+  const nextHeading = normalizeHeading(desiredHeading + nextDisplacement);
+  const signedError = signedHeadingError(nextHeading, desiredHeading);
+  return {
+    heading: nextHeading,
+    angularVelocity: nextAngularVelocity,
+    signedError,
+    active: isHeadingSmoothingActive(signedError, nextAngularVelocity),
+  };
+}
+
+export function signedHeadingError(from: number, to: number): number {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
+}
 
 export interface MovementStateInput {
   readonly grounded: boolean;
@@ -61,13 +108,15 @@ export function decideMovementState(
 export class PlayerMovementSimulation {
   public readonly position = new Vector3();
   public readonly velocity = new Vector3();
-  /** Last camera-relative movement input, used only by presentation policy. */
-  public readonly localMovementDirection = new Vector2();
   public readonly groundNormal = new Vector3(0, 1, 0);
   public grounded = false;
   public groundColliderId = 'world-floor';
   public state: PlayerMovementState = 'idle';
   public facingYaw = 0;
+  public desiredFacingYaw = 0;
+  public facingTurnRate = 0;
+  public facingError = 0;
+  public facingSmoothingActive = false;
   public blocked = false;
 
   private landingTimeRemaining = 0;
@@ -83,7 +132,6 @@ export class PlayerMovementSimulation {
     delta: number,
   ): void {
     if (delta <= 0) return;
-    this.localMovementDirection.copy(intent.move);
     const forwardX = -Math.sin(cameraYaw);
     const forwardZ = -Math.cos(cameraYaw);
     const rightX = Math.cos(cameraYaw);
@@ -126,9 +174,7 @@ export class PlayerMovementSimulation {
       acceleration * delta,
     );
 
-    if (hasMovementIntent) {
-      this.facingYaw = Math.atan2(desiredDirection.x, desiredDirection.z);
-    }
+    this.updateFacing(delta);
     if (intent.jump && this.grounded) {
       this.velocity.y = this.config.jumpSpeed;
       this.grounded = false;
@@ -179,7 +225,6 @@ export class PlayerMovementSimulation {
   ): void {
     this.position.copy(position);
     this.velocity.set(0, 0, 0);
-    this.localMovementDirection.set(0, 0);
     this.groundNormal.set(0, 1, 0);
     this.groundColliderId = 'world-floor';
     this.grounded = false;
@@ -187,6 +232,10 @@ export class PlayerMovementSimulation {
     this.landingTimeRemaining = 0;
     this.state = 'airborne';
     this.facingYaw = facingYaw;
+    this.desiredFacingYaw = facingYaw;
+    this.facingTurnRate = 0;
+    this.facingError = 0;
+    this.facingSmoothingActive = false;
     const settled = this.collision.moveCharacter(
       this.position,
       new Vector3(0, -this.config.groundSnapDistance, 0),
@@ -199,6 +248,40 @@ export class PlayerMovementSimulation {
     this.groundColliderId = settled.groundColliderId;
     this.state = this.grounded ? 'idle' : 'airborne';
   }
+
+  private updateFacing(delta: number): void {
+    const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
+    if (horizontalSpeed < this.config.movingSpeedThreshold) {
+      this.desiredFacingYaw = this.facingYaw;
+      this.facingTurnRate = 0;
+      this.facingError = 0;
+      this.facingSmoothingActive = false;
+      return;
+    }
+    this.desiredFacingYaw = Math.atan2(this.velocity.x, this.velocity.z);
+    const step = stepSmoothedHeading(
+      this.facingYaw,
+      this.desiredFacingYaw,
+      this.facingTurnRate,
+      this.config.facingSmoothTime,
+      delta,
+    );
+    this.facingYaw = step.heading;
+    this.facingTurnRate = step.angularVelocity;
+    this.facingError = step.signedError;
+    this.facingSmoothingActive = step.active;
+  }
+}
+
+function normalizeHeading(heading: number): number {
+  return Math.atan2(Math.sin(heading), Math.cos(heading));
+}
+
+function isHeadingSmoothingActive(error: number, turnRate: number): boolean {
+  return (
+    Math.abs(error) > MathUtils.degToRad(0.25) ||
+    Math.abs(turnRate) > MathUtils.degToRad(1)
+  );
 }
 
 function moveTowards(

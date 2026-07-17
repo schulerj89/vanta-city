@@ -1,10 +1,4 @@
-import {
-  AnimationClip,
-  Group,
-  Vector2,
-  Vector3,
-  VectorKeyframeTrack,
-} from 'three';
+import { AnimationClip, Group, Vector3, VectorKeyframeTrack } from 'three';
 import type { LoadedCharacter } from '../src/characters/CharacterLoader';
 import { CharacterSelectionStore } from '../src/characters/CharacterSelection';
 import type { CharacterDefinition } from '../src/characters/CharacterDefinition';
@@ -56,13 +50,12 @@ function loadedCharacter(
 
 function movement(
   state: PlayerMovementSimulation['state'],
-  localMovementX = 0,
+  facingYaw = 1.25,
 ): PlayerMovementSimulation {
   return {
     position: new Vector3(4, 0, 7),
-    facingYaw: 1.25,
+    facingYaw,
     state,
-    localMovementDirection: new Vector2(localMovementX, 1),
   } as PlayerMovementSimulation;
 }
 
@@ -145,6 +138,14 @@ describe('CharacterPlayerVisual', () => {
       loadStatus: 'fallback',
       animationState: 'static',
     });
+    const fallbackOffset = visual.loadedModelRoot.position.clone();
+    for (const heading of [0.4, 1.2, -2.4, Math.PI]) {
+      visual.sync(movement('running', heading), 0.1);
+    }
+    expect(visual.loadedModelRoot.position.toArray()).toEqual(
+      fallbackOffset.toArray(),
+    );
+    expect(visual.visualRoot.rotation.y).toBeCloseTo(Math.PI);
     visual.dispose();
   });
 
@@ -217,41 +218,86 @@ describe('CharacterPlayerVisual', () => {
     visual.dispose();
   });
 
-  it('does not restart a stable directional run and restores it after an action', async () => {
+  it('keeps one Run action through heading changes and restores it after a kick', async () => {
     const selection = new CharacterSelectionStore(definitions, 'first');
-    const clips = new Map([
-      ['run', new AnimationClip('Run', 1, [])],
-      ['runLeft', new AnimationClip('Run left', 1, [])],
-      ['runRight', new AnimationClip('Run right', 1, [])],
-      ['kickLeft', new AnimationClip('Kick left', 0.2, [])],
-    ]);
+    const instance = loadedCharacter(
+      definitions[0],
+      'asset',
+      new Map([
+        ['run', new AnimationClip('Run', 1, [])],
+        ['kickLeft', new AnimationClip('Kick left', 0.2, [])],
+      ]),
+    );
+    instance.root.position.set(0, 0.2, 0);
     const visual = new CharacterPlayerVisual(selection, {
-      instantiate: vi.fn(async () =>
-        loadedCharacter(definitions[0], 'asset', clips),
-      ),
+      instantiate: vi.fn(async () => instance),
     });
     await visual.init();
 
-    visual.sync(movement('running', -1), 0.1);
-    const initialSequence =
+    visual.sync(movement('running', 0), 0.05);
+    const runSequence =
       visual.getDebugSnapshot().animationGraph.transitionSequence;
-    visual.sync(movement('running', -0.4), 0.1);
-    expect(visual.getDebugSnapshot()).toMatchObject({
-      animationState: 'runLeft',
-      animationGraph: { transitionSequence: initialSequence },
-    });
+    for (const heading of [0.2, 0.6, 1.1, 1.8]) {
+      visual.sync(movement('running', heading), 0.05);
+      expect(visual.getDebugSnapshot()).toMatchObject({
+        animationState: 'run',
+        animationGraph: { transitionSequence: runSequence },
+      });
+      expect(instance.root.position.toArray()).toEqual([0, 0.2, 0]);
+    }
 
     expect(visual.triggerCharacterAction('kickLeft', 'unit-test')).toBe(true);
-    visual.sync(movement('running', 1), 0.1);
+    visual.sync(movement('running', 2.2), 0.1);
     expect(visual.getDebugSnapshot().animationState).toBe('action:kickLeft');
-    visual.sync(movement('running', 1), 0.2);
+    visual.sync(movement('running', 2.6), 0.2);
     expect(visual.getDebugSnapshot()).toMatchObject({
-      animationState: 'runRight',
-      animationGraph: {
-        directionalLocomotion: 'right',
-        transitionReason: 'restoration',
-      },
+      animationState: 'run',
+      animationGraph: { transitionReason: 'restoration' },
     });
+    expect(visual.visualRoot.rotation.y).toBeCloseTo(2.6);
+    expect(instance.root.position.toArray()).toEqual([0, 0.2, 0]);
+    visual.dispose();
+  });
+
+  it('preserves alignment while switching characters during a smoothed turn', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const first = loadedCharacter(
+      definitions[0],
+      'asset',
+      new Map([['run', new AnimationClip('Run first', 1, [])]]),
+    );
+    const second = loadedCharacter(
+      definitions[1],
+      'asset',
+      new Map([['run', new AnimationClip('Run second', 1, [])]]),
+    );
+    first.root.position.y = 0.15;
+    second.root.position.y = 0.3;
+    const visual = new CharacterPlayerVisual(selection, {
+      instantiate: vi
+        .fn()
+        .mockResolvedValueOnce(first)
+        .mockResolvedValueOnce(second),
+    });
+    await visual.init();
+    visual.sync(movement('running', 0.8), 0.1);
+    const firstAlignmentY = visual.loadedModelRoot.position.y;
+    visual.sync(movement('running', 1.1), 0.1);
+    expect(visual.loadedModelRoot.position.y).toBe(firstAlignmentY);
+
+    selection.select('second');
+    await vi.waitFor(() => {
+      expect(visual.getDebugSnapshot().loadedDefinitionId).toBe('second');
+    });
+    visual.sync(movement('running', 1.6), 0.1);
+    const secondAlignmentY = visual.loadedModelRoot.position.y;
+    visual.sync(movement('running', 2.1), 0.1);
+
+    expect(first.dispose).toHaveBeenCalledOnce();
+    expect(visual.loadedModelRoot.position.y).toBe(secondAlignmentY);
+    expect(second.root.position.y).toBe(0.3);
+    expect(visual.visualRoot.rotation.y).toBeCloseTo(2.1);
+    expect(visual.getDebugSnapshot().animationState).toBe('run');
     visual.dispose();
   });
 

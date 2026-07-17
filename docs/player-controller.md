@@ -34,7 +34,9 @@ Bindings and display metadata live only in `src/input/defaultBindings.ts`. Promp
 
 ## Tuning
 
-`defaultPlayerMovementConfig` in `src/player/PlayerMovement.ts` is the single movement tuning object. It contains capsule radius/height, walk and run speed, ground/air acceleration, deceleration, gravity, jump speed, terminal velocity, step height, ground snap distance, maximum slope angle, landing duration, and animation-state thresholds.
+`defaultPlayerMovementConfig` in `src/player/PlayerMovement.ts` is the single movement tuning object. It contains capsule radius/height, walk and run speed, ground/air acceleration, deceleration, gravity, jump speed, terminal velocity, step height, ground snap distance, maximum slope angle, landing duration, animation-state thresholds, and a `0.24s` facing smoothing time.
+
+Facing uses an exact critically damped angular step toward the current horizontal velocity heading after acceleration. This makes the result effectively frame-rate independent for fixed targets and stable across 30/60/120 Hz while naturally following a continuously orbiting camera. The smoothed heading is authoritative for simulation/action direction and `getWorldPose()`; position and collision continue to use unchanged velocity. Conversation framing may temporarily rotate only `visualRoot`, then restores the current smoothed simulation heading. Debug output reports desired/current heading, signed error, angular turn rate, and whether smoothing is active.
 
 `defaultThirdPersonCameraConfig` in `src/camera/ThirdPersonCameraSystem.ts` contains target height, pitch limits, orbit/zoom sensitivity, distance limits, smoothing sharpness, re-center timing, camera collision radius/padding, and teleport snap distance. Both systems accept a complete replacement config through their constructors.
 
@@ -44,7 +46,7 @@ The `PlayerControllerSystem` instance is the stable owner other branches should 
 
 - `getPlayerPosition()` returns a copied plain `{ x, y, z }` value.
 - `getWorldPose()` returns the shared copied position/forward contract consumed by interactions and future location-based systems.
-- `getDebugSnapshot()` returns copied velocity, grounded state, movement state, collision-blocked state, and persistent run mode.
+- `getDebugSnapshot()` returns copied velocity, grounded state, movement state, collision-blocked state, persistent run mode, and heading-smoothing diagnostics.
 - `teleport(position, facingYaw?)` clears velocity and re-probes the ground.
 - `reset()` returns to the configured spawn and clears movement.
 - `setControlEnabled(enabled)` and `isControlEnabled()` provide an explicit feature lock.

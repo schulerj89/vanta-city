@@ -103,7 +103,14 @@ test('inspects gameplay, help, picker, and dialogue ownership', async ({
   await expect
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('playing');
-  await command(page, 'player.teleport', 'spawn.npc-mechanic');
+  // Turning is authoritative for interaction facing, so make this fixture's
+  // intended east-facing dialogue setup explicit instead of inheriting the
+  // heading from the earlier input-ownership exercise.
+  await command(
+    page,
+    'player.teleport-position',
+    '-10,0.2,4,1.5707963267948966',
+  );
   await expect
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
     .toBe('interaction.npc.mack');

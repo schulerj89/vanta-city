@@ -3,6 +3,8 @@ import { StaticCollisionWorld } from '../src/physics/CollisionWorld';
 import {
   PlayerMovementSimulation,
   decideMovementState,
+  signedHeadingError,
+  stepSmoothedHeading,
 } from '../src/player/PlayerMovement';
 import { testDistrict } from '../src/world/levels/testDistrict';
 
@@ -43,7 +45,12 @@ describe('PlayerMovementSimulation', () => {
 
       expect(movement.velocity.x).toBeCloseTo(expectedX * 2.2);
       expect(movement.velocity.z).toBeCloseTo(expectedZ * 2.2);
-      expect(movement.facingYaw).toBeCloseTo(expectedYaw);
+      expect(
+        Math.abs(signedHeadingError(movement.desiredFacingYaw, expectedYaw)),
+      ).toBeLessThan(1e-6);
+      expect(
+        Math.abs(signedHeadingError(movement.facingYaw, expectedYaw)),
+      ).toBeLessThanOrEqual(Math.abs(signedHeadingError(0, expectedYaw)));
     },
   );
 
@@ -59,6 +66,105 @@ describe('PlayerMovementSimulation', () => {
     expect(movement.velocity.x).toBeCloseTo(-2.2);
     expect(movement.velocity.z).toBeCloseTo(0);
     expect(movement.velocity.length()).toBeLessThan(movement.config.walkSpeed);
+  });
+
+  it.each([30, 60, 120])(
+    'converges to the same sharp-turn heading at %i Hz',
+    (hz) => {
+      let heading = 0;
+      let angularVelocity = 0;
+      for (let frame = 0; frame < hz; frame += 1) {
+        const step = stepSmoothedHeading(
+          heading,
+          (Math.PI * 3) / 4,
+          angularVelocity,
+          0.24,
+          1 / hz,
+        );
+        heading = step.heading;
+        angularVelocity = step.angularVelocity;
+      }
+      expect(heading).toBeCloseTo(2.3509, 3);
+      expect(angularVelocity).toBeCloseTo(0.0393, 3);
+    },
+  );
+
+  it('turns through a small arc monotonically without overshoot', () => {
+    let heading = 0;
+    let angularVelocity = 0;
+    let previousError = Math.PI / 6;
+    for (let frame = 0; frame < 60; frame += 1) {
+      const step = stepSmoothedHeading(
+        heading,
+        Math.PI / 6,
+        angularVelocity,
+        0.24,
+        1 / 60,
+      );
+      heading = step.heading;
+      angularVelocity = step.angularVelocity;
+      expect(step.signedError).toBeGreaterThanOrEqual(-1e-8);
+      expect(step.signedError).toBeLessThanOrEqual(previousError + 1e-8);
+      previousError = step.signedError;
+    }
+    expect(heading).toBeCloseTo(Math.PI / 6, 2);
+  });
+
+  it('tracks a continuous circular target consistently across frame rates', () => {
+    const outcomes = [30, 60, 120].map((hz) => {
+      let heading = 0;
+      let angularVelocity = 0;
+      for (let frame = 1; frame <= hz * 4; frame += 1) {
+        const desired = 0.75 * (frame / hz);
+        const step = stepSmoothedHeading(
+          heading,
+          desired,
+          angularVelocity,
+          0.24,
+          1 / hz,
+        );
+        heading = step.heading;
+        angularVelocity = step.angularVelocity;
+      }
+      return { heading, angularVelocity };
+    });
+    expect(Math.max(...outcomes.map(({ heading }) => heading))).toBeLessThan(
+      Math.min(...outcomes.map(({ heading }) => heading)) + 0.02,
+    );
+    expect(
+      Math.max(...outcomes.map(({ angularVelocity }) => angularVelocity)),
+    ).toBeLessThan(
+      Math.min(...outcomes.map(({ angularVelocity }) => angularVelocity)) +
+        0.02,
+    );
+  });
+
+  it('smooths a 180-degree reversal without snapping', () => {
+    let heading = 0;
+    let angularVelocity = 0;
+    const first = stepSmoothedHeading(
+      heading,
+      Math.PI,
+      angularVelocity,
+      0.24,
+      1 / 60,
+    );
+    expect(Math.abs(first.heading)).toBeLessThan(0.05);
+    expect(Math.abs(first.signedError)).toBeGreaterThan(3);
+    heading = first.heading;
+    angularVelocity = first.angularVelocity;
+    for (let frame = 1; frame < 90; frame += 1) {
+      const step = stepSmoothedHeading(
+        heading,
+        Math.PI,
+        angularVelocity,
+        0.24,
+        1 / 60,
+      );
+      heading = step.heading;
+      angularVelocity = step.angularVelocity;
+    }
+    expect(Math.abs(signedHeadingError(heading, Math.PI))).toBeLessThan(0.001);
   });
 
   it('does not pass through registered static obstacles', () => {
