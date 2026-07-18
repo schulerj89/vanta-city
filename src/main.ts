@@ -117,6 +117,8 @@ async function bootstrap(): Promise<void> {
     assetFaults = DevelopmentAssetFaults.from(pageParameters);
   }
   const levels = new LevelRegistry([testDistrict]);
+  const initialLevelId = 'test-district';
+  const initialLevel = levels.get(initialLevelId);
   const assetCatalog = new AssetCatalog({
     ...assetManifest,
     ...levels.assetManifest,
@@ -208,7 +210,7 @@ async function bootstrap(): Promise<void> {
     render.scene,
     assets,
     levels,
-    'test-district',
+    initialLevelId,
     worldEvents,
     undefined,
     false,
@@ -227,7 +229,7 @@ async function bootstrap(): Promise<void> {
   );
   const collision = new StaticCollisionWorld();
   const worldCollision = new WorldCollisionSystem(collision, worldEvents);
-  const spawn = findSpawn(testDistrict.definition);
+  const spawn = findSpawn(initialLevel);
   const objects = new GameObjectWorld(render.scene);
   const availableCharacters = browserTestModule
     ? [
