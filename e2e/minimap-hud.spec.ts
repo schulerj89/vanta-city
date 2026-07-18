@@ -92,9 +92,8 @@ test.describe('north-up minimap HUD', () => {
     await expect
       .poll(async () => (await snapshot(page)).gameState)
       .toBe('dialogue');
-    expect((await snapshot(page)).minimapHud.visible).toBe(true);
     await expect(page.getByTestId('dialogue-box')).toBeVisible();
-    await assertNoGameplayHudOverlap(page, true);
+    await expect(page.getByTestId('minimap-hud')).toBeHidden();
     await capture(page, testInfo, 'minimap-dialogue');
     expect((await snapshot(page)).runtimeErrors.count).toBe(0);
     expect(failures).toEqual([]);
@@ -143,7 +142,6 @@ async function assertNoGameplayHudOverlap(
     ['quickbar', page.locator('.quickbar')],
     ['health', page.locator('.health-hud__player')],
     ['money', page.locator('.money-hud')],
-    ['debug', page.locator('.debug-panel')],
     ['help', page.getByRole('button', { name: 'Help' })],
     ...(includeDialogue
       ? ([['dialogue', page.getByTestId('dialogue-box')]] as const)

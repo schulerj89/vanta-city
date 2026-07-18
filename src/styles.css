@@ -1,6 +1,38 @@
 :root {
   color-scheme: dark;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  --ash-font-display: 'Arial Narrow', 'Roboto Condensed', Impact, sans-serif;
+  --ash-font-interface: 'Trebuchet MS', Verdana, system-ui, sans-serif;
+  --ash-font-data: 'Courier New', ui-monospace, monospace;
+  --ash-ink: #fff4d5;
+  --ash-ink-muted: #c8c1a9;
+  --ash-night: #071316;
+  --ash-panel: rgb(7 19 22 / 88%);
+  --ash-panel-solid: #0b2023;
+  --ash-copper: #65c5b2;
+  --ash-amber: #ffc25c;
+  --ash-danger: #ff6b55;
+  --ash-disabled: #817e72;
+  --ash-rule: rgb(255 244 213 / 27%);
+  --ash-shadow: 0 0.65rem 0 rgb(1 7 8 / 42%);
+  --ash-chamfer: 0.15rem 0.85rem 0.15rem 0.85rem;
+  --ash-gap-1: 0.35rem;
+  --ash-gap-2: 0.65rem;
+  --ash-gap-3: 1rem;
+  --ash-safe-top: max(1rem, env(safe-area-inset-top));
+  --ash-safe-right: max(1rem, env(safe-area-inset-right));
+  --ash-safe-bottom: max(1rem, env(safe-area-inset-bottom));
+  --ash-safe-left: max(1rem, env(safe-area-inset-left));
+  --ash-motion-fast: 140ms;
+  --ash-motion-slow: 360ms;
+  --ash-layer-hud: 10;
+  --ash-layer-notification: 20;
+  --ash-layer-modal: 40;
+  --ash-layer-lab: 55;
+  --ash-text-small: 0.72rem;
+  --ash-text-body: 1rem;
+  --ash-text-heading: 1.5rem;
+  --ui-text-scale: 1;
+  font-family: var(--ash-font-interface);
   background: #0b1018;
 }
 
@@ -19,6 +51,125 @@ body,
 
 #game {
   position: relative;
+}
+
+.ui-layout {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-size: calc(1rem * var(--ui-text-scale));
+  container-type: size;
+}
+
+.ui-zone {
+  position: absolute;
+  z-index: var(--ash-layer-hud);
+  pointer-events: none;
+}
+
+.ui-zone > * {
+  pointer-events: auto;
+}
+
+.ui-zone [hidden] {
+  display: none !important;
+}
+
+.ui-zone--player-status {
+  top: calc(var(--ash-safe-top) + 3.5rem);
+  right: var(--ash-safe-right);
+  width: min(16rem, calc(100vw - 2rem));
+}
+
+.ui-zone--navigation {
+  bottom: var(--ash-safe-bottom);
+  left: var(--ash-safe-left);
+  display: grid;
+  width: min(19rem, calc(100vw - 2rem));
+  gap: var(--ash-gap-2);
+}
+
+.ui-zone--loadout {
+  bottom: var(--ash-safe-bottom);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ui-zone--interaction {
+  bottom: max(6.3rem, calc(env(safe-area-inset-bottom) + 5.3rem));
+  left: 50%;
+  width: min(32rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+}
+
+.ui-zone--objectives {
+  top: var(--ash-safe-top);
+  left: var(--ash-safe-left);
+  width: min(25rem, calc(100vw - 2rem));
+}
+
+.ui-zone--notifications {
+  z-index: var(--ash-layer-notification);
+  top: var(--ash-safe-top);
+  left: 50%;
+  width: min(30rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+}
+
+.ui-zone--conversation {
+  right: var(--ash-safe-right);
+  bottom: var(--ash-safe-bottom);
+  left: var(--ash-safe-left);
+}
+
+.ui-zone--modal,
+.ui-zone--presentation,
+.ui-zone--world-indicator {
+  inset: 0;
+}
+
+.ui-zone--modal,
+.ui-zone--presentation {
+  z-index: var(--ash-layer-modal);
+}
+
+.ui-layout[data-game-state='booting'] .ui-zone:not(.ui-zone--presentation),
+.ui-layout[data-game-state='cinematic']
+  :is(
+    .ui-zone--player-status,
+    .ui-zone--navigation,
+    .ui-zone--loadout,
+    .ui-zone--interaction,
+    .ui-zone--objectives,
+    .ui-zone--notifications,
+    .ui-zone--world-indicator
+  ),
+.ui-layout[data-game-state='dialogue'] .ui-zone--world-indicator {
+  display: none;
+}
+
+.ui-layout[data-game-state='dialogue']
+  :is(
+    .ui-zone--player-status,
+    .ui-zone--navigation,
+    .ui-zone--loadout,
+    .ui-zone--interaction,
+    .ui-zone--objectives,
+    .ui-zone--notifications
+  ),
+.ui-layout[data-game-state='character-select']
+  :is(
+    .ui-zone--player-status,
+    .ui-zone--navigation,
+    .ui-zone--loadout,
+    .ui-zone--interaction,
+    .ui-zone--objectives,
+    .ui-zone--notifications,
+    .ui-zone--conversation,
+    .ui-zone--world-indicator
+  ) {
+  display: none;
 }
 
 canvas {
@@ -1766,6 +1917,286 @@ canvas {
 @media (max-width: 24rem) {
   .debug-panel__header {
     display: grid;
+  }
+}
+
+/* UI-SYSTEM-001: zone children no longer choose global screen positions. */
+.ui-zone .player-hud-cluster,
+.ui-zone .money-hud,
+.ui-zone .health-hud__player,
+.ui-zone .minimap-hud,
+.ui-zone .location-hud,
+.ui-zone .quickbar,
+.ui-zone .interaction-prompt,
+.ui-zone .dialogue-box {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  transform: none;
+}
+
+.ui-zone .player-hud-cluster {
+  display: grid;
+  gap: var(--ash-gap-2);
+}
+
+.ui-zone :is(.money-hud, .health-hud__player, .minimap-hud, .location-hud) {
+  border: 1px solid var(--ash-rule);
+  border-radius: var(--ash-chamfer);
+  color: var(--ash-ink);
+  background:
+    linear-gradient(90deg, var(--ash-amber) 0 0.22rem, transparent 0),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 5px,
+      rgb(255 255 255 / 2%) 5px 6px
+    ),
+    var(--ash-panel);
+  box-shadow: var(--ash-shadow);
+  backdrop-filter: blur(7px) saturate(0.8);
+}
+
+.ui-zone .money-hud {
+  min-height: 2.8rem;
+  padding: 0.5rem 0.75rem 0.5rem 1rem;
+  font-family: var(--ash-font-data);
+}
+
+.ui-zone .money-hud__balance {
+  color: var(--ash-amber);
+  font-size: 1.35rem;
+  text-shadow: none;
+}
+
+.ui-zone .health-hud__player {
+  padding: 0.65rem 0.75rem 0.7rem 1rem;
+}
+
+.ui-zone .health-hud__track {
+  height: 0.62rem;
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, #17282a 0 8%, #071316 8% 10%);
+}
+
+.ui-zone .health-hud__fill {
+  border-radius: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ash-copper) 0 8%,
+    #347e74 8% 10%
+  );
+}
+
+.ui-zone .health-hud__bar[data-depleted='true'] .health-hud__fill {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ash-danger) 0 0.35rem,
+    #8c2e25 0.35rem 0.7rem
+  );
+}
+
+.ui-zone .minimap-hud {
+  order: 1;
+  width: 10.5rem;
+  padding: 0.55rem 0.55rem 0.65rem 0.8rem;
+}
+
+.ui-zone .location-hud {
+  order: 2;
+  padding: 0.55rem 0.7rem 0.6rem 0.95rem;
+}
+
+.ui-zone .minimap-hud__title,
+.ui-zone .location-hud__name {
+  font-family: var(--ash-font-display);
+  letter-spacing: 0.12em;
+}
+
+.ui-zone .location-hud__coordinates {
+  color: var(--ash-copper);
+  font-family: var(--ash-font-data);
+}
+
+.ui-zone .quickbar {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.ui-zone .quickbar__slot {
+  width: 4rem;
+  border-radius: 0.15rem 0.65rem;
+  border-color: var(--ash-rule);
+  color: var(--ash-ink);
+  background: var(--ash-panel);
+  box-shadow: var(--ash-shadow);
+}
+
+.ui-zone .quickbar__slot[data-selected='true'] {
+  border-color: var(--ash-amber);
+  background:
+    linear-gradient(0deg, rgb(255 194 92 / 15%), transparent),
+    var(--ash-panel-solid);
+  box-shadow:
+    inset 0 -0.22rem var(--ash-amber),
+    var(--ash-shadow);
+}
+
+.ui-zone .quickbar__slot[data-owned='false'] {
+  border-style: dashed;
+  color: var(--ash-disabled);
+  filter: none;
+}
+
+.ui-zone .interaction-prompt {
+  padding: 0.72rem 1rem;
+  border: 1px solid var(--ash-amber);
+  border-radius: var(--ash-chamfer);
+  color: var(--ash-night);
+  background: var(--ash-amber);
+  box-shadow: 0.35rem 0.35rem 0 rgb(4 10 11 / 62%);
+  font: 800 0.82rem/1.2 var(--ash-font-data);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.ui-zone .dialogue-box {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 8rem) minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--ash-rule);
+  border-radius: 0.2rem 1.2rem 0.2rem 1.2rem;
+  background:
+    linear-gradient(90deg, rgb(101 197 178 / 14%), transparent 35%),
+    var(--ash-panel);
+  box-shadow: 0.55rem 0.7rem 0 rgb(2 8 9 / 55%);
+}
+
+.ui-zone .dialogue-box__speaker {
+  color: var(--ash-amber);
+  font-family: var(--ash-font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ui-zone .dialogue-box__text {
+  color: var(--ash-ink);
+  font-family: var(--ash-font-interface);
+}
+
+.ui-zone :is(.dialogue-box__continue, .dialogue-box__cancel) {
+  border-radius: 0.1rem 0.55rem;
+  font-family: var(--ash-font-data);
+}
+
+.ui-zone .help-button {
+  top: var(--ash-safe-top);
+  right: var(--ash-safe-right);
+}
+
+.ui-zone :is(button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--ash-amber);
+  outline-offset: 3px;
+}
+
+@media (max-width: 34rem) {
+  :root {
+    --ash-safe-top: max(0.65rem, env(safe-area-inset-top));
+    --ash-safe-right: max(0.65rem, env(safe-area-inset-right));
+    --ash-safe-bottom: max(0.65rem, env(safe-area-inset-bottom));
+    --ash-safe-left: max(0.65rem, env(safe-area-inset-left));
+  }
+
+  .ui-zone--player-status {
+    right: var(--ash-safe-right);
+    left: var(--ash-safe-left);
+    width: auto;
+  }
+
+  .ui-zone--navigation {
+    width: 8.2rem;
+  }
+
+  .ui-zone .minimap-hud {
+    width: 8.2rem;
+  }
+
+  .ui-zone .minimap-hud__title {
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+  }
+
+  .ui-zone--loadout {
+    right: var(--ash-safe-right);
+    left: auto;
+    transform: none;
+  }
+
+  .ui-zone .location-hud {
+    display: grid;
+    padding: 0.45rem 0.55rem 0.5rem 0.75rem;
+  }
+
+  .ui-zone .location-hud__coordinates {
+    display: none;
+  }
+
+  .ui-zone .location-hud__name {
+    overflow: visible;
+    font-size: 0.64rem;
+    line-height: 1.1;
+    letter-spacing: 0.04em;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .ui-zone--interaction {
+    right: var(--ash-safe-right);
+    bottom: calc(var(--ash-safe-bottom) + 14.25rem);
+    left: var(--ash-safe-left);
+    width: auto;
+    transform: none;
+  }
+
+  .ui-zone .dialogue-box {
+    grid-template-columns: 1fr;
+    max-height: calc(100dvh - var(--ash-safe-top) - var(--ash-safe-bottom));
+  }
+
+  .ui-zone .dialogue-box__portrait {
+    width: 4.25rem;
+  }
+}
+
+@media (max-height: 28rem) and (orientation: landscape) {
+  .ui-zone .dialogue-box {
+    height: min(8.5rem, calc(100dvh - 1rem));
+  }
+}
+
+@media (min-width: 100rem) {
+  .ui-zone--player-status {
+    right: max(2rem, env(safe-area-inset-right));
+  }
+
+  .ui-zone--navigation {
+    left: max(2rem, env(safe-area-inset-left));
+  }
+
+  .ui-zone--conversation {
+    right: max(12vw, env(safe-area-inset-right));
+    left: max(12vw, env(safe-area-inset-left));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-layout *,
+  .ui-layout *::before,
+  .ui-layout *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }
 

@@ -3,12 +3,14 @@ import { characterAnimationLab } from './scenarios/characterAnimationLab';
 import { foundationSandbox } from './scenarios/foundationSandbox';
 import { cameraCompositionLab } from './scenarios/cameraCompositionLab';
 import { buildingVisualLab } from './scenarios/buildingVisualLab';
+import { uiCompositionLab } from './scenarios/uiCompositionLab';
 
 const scenarios = new Map<string, SandboxScenario>([
   [foundationSandbox.id, foundationSandbox],
   [cameraCompositionLab.id, cameraCompositionLab],
   [characterAnimationLab.id, characterAnimationLab],
   [buildingVisualLab.id, buildingVisualLab],
+  [uiCompositionLab.id, uiCompositionLab],
 ]);
 
 export function loadSandboxScenario(

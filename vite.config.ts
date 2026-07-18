@@ -19,6 +19,7 @@ const domTestFiles = [
   'tests/minimapHud.test.ts',
   'tests/playerDeathSystem.test.ts',
   'tests/quickbar.test.ts',
+  'tests/screenSpaceLayout.test.ts',
 ];
 
 export default defineConfig({

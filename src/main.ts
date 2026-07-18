@@ -67,6 +67,7 @@ import { QuickbarSystem } from './ui/QuickbarSystem';
 import { PlayerMoneyAccount } from './economy/PlayerMoneyAccount';
 import { MoneyHudSystem } from './ui/MoneyHudSystem';
 import { PlayerHudClusterSystem } from './ui/PlayerHudClusterSystem';
+import { ScreenSpaceLayoutSystem } from './ui/ScreenSpaceLayoutSystem';
 import { PlayerDeathSystem } from './ui/PlayerDeathSystem';
 import { HandgunPurchase } from './economy/HandgunPurchase';
 import type { DebugCashPickup } from './economy/DebugCashPickup';
@@ -84,6 +85,7 @@ async function bootstrap(): Promise<void> {
 
   const input = new InputSystem(defaultBindings);
   const render = new RenderSystem(mount);
+  const uiLayout = new ScreenSpaceLayoutSystem(mount);
   const pageParameters = new URLSearchParams(window.location.search);
   let assetFaults:
     import('./debug/DevelopmentAssetFaults').DevelopmentAssetFaults | undefined;
@@ -98,7 +100,7 @@ async function bootstrap(): Promise<void> {
     ...levels.assetManifest,
   });
   const assets = new ThreeAssetLoader(assetCatalog, undefined, assetFaults);
-  const loading = new LoadingScreen(mount, assets);
+  const loading = new LoadingScreen(uiLayout.zone('presentation'), assets);
   activeLoadingScreen = loading;
   const runtime = new GameRuntime(input);
   const prefersReducedMotion =
@@ -156,6 +158,7 @@ async function bootstrap(): Promise<void> {
         scene: render.scene,
         camera: render.camera,
         input,
+        uiLayout,
         assets,
         debug: development.debug,
         visualHelpers: development.visualHelpers,
@@ -163,6 +166,7 @@ async function bootstrap(): Promise<void> {
       runtime
         .register(input)
         .register(development.systems[0]!)
+        .register(uiLayout)
         .register(sandbox);
       runtime.register(new GameObjectWorld(render.scene)).register(render);
       for (const system of development.systems.slice(1))
@@ -227,7 +231,7 @@ async function bootstrap(): Promise<void> {
     assets,
   );
   const characterPicker = new CharacterPickerSystem(
-    mount,
+    uiLayout.zone('modal'),
     characterSelection,
     new ManifestCharacterAvailabilityProbe(assetCatalog),
     new CharacterPreviewSystem(new CharacterLoader(assets)),
@@ -251,7 +255,9 @@ async function bootstrap(): Promise<void> {
       ...registerSectorStreamingDiagnostics(development.debug, levelSystem),
     );
   }
-  const playerHudCluster = new PlayerHudClusterSystem(mount);
+  const playerHudCluster = new PlayerHudClusterSystem(
+    uiLayout.zone('player-status'),
+  );
   const trafficSeed = Number(pageParameters.get('trafficSeed'));
   const trafficCadence = Number(pageParameters.get('trafficCadence'));
   const trafficMaximum = Number(pageParameters.get('trafficMax'));
@@ -291,7 +297,10 @@ async function bootstrap(): Promise<void> {
           : defaultTrafficConfig.speed,
     },
   );
-  const quickbar = new QuickbarSystem(mount, playerEquipment);
+  const quickbar = new QuickbarSystem(
+    uiLayout.zone('loadout'),
+    playerEquipment,
+  );
   const moneyHud = new MoneyHudSystem(
     playerHudCluster.element,
     playerAccount,
@@ -310,14 +319,14 @@ async function bootstrap(): Promise<void> {
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
   const weaponAim = new WeaponAimSystem(
-    mount,
+    uiLayout.zone('world-indicator'),
     render.camera,
     input,
     playerEquipment,
     camera,
   );
   const help = new LazyHelpOverlaySystem(
-    mount,
+    uiLayout.zone('modal'),
     runtime,
     helpControlEntries,
     accessibility,
@@ -408,14 +417,14 @@ async function bootstrap(): Promise<void> {
     },
   );
   const playerDeath = new PlayerDeathSystem(
-    mount,
+    uiLayout.zone('modal'),
     player,
     camera,
     prefersReducedMotion,
     () => sparringTarget?.reset(),
   );
   const healthHud = new HealthHudSystem(
-    mount,
+    uiLayout.zone('world-indicator'),
     player.health,
     sparringTarget ?? {
       getHealth: () => undefined,
@@ -425,8 +434,16 @@ async function bootstrap(): Promise<void> {
     collision,
     playerHudCluster.element,
   );
-  const locationHud = new LocationHudSystem(mount, player, levelSystem);
-  const minimapHud = new MinimapHudSystem(mount, player, levelSystem);
+  const locationHud = new LocationHudSystem(
+    uiLayout.zone('navigation'),
+    player,
+    levelSystem,
+  );
+  const minimapHud = new MinimapHudSystem(
+    uiLayout.zone('navigation'),
+    player,
+    levelSystem,
+  );
   const unregisterCombatVolumes =
     development && sparringTarget
       ? development.visualHelpers.register('combatVolumes', {
@@ -505,7 +522,11 @@ async function bootstrap(): Promise<void> {
       },
     },
   );
-  const dialogueUI = new DialogueUISystem(mount, dialogue, dialoguePortraits);
+  const dialogueUI = new DialogueUISystem(
+    uiLayout.zone('conversation'),
+    dialogue,
+    dialoguePortraits,
+  );
   interactions.register({
     id: 'interaction.signal-controller',
     prompt: 'Inspect signal controller',
@@ -601,6 +622,7 @@ async function bootstrap(): Promise<void> {
     .register(levelSystem)
     .register(timeOfDay)
     .register(objects)
+    .register(uiLayout)
     .register(help)
     .register(player)
     .register(weaponAim)
@@ -624,7 +646,9 @@ async function bootstrap(): Promise<void> {
   runtime
     .register(dialogue)
     .register(dialogueUI)
-    .register(new InteractionPromptSystem(mount, interactions))
+    .register(
+      new InteractionPromptSystem(uiLayout.zone('interaction'), interactions),
+    )
     .register(characterPicker);
   if (interactionDebug) runtime.register(interactionDebug);
   if (characterAlignmentDebug) runtime.register(characterAlignmentDebug);
