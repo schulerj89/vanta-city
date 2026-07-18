@@ -23,6 +23,15 @@
       "maxNewWorkersPerRun": 5,
       "workerModel": "gpt-5.6-sol",
       "workerReasoningEffort": "medium",
+      "taskControlGuard": {
+        "maxSeconds": 20,
+        "attemptsPerRun": 1,
+        "expectedProjectId": "local-6a89a58c813337a56f9c0d5642de0fd5",
+        "requireThreadCatalog": true,
+        "requireExpectedProjectInCatalog": true,
+        "createGitStateBeforePass": false,
+        "onFailure": "Stop immediately with one concise control-channel blocker report. Do not retry, inspect individual threads, create a probe task, create a branch or worktree, or continue the roadmap audit."
+      },
       "implementationPolicy": "The orchestrator plans, reviews dependencies, and dispatches bounded work. Implementation, asset acquisition, editing, and QA belong to medium-effort workers in dedicated worktrees."
     },
     "integrator": {

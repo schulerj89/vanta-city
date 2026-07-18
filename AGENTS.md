@@ -42,6 +42,7 @@ These rules apply to the entire repository.
 
 - Treat `coordination/game-orchestrator.json` as the authoritative roadmap, performance budget, asset policy, and scheduled-worker contract.
 - The hourly orchestrator may create or reuse bounded worker tasks using the model and effort declared in that file. It must not implement features or edit `main` itself.
+- The hourly orchestrator must run one bounded task-control health check before its detailed audit. Both the thread catalog and the expected saved project must respond within 20 seconds. On timeout, empty/missing project catalog, unavailable expected host, or malformed response, stop immediately with one blocker report; do not retry, probe individual threads, create tasks, branches, or worktrees, or spend the remainder of the run auditing work that cannot be dispatched.
 - Because the saved Codex project root is `/Users/jschuler/Projects`, every scheduled prompt and worker handoff must explicitly change into `/Users/jschuler/Projects/vanta-city` or the assigned Vanta worktree and verify the Git root, branch, HEAD, and status before reading or editing.
 - The hourly integrator may review, merge, commit, update roadmap execution state, and push `main` because the user explicitly authorized that recurring workflow.
 - Stagger orchestration and integration runs. Never duplicate a roadmap task that already has an active task, worktree, branch, commit, or completed entry.
