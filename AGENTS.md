@@ -38,6 +38,19 @@ These rules apply to the entire repository.
 - Commit integration corrections separately when they express a distinct conflict-resolution decision.
 - Push only when the user explicitly asks to push. Do not delete branches during routine worktree cleanup.
 
+## Scheduled orchestration
+
+- Treat `coordination/game-orchestrator.json` as the authoritative roadmap, performance budget, asset policy, and scheduled-worker contract.
+- The hourly orchestrator may create or reuse bounded worker tasks using the model and effort declared in that file. It must not implement features or edit `main` itself.
+- Because the saved Codex project root is `/Users/jschuler/Projects`, every scheduled prompt and worker handoff must explicitly change into `/Users/jschuler/Projects/vanta-city` or the assigned Vanta worktree and verify the Git root, branch, HEAD, and status before reading or editing.
+- The hourly integrator may review, merge, commit, update roadmap execution state, and push `main` because the user explicitly authorized that recurring workflow.
+- Stagger orchestration and integration runs. Never duplicate a roadmap task that already has an active task, worktree, branch, commit, or completed entry.
+- Hourly integration skips the complete E2E suite. Run changed-feature browser tests and smoke coverage; reserve full E2E for explicit release milestones or a separately approved scheduled gate.
+- A map-expansion milestone grows measured playable area by 20–30% (target 25%). Unrelated feature iterations must not inflate the map merely to satisfy the percentage.
+- Treat 900 MB as a tested hard memory ceiling, not a utilization goal. Performance, disposal, and leak checks block integration when budgets regress.
+- New gameplay acceptance must use production-intended, locally stored assets with verified provenance. Synthetic placeholders remain limited to explicit failure-path tests.
+- Do not call paid audio services or transmit credentials from an unattended run. Audio work remains blocked until credentials, rights, budget, voice ID, and a concrete brief are available.
+
 ## Efficient validation
 
 - Match validation scope to the change while iterating. Run affected unit tests, targeted lint/format checks, and the relevant browser feature suite instead of repeatedly running every check after each small edit.

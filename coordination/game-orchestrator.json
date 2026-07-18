@@ -1,0 +1,361 @@
+{
+  "$schema": "https://vanta-city.local/schemas/game-orchestrator-v1.json",
+  "version": 1,
+  "project": {
+    "id": "vanta-city",
+    "repository": "/Users/jschuler/Projects/vanta-city",
+    "defaultBranch": "main",
+    "worktreeRoot": "/Users/jschuler/Projects/vanta-city-worktrees",
+    "vision": "A distinctive 1990s low-poly browser crime drama built around Ashfall City, with authored open-world exploration, memorable characters, cinematic missions, vehicles, and reliable browser performance.",
+    "creativeBoundary": "Use the open-world crime genre as a design reference, but do not copy GTA names, dialogue, missions, branding, artwork, UI layouts, music, characters, or story beats."
+  },
+  "automation": {
+    "orchestrator": {
+      "model": "gpt-5.6-sol",
+      "reasoningEffort": "xhigh",
+      "intervalMinutes": 60,
+      "minuteOfHour": 5,
+      "maxActiveWorkers": 3,
+      "maxNewWorkersPerRun": 2,
+      "workerModel": "gpt-5.6-sol",
+      "workerReasoningEffort": "medium",
+      "implementationPolicy": "The orchestrator plans, reviews dependencies, and dispatches bounded work. Implementation, asset acquisition, editing, and QA belong to medium-effort workers in dedicated worktrees."
+    },
+    "integrator": {
+      "model": "gpt-5.6-sol",
+      "reasoningEffort": "xhigh",
+      "intervalMinutes": 60,
+      "minuteOfHour": 50,
+      "mergeOnlyCleanCommittedWorkers": true,
+      "pushTarget": "origin/main",
+      "fullE2EEachHour": false
+    }
+  },
+  "executionPolicy": {
+    "selection": [
+      "Read this entire file and AGENTS.md.",
+      "Inspect current Codex task status, Git worktrees, branches, and main before dispatching.",
+      "Do not duplicate a task whose task ID appears in an active task title, branch name, worktree path, commit, or completed roadmap entry.",
+      "Select only tasks whose dependencies are completed and whose status is ready.",
+      "Prefer one architecture task and one independent content or visual task per run.",
+      "Do not start more work when three workers are active or more than five worktrees are registered."
+    ],
+    "workerRules": [
+      "Create or reuse one dedicated worker task and worktree per bounded task.",
+      "Name branches worker/<task-id>-<short-name> and include the task ID in the task title.",
+      "Start from the current origin/main unless the task explicitly depends on an unmerged worker.",
+      "Begin every worker prompt with an exact cd to its assigned /Users/jschuler/Projects/vanta-city-worktrees/<name> path, then verify git rev-parse --show-toplevel, git branch --show-current, git rev-parse HEAD, and git status --short --branch before any read or edit.",
+      "Stop without editing if the verified repository root is not the assigned Vanta City worktree or if the starting state differs from the orchestrator's assignment.",
+      "Workers must not merge or push main.",
+      "Workers must commit focused changes, leave worktrees clean, and report checks, screenshots, architectural decisions, provenance, performance measurements, and risks.",
+      "Visual workers must inspect screenshots and the browser console. Runtime changes must use existing public lifecycle, input, camera, collision, asset, game-state, debug, and browser-test contracts.",
+      "If a suitable production-intended asset cannot be found with verified usage rights, block the task instead of shipping a placeholder. Synthetic assets remain allowed only in explicit failure-path tests."
+    ],
+    "integrationRules": [
+      "Review commit history, changed files, APIs, tests, asset assumptions, performance impact, and overlap before merging.",
+      "Prefer one authoritative system over adapters or duplicate browser listeners.",
+      "Never merge an active, dirty, uncommitted, failing, or conceptually incompatible worker.",
+      "Run formatting, linting, type-checking, unit tests, relevant asset validators, production build, bundle size, targeted browser tests, and smoke tests.",
+      "Skip the complete E2E suite during hourly integration. Reserve it for explicit release milestones or a separately approved scheduled gate.",
+      "Commit integration corrections separately, update task status and metrics in this file, push main, and report exactly what changed.",
+      "Never delete a dirty or active worktree. Preserve worker branches when cleaning completed worktrees."
+    ]
+  },
+  "performanceBudgets": {
+    "referenceViewport": "1280x720",
+    "targetFps": 60,
+    "acceptableSustainedFps": 50,
+    "minimumOnePercentLowFps": 45,
+    "warmupSeconds": 20,
+    "measurementSeconds": 60,
+    "frameTimeP95Ms": 20,
+    "memory": {
+      "preferredPeakWorkingSetMb": 650,
+      "hardPeakWorkingSetMb": 900,
+      "policy": "Memory is a ceiling, not a target. Exceed 900 MB only with a recorded benchmark, a documented reason, no leak trend across three load/unload cycles, and explicit roadmap approval."
+    },
+    "rendering": {
+      "requireSectorStreaming": true,
+      "requireFrustumCulling": true,
+      "requireDistanceLod": true,
+      "requireAssetCacheDisposalTests": true,
+      "requireThreeLoadUnloadCycles": true,
+      "performanceFailureBlocksMerge": true
+    }
+  },
+  "worldGrowth": {
+    "measurement": "walkable-playable-area-square-metres",
+    "growthTargetPercent": 25,
+    "allowedGrowthPercent": {
+      "minimum": 20,
+      "maximum": 30
+    },
+    "baseline": {
+      "mapId": "ashfall-junction",
+      "boundsMetres": {
+        "minX": -28,
+        "maxX": 28,
+        "minZ": -28,
+        "maxZ": 28
+      },
+      "playableAreaSquareMetres": 3136,
+      "buildingCount": 8
+    },
+    "nextExpansionTarget": {
+      "minimumAreaSquareMetres": 3763,
+      "targetAreaSquareMetres": 3920,
+      "maximumAreaSquareMetres": 4077
+    },
+    "rules": [
+      "Apply the growth percentage once per map-expansion milestone, not once per unrelated feature run.",
+      "Describe each expansion in an authored machine-readable map plan before building it.",
+      "Keep buildings on the outer edge of sidewalks with continuous pedestrian clearance, readable entrances, authored collision, camera recovery space, and traffic-safe lanes.",
+      "Add curved streets through shared spline-based road, lane, collision, traffic, and minimap geometry rather than visual-only bends.",
+      "Load only nearby sectors during gameplay and provide a separate full-map representation for the map UI.",
+      "Every expansion must record area, buildings, sectors, draw calls, triangles, memory, FPS, collision coverage, and screenshot paths."
+    ]
+  },
+  "assetPolicy": {
+    "runtimeNetworkLoading": false,
+    "acceptedLicenses": ["CC0-1.0", "public-domain", "original-project-owned"],
+    "requirements": [
+      "Verify the source page and license before downloading.",
+      "Store reviewed runtime assets locally with source URL, author, license, retrieval date, hash, scale, forward axis, animation list, and modification notes.",
+      "Use production-intended assets in visual and browser acceptance tests; do not approve placeholder geometry as feature completion.",
+      "Run characters and animated NPCs through the animation lab with persistent transform controls and screenshots.",
+      "Do not copy real brands, protected characters, famous buildings, GTA material, or unclear-license marketplace assets."
+    ]
+  },
+  "creativeRoles": {
+    "storyWriterSkill": "/Users/jschuler/.codex/skills/vanta-story-writer/SKILL.md",
+    "cinematicDirectorSkill": "/Users/jschuler/.codex/skills/vanta-cinematic-director/SKILL.md",
+    "consultationModel": "gpt-5.6-sol",
+    "consultationReasoningEffort": "xhigh",
+    "implementationModel": "gpt-5.6-sol",
+    "implementationReasoningEffort": "medium"
+  },
+  "productRules": {
+    "defaultPlayableCharacterId": "casual",
+    "showCharacterPickerAtBoot": false,
+    "preserveCharacterRegistry": true,
+    "missionPresentation": "World triggers and objectives use a shared mission system with authored map/world highlights and event hooks.",
+    "cinematicPresentation": "Cinematics use the camera system, subtitle dialogue, skip confirmation, exact gameplay restoration, and no voice-over requirement.",
+    "vehiclePresentation": "Vehicles use one enter-drive-exit ownership flow with game-state, camera, collision, traffic, and input integration inspired by genre conventions but implemented originally.",
+    "fullMapPresentation": "A dedicated map action opens a full-world sector map without replacing the existing minimap.",
+    "titleAndLoadingPresentation": "Create an original 1990s Ashfall title screen and locally stored rotating loading artwork that reflects completed story locations and characters.",
+    "audioPresentation": "Reserve ElevenLabs for an original theme/radio pipeline. Do not generate voice-over dialogue yet and do not call the API until credentials, rights, budget, radio voice ID, and an approved brief are available."
+  },
+  "testStrategy": {
+    "goals": [
+      "Keep unit tests under ten seconds on the reference machine.",
+      "Keep hourly targeted browser validation under three minutes.",
+      "Use deterministic public snapshots and events instead of arbitrary sleeps.",
+      "Run screenshot-heavy labs only for changed visual systems.",
+      "Profile before increasing Playwright workers and preserve WebGL isolation."
+    ],
+    "hourlyIntegration": [
+      "format:check",
+      "lint",
+      "typecheck",
+      "unit",
+      "relevant-asset-validation",
+      "production-build",
+      "bundle-size",
+      "changed-feature-browser-tests",
+      "smoke"
+    ],
+    "releaseMilestone": [
+      "hourlyIntegration",
+      "full-e2e",
+      "repeated-critical-flow",
+      "manual-browser-console-review",
+      "visual-screenshot-review",
+      "memory-and-fps-benchmark"
+    ]
+  },
+  "roadmap": [
+    {
+      "id": "CORE-001",
+      "title": "Boot directly as Casual",
+      "status": "ready",
+      "dependencies": [],
+      "owner": "runtime-worker",
+      "acceptance": [
+        "Boot bypasses the character picker and selects casual through the existing character selection state.",
+        "The character registry, fallback loading, debug switching, and tests remain available.",
+        "No player simulation is recreated solely to choose the visual."
+      ]
+    },
+    {
+      "id": "STORY-001",
+      "title": "Author the Ashfall 1990s narrative bible",
+      "status": "ready",
+      "dependencies": [],
+      "owner": "story-worker",
+      "skill": "vanta-story-writer",
+      "acceptance": [
+        "Define the original setting, themes, timeline, factions, Rook/Casual identity, supporting cast, act structure, and first six mission premises.",
+        "Provide structured speaker, location, mission, and story-beat IDs suitable for runtime definitions.",
+        "Avoid GTA-specific names, copied story beats, and copyrighted dialogue."
+      ]
+    },
+    {
+      "id": "PERF-001",
+      "title": "Build sector streaming and performance telemetry",
+      "status": "ready",
+      "dependencies": [],
+      "owner": "performance-worker",
+      "acceptance": [
+        "Define authored world sectors and deterministic load/unload ownership using the existing asset and level lifecycle.",
+        "Expose sector, draw-call, triangle, texture, memory-proxy, frame-time, and disposal diagnostics.",
+        "Prove three sector load/unload cycles without increasing retained scene objects or asset references."
+      ]
+    },
+    {
+      "id": "WORLD-001",
+      "title": "Expand Ashfall by 25 percent with the first curved street",
+      "status": "ready",
+      "dependencies": ["PERF-001"],
+      "owner": "world-worker",
+      "acceptance": [
+        "Increase walkable playable area to 3763–4077 square metres and record the exact result.",
+        "Add one authored curved road corridor whose visuals, lanes, collision, traffic paths, and minimap share spline-derived geometry.",
+        "Add production buildings at outer sidewalk edges without reducing pedestrian clearance.",
+        "Meet FPS, memory, collision, camera, and visual screenshot gates."
+      ]
+    },
+    {
+      "id": "NPC-001",
+      "title": "Acquire and validate the first expanded pedestrian cast",
+      "status": "ready",
+      "dependencies": ["PERF-001"],
+      "owner": "asset-worker",
+      "acceptance": [
+        "Add at least four license-verified low-poly NPC models that fit Ashfall's art direction.",
+        "Each NPC has production idle and interaction animation coverage, documented provenance, correct scale/forward direction, disposal tests, and animation-lab controls.",
+        "No placeholder model is accepted as the completed visual."
+      ]
+    },
+    {
+      "id": "MISSION-001",
+      "title": "Create the authoritative mission and objective system",
+      "status": "ready",
+      "dependencies": ["STORY-001", "CORE-001"],
+      "owner": "gameplay-worker",
+      "acceptance": [
+        "Implement mission definitions, prerequisites, objective state, world triggers, highlighted world/map targets, event hooks, persistence-ready snapshots, cancellation, completion, debug controls, and disposal.",
+        "Mission definitions reference entity, location, dialogue, cinematic, and speaker IDs instead of loaded objects.",
+        "Add a production first-mission skeleton from the story bible without placeholder mission text."
+      ]
+    },
+    {
+      "id": "VEHICLE-001",
+      "title": "Implement enter, drive, and exit vehicle foundation",
+      "status": "ready",
+      "dependencies": ["PERF-001"],
+      "owner": "vehicle-worker",
+      "acceptance": [
+        "Use a production traffic vehicle asset for enter, seated ownership, acceleration, braking, reverse, steering, collision, camera, exit placement, pause, and recovery.",
+        "Player simulation and vehicle simulation have explicit ownership transfer without duplicate input listeners.",
+        "Driving is responsive and original, with genre-appropriate handling but no copied GTA values or UI."
+      ]
+    },
+    {
+      "id": "MAP-001",
+      "title": "Add a full-world map screen",
+      "status": "ready",
+      "dependencies": ["WORLD-001"],
+      "owner": "ui-worker",
+      "acceptance": [
+        "A named map action opens a pause-safe full-sector map distinct from the minimap.",
+        "It shows authored roads, curves, buildings, mission highlights, player position, locations, zoom, pan, accessibility labels, and clean input ownership.",
+        "Opening and closing restores the exact prior gameplay state and camera ownership."
+      ]
+    },
+    {
+      "id": "CINEMATIC-001",
+      "title": "Create the cinematic sequence system",
+      "status": "ready",
+      "dependencies": ["STORY-001", "MISSION-001"],
+      "owner": "cinematic-worker",
+      "skill": "vanta-cinematic-director",
+      "acceptance": [
+        "Cinematic definitions request camera shots through the camera system and render subtitle dialogue through shared dialogue presentation.",
+        "Skip input opens a confirmation prompt; confirm exits cleanly and cancel resumes the sequence.",
+        "Completion and skipping restore game state, movement, interaction, camera, HUD, and input ownership exactly.",
+        "Add one production opening scene based on the story bible and validate desktop/narrow screenshots."
+      ]
+    },
+    {
+      "id": "MISSION-002",
+      "title": "Ship the first complete story mission",
+      "status": "ready",
+      "dependencies": [
+        "MISSION-001",
+        "CINEMATIC-001",
+        "NPC-001",
+        "VEHICLE-001",
+        "WORLD-001"
+      ],
+      "owner": "mission-worker",
+      "acceptance": [
+        "A concrete story mission connects an opening cinematic, world objective highlights, dialogue, on-foot movement, vehicle use, completion, reward, failure/retry, and post-mission world state.",
+        "All text and character beats come from the approved story bible.",
+        "The complete browser path uses production-intended assets and records console, FPS, memory, and screenshots."
+      ]
+    },
+    {
+      "id": "PRESENTATION-001",
+      "title": "Create the original 1990s title and loading presentation",
+      "status": "ready",
+      "dependencies": ["STORY-001", "WORLD-001", "NPC-001"],
+      "owner": "visual-worker",
+      "acceptance": [
+        "Create an original Ashfall title screen, typography system, and locally stored loading artwork based on shipped characters and locations.",
+        "Loading transitions reflect real sector or asset readiness and do not conceal hangs.",
+        "No GTA artwork, logo composition, names, or music is copied."
+      ]
+    },
+    {
+      "id": "AUDIO-001",
+      "title": "Create the theme and radio audio pipeline",
+      "status": "blocked-user-input",
+      "dependencies": ["STORY-001"],
+      "owner": "audio-worker",
+      "blockedOn": [
+        "ElevenLabs API credential availability",
+        "approved spending limit",
+        "radio host voice ID and usage rights",
+        "theme and station brief"
+      ],
+      "acceptance": [
+        "Generate or acquire only original project-owned audio with recorded provenance and API parameters.",
+        "Implement local runtime playback, streaming/disposal rules, volume/accessibility controls, and radio interruption behavior.",
+        "Do not generate character dialogue voice-over in this milestone."
+      ]
+    },
+    {
+      "id": "TEST-001",
+      "title": "Reduce hourly validation latency",
+      "status": "ready",
+      "dependencies": [],
+      "owner": "test-performance-worker",
+      "acceptance": [
+        "Profile current unit and browser suites before editing.",
+        "Keep unit runtime below ten seconds and hourly targeted browser validation below three minutes without deleting meaningful regression coverage.",
+        "Separate deterministic state tests, smoke paths, visual labs, and release-only full E2E coverage."
+      ]
+    }
+  ],
+  "executionState": {
+    "lastIntegratedTaskIds": [],
+    "lastOrchestratorRun": null,
+    "lastIntegratorRun": null,
+    "lastMapExpansion": null,
+    "lastPerformanceReport": null,
+    "notes": [
+      "The hourly orchestrator must inspect live tasks and branches because this file is updated only after integration.",
+      "The hourly integrator may update executionState and task statuses in the same focused commit as successful integration metadata."
+    ]
+  }
+}
