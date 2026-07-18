@@ -1,0 +1,1594 @@
+{
+  "schemaVersion": 1,
+  "title": "Ashfall: The Cinder Ledger — Narrative Bible",
+  "logline": "In autumn 1997, a wary courier known as Rook returns to a salt-bitten port city and discovers that a missing teenager, a false municipal debt, and a chain of staged accidents are entries in the same ledger; surviving means deciding whether Ashfall belongs to the people who remember it or the people who can price it.",
+  "setting": {
+    "settingId": "ashfall-city",
+    "name": "Ashfall City",
+    "year": 1997,
+    "preciseDateRange": "September 29–November 7, 1997",
+    "citySummary": "Ashfall is a fictional Atlantic port built where a tidal channel meets steep industrial ground. Salt, coal dust, wet concrete, and faded geometric facades define its streets. A 1984 channel fire hollowed out the manufacturing base; a 1992 storm then gave lenders and city receivers an excuse to convert repair debt into property control. By 1997 the city still works, but every shift, lease, and favor carries two prices: the one printed on paper and the one enforced at the curb.",
+    "technologyBoundary": "Landlines, pay phones, pagers, fax machines, VHS security tapes, cassette recorders, paper manifests, dot-matrix printouts, broadcast radio, and early standalone office computers are ordinary. Mobile phones are rare and bulky; there are no smartphones, social media, consumer GPS, cloud services, text messaging culture, or instant digital surveillance.",
+    "economicBoundary": "Money is expressed as whole local currency units. Cash, money orders, payroll envelopes, debt notes, and paper receipts dominate. The runtime starts the player at 500 units; the story never promises a second currency or a networked banking system."
+  },
+  "canonAuthority": {
+    "defaultPlayableCharacterId": "casual",
+    "playerDialogueIdentityId": "rook",
+    "rookIdentityRule": "Rook is the street name and dialogue identity of the playable character whose authoritative registry ID remains casual. Rook is not a new CharacterDefinition, selectable character, model, or duplicate entity.",
+    "authoritativeNpcIds": ["mack", "nox", "raze"],
+    "authoritativeLevelId": "test-district",
+    "authoritativeLevelName": "Ashfall Junction",
+    "establishedGameplayFacts": [
+      "The playable character registry contains casual and punk; casual remains the default story entity.",
+      "Mack, Nox, and Raze retain their existing NPC, speaker, character-model, spawn, portrait, conversation, and camera-profile authority.",
+      "Ashfall Junction is a 56m by 56m authored intersection with north, east, south, and west approaches, Signal Corner, a signal-controller interaction, a mission point at the center, and fixed straight traffic lanes.",
+      "The player economy uses integer money, starts at 500, and exposes authoritative credit and debit events.",
+      "The player production composition starts with a knife; the existing test handgun purchase costs 250 and should not be treated as a story shop contract.",
+      "Current civilian traffic is deterministic, pooled, straight-lane traffic using pickup-truck and sports-car catalog IDs; enter-drive-exit does not yet exist.",
+      "Production startup has no ordinary NPCs. Mack, Nox, and Raze currently spawn only as explicit development fixtures, so story use requires production roster work.",
+      "No mission, persistence, scheduling, pathfinding, production combat AI, cinematic sequence, full-map, or vehicle-control system exists yet."
+    ],
+    "intentionalCorrections": [],
+    "runtimeBoundary": "This bible is planning data only. It is not imported by runtime startup, does not register entities or listeners, and does not claim unimplemented systems."
+  },
+  "themes": [
+    {
+      "id": "theme-memory-versus-paper",
+      "name": "Memory versus paper",
+      "statement": "A neighborhood remembers who kept it alive; an institution recognizes only what can be stamped, filed, and sold. The drama tests whether either kind of truth can survive alone."
+    },
+    {
+      "id": "theme-debt-as-government",
+      "name": "Debt as government",
+      "statement": "Ashfall is controlled less by uniforms than by overdue notices, repair liens, payroll gaps, and favors. Crime and civic administration use the same arithmetic with different letterhead."
+    },
+    {
+      "id": "theme-loyalty-with-receipts",
+      "name": "Loyalty with receipts",
+      "statement": "Care is real, but every character has learned to document, price, or deny it. Trust changes when someone accepts a cost they cannot recover."
+    },
+    {
+      "id": "theme-motion-and-belonging",
+      "name": "Motion and belonging",
+      "statement": "Rook survives by leaving before a place can claim them. Ashfall forces a choice between remaining unowned and becoming responsible for somewhere imperfect."
+    }
+  ],
+  "toneBoundaries": [
+    "Crime is tense, local, and consequential; violence is never a carnival, civilian suffering is not a punchline, and cruelty does not substitute for characterization.",
+    "Humor comes from dry observation, stubborn logistics, and clashing habits—not humiliation, stereotypes, or broad parody.",
+    "Dialogue stays concise and subtitle-friendly. Characters avoid exposition speeches, modern meme phrasing, and borrowed genre catchphrases.",
+    "Police, labor, business, and neighborhood groups contain competing people rather than uniform moral categories.",
+    "No real brands, cities, public figures, songs, criminal organizations, or recognizable franchise plots are named or imitated.",
+    "The story may show threats, debt coercion, property crime, smuggling, arson aftermath, and defensive violence, but it avoids sexual violence, torture spectacle, hate-crime set pieces, and harm to children as entertainment.",
+    "The 1990s are material conditions rather than nostalgia wallpaper: information moves slowly, records can be lost, and a missed call changes plans."
+  ],
+  "districts": [
+    {
+      "id": "ashfall-junction",
+      "name": "Ashfall Junction",
+      "history": "The Junction formed where foundry shifts crossed the channel road. Its street grid survived the 1984 channel fire, but the surrounding workshops became repair yards, storage rooms, and informal offices. The signal cabinet still bears layers of municipal paint from administrations that never replaced its wiring.",
+      "currentPressures": [
+        "Recovery Office survey crews are reclassifying occupied workshops as unsafe vacancies.",
+        "Straight-through traffic and perimeter closures make the intersection easy to watch and hard to leave unnoticed.",
+        "Mack's garage network is one late payroll away from accepting predatory financing."
+      ],
+      "runtimeStatus": "Implemented as level test-district with authored roads, approaches, landmarks, collision, trigger.intersection-center, interaction.signal-controller, mission.intersection-center, and two static civilian vehicle models in the traffic catalog."
+    },
+    {
+      "id": "cinder-quay",
+      "name": "Cinder Quay",
+      "history": "A stepped seawall and bonded warehouses once moved machine parts around the clock. After the channel fire, insurers fenced the deepest berths and leased the remaining sheds through shell operators.",
+      "currentPressures": [
+        "A contested night manifest proves usable berths are being declared derelict before forced sale.",
+        "Tidehands crews are split between protecting work and taking private unloading contracts.",
+        "Recovery Office inspectors can close the quay by noon if a staged safety failure holds."
+      ],
+      "runtimeStatus": "Canon location planned for WORLD-001 or later; no current level geometry, trigger, traffic lane, or cinematic anchor exists."
+    },
+    {
+      "id": "glasshouse-row",
+      "name": "Glasshouse Row",
+      "history": "Small print shops, repair counters, and boarding rooms filled the lee side of the old tram grade. Its narrow businesses became the city's unofficial copy room when official archives started losing inconvenient pages.",
+      "currentPressures": [
+        "A print cooperative is reproducing deed notices faster than receivers can seize originals.",
+        "Public pay phones are being removed under a modernization contract, cutting the district's private communications.",
+        "Nox's courier routes are compromised by an unknown pager-code leak."
+      ],
+      "runtimeStatus": "Canon location only; requires authored district expansion, interiors or exterior service windows, interaction points, and NPC schedules."
+    },
+    {
+      "id": "reservoir-steps",
+      "name": "Reservoir Steps",
+      "history": "Concrete stairs and service roads climb to the capped municipal reservoir. The upper pump house became a records annex after the 1992 storm flooded City Hall's basement.",
+      "currentPressures": [
+        "The annex holds the only surviving index that connects repair bonds to property seizures.",
+        "Private security has replaced clerks on the night shift.",
+        "A forecast king tide threatens lower streets before the final hearing."
+      ],
+      "runtimeStatus": "Canon finale district only; requires vertical traversal, authored collision, production security NPCs, record interactions, and performance-reviewed sector streaming."
+    }
+  ],
+  "factions": [
+    {
+      "id": "recovery-office",
+      "name": "Ashfall Recovery Office",
+      "goal": [
+        "Consolidate storm and fire liabilities into a single saleable redevelopment parcel",
+        "Keep the bond-transfer chain legal-looking until the November hearing"
+      ],
+      "resources": [
+        "Inspectors and closure notices",
+        "Debt records and municipal seals",
+        "Contract security through Marrow Transit",
+        "Access to condemned properties"
+      ],
+      "methods": [
+        "Selective code enforcement",
+        "Purchased debt",
+        "Staged safety failures",
+        "Offers that turn witnesses into beneficiaries"
+      ],
+      "relationships": [
+        "Uses Marrow Transit as deniable muscle",
+        "Pressures Mack's garage through liens",
+        "Courts Raze as a future public spokesman",
+        "Underestimates Nox's paper network"
+      ]
+    },
+    {
+      "id": "tidehands-local",
+      "name": "Tidehands Local 14",
+      "goal": [
+        "Keep the remaining quay shifts under worker control",
+        "Prevent the berth closures from becoming permanent"
+      ],
+      "resources": [
+        "Dock access and load knowledge",
+        "Forklifts, keys, and shift rosters",
+        "Families across four districts"
+      ],
+      "methods": [
+        "Work slowdowns",
+        "Mutual aid",
+        "Selective off-book freight",
+        "Collective witness when leadership agrees"
+      ],
+      "relationships": [
+        "Relies on Mack for vehicle repair",
+        "Distrusts Raze's clean public strategy",
+        "Trades route warnings with Nox",
+        "Contains a paid Recovery Office informant"
+      ]
+    },
+    {
+      "id": "marrow-transit",
+      "name": "Marrow Transit & Recovery",
+      "goal": [
+        "Own the city's towing, impound, and bonded-haul routes",
+        "Acquire waterfront parcels as payment for municipal contracts"
+      ],
+      "resources": [
+        "Tow yards and dispatch radios",
+        "Drivers and private guards",
+        "Civilian-looking fleet access",
+        "Signed emergency contracts"
+      ],
+      "methods": [
+        "Strategic towing",
+        "Cargo substitution",
+        "Threats framed as service calls",
+        "Short, deniable road blockades"
+      ],
+      "relationships": [
+        "Paid by the Recovery Office",
+        "Competes with Tidehands crews",
+        "Attempts to recruit Rook",
+        "Holds evidence about the 1984 fire that can damage its own founders"
+      ]
+    },
+    {
+      "id": "glasshouse-cooperative",
+      "name": "Glasshouse Copy Cooperative",
+      "goal": [
+        "Keep public records reproducible and locally accessible",
+        "Expose the false vacancy chain without sacrificing vulnerable tenants"
+      ],
+      "resources": [
+        "Print rooms and fax lines",
+        "Volunteer indexers",
+        "Nox's courier routes",
+        "A cassette archive of public meetings"
+      ],
+      "methods": [
+        "Distributed copies",
+        "Anonymous tips",
+        "Document comparison",
+        "Public release timed to hearings"
+      ],
+      "relationships": [
+        "Protects Nox but questions his secrecy",
+        "Needs Raze's public credibility",
+        "Treats Rook as a courier until Rook chooses responsibility",
+        "Cannot act on stolen records without corroboration"
+      ]
+    },
+    {
+      "id": "junction-garages",
+      "name": "Junction Garages",
+      "goal": [
+        "Keep independent repair bays operating",
+        "Find Mack's missing nephew Orin before either side can use him"
+      ],
+      "resources": [
+        "Tools, lifts, and keys",
+        "Knowledge of vehicle histories",
+        "Favors from drivers",
+        "Mack's reputation for finishing difficult work"
+      ],
+      "methods": [
+        "Repair credit",
+        "Quiet storage",
+        "Vehicle identification",
+        "Refusal to service coercive crews"
+      ],
+      "relationships": [
+        "Supports Tidehands vehicles",
+        "Owes Marrow Transit money",
+        "Hides Glasshouse materials",
+        "Becomes Rook's first fragile home base"
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "rook",
+      "name": "Rook",
+      "speakerId": "rook",
+      "entityId": "casual",
+      "age": 29,
+      "goal": "Collect the promised courier fee, find Orin, and leave Ashfall before an old failure becomes public.",
+      "pressure": "Rook's cash reserve is thin, Marrow Transit recognizes their driving habits, and Mack knows why Rook left in 1992.",
+      "contradiction": "Rook insists every job is temporary but memorizes people, routes, and small needs with the care of someone building a home.",
+      "leverage": "Exceptional route memory, calm under pursuit, and a sealed cassette from the 1992 storm that Rook has never played for anyone else.",
+      "relationshipChange": "Begins as Mack's paid outsider, becomes Nox's accountable partner, refuses Raze's clean exit, and ends responsible for what Ashfall does with the ledger.",
+      "gameplayFunction": "Playable viewpoint, courier, investigator through movement and interaction, eventual driver, and the owner of mission, money, equipment, and persistent choice state.",
+      "arc": "From mobility as self-protection to chosen obligation without romanticizing ownership or crime.",
+      "voicePattern": "Short declarative replies; notices practical details; asks one precise question instead of explaining a feeling. Under pressure, sentences get quieter rather than louder.",
+      "visualAssetDependency": "Use authoritative playable entity casual and its existing local CC0 model. Rook-specific wardrobe, portrait, or props remain optional original-project-owned art dependencies and must not replace the registry ID."
+    },
+    {
+      "id": "mack",
+      "name": "Mack Bell",
+      "speakerId": "mack",
+      "entityId": "mack",
+      "age": 52,
+      "goal": "Recover his nephew Orin and keep the Junction garages independent through the hearing.",
+      "pressure": "A repair lien comes due in ten days, his crews are losing work, and admitting how Orin got the ledger could incriminate a friend.",
+      "contradiction": "Mack demands punctual honesty while hiding the one delay and one lie that sent Orin into danger.",
+      "leverage": "Vehicle histories, shop keys, repair credit, and trust across trades that do not otherwise cooperate.",
+      "relationshipChange": "Treats Rook as an unreliable tool, then as a partner, and finally accepts that protection without truth is another form of control.",
+      "gameplayFunction": "First mission giver, grounded tutorial relationship, garage access gate, vehicle identification source, and emotional measure of Rook's reliability.",
+      "arc": "From guarding people through omission to risking the garage by giving them the whole record.",
+      "voicePattern": "Concrete nouns, mechanical comparisons, dry three-beat corrections; rarely uses a name when a task will do.",
+      "visualAssetDependency": "Preserve NPC ID mack, character ID npc-worker, spawn spawn.npc-mechanic, close camera profile, and existing local CC0 model. Production use requires promoting the fixture through a reviewed production roster; portrait remains optional."
+    },
+    {
+      "id": "nox",
+      "name": "Nox Arlen",
+      "speakerId": "nox",
+      "entityId": "nox",
+      "age": 34,
+      "goal": "Build enough redundant evidence that no single raid, fire, or frightened witness can erase the seizure scheme.",
+      "pressure": "A compromised pager code exposes couriers, while the cooperative suspects Nox values perfect proof more than living people.",
+      "contradiction": "Nox distributes documents to prevent centralized power but hoards the index that makes the copies meaningful.",
+      "leverage": "Pay-phone timing, copy routes, document comparison, and knowledge of which official records were altered after filing.",
+      "relationshipChange": "Dismisses Rook as another vanishing courier, then trusts Rook with the master index after Rook returns when escape is available.",
+      "gameplayFunction": "Evidence-chain mission giver, route and stealth-pressure planner, dialogue source for paper-trail objectives, and owner of copy-network facts.",
+      "arc": "From control through redundancy to trust through shared custody.",
+      "voicePattern": "Compressed warnings and exact times; avoids adjectives; repeats the key noun when someone is evading the point.",
+      "visualAssetDependency": "Preserve NPC ID nox, character ID npc-hoodie, spawn spawn.npc-alley, and existing local CC0 model. Production scheduling and a reviewed portrait are unresolved dependencies."
+    },
+    {
+      "id": "raze",
+      "name": "Raze Calder",
+      "speakerId": "raze",
+      "entityId": "raze",
+      "age": 38,
+      "goal": "Force a public settlement that keeps the quay open without turning the Tidehands into a criminal organization.",
+      "pressure": "Every illegal load weakens his hearing strategy, while every lawful delay costs another shift and another family.",
+      "contradiction": "Raze prizes collective consent but privately decides which truths the membership is ready to hear.",
+      "leverage": "Shift loyalty, public composure, access to berth operations, and a legitimate seat at the November hearing.",
+      "relationshipChange": "Sees Rook as reckless noise, uses Rook's evidence, then breaks with Rook over whether to trade the ledger for immediate jobs before choosing disclosure.",
+      "gameplayFunction": "Quay access gate, pressure-versus-proof countervoice, timed worksite mission giver, and public consequence carrier.",
+      "arc": "From protecting the institution's image to letting members choose with full knowledge of the risk.",
+      "voicePattern": "Measured clauses and clear alternatives; never wastes a threat; anger appears as unusually formal courtesy.",
+      "visualAssetDependency": "Preserve NPC ID raze, character ID npc-punk, spawn spawn.npc-deck, wide camera profile, and existing local CC0 model. Production use requires roster promotion and authored quay placement."
+    },
+    {
+      "id": "orin-bell",
+      "name": "Orin Bell",
+      "speakerId": "orin-bell",
+      "entityId": "orin-bell",
+      "age": 19,
+      "goal": "Prove the garage can survive without Mack deciding every risk and expose the seizure chain he found in impounded vehicle records.",
+      "pressure": "Both Marrow Transit and the Recovery Office need his copied ledger, and his improvised hiding plan is running out of safe contacts.",
+      "contradiction": "Orin resents being protected like a child but chose a plan that depends on older people understanding his clues.",
+      "leverage": "A partial tow ledger, first-hand knowledge of substituted vehicle plates, and the missing page that ties a staged collision to a parcel transfer.",
+      "relationshipChange": "Begins as Rook's absent obligation, rejects rescue without agency, and becomes a junior custodian of the evidence rather than a prize to retrieve.",
+      "gameplayFunction": "Mystery target, breadcrumb author, later mobile witness, and source of the physical ledger-page objective.",
+      "arc": "From solitary proof-seeking to disciplined participation in a shared evidence chain.",
+      "voicePattern": "Fast practical lists, over-specific alibis, and humor that arrives one beat after danger; drops the performance when Mack apologizes plainly.",
+      "visualAssetDependency": "Requires an original-project-owned or license-approved production NPC model, portrait metadata, animations, entity definition, and authored spawn; no placeholder qualifies."
+    },
+    {
+      "id": "vera-sorn",
+      "name": "Vera Sorn",
+      "speakerId": "vera-sorn",
+      "entityId": "vera-sorn",
+      "age": 45,
+      "goal": "Complete the parcel consolidation before the bond review exposes that the Recovery Office built solvency on fabricated vacancies.",
+      "pressure": "Her superiors will disown the methods if the sale fails, and Marrow Transit has kept copies of orders she expected to remain verbal.",
+      "contradiction": "Vera genuinely believes Ashfall needs capital and safe buildings, yet treats existing residents as accounting errors when they obstruct her timetable.",
+      "leverage": "Closure authority, debt assignments, access to the annex, and the ability to make selective amnesty offers that divide allies.",
+      "relationshipChange": "Initially offers Rook anonymous paid work, then recognizes Rook as the evidence chain's human weak point, and finally offers a lawful-looking compromise that would save jobs while preserving the fraud.",
+      "gameplayFunction": "Primary institutional antagonist, source of escalating world pressure, negotiation counterparty, and final choice catalyst rather than a combat boss.",
+      "arc": "From invisible administrative certainty to public accountability, with her central argument remaining materially tempting.",
+      "voicePattern": "Patient, exact, and professionally warm; converts moral claims into deadlines and liabilities; never uses slang to manufacture menace.",
+      "visualAssetDependency": "Requires an original-project-owned or accepted-license production NPC model, restrained office/worksite wardrobe, portrait, idle/interaction animation, and cinematic-ready facial readability within the low-poly style."
+    },
+    {
+      "id": "della-voss",
+      "name": "Della Voss",
+      "speakerId": "della-voss",
+      "entityId": "della-voss",
+      "age": 41,
+      "goal": "Keep Marrow Transit's contracts profitable enough to survive while preventing Vera from making the company the scheme's disposable culprit.",
+      "pressure": "Drivers are withholding dispatch tapes, Tidehands can close her routes, and the 1984 fire record implicates the company's founders.",
+      "contradiction": "Della insists every deal is voluntary while engineering circumstances in which refusal becomes ruin.",
+      "leverage": "Dispatch schedules, impound access, temporary road control, and proof that can expose Vera or destroy Mack.",
+      "relationshipChange": "Tests Rook with a paid delivery, grows to respect Rook's refusal to be owned, and ultimately loses control when her own drivers provide corroboration.",
+      "gameplayFunction": "Street-level antagonist, vehicle-route pressure owner, alternate information source, and recurring negotiator who makes nonviolent compromise costly.",
+      "arc": "From controlling every exit to discovering that a network held together by coercion cannot keep a secret under shared risk.",
+      "voicePattern": "Friendly dispatch shorthand, conditional favors, and precise route names; answers accusations by offering a better price.",
+      "visualAssetDependency": "Requires an original-project-owned or accepted-license production NPC model, portrait, dispatch-yard placement, and noncombat interaction animations."
+    }
+  ],
+  "threeActSpine": [
+    {
+      "id": "act-one-the-missing-page",
+      "act": "Act I",
+      "title": "The Missing Page",
+      "summary": "Rook arrives for a simple pickup, finds Orin missing, and traces his route through the Junction to a copied tow ledger. The paper suggests that condemned properties, staged collisions, and Marrow Transit impounds share a numbering sequence.",
+      "irreversibleTurn": "Rook gives Nox the only clean copy instead of selling it to Della; Marrow Transit identifies Rook publicly, closing the option of anonymous departure.",
+      "change": "Mack moves from employer to implicated ally, Nox grants limited trust, and fact rook-known-to-marrow becomes true."
+    },
+    {
+      "id": "act-two-the-price-of-proof",
+      "act": "Act II",
+      "title": "The Price of Proof",
+      "summary": "The group must corroborate paper with people and places: a quay load, a dispatch tape, an occupied property listed as vacant, and Orin's testimony. Each proof requires risking the livelihoods the evidence is supposed to protect.",
+      "irreversibleTurn": "Raze authorizes release of the berth roster after a staged safety incident injures a worker, trading short-term legal protection for proof the closure was ordered in advance.",
+      "change": "The Tidehands split, Vera accelerates the annex purge, Mack admits his 1992 lie, and Rook stays after a clean route out becomes available."
+    },
+    {
+      "id": "act-three-who-owns-the-record",
+      "act": "Act III",
+      "title": "Who Owns the Record",
+      "summary": "Rook's coalition races the king tide and an administrative purge to assemble a public chain of custody. The final conflict is not possession of one magic document but whether enough independent holders speak together that no private bargain can erase them.",
+      "irreversibleTurn": "Rook rejects Vera's parcel-saving private settlement and distributes the index before the hearing, making the truth impossible for any single ally—including Rook—to withdraw.",
+      "change": "Ashfall wins time rather than a perfect victory; the garages and quay remain vulnerable but locally governed, while Rook accepts an accountable place in the network."
+    }
+  ],
+  "locationGlossary": [
+    {
+      "id": "test-district",
+      "name": "Ashfall Junction level",
+      "description": "Authoritative current level and fallback district label.",
+      "runtimeStatus": "Implemented."
+    },
+    {
+      "id": "zone.ashfall-junction",
+      "name": "Ashfall Junction zone",
+      "description": "The full 56m current playable zone.",
+      "runtimeStatus": "Implemented."
+    },
+    {
+      "id": "landmark.signal-corner",
+      "name": "Signal Corner",
+      "description": "High-priority northeast landmark near the traffic light and controller.",
+      "runtimeStatus": "Implemented."
+    },
+    {
+      "id": "landmark.north-approach",
+      "name": "North Approach",
+      "description": "Rook's opening approach and default-spawn side of the Junction.",
+      "runtimeStatus": "Implemented."
+    },
+    {
+      "id": "landmark.east-approach",
+      "name": "East Approach",
+      "description": "Straight road exit useful for traffic observation.",
+      "runtimeStatus": "Implemented."
+    },
+    {
+      "id": "landmark.south-approach",
+      "name": "South Approach",
+      "description": "Approach near Nox's development fixture position.",
+      "runtimeStatus": "Implemented."
+    },
+    {
+      "id": "landmark.west-approach",
+      "name": "West Approach",
+      "description": "Approach near Mack's side of the Junction.",
+      "runtimeStatus": "Implemented."
+    },
+    {
+      "id": "interaction.signal-controller",
+      "name": "Signal controller",
+      "description": "Existing non-NPC inspect/use point at the northeast signal cabinet.",
+      "runtimeStatus": "Implemented as an interaction location; mission behavior must be registered by MISSION-001."
+    },
+    {
+      "id": "mission.intersection-center",
+      "name": "Junction center mission point",
+      "description": "Existing mission-kind location at the crossing.",
+      "runtimeStatus": "Implemented as level metadata only."
+    },
+    {
+      "id": "trigger.intersection-center",
+      "name": "Junction center trigger",
+      "description": "Existing 12m crossing volume tagged future-mission.",
+      "runtimeStatus": "Implemented as metadata; no general overlap mission owner exists."
+    },
+    {
+      "id": "trigger.signal-corner",
+      "name": "Signal Corner trigger",
+      "description": "Existing northeast box volume near the signal controller.",
+      "runtimeStatus": "Implemented as metadata; mission consumption is unimplemented."
+    },
+    {
+      "id": "spawn.npc-mechanic",
+      "name": "Mack fixture spawn",
+      "description": "Authoritative current authored transform for Mack.",
+      "runtimeStatus": "Development fixture only; production roster promotion required."
+    },
+    {
+      "id": "spawn.npc-alley",
+      "name": "Nox fixture spawn",
+      "description": "Authoritative current authored transform for Nox.",
+      "runtimeStatus": "Development fixture only; production roster promotion required."
+    },
+    {
+      "id": "spawn.npc-deck",
+      "name": "Raze fixture spawn",
+      "description": "Authoritative current authored transform for Raze.",
+      "runtimeStatus": "Development fixture only; production roster promotion required."
+    },
+    {
+      "id": "cinder-quay",
+      "name": "Cinder Quay",
+      "description": "Bonded warehouses and the contested working berth.",
+      "runtimeStatus": "Canon definition only; WORLD-001 or later."
+    },
+    {
+      "id": "glasshouse-row",
+      "name": "Glasshouse Row",
+      "description": "Print shops, boarding rooms, and distributed record network.",
+      "runtimeStatus": "Canon definition only; world and interaction work unscheduled."
+    },
+    {
+      "id": "reservoir-steps",
+      "name": "Reservoir Steps",
+      "description": "Uphill records annex and finale pressure corridor.",
+      "runtimeStatus": "Canon definition only; later world milestone."
+    }
+  ],
+  "chronology": [
+    {
+      "date": "October 18, 1984",
+      "event": "The channel fire destroys machine shops and closes the deepest quay berth. The official cause remains an electrical cascade; Marrow's founders moved insured cargo hours earlier."
+    },
+    {
+      "date": "March 1988",
+      "event": "The city creates temporary recovery liens. Temporary authority is renewed annually and becomes the Recovery Office's legal foundation."
+    },
+    {
+      "date": "September 2, 1992",
+      "event": "A storm floods the City Hall archive. Mack asks Rook to move a sealed records carton; Rook abandons the route after a collision and leaves Ashfall believing the carton was destroyed."
+    },
+    {
+      "date": "January 1994",
+      "event": "Vera Sorn begins consolidating repair bonds. Occupied workshops start appearing as vacant collateral."
+    },
+    {
+      "date": "August 1997",
+      "event": "Orin spots matching numbers in impound logs and parcel files while repairing a Marrow tow truck."
+    },
+    {
+      "date": "September 27, 1997",
+      "event": "Orin copies one ledger page, hides the index, and asks Mack to summon Rook as a courier outside local pressure networks."
+    },
+    {
+      "date": "September 29, 1997",
+      "event": "Mission one begins at Ashfall Junction. Mack's existing introduction lines remain compatible: Rook is late, Orin was meant to meet them, and Mack orders a surveillance-check walk."
+    },
+    {
+      "date": "October 6, 1997",
+      "event": "The first staged quay safety incident accelerates the berth closure timetable."
+    },
+    {
+      "date": "October 21, 1997",
+      "event": "The coalition confirms the false-vacancy chain and learns the annex index will be pulped before the hearing."
+    },
+    {
+      "date": "November 6–7, 1997",
+      "event": "A king tide coincides with the bond hearing. The evidence is distributed before the final public confrontation."
+    }
+  ],
+  "worldStateFacts": [
+    {
+      "id": "rook-arrived-in-ashfall",
+      "initialValue": "false",
+      "meaning": "Set when the opening mission takes control after the player enters the Junction."
+    },
+    {
+      "id": "orin-status",
+      "initialValue": "missing",
+      "meaning": "Enumerated narrative state: missing, contacted, safe, public-witness."
+    },
+    {
+      "id": "mack-trust",
+      "initialValue": "guarded",
+      "meaning": "Relationship state: guarded, conditional, partner, honest."
+    },
+    {
+      "id": "nox-trust",
+      "initialValue": "none",
+      "meaning": "Relationship state: none, provisional, shared-custody."
+    },
+    {
+      "id": "raze-trust",
+      "initialValue": "none",
+      "meaning": "Relationship state: none, transactional, coalition, strained, public-allied."
+    },
+    {
+      "id": "rook-known-to-marrow",
+      "initialValue": "false",
+      "meaning": "Enables stronger route pressure after Rook keeps the clean copy."
+    },
+    {
+      "id": "ledger-copy-custody",
+      "initialValue": "none",
+      "meaning": "Tracks none, rook, nox, or distributed; it is evidence state, not an inventory model reference."
+    },
+    {
+      "id": "pager-code-compromised",
+      "initialValue": "true",
+      "meaning": "Forces pay-phone and in-person route logic until the leak is identified."
+    },
+    {
+      "id": "junction-surveillance-checked",
+      "initialValue": "false",
+      "meaning": "Records the opening loop completion and whether a watcher was observed."
+    },
+    {
+      "id": "quay-closure-hours",
+      "initialValue": "168",
+      "meaning": "Narrative deadline represented as a persisted integer when a scheduled world-pressure system exists."
+    },
+    {
+      "id": "dispatch-tape-copied",
+      "initialValue": "false",
+      "meaning": "Corroborates Marrow dispatch timing without requiring voice-over audio."
+    },
+    {
+      "id": "false-vacancy-witnessed",
+      "initialValue": "false",
+      "meaning": "Confirms one listed-vacant property is occupied and maintained."
+    },
+    {
+      "id": "berth-roster-released",
+      "initialValue": "false",
+      "meaning": "Irreversible Act II disclosure that splits the Tidehands."
+    },
+    {
+      "id": "annex-index-copied",
+      "initialValue": "false",
+      "meaning": "Final corroborating index; not a magical single proof without other facts."
+    },
+    {
+      "id": "evidence-chain-distributed",
+      "initialValue": "false",
+      "meaning": "Final irreversible public state set only after independent custodians receive copies."
+    }
+  ],
+  "missions": [
+    {
+      "id": "ash-001-walk-the-block",
+      "title": "Walk the Block",
+      "narrativePurpose": "Introduce Rook through behavior, preserve Mack's existing conversation, establish Orin's absence, and teach that observing a route is more valuable than rushing to a marker.",
+      "characterChange": "Mack moves from dismissive suspicion to conditional employment when Rook returns with a precise observation instead of disappearing again.",
+      "prerequisites": { "missionIds": [], "worldStateFacts": [] },
+      "initialWorldStateFacts": [
+        "orin-status=missing",
+        "mack-trust=guarded",
+        "pager-code-compromised=true"
+      ],
+      "startTrigger": {
+        "kind": "trigger-volume-enter",
+        "id": "trigger.intersection-center",
+        "locationId": "mission.intersection-center"
+      },
+      "objectives": [
+        {
+          "id": "ash-001-enter-junction",
+          "summary": "Enter Ashfall Junction and let the district/location state resolve.",
+          "feasibleMapping": {
+            "kind": "trigger",
+            "referenceId": "trigger.intersection-center",
+            "status": "implemented-definition"
+          }
+        },
+        {
+          "id": "ash-001-talk-to-mack",
+          "summary": "Speak with Mack and complete his existing introduction.",
+          "feasibleMapping": {
+            "kind": "conversation-completion-event",
+            "referenceId": "conversation.mack-introduction.completed",
+            "status": "implemented-development-fixture"
+          }
+        },
+        {
+          "id": "ash-001-check-signal-corner",
+          "summary": "Inspect Signal Corner for a watcher and the first Orin clue.",
+          "feasibleMapping": {
+            "kind": "interaction-or-trigger",
+            "referenceId": "interaction.signal-controller",
+            "status": "implemented-location-needs-mission-handler"
+          }
+        },
+        {
+          "id": "ash-001-walk-south-approach",
+          "summary": "Cross the south approach to test whether the same vehicle circles back.",
+          "feasibleMapping": {
+            "kind": "landmark-entry-state",
+            "referenceId": "landmark.south-approach",
+            "status": "location-resolver-implemented-mission-observer-roadmap"
+          }
+        },
+        {
+          "id": "ash-001-return-to-mack",
+          "summary": "Return to Mack and report the observed plate color and route.",
+          "feasibleMapping": {
+            "kind": "entity-interaction",
+            "referenceId": "mack",
+            "status": "development-fixture-needs-production-roster"
+          }
+        }
+      ],
+      "highlights": [
+        { "kind": "world", "referenceId": "spawn.npc-mechanic" },
+        {
+          "kind": "world-and-map",
+          "referenceId": "interaction.signal-controller"
+        },
+        { "kind": "map", "referenceId": "landmark.south-approach" }
+      ],
+      "dialogueIds": [
+        "conversation.mack.introduction",
+        "dialogue.ash-001.signal-clue",
+        "dialogue.ash-001.report"
+      ],
+      "cinematicIds": [
+        "cinematic.ash-001.opening",
+        "cinematic.ash-001.mack-return"
+      ],
+      "gameplayEvents": [
+        {
+          "id": "conversation.mack-introduction.completed",
+          "system": "conversation",
+          "status": "implemented"
+        },
+        {
+          "id": "mission.objective-completed",
+          "system": "mission",
+          "status": "roadmap-MISSION-001"
+        },
+        {
+          "id": "interaction.completed",
+          "system": "interaction",
+          "status": "implemented-generic-event"
+        },
+        {
+          "id": "world.location-changed",
+          "system": "location-resolver",
+          "status": "definition-only-observation-needed"
+        }
+      ],
+      "systemDependencies": [
+        {
+          "id": "mission-001",
+          "status": "roadmap",
+          "reason": "Must own prerequisites, objective state, trigger consumption, highlights, persistence-ready snapshots, retry, cancel, and disposal."
+        },
+        {
+          "id": "core-001",
+          "status": "roadmap",
+          "reason": "Must boot directly through the existing casual selection state without deleting the registry."
+        },
+        {
+          "id": "npc-production-roster",
+          "status": "roadmap",
+          "reason": "Mack currently exists only behind npcFixtures=1; story startup must not depend on a development URL flag."
+        },
+        {
+          "id": "cinematic-001",
+          "status": "roadmap",
+          "reason": "Opening and return shot requests remain optional until exact restoration and skip confirmation exist."
+        }
+      ],
+      "failure": {
+        "conditions": [
+          "Player health depletes after combat-capable story pressure exists",
+          "Required Mack entity unloads",
+          "Mission-owned interaction is cancelled by level unload"
+        ],
+        "retry": "Restore the mission-start snapshot at the Junction, preserve pre-mission money/equipment, reset objective-local watcher state, and replay no completed reward.",
+        "cancel": "Allowed before the first Mack conversation completes; remove mission highlights/interactions and leave all persistent facts unchanged.",
+        "skip": "A cinematic skip completes only the cinematic request. It never completes Talk, observation, report, or mission objectives."
+      },
+      "rewards": {
+        "moneyDelta": 75,
+        "equipmentChanges": [],
+        "factChanges": [
+          "rook-arrived-in-ashfall=true",
+          "junction-surveillance-checked=true",
+          "mack-trust=conditional"
+        ]
+      },
+      "persistentFacts": [
+        "rook-arrived-in-ashfall",
+        "junction-surveillance-checked",
+        "mack-trust"
+      ],
+      "postMissionAvailability": "Unlock Nox's check-in and the second mission premise after Mack's report conversation completes.",
+      "followUpHooks": [
+        "A copied towing number is tucked behind the signal cabinet service card.",
+        "The circling vehicle model is presentation-only until missions can identify a catalog vehicle by stable traffic ID."
+      ],
+      "sceneChange": "Changes an objective, Mack's relationship state, Rook's risk of surveillance, and three persistent world-state facts."
+    },
+    {
+      "id": "ash-002-carbon-copy",
+      "title": "Carbon Copy",
+      "narrativePurpose": "Turn Orin's clue into a verifiable document chain and introduce Nox's rule that one copy is evidence only when another person can locate its source.",
+      "characterChange": "Nox grants Rook provisional trust after Rook chooses a slower corroboration route over an immediate cash offer.",
+      "prerequisites": {
+        "missionIds": ["ash-001-walk-the-block"],
+        "worldStateFacts": ["junction-surveillance-checked"]
+      },
+      "initialWorldStateFacts": [
+        "ledger-copy-custody=none",
+        "nox-trust=none",
+        "rook-known-to-marrow=false"
+      ],
+      "startTrigger": {
+        "kind": "entity-interaction",
+        "id": "nox",
+        "locationId": "spawn.npc-alley"
+      },
+      "objectives": [
+        {
+          "id": "ash-002-talk-to-nox",
+          "summary": "Complete Nox's terse check-in and receive the copy route.",
+          "feasibleMapping": {
+            "kind": "conversation-session-complete",
+            "referenceId": "conversation.nox.check-in",
+            "status": "implemented-development-fixture"
+          }
+        },
+        {
+          "id": "ash-002-recover-carbon",
+          "summary": "Recover the carbon sheet hidden at Signal Corner.",
+          "feasibleMapping": {
+            "kind": "mission-owned-interaction",
+            "referenceId": "interaction.signal-controller",
+            "status": "location-implemented-handler-roadmap"
+          }
+        },
+        {
+          "id": "ash-002-verify-impound-code",
+          "summary": "Compare the carbon number with Mack's vehicle history.",
+          "feasibleMapping": {
+            "kind": "entity-interaction",
+            "referenceId": "mack",
+            "status": "production-roster-roadmap"
+          }
+        },
+        {
+          "id": "ash-002-deliver-clean-copy",
+          "summary": "Return the verified copy to Nox despite Della's competing offer.",
+          "feasibleMapping": {
+            "kind": "entity-interaction-and-fact",
+            "referenceId": "nox",
+            "status": "mission-state-roadmap"
+          }
+        }
+      ],
+      "highlights": [
+        { "kind": "world", "referenceId": "spawn.npc-alley" },
+        {
+          "kind": "world-and-map",
+          "referenceId": "interaction.signal-controller"
+        },
+        { "kind": "world", "referenceId": "spawn.npc-mechanic" }
+      ],
+      "dialogueIds": [
+        "conversation.nox.check-in",
+        "dialogue.ash-002.mack-verify",
+        "dialogue.ash-002.della-offer",
+        "dialogue.ash-002.nox-delivery"
+      ],
+      "cinematicIds": ["cinematic.ash-002-copy-choice"],
+      "gameplayEvents": [
+        {
+          "id": "interaction.completed",
+          "system": "interaction",
+          "status": "implemented-generic-event"
+        },
+        {
+          "id": "mission.choice-committed",
+          "system": "mission",
+          "status": "roadmap-MISSION-001"
+        },
+        {
+          "id": "money.transaction",
+          "system": "economy",
+          "status": "implemented-if-choice-reward-used"
+        }
+      ],
+      "systemDependencies": [
+        {
+          "id": "mission-001",
+          "status": "roadmap",
+          "reason": "Requires objective facts, mutually exclusive choice resolution, interactions, and persistence-ready snapshots."
+        },
+        {
+          "id": "npc-production-roster",
+          "status": "roadmap",
+          "reason": "Nox and Mack are current development fixtures; Della has no entity definition or asset."
+        },
+        {
+          "id": "dialogue-choice-presentation",
+          "status": "definition-only",
+          "reason": "Current conversations are linear. If no choice UI is scheduled, Della's offer must resolve through separate world interactions rather than invented dialogue branching."
+        }
+      ],
+      "failure": {
+        "conditions": [
+          "The mission copy is lost through a mission-state reset",
+          "Rook is depleted",
+          "The level unloads during a mission interaction"
+        ],
+        "retry": "Restore the carbon to its authored interaction and reset offer-local facts; never duplicate a money credit or evidence fact.",
+        "cancel": "Cancel before recovering the carbon; remove offer and copy interactions and preserve ash-001 facts.",
+        "skip": "Skipping the choice cinematic returns to the unresolved world interaction and grants neither offer outcome."
+      },
+      "rewards": {
+        "moneyDelta": 100,
+        "equipmentChanges": [],
+        "factChanges": [
+          "ledger-copy-custody=nox",
+          "nox-trust=provisional",
+          "rook-known-to-marrow=true"
+        ]
+      },
+      "persistentFacts": [
+        "ledger-copy-custody",
+        "nox-trust",
+        "rook-known-to-marrow"
+      ],
+      "postMissionAvailability": "Unlock the quay introduction and Marrow route pressure once Nox holds the clean copy.",
+      "followUpHooks": [
+        "The copy lists a berth closure before the inspection that supposedly caused it.",
+        "Della now knows Rook rejected an easy payout."
+      ],
+      "sceneChange": "Changes Nox's trust, Rook's visibility to Marrow, evidence custody, and the objective from finding Orin to corroborating his discovery."
+    },
+    {
+      "id": "ash-003-night-manifest",
+      "title": "Night Manifest",
+      "narrativePurpose": "Move the story to Cinder Quay and make proof compete with workers' immediate safety and wages.",
+      "characterChange": "Raze shifts from excluding Rook to using Rook as an accountable observer after Rook protects a worker before protecting the document.",
+      "prerequisites": {
+        "missionIds": ["ash-002-carbon-copy"],
+        "worldStateFacts": ["ledger-copy-custody", "rook-known-to-marrow"]
+      },
+      "initialWorldStateFacts": [
+        "raze-trust=none",
+        "quay-closure-hours=168",
+        "berth-roster-released=false"
+      ],
+      "startTrigger": {
+        "kind": "entity-interaction",
+        "id": "raze",
+        "locationId": "cinder-quay"
+      },
+      "objectives": [
+        {
+          "id": "ash-003-meet-raze",
+          "summary": "Meet Raze at the quiet deck and establish the worksite rules.",
+          "feasibleMapping": {
+            "kind": "entity-interaction",
+            "referenceId": "raze",
+            "status": "existing-identity-future-location"
+          }
+        },
+        {
+          "id": "ash-003-observe-unload",
+          "summary": "Observe the marked cargo move through the berth without blocking scheduled workers.",
+          "feasibleMapping": {
+            "kind": "scheduled-system-state",
+            "referenceId": "quay-night-unload",
+            "status": "unimplemented-roadmap-dependency"
+          }
+        },
+        {
+          "id": "ash-003-stop-staged-failure",
+          "summary": "Respond to a deliberately loosened load before it injures a worker.",
+          "feasibleMapping": {
+            "kind": "gameplay-event",
+            "referenceId": "quay.load-instability-detected",
+            "status": "unimplemented-roadmap-dependency"
+          }
+        },
+        {
+          "id": "ash-003-copy-manifest",
+          "summary": "Use the surviving manifest number to corroborate the early closure order.",
+          "feasibleMapping": {
+            "kind": "mission-owned-interaction",
+            "referenceId": "quay-manifest-desk",
+            "status": "unimplemented-location-and-interaction"
+          }
+        },
+        {
+          "id": "ash-003-report-to-raze",
+          "summary": "Give Raze the proof and accept his conditions for using it.",
+          "feasibleMapping": {
+            "kind": "entity-interaction",
+            "referenceId": "raze",
+            "status": "production-roster-roadmap"
+          }
+        }
+      ],
+      "highlights": [
+        { "kind": "world-and-map", "referenceId": "cinder-quay" },
+        { "kind": "world", "referenceId": "quay-night-unload" },
+        { "kind": "world", "referenceId": "quay-manifest-desk" }
+      ],
+      "dialogueIds": [
+        "dialogue.ash-003.raze-rules",
+        "dialogue.ash-003.worker-warning",
+        "dialogue.ash-003.raze-report"
+      ],
+      "cinematicIds": [
+        "cinematic.ash-003-quay-arrival",
+        "cinematic.ash-003-load-failure"
+      ],
+      "gameplayEvents": [
+        {
+          "id": "quay.shift-started",
+          "system": "npc-schedule",
+          "status": "unimplemented"
+        },
+        {
+          "id": "quay.load-instability-detected",
+          "system": "worksite-gameplay",
+          "status": "unimplemented"
+        },
+        {
+          "id": "mission.interaction-completed",
+          "system": "mission-and-interaction",
+          "status": "roadmap-MISSION-001"
+        }
+      ],
+      "systemDependencies": [
+        {
+          "id": "world-001",
+          "status": "roadmap",
+          "reason": "Needs an authored, streamed Cinder Quay sector with walkable collision, map facts, worksite clearance, and highlights."
+        },
+        {
+          "id": "npc-001",
+          "status": "roadmap",
+          "reason": "Needs production workers with verified assets; Raze also needs production placement."
+        },
+        {
+          "id": "npc-schedules",
+          "status": "roadmap",
+          "reason": "The timed unload cannot be represented by static fixture NPCs."
+        },
+        {
+          "id": "worksite-events",
+          "status": "definition-only",
+          "reason": "A feasible load-instability interaction/event must be designed; no physics spectacle or invented crane system is assumed."
+        },
+        {
+          "id": "mission-001",
+          "status": "roadmap",
+          "reason": "Owns objectives, timers, event subscriptions, fail/retry, and persistent facts."
+        }
+      ],
+      "failure": {
+        "conditions": [
+          "A worker is injured after the instability warning expires",
+          "Rook leaves the active quay sector during the timed unload",
+          "Player depletion"
+        ],
+        "retry": "Restart at pre-shift state, reset only the scheduled unload actors and mission interactions, and restore the same timer seed.",
+        "cancel": "Allowed before shift-started; after the shift starts, abandonment is a mission failure rather than silent cancellation.",
+        "skip": "Arrival and load-failure cinematics may skip presentation only; the worksite event and rescue objective remain authoritative."
+      },
+      "rewards": {
+        "moneyDelta": 125,
+        "equipmentChanges": [],
+        "factChanges": ["raze-trust=transactional", "quay-closure-hours=120"]
+      },
+      "persistentFacts": ["raze-trust", "quay-closure-hours"],
+      "postMissionAvailability": "Unlock access to Marrow dispatch evidence and establish Raze as a conditional ally.",
+      "followUpHooks": [
+        "The manifest timestamp predates the inspection by six hours.",
+        "A dispatch call sign identifies the tow yard tape that can corroborate the order."
+      ],
+      "sceneChange": "Changes Raze's relationship with Rook, reduces the deadline, raises worker risk, and supplies the dispatch objective."
+    },
+    {
+      "id": "ash-004-dead-air",
+      "title": "Dead Air",
+      "narrativePurpose": "Use 1997 communications constraints as gameplay: obtain a dispatch cassette and coordinate a route through pay phones while the compromised pager remains unsafe.",
+      "characterChange": "Rook and Nox move from compartmentalized cooperation to shared custody when each must trust the other to hold half the extraction plan.",
+      "prerequisites": {
+        "missionIds": ["ash-003-night-manifest"],
+        "worldStateFacts": ["raze-trust", "pager-code-compromised"]
+      },
+      "initialWorldStateFacts": [
+        "dispatch-tape-copied=false",
+        "nox-trust=provisional",
+        "pager-code-compromised=true"
+      ],
+      "startTrigger": {
+        "kind": "pay-phone-interaction",
+        "id": "glasshouse-payphone-west",
+        "locationId": "glasshouse-row"
+      },
+      "objectives": [
+        {
+          "id": "ash-004-answer-first-call",
+          "summary": "Reach the pay phone during its scheduled ring window.",
+          "feasibleMapping": {
+            "kind": "scheduled-interaction-state",
+            "referenceId": "glasshouse-payphone-west",
+            "status": "unimplemented"
+          }
+        },
+        {
+          "id": "ash-004-enter-dispatch-yard",
+          "summary": "Enter the Marrow dispatch yard through the route Nox leaves open.",
+          "feasibleMapping": {
+            "kind": "trigger",
+            "referenceId": "marrow-yard-service-entry",
+            "status": "unimplemented-world-location"
+          }
+        },
+        {
+          "id": "ash-004-copy-dispatch-tape",
+          "summary": "Copy the relevant cassette segment without removing the source tape.",
+          "feasibleMapping": {
+            "kind": "timed-interaction",
+            "referenceId": "marrow-dispatch-cassette-deck",
+            "status": "unimplemented-interaction"
+          }
+        },
+        {
+          "id": "ash-004-use-second-phone",
+          "summary": "Confirm extraction at a second pay phone rather than using the compromised pager.",
+          "feasibleMapping": {
+            "kind": "interaction-and-fact",
+            "referenceId": "glasshouse-payphone-south",
+            "status": "unimplemented"
+          }
+        },
+        {
+          "id": "ash-004-deliver-tape-copy",
+          "summary": "Give Nox one copy while Rook retains a separate custody receipt.",
+          "feasibleMapping": {
+            "kind": "entity-interaction",
+            "referenceId": "nox",
+            "status": "production-roster-roadmap"
+          }
+        }
+      ],
+      "highlights": [
+        { "kind": "world-and-map", "referenceId": "glasshouse-payphone-west" },
+        { "kind": "world-and-map", "referenceId": "marrow-yard-service-entry" },
+        { "kind": "world", "referenceId": "marrow-dispatch-cassette-deck" },
+        { "kind": "map", "referenceId": "glasshouse-payphone-south" }
+      ],
+      "dialogueIds": [
+        "dialogue.ash-004.first-call",
+        "dialogue.ash-004.della-yard",
+        "dialogue.ash-004.second-call",
+        "dialogue.ash-004.nox-custody"
+      ],
+      "cinematicIds": ["cinematic.ash-004-dispatch-confrontation"],
+      "gameplayEvents": [
+        {
+          "id": "phone.ringing",
+          "system": "scheduled-world-interaction",
+          "status": "unimplemented"
+        },
+        {
+          "id": "cassette.copy-completed",
+          "system": "mission-interaction",
+          "status": "unimplemented"
+        },
+        {
+          "id": "npc.alert-state-changed",
+          "system": "npc-schedule-or-awareness",
+          "status": "unimplemented"
+        }
+      ],
+      "systemDependencies": [
+        {
+          "id": "world-expansion",
+          "status": "roadmap",
+          "reason": "Needs Glasshouse Row, Marrow yard, authored paths, collision, pay-phone and cassette interactions, and map markers."
+        },
+        {
+          "id": "scheduled-world-interactions",
+          "status": "roadmap",
+          "reason": "Phone ring windows require deterministic game-time scheduling and retry reset."
+        },
+        {
+          "id": "npc-awareness",
+          "status": "definition-only",
+          "reason": "If no awareness system is scheduled, yard pressure must use explicit triggers and route windows rather than invented stealth AI."
+        },
+        {
+          "id": "audio-playback",
+          "status": "definition-only",
+          "reason": "The cassette may be represented through subtitles and metadata; character voice-over and paid audio remain locked."
+        },
+        {
+          "id": "mission-001",
+          "status": "roadmap",
+          "reason": "Owns timing, events, mission interactions, failure, and evidence facts."
+        }
+      ],
+      "failure": {
+        "conditions": [
+          "Miss both scheduled phone windows",
+          "Leave the cassette deck before the copy completes",
+          "Trigger the explicit yard lockdown state",
+          "Player depletion"
+        ],
+        "retry": "Reset phone windows, yard trigger state, and the mission copy; keep the source cassette in place and create no duplicate evidence fact.",
+        "cancel": "Allowed before answering the first call. Once the source tape is touched, cancel becomes a failed attempt with yard pressure reset on retry.",
+        "skip": "The confrontation cinematic skip restores the exact active mission and alert state; it does not bypass the cassette copy or extraction."
+      },
+      "rewards": {
+        "moneyDelta": 150,
+        "equipmentChanges": [],
+        "factChanges": [
+          "dispatch-tape-copied=true",
+          "nox-trust=shared-custody",
+          "pager-code-compromised=false"
+        ]
+      },
+      "persistentFacts": [
+        "dispatch-tape-copied",
+        "nox-trust",
+        "pager-code-compromised"
+      ],
+      "postMissionAvailability": "Unlock the false-vacancy witness route and remove the compromised-pager restriction from later mission communication.",
+      "followUpHooks": [
+        "The copied dispatch contains a property address called vacant despite audible residents in the background.",
+        "Della offers the 1984 file in exchange for the tape copy."
+      ],
+      "sceneChange": "Changes Nox's trust, communication risk, evidence state, and Della's leverage without relying on voiced audio."
+    },
+    {
+      "id": "ash-005-occupied",
+      "title": "Occupied",
+      "narrativePurpose": "Make the abstract vacancy fraud personal by proving a listed-empty building houses people and a working print cooperative.",
+      "characterChange": "Mack admits that his 1992 request put Rook on the failed archive route, while Rook chooses to protect witnesses rather than use them as a shortcut to proof.",
+      "prerequisites": {
+        "missionIds": ["ash-004-dead-air"],
+        "worldStateFacts": ["dispatch-tape-copied", "nox-trust"]
+      },
+      "initialWorldStateFacts": [
+        "false-vacancy-witnessed=false",
+        "mack-trust=conditional",
+        "orin-status=missing"
+      ],
+      "startTrigger": {
+        "kind": "entity-interaction",
+        "id": "mack",
+        "locationId": "spawn.npc-mechanic"
+      },
+      "objectives": [
+        {
+          "id": "ash-005-hear-mack-confession",
+          "summary": "Hear Mack's complete account of the 1992 carton route.",
+          "feasibleMapping": {
+            "kind": "conversation-completion-event",
+            "referenceId": "dialogue.ash-005.mack-confession",
+            "status": "new-dialogue-definition-needed"
+          }
+        },
+        {
+          "id": "ash-005-reach-glasshouse",
+          "summary": "Reach the occupied property before the closure crew.",
+          "feasibleMapping": {
+            "kind": "trigger",
+            "referenceId": "glasshouse-occupied-entry",
+            "status": "unimplemented-world-location"
+          }
+        },
+        {
+          "id": "ash-005-document-occupancy",
+          "summary": "Collect three non-exploitative occupancy facts: active utilities, current repair ledger, and resident consent.",
+          "feasibleMapping": {
+            "kind": "interaction-set",
+            "referenceId": "glasshouse-occupancy-evidence",
+            "status": "unimplemented-interactions"
+          }
+        },
+        {
+          "id": "ash-005-prevent-closure",
+          "summary": "Keep the closure notice from taking effect until Raze can witness the records.",
+          "feasibleMapping": {
+            "kind": "timed-world-state",
+            "referenceId": "glasshouse-closure-window",
+            "status": "unimplemented"
+          }
+        },
+        {
+          "id": "ash-005-contact-orin",
+          "summary": "Use Orin's hidden repair notation to establish his first safe contact.",
+          "feasibleMapping": {
+            "kind": "interaction-and-fact",
+            "referenceId": "orin-glasshouse-dead-drop",
+            "status": "unimplemented-entity-and-location"
+          }
+        }
+      ],
+      "highlights": [
+        { "kind": "world", "referenceId": "spawn.npc-mechanic" },
+        { "kind": "world-and-map", "referenceId": "glasshouse-occupied-entry" },
+        { "kind": "world", "referenceId": "glasshouse-occupancy-evidence" },
+        { "kind": "world", "referenceId": "orin-glasshouse-dead-drop" }
+      ],
+      "dialogueIds": [
+        "dialogue.ash-005.mack-confession",
+        "dialogue.ash-005.resident-consent",
+        "dialogue.ash-005.raze-witness",
+        "dialogue.ash-005.orin-contact"
+      ],
+      "cinematicIds": [
+        "cinematic.ash-005-mack-confession",
+        "cinematic.ash-005-closure-arrival"
+      ],
+      "gameplayEvents": [
+        {
+          "id": "occupancy.fact-recorded",
+          "system": "mission-interaction",
+          "status": "unimplemented"
+        },
+        {
+          "id": "closure.window-expired",
+          "system": "scheduled-world-state",
+          "status": "unimplemented"
+        },
+        {
+          "id": "orin.contact-established",
+          "system": "mission",
+          "status": "unimplemented"
+        }
+      ],
+      "systemDependencies": [
+        {
+          "id": "world-expansion",
+          "status": "roadmap",
+          "reason": "Needs an authored accessible Glasshouse location and evidence interaction points."
+        },
+        {
+          "id": "npc-001",
+          "status": "roadmap",
+          "reason": "Needs production residents/print workers plus Orin's approved model and metadata."
+        },
+        {
+          "id": "scheduled-world-state",
+          "status": "roadmap",
+          "reason": "Closure pressure needs deterministic timing and retry behavior."
+        },
+        {
+          "id": "mission-001",
+          "status": "roadmap",
+          "reason": "Owns multi-fact objectives, consent-gated interactions, persistence, and failure."
+        },
+        {
+          "id": "cinematic-001",
+          "status": "roadmap",
+          "reason": "Mack's confession staging needs subtitle presentation, shots by stable anchors, skip confirmation, and exact restoration."
+        }
+      ],
+      "failure": {
+        "conditions": [
+          "Closure window expires without all three occupancy facts",
+          "A required witness unloads",
+          "Player depletion"
+        ],
+        "retry": "Restore the pre-arrival closure window and interaction facts; resident consent must be requested again but never turned into collectible inventory.",
+        "cancel": "Allowed before leaving Mack. After the closure crew arrives, leaving the sector fails the attempt and resets through retry.",
+        "skip": "Skipping either cinematic preserves conversation completion rules and cannot grant confession, witness, or occupancy facts."
+      },
+      "rewards": {
+        "moneyDelta": 100,
+        "equipmentChanges": [],
+        "factChanges": [
+          "false-vacancy-witnessed=true",
+          "orin-status=contacted",
+          "mack-trust=honest",
+          "raze-trust=coalition"
+        ]
+      },
+      "persistentFacts": [
+        "false-vacancy-witnessed",
+        "orin-status",
+        "mack-trust",
+        "raze-trust"
+      ],
+      "postMissionAvailability": "Unlock the reservoir index plan and Orin as a later production witness entity, not a follower AI assumption.",
+      "followUpHooks": [
+        "Orin supplies the annex shelf code but refuses rescue until the evidence is distributed.",
+        "Mack reveals the sealed 1992 cassette Rook carried is still recoverable."
+      ],
+      "sceneChange": "Changes Mack's honesty, Orin's status, Raze's alliance, resident risk, and the proof chain from financial inference to witnessed occupancy."
+    },
+    {
+      "id": "ash-006-common-custody",
+      "title": "Common Custody",
+      "narrativePurpose": "Complete the first arc by assembling corroborated records and distributing custody before Vera can convert the conflict into one private deal.",
+      "characterChange": "Rook stops treating possession as safety and gives up unilateral control of the evidence; Raze accepts member choice, Nox releases his index, and Mack stops hiding costs from Orin.",
+      "prerequisites": {
+        "missionIds": ["ash-005-occupied"],
+        "worldStateFacts": [
+          "ledger-copy-custody",
+          "dispatch-tape-copied",
+          "false-vacancy-witnessed",
+          "orin-status"
+        ]
+      },
+      "initialWorldStateFacts": [
+        "annex-index-copied=false",
+        "evidence-chain-distributed=false",
+        "berth-roster-released=false",
+        "quay-closure-hours=24"
+      ],
+      "startTrigger": {
+        "kind": "entity-interaction",
+        "id": "orin-bell",
+        "locationId": "reservoir-steps"
+      },
+      "objectives": [
+        {
+          "id": "ash-006-meet-orin",
+          "summary": "Meet Orin on his terms and confirm the annex shelf code.",
+          "feasibleMapping": {
+            "kind": "entity-interaction",
+            "referenceId": "orin-bell",
+            "status": "unimplemented-production-entity"
+          }
+        },
+        {
+          "id": "ash-006-reach-annex",
+          "summary": "Reach the records annex before the scheduled purge and rising water close the lower route.",
+          "feasibleMapping": {
+            "kind": "trigger-and-world-state",
+            "referenceId": "reservoir-annex-entry",
+            "status": "unimplemented-world-location"
+          }
+        },
+        {
+          "id": "ash-006-copy-index",
+          "summary": "Copy the shelf index and match it against existing evidence facts.",
+          "feasibleMapping": {
+            "kind": "interaction-and-prerequisite-set",
+            "referenceId": "reservoir-annex-index",
+            "status": "unimplemented-interaction"
+          }
+        },
+        {
+          "id": "ash-006-release-berth-roster",
+          "summary": "Secure Raze's irreversible consent to release the berth roster.",
+          "feasibleMapping": {
+            "kind": "entity-interaction-and-fact",
+            "referenceId": "raze",
+            "status": "production-roster-roadmap"
+          }
+        },
+        {
+          "id": "ash-006-answer-vera",
+          "summary": "Hear Vera's lawful-looking settlement and reject private custody without turning the scene into combat.",
+          "feasibleMapping": {
+            "kind": "dialogue-decision",
+            "referenceId": "dialogue.ash-006.vera-offer",
+            "status": "linear-alternative-needed-if-no-choice-ui"
+          }
+        },
+        {
+          "id": "ash-006-distribute-chain",
+          "summary": "Deliver independent packets to Nox, Raze, Orin, and a public filing point.",
+          "feasibleMapping": {
+            "kind": "ordered-entity-and-location-set",
+            "referenceId": "evidence-distribution-route",
+            "status": "unimplemented-mission-route"
+          }
+        }
+      ],
+      "highlights": [
+        { "kind": "world-and-map", "referenceId": "reservoir-steps" },
+        { "kind": "world", "referenceId": "reservoir-annex-index" },
+        { "kind": "world", "referenceId": "raze" },
+        {
+          "kind": "world-and-map",
+          "referenceId": "evidence-distribution-route"
+        }
+      ],
+      "dialogueIds": [
+        "dialogue.ash-006.orin-terms",
+        "dialogue.ash-006.raze-consent",
+        "dialogue.ash-006.vera-offer",
+        "dialogue.ash-006.common-custody"
+      ],
+      "cinematicIds": [
+        "cinematic.ash-006-annex-entry",
+        "cinematic.ash-006-vera-offer",
+        "cinematic.ash-006-distribution-finale"
+      ],
+      "gameplayEvents": [
+        {
+          "id": "annex.purge-started",
+          "system": "scheduled-world-state",
+          "status": "unimplemented"
+        },
+        {
+          "id": "world.water-route-closed",
+          "system": "world-state",
+          "status": "unimplemented-no-dynamic-water-assumed"
+        },
+        {
+          "id": "evidence.packet-delivered",
+          "system": "mission",
+          "status": "roadmap-MISSION-001"
+        },
+        {
+          "id": "story.act-completed",
+          "system": "mission-persistence",
+          "status": "unimplemented"
+        }
+      ],
+      "systemDependencies": [
+        {
+          "id": "world-expansion",
+          "status": "roadmap",
+          "reason": "Needs Reservoir Steps, annex access, map route, collision, and performance-reviewed streaming. Route closure may be a trigger/state swap; dynamic flood simulation is not assumed."
+        },
+        {
+          "id": "npc-001",
+          "status": "roadmap",
+          "reason": "Needs production Orin and Vera assets plus production promotion/placement for established NPCs."
+        },
+        {
+          "id": "mission-001",
+          "status": "roadmap",
+          "reason": "Needs prerequisite fact validation, ordered distribution objectives, cancellation rules, persistence snapshots, and completion."
+        },
+        {
+          "id": "cinematic-001",
+          "status": "roadmap",
+          "reason": "Needs subtitle-driven negotiation and finale shots with skip confirmation and exact restoration."
+        },
+        {
+          "id": "dialogue-decision-presentation",
+          "status": "definition-only",
+          "reason": "If branching dialogue is absent, Vera's offer resolves as a linear scene followed by a separate explicit distribute interaction."
+        },
+        {
+          "id": "scheduled-world-state",
+          "status": "roadmap",
+          "reason": "Purge and route closure need deterministic event timing and restartable state."
+        }
+      ],
+      "failure": {
+        "conditions": [
+          "Annex purge completes before the index copy",
+          "Rook is depleted",
+          "A required delivery target unloads during distribution",
+          "The active sector unloads unexpectedly"
+        ],
+        "retry": "Restore the pre-annex snapshot, purge timer, route state, NPC availability, and undelivered packet set; already committed campaign facts remain exactly as the mission snapshot specifies.",
+        "cancel": "Not available after annex entry because the purge is the irreversible mission pressure; pause remains separate from cancellation.",
+        "skip": "Cinematic skips never choose Vera's offer, grant the index, release the roster, deliver packets, or complete the act."
+      },
+      "rewards": {
+        "moneyDelta": 250,
+        "equipmentChanges": [],
+        "factChanges": [
+          "annex-index-copied=true",
+          "berth-roster-released=true",
+          "evidence-chain-distributed=true",
+          "orin-status=public-witness",
+          "ledger-copy-custody=distributed"
+        ]
+      },
+      "persistentFacts": [
+        "annex-index-copied",
+        "berth-roster-released",
+        "evidence-chain-distributed",
+        "orin-status",
+        "ledger-copy-custody"
+      ],
+      "postMissionAvailability": "Complete the Cinder Ledger arc, preserve Ashfall as contested rather than magically fixed, and unlock post-arc world reactions through future persistence work.",
+      "followUpHooks": [
+        "Marrow drivers begin providing their own records after the distributed release.",
+        "Vera faces a public review but retains a credible redevelopment argument for later story conflict.",
+        "Rook takes an accountable place at the Junction without becoming its owner."
+      ],
+      "sceneChange": "Changes every core relationship, closes the first objective chain, makes evidence public, alters city risk, and sets the irreversible campaign fact evidence-chain-distributed."
+    }
+  ],
+  "openCreativeDecisions": [
+    "Choose Rook's pronouns and any player-facing name customization policy before final dialogue lock; this bible avoids gendered references so the existing casual entity remains usable.",
+    "Decide whether the player can accept Della's ash-002 offer as a temporary branch. The canonical spine assumes Rook ultimately gives Nox the clean copy; a branch must reconverge without duplicating canon or rewards.",
+    "Decide whether Vera remains in office after the final hearing. Her survival is preferred because institutional pressure should not collapse into defeating one villain.",
+    "Choose the exact Atlantic-region voice references only after casting and cultural review; written voice patterns must not be converted into phonetic accents.",
+    "Decide which future district enters WORLD-001. If it is not Cinder Quay, ash-003 and later premises remain blocked rather than being relocated into implausible Junction space.",
+    "Set final mission reward amounts during economy balancing. Current values are conservative whole-unit story proposals and must use PlayerMoneyAccount rather than a second balance."
+  ],
+  "blockedDependencies": [
+    "MISSION-001 authoritative mission/objective/highlight/event/persistence-ready system is required before any premise becomes runtime data.",
+    "CORE-001 must select casual through existing character selection while preserving the registry and debug switching.",
+    "Mack, Nox, and Raze need explicit production roster promotion; their current identities are authoritative but their startup presence is development-only.",
+    "WORLD-001/PERF-001 or later authored sectors are required for Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps. No current map fact supports those locations.",
+    "NPC-001 and later NPC scheduling/awareness work are required for Orin, Vera, Della, quay workers, residents, and timed routes. Static fixture behavior is insufficient.",
+    "VEHICLE-001 is required before any mission objective asks Rook to enter or drive. These six premises deliberately avoid making driving completion-critical until that contract exists.",
+    "CINEMATIC-001 is required for shot requests, subtitle staging, skip confirmation, and exact restoration. Cinematic IDs here are references, not executable definitions.",
+    "MAP-001 is required for full-world route display; current minimap highlights can only reference existing level map facts.",
+    "Dialogue choice UI, scheduled world-state, and persistence are not current runtime capabilities; missions must use linear interaction alternatives or add roadmap-approved systems.",
+    "Audio and voice-over remain locked. Cassette and radio information must work through subtitles/text metadata until rights, budget, credentials, and an approved audio brief exist."
+  ],
+  "productionNeeds": [
+    "Original-project-owned or CC0/public-domain production NPC models and reviewed portraits for Orin Bell, Vera Sorn, Della Voss, workers, residents, and clerks, with full source/license/hash/scale/axis/animation provenance.",
+    "Reviewed production promotion and placement for existing Mack, Nox, and Raze CC0 models; no duplication of their entity, speaker, character, spawn, portrait, or conversation authority.",
+    "Authored streamed world sectors, collision, triggers, landmarks, mission locations, map references, and cinematic anchors for Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps.",
+    "Original environmental props for paper records, carbon sheets, pay phones, cassette decks, manifests, filing shelves, garage details, and quay work areas. Placeholder geometry cannot satisfy production acceptance.",
+    "Mission system, persistence-ready facts, objective/event mapping, mission interactions, world/map highlights, deterministic retry/cancel, and debug inspection from MISSION-001.",
+    "NPC production roster, deterministic schedules, and explicit trigger-based pressure. Do not imply navigation or awareness until those systems are implemented and tested.",
+    "Cinematic sequence and dialogue presentation using stable IDs, existing game-state/camera ownership, subtitle-safe text, skip confirmation, and exact gameplay restoration.",
+    "Accessibility and localization pass for subtitle length, reading speed, speaker labels, contrast, reduced motion, and non-audio delivery of every required clue.",
+    "No visual or audio asset is acquired or generated by STORY-001. Future accepted assets must be CC0-1.0, public-domain, or original-project-owned with complete provenance."
+  ],
+  "nextSlices": {
+    "mission001": "Implement only ash-001-walk-the-block as the first production mission skeleton: bind trigger.intersection-center, the existing Mack conversation completion event, interaction.signal-controller, landmark.south-approach, Mack return, three persistent facts, deterministic retry/cancel, and 75-unit PlayerMoneyAccount reward. Promote Mack through a production roster without changing his IDs. Keep both cinematics optional requests and do not implement later districts.",
+    "cinematic001": "Stage only cinematic.ash-001.opening after MISSION-001 exists: a brief subtitle-led arrival at the north approach that establishes Rook's lateness, the watched Junction, and Mack's position. Request shots through authored anchors (add narrowly scoped anchors only if needed), use speaker IDs rook and mack, support skip confirmation, and restore the exact game state, movement, interaction, camera, HUD, and input ownership. Do not add voice-over."
+  },
+  "provenanceAndOriginality": [
+    "The setting, names, factions, characters, plot, mission premises, dialogue intentions, and Cinder Ledger concept are original Vanta City material written for this repository.",
+    "No GTA names, plots, missions, dialogue, brands, UI, music, characters, satire, or recognizable story beats are used.",
+    "Existing runtime asset provenance remains authoritative in the repository asset catalog and adjacent README files. This narrative task adds no runtime asset and makes no new license claim.",
+    "Radio-host writing is outside this bible and must remain separate from character dialogue. No ElevenLabs or paid audio service is called or implied as unlocked.",
+    "Canon facts are separated from open decisions, blocked dependencies, and implementation notes so optional ideas cannot silently become runtime promises."
+  ]
+}
