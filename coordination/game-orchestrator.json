@@ -373,7 +373,7 @@
     {
       "id": "STORY-001",
       "title": "Author the Ashfall 1990s narrative bible",
-      "status": "ready",
+      "status": "completed",
       "dependencies": [],
       "owner": "story-worker",
       "skill": "vanta-story-writer",
@@ -593,9 +593,9 @@
     }
   ],
   "executionState": {
-    "lastIntegratedTaskIds": [],
+    "lastIntegratedTaskIds": ["STORY-001"],
     "lastOrchestratorRun": null,
-    "lastIntegratorRun": null,
+    "lastIntegratorRun": "2026-07-18T06:06:47Z",
     "lastNightlyReleaseGate": null,
     "lastMapExpansion": null,
     "lastPerformanceReport": null,
