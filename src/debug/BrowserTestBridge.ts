@@ -44,6 +44,11 @@ import type { VehicleControllerSystem } from '../vehicles/VehicleControllerSyste
 import type { VehicleHudSystem } from '../ui/VehicleHudSystem';
 import type { MissionSystem } from '../missions/MissionSystem';
 import type { MissionHudSystem } from '../ui/MissionHudSystem';
+import type { AudioPlaybackCoordinator } from '../audio/AudioPlaybackCoordinator';
+import type {
+  AudioPreferences,
+  AudioPreferenceStore,
+} from '../audio/AudioPreferences';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -185,6 +190,7 @@ export interface BrowserTestSnapshot {
     readonly controller: ReturnType<VehicleControllerSystem['getSnapshot']>;
     readonly hud: ReturnType<VehicleHudSystem['getSnapshot']>;
   };
+  readonly audio: ReturnType<AudioPlaybackCoordinator['getSnapshot']>;
   readonly missions: {
     readonly runtime: ReturnType<MissionSystem['getSnapshot']>;
     readonly persistence: ReturnType<MissionSystem['getPersistenceSnapshot']>;
@@ -200,6 +206,12 @@ export interface BrowserTestApi {
   setDebugToggle(id: string, enabled: boolean): void;
   setDebugNumber(id: string, value: number): Promise<void>;
   setVirtualGamepad(fixture?: VirtualGamepadFixture): void;
+  audioPlayTheme(): Promise<void>;
+  audioPlayRadio(): Promise<void>;
+  audioPause(): void;
+  audioResume(): void;
+  audioStop(): void;
+  setAudioPreferences(update: Partial<AudioPreferences>): AudioPreferences;
   exportDiagnosticTrace(): string;
   readbackDiagnosticTrace(input: string): DiagnosticTraceSummary;
   capturePerformance(
@@ -269,6 +281,8 @@ export interface BrowserTestBridgeDependencies {
   readonly traffic: TrafficSystem;
   readonly vehicle: VehicleControllerSystem;
   readonly vehicleHud: VehicleHudSystem;
+  readonly audio: AudioPlaybackCoordinator;
+  readonly audioPreferences: AudioPreferenceStore;
   readonly missions: MissionSystem;
   readonly missionHud: MissionHudSystem;
   readonly timeOfDay: TimeOfDayLightingSystem;
@@ -313,6 +327,13 @@ export function installBrowserTestBridge(
     setDebugNumber: (id, value) => dependencies.debug.setNumber(id, value),
     setVirtualGamepad: (fixture) =>
       dependencies.inputInspector.setVirtualGamepad(fixture),
+    audioPlayTheme: () => dependencies.audio.playTheme(),
+    audioPlayRadio: () => dependencies.audio.playRadio(),
+    audioPause: () => dependencies.audio.pause(),
+    audioResume: () => dependencies.audio.resume(),
+    audioStop: () => dependencies.audio.stop(),
+    setAudioPreferences: (update) =>
+      dependencies.audioPreferences.update(update),
     exportDiagnosticTrace: () => dependencies.diagnostics.serialize(),
     readbackDiagnosticTrace: (input) =>
       dependencies.diagnostics.readback(input),
@@ -507,6 +528,7 @@ function createSnapshot(
       controller: dependencies.vehicle.getSnapshot(),
       hud: dependencies.vehicleHud.getSnapshot(),
     },
+    audio: dependencies.audio.getSnapshot(),
     missions: {
       runtime: dependencies.missions.getSnapshot(),
       persistence: dependencies.missions.getPersistenceSnapshot(),

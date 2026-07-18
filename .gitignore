@@ -4,6 +4,7 @@ coverage/
 reports/character-validation.json
 reports/playbot/
 reports/release-gate/
+reports/audio-001/
 playwright-report/
 test-results/
 blob-report/

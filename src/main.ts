@@ -90,6 +90,9 @@ import {
 } from './missions/missions';
 import { registerMissionDebug } from './missions/MissionDebug';
 import { MissionHudSystem } from './ui/MissionHudSystem';
+import { audioCatalog } from './audio/AudioCatalog';
+import { AudioPreferenceStore } from './audio/AudioPreferences';
+import { AudioPlaybackCoordinator } from './audio/AudioPlaybackCoordinator';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -364,6 +367,27 @@ async function bootstrap(): Promise<void> {
     uiLayout.zone('loadout'),
     vehicle,
     quickbar,
+  );
+  const audioPreferences = new AudioPreferenceStore(window.localStorage);
+  const failedAudioUrl =
+    import.meta.env.DEV && pageParameters.get('audioFail') === '1'
+      ? audioCatalog.first('theme')?.url
+      : undefined;
+  const audio = new AudioPlaybackCoordinator(
+    audioCatalog,
+    audioPreferences,
+    vehicle,
+    undefined,
+    failedAudioUrl
+      ? async (input) =>
+          audioRequestUrl(input) === failedAudioUrl
+            ? {
+                ok: false,
+                status: 503,
+                arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+              }
+            : fetch(input)
+      : undefined,
   );
   const proximityPickups = new ProximityPickupSystem(player);
   render.scene.add(proximityPickups.getVisualization());
@@ -696,7 +720,8 @@ async function bootstrap(): Promise<void> {
     .register(playerDeath)
     .register(proximityPickups)
     .register(traffic)
-    .register(vehicle);
+    .register(vehicle)
+    .register(audio);
   if (sparringTarget) runtime.register(sparringTarget);
   runtime
     .register(camera)
@@ -791,6 +816,8 @@ async function bootstrap(): Promise<void> {
           traffic,
           vehicle,
           vehicleHud,
+          audio,
+          audioPreferences,
           missions,
           missionHud,
           timeOfDay,
@@ -814,6 +841,11 @@ async function bootstrap(): Promise<void> {
     worldEvents.clear();
     loading.dispose();
   });
+}
+
+function audioRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  return input instanceof URL ? input.href : input.url;
 }
 
 function registerVerticalSliceDebug(

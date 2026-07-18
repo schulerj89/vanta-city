@@ -32,6 +32,7 @@
     "lab:characters": "vite --open '/?sandbox=character-animation-lab&debug=1'",
     "lab:buildings": "vite --open '/?sandbox=building-visual-lab&debug=1'",
     "lab:ui": "vite --open '/?sandbox=ui-composition-lab&debug=1'",
+    "audio:provider": "tsx scripts/audio/elevenlabs-audio.ts",
     "size": "node scripts/report-bundle-size.mjs",
     "validate:characters": "tsx scripts/validate-characters.ts",
     "validate:equipment": "tsx scripts/validate-equipment-assets.ts",

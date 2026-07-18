@@ -48,6 +48,8 @@ Pressed and released edges last for one frame and are cleared during `lateUpdate
 
 `RenderSystem` exclusively owns the Three.js renderer, scene, camera, canvas, resize observer, and render call. It caps device pixel ratio at two. Future third-person camera logic should update the injected camera from its own simulation system; it should not create another renderer or animation loop.
 
+`AudioPlaybackCoordinator` exclusively owns browser audio context, decoded-buffer retention, playback nodes, offsets, interruption, and disposal. Its typed catalog accepts local `/assets/audio/` files only, and its versioned preference store owns volume, mute, mono-output, and pause policy. Audio observes public game-state and vehicle events; it does not own input listeners, vehicle state, UI layout, or provider access. See [AUDIO-001 theme and radio pipeline](audio/audio-001-theme-radio-pipeline.md).
+
 `ThirdPersonCameraSystem` is the sole coordinator for that renderer camera. Gameplay is the default camera owner; conversations and future cinematics use priority-based request handles and release them on completion or cancellation. See [Camera system](camera-system.md) for ownership, restoration, settings, and authored-anchor integration.
 
 ## Levels and static world collision
@@ -109,5 +111,6 @@ Parallel work may rely on these APIs:
 - `DebugVisualHelpers.register` and standard helper IDs (development-only)
 - `RenderSystem.scene`, `.camera`, and `.renderer` (renderer configuration only; do not start another loop)
 - `LevelDefinition`, `LevelRegistry`, `LevelSystem`, and `LevelLocations`
+- `AudioCatalog`, `AudioPreferenceStore`, and `AudioPlaybackCoordinator` snapshots/events/commands
 
 Changes to these contracts should be coordinated and documented. Feature branches should add narrow event maps and constructor-injected dependencies rather than expanding `GameRuntime` into a general manager.
