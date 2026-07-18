@@ -212,6 +212,9 @@ test.describe('playable debug district', () => {
         'conversation.end',
         'level.reload',
         'player.teleport',
+        'traffic.spawn-each-approach',
+        'traffic.clear',
+        'traffic.step',
       ]),
     );
     const retainedToggles = await actions
@@ -231,6 +234,7 @@ test.describe('playable debug district', () => {
       'sparring-target.active',
       'camera.invert-y',
       'camera.automatic-recenter',
+      'traffic.enabled',
     ]);
 
     const positionBeforeTyping = (await snapshot(page)).player.position;
