@@ -1,0 +1,352 @@
+{
+  "id": "world-002-opening-location-plan",
+  "status": "implementation-plan",
+  "baseCommit": "3e148217f1867058eba007f8c46984f0d6c04fc7",
+  "measurementConvention": "rectangular-playable-bounds-square-metres",
+  "authorities": {
+    "levelCatalog": "LevelRegistry",
+    "levelLifecycle": "LevelSystem",
+    "collisionLifecycle": "WorldCollisionSystem",
+    "assets": "ThreeAssetLoader",
+    "buildingCatalog": "AshfallBuildingKit",
+    "buildingRenderer": "AshfallBuildingRenderer",
+    "cameraTransforms": "ThirdPersonCameraSystem",
+    "cinematicProgression": "CinematicCoordinator",
+    "maps": "LevelDefinition.mapPresentation"
+  },
+  "openingLevel": {
+    "technicalLevelId": "ash-001-opening-site",
+    "workingTypology": "covered-municipal-transfer-shed-and-platform",
+    "excludedFromJunctionGrowth": true,
+    "storyOwnedFields": [
+      "displayName",
+      "canonicalLocationId",
+      "participantIds",
+      "speakerIds",
+      "storyPropIds",
+      "journeyMeaning",
+      "dialogue"
+    ],
+    "boundsMetres": {
+      "minX": -24,
+      "maxX": 24,
+      "minZ": -18,
+      "maxZ": 18
+    },
+    "playableAreaSquareMetres": 1728,
+    "minimumClearanceMetres": {
+      "pedestrianRoute": 4,
+      "entranceFront": 1.8,
+      "participantPadWidth": 2.4,
+      "participantPadDepth": 2.4,
+      "cameraTwoShotRadius": 4,
+      "platformEdgeToParticipant": 0.8,
+      "departureLaneToParticipant": 3,
+      "departureLaneToStaticProp": 1.5
+    },
+    "stableEntries": {
+      "defaultPlayerSpawnId": "spawn.player-default",
+      "defaultPlayerSpawnMaximumDistanceFromOriginMetres": 4,
+      "arrivalLocationId": "location.ash-001-arrival-platform",
+      "departureTriggerId": "trigger.ash-001-departure-ready",
+      "cameraAnchorIds": [
+        "camera.ash-001-opening.establishing",
+        "camera.ash-001-opening.two-shot",
+        "camera.ash-001-opening.close-a",
+        "camera.ash-001-opening.close-b",
+        "camera.ash-001-opening.departure"
+      ]
+    },
+    "sectors": [
+      {
+        "id": "sector.opening.infrastructure",
+        "center": [0, 0],
+        "alwaysLoaded": true,
+        "loadDistanceMetres": 1,
+        "unloadDistanceMetres": 2,
+        "responsibility": "ground-bounds-platform-primary-shed-lighting"
+      },
+      {
+        "id": "sector.opening.arrival",
+        "center": [-12, 0],
+        "loadDistanceMetres": 40,
+        "unloadDistanceMetres": 48,
+        "responsibility": "arrival-hall-closeup-background-arrival-props"
+      },
+      {
+        "id": "sector.opening.departure",
+        "center": [12, 0],
+        "loadDistanceMetres": 40,
+        "unloadDistanceMetres": 48,
+        "responsibility": "annex-service-edge-departure-lane-props"
+      }
+    ],
+    "minimumBuildingPlacements": 2,
+    "mapPresentation": null
+  },
+  "transition": {
+    "destination": {
+      "levelId": "test-district",
+      "spawnId": "spawn.player-default",
+      "positionMetres": [0, 0.02, 19],
+      "yawRadians": 3.141592653589793
+    },
+    "reason": "cinematic.ash-001.opening",
+    "landingEventId": "cinematic.ash-001.opening.junction-ready",
+    "sameLandingResults": [
+      "normal-completion",
+      "confirmed-skip",
+      "cinematic-participant-failure",
+      "cinematic-animation-failure",
+      "cinematic-shot-failure"
+    ],
+    "destinationLoadFailure": "retain-real-loading-error-and-retry-with-neither-level-partially-committed",
+    "readiness": [
+      "destination-definition-valid",
+      "initial-destination-sectors-built",
+      "destination-root-and-colliders-committed",
+      "player-teleported-and-grounded",
+      "destination-npc-placements-settled",
+      "destination-traffic-bound",
+      "map-location-lighting-mission-camera-sources-resolve-destination",
+      "gameplay-camera-ready",
+      "no-required-asset-in-flight-or-failed"
+    ]
+  },
+  "junctionGrowth": {
+    "baseline": {
+      "taskId": "WORLD-001",
+      "boundsMetres": {
+        "minX": -28,
+        "maxX": 42,
+        "minZ": -28,
+        "maxZ": 28
+      },
+      "widthMetres": 70,
+      "depthMetres": 56,
+      "playableAreaSquareMetres": 3920,
+      "buildingCount": 10,
+      "sectorCount": 6
+    },
+    "milestones": [
+      {
+        "id": "world-002a-east-west-rim",
+        "dependsOn": "WORLD-001",
+        "boundsMetres": {
+          "minX": -36.75,
+          "maxX": 50.75,
+          "minZ": -28,
+          "maxZ": 28
+        },
+        "widthMetres": 87.5,
+        "depthMetres": 56,
+        "playableAreaSquareMetres": 4900,
+        "growthSquareMetres": 980,
+        "growthPercentFromPrior": 25,
+        "buildingCountBefore": 10,
+        "buildingsAdded": 6,
+        "buildingCountAfter": 16,
+        "sectorCountBefore": 6,
+        "sectorsAdded": [
+          "sector.west-rim-north",
+          "sector.west-rim-south",
+          "sector.east-rim-north",
+          "sector.east-rim-south"
+        ],
+        "sectorCountAfter": 10,
+        "roads": [
+          "extend-west-straight-approach-to-minX",
+          "extend-east-quay-corridor-to-maxX"
+        ],
+        "traffic": "derive-render-collision-lanes-endpoints-and-map-from-shared-road-construction"
+      },
+      {
+        "id": "world-002b-north-south-rim",
+        "dependsOn": "world-002a-east-west-rim",
+        "boundsMetres": {
+          "minX": -36.75,
+          "maxX": 50.75,
+          "minZ": -35,
+          "maxZ": 35
+        },
+        "widthMetres": 87.5,
+        "depthMetres": 70,
+        "playableAreaSquareMetres": 6125,
+        "growthSquareMetres": 1225,
+        "growthPercentFromPrior": 25,
+        "buildingCountBefore": 16,
+        "buildingsAdded": 6,
+        "buildingCountAfter": 22,
+        "sectorCountBefore": 10,
+        "sectorsAdded": [
+          "sector.north-rim-west",
+          "sector.north-rim-east",
+          "sector.south-rim-west",
+          "sector.south-rim-east"
+        ],
+        "sectorCountAfter": 14,
+        "roads": ["extend-north-south-road-and-lanes-to-final-minZ-maxZ"],
+        "traffic": "retain-six-vehicle-cap-unless-measured-performance-approves-change"
+      }
+    ],
+    "finalRelativeToBaseline": {
+      "widthGrowthPercent": 25,
+      "depthGrowthPercent": 25,
+      "areaGrowthPercent": 56.25,
+      "westBoundOutwardMetres": 8.75,
+      "eastBoundOutwardMetres": 8.75,
+      "northBoundOutwardMetres": 7,
+      "southBoundOutwardMetres": 7,
+      "centerX": 7,
+      "centerZ": 0
+    },
+    "minimumPedestrianClearanceMetres": 4,
+    "minimumEntranceClearanceMetres": 1.8,
+    "trafficLaneWidthMetres": 3,
+    "roadWidthMetres": 12,
+    "trafficEndpointInsetMetres": 3
+  },
+  "buildingCatalog": {
+    "currentVariantCount": 18,
+    "plannedVariantCount": 26,
+    "currentTextureCount": 7,
+    "maximumNewTextureCount": 4,
+    "maximumAggregateTextureBytes": 1153433,
+    "runtimeNetworkAssets": false,
+    "acceptedLicenses": ["CC0-1.0", "public-domain", "original-project-owned"],
+    "plannedVariants": [
+      {
+        "id": "arrival-shed",
+        "footprintMetres": [22, 12],
+        "heightMetres": 9,
+        "frontage": "transit",
+        "profile": "sawtooth"
+      },
+      {
+        "id": "ticket-arcade",
+        "footprintMetres": [14, 8],
+        "heightMetres": 7,
+        "frontage": "institutional",
+        "profile": "stepped"
+      },
+      {
+        "id": "garage-six-bay",
+        "footprintMetres": [20, 10],
+        "heightMetres": 8,
+        "frontage": "service-bays",
+        "profile": "flat"
+      },
+      {
+        "id": "print-house",
+        "footprintMetres": [16, 9],
+        "heightMetres": 10,
+        "frontage": "shopfront",
+        "profile": "stepped"
+      },
+      {
+        "id": "boarding-court",
+        "footprintMetres": [12, 16],
+        "heightMetres": 15,
+        "frontage": "residential",
+        "profile": "setback"
+      },
+      {
+        "id": "corner-chemist",
+        "footprintMetres": [9, 11],
+        "heightMetres": 9,
+        "frontage": "corner-shop",
+        "profile": "stepped"
+      },
+      {
+        "id": "cold-store",
+        "footprintMetres": [20, 14],
+        "heightMetres": 12,
+        "frontage": "service-bays",
+        "profile": "setback"
+      },
+      {
+        "id": "municipal-annex",
+        "footprintMetres": [16, 12],
+        "heightMetres": 16,
+        "frontage": "institutional",
+        "profile": "tower"
+      }
+    ],
+    "proposedTextureFamilies": [
+      "ribbed-zinc",
+      "ceramic-tile",
+      "glass-block",
+      "painted-shopfront"
+    ],
+    "labViews": [
+      "overview",
+      "close",
+      "street",
+      "overhead",
+      "materials",
+      "narrow"
+    ],
+    "labLodStates": ["near-detail", "far-detail", "shell-only"]
+  },
+  "visibilityBenchmark": {
+    "referenceViewport": "1280x720",
+    "warmupSeconds": 20,
+    "measurementSeconds": 60,
+    "profiles": [
+      {
+        "id": "baseline",
+        "loadDistanceMetres": 26,
+        "unloadDistanceMetres": 32,
+        "streetDetailDistanceMetres": 24
+      },
+      {
+        "id": "far-1",
+        "loadDistanceMetres": 30,
+        "unloadDistanceMetres": 38,
+        "streetDetailDistanceMetres": 28
+      },
+      {
+        "id": "far-2",
+        "loadDistanceMetres": 32,
+        "unloadDistanceMetres": 40,
+        "streetDetailDistanceMetres": 30
+      },
+      {
+        "id": "far-3",
+        "loadDistanceMetres": 36,
+        "unloadDistanceMetres": 46,
+        "streetDetailDistanceMetres": 34
+      }
+    ],
+    "selection": "farthest-profile-that-passes-all-gates-and-shows-recorded-visual-benefit",
+    "performanceGates": {
+      "minimumAverageFps": 50,
+      "minimumOnePercentLowFps": 45,
+      "maximumFrameTimeP95Ms": 20,
+      "preferredPeakWorkingSetMb": 650,
+      "hardPeakWorkingSetMb": 900,
+      "maximumStreetDrawCalls": 120,
+      "maximumVisibleStreetTriangles": 30000,
+      "requiredLoadUnloadCycles": 3
+    },
+    "cycleRoute": ["south", "north", "west", "east", "north-baseline"],
+    "stableCounters": [
+      "sceneObjects",
+      "sectorOwnedResources",
+      "sectorModelInstances",
+      "colliders",
+      "loaderSourceReferences",
+      "liveAssetInstances"
+    ]
+  },
+  "implementationOrder": [
+    "approve-story-and-npc-performance-intent",
+    "close-cross-level-public-contract-gaps",
+    "build-opening-level",
+    "expand-building-catalog-assets-and-lab",
+    "implement-world-002a",
+    "implement-world-002b",
+    "benchmark-and-select-streaming-policy",
+    "integrate-cinematic-and-travel"
+  ]
+}
