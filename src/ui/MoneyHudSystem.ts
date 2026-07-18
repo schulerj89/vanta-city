@@ -30,6 +30,7 @@ export class MoneyHudSystem implements GameSystem {
   public readonly updateMode = 'always' as const;
 
   private readonly root = document.createElement('section');
+  private readonly label = document.createElement('span');
   private readonly balance = document.createElement('span');
   private readonly delta = document.createElement('span');
   private readonly announcement = document.createElement('span');
@@ -55,6 +56,9 @@ export class MoneyHudSystem implements GameSystem {
     this.animationTarget = account.balance;
     this.root.className = 'money-hud';
     this.root.setAttribute('aria-label', 'Player money');
+    this.label.className = 'money-hud__label';
+    this.label.textContent = 'FUNDS';
+    this.label.setAttribute('aria-hidden', 'true');
     this.balance.className = 'money-hud__balance';
     this.balance.setAttribute('aria-hidden', 'true');
     this.delta.className = 'money-hud__delta';
@@ -65,7 +69,7 @@ export class MoneyHudSystem implements GameSystem {
     this.announcement.setAttribute('aria-live', 'polite');
     this.announcement.setAttribute('aria-atomic', 'true');
     this.root.dataset.reducedMotion = String(this.reducedMotion);
-    this.root.append(this.balance, this.delta, this.announcement);
+    this.root.append(this.label, this.balance, this.delta, this.announcement);
   }
 
   public init(): void {

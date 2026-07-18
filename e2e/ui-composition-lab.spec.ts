@@ -28,6 +28,12 @@ test.describe('Ashfall UI composition lab', () => {
     page,
   }) => {
     expect(uiCompositionPresentationFixtures.exploration.supported).toBe(true);
+    expect(uiCompositionPresentationFixtures['health-depleted'].supported).toBe(
+      true,
+    );
+    expect(
+      uiCompositionPresentationFixtures['money-transaction'].supported,
+    ).toBe(true);
     expect(uiCompositionPresentationFixtures['pause-map'].supported).toBe(true);
     expect(uiCompositionPresentationFixtures['mission-update']).toMatchObject({
       supported: true,
@@ -59,12 +65,35 @@ test.describe('Ashfall UI composition lab', () => {
       background: 'bright',
     },
     { name: 'combat-noisy-desktop', state: 'combat', background: 'noisy' },
+    {
+      name: 'health-depleted-dark-desktop',
+      state: 'health-depleted',
+      background: 'dark',
+      extra: '&uiMotion=reduced',
+    },
+    {
+      name: 'money-transaction-bright-desktop',
+      state: 'money-transaction',
+      background: 'bright',
+    },
     { name: 'dialogue-dark-desktop', state: 'dialogue', background: 'dark' },
     {
       name: 'restoration-ultrawide',
       state: 'restoration',
       background: 'noisy',
       viewport: { width: 1920, height: 800 },
+    },
+    {
+      name: 'exploration-noisy-ultrawide',
+      state: 'exploration',
+      background: 'noisy',
+      viewport: { width: 1920, height: 800 },
+    },
+    {
+      name: 'exploration-noisy-short-ultrawide',
+      state: 'exploration',
+      background: 'noisy',
+      viewport: { width: 1920, height: 400 },
     },
     {
       name: 'exploration-narrow-large-safe',
@@ -121,6 +150,46 @@ test.describe('Ashfall UI composition lab', () => {
     const focused = page.locator(':focus-visible');
     await expect(focused).toBeVisible();
     expect(errors).toEqual([]);
+  });
+
+  test('uses distinct open instruments instead of one closed card family', async ({
+    page,
+  }) => {
+    await openLab(page, { state: 'mission-update', background: 'noisy' });
+    const styles = await page.evaluate(() => {
+      const read = (selector: string) => {
+        const element = document.querySelector<HTMLElement>(selector);
+        if (!element) throw new Error(`Missing ${selector}`);
+        const style = getComputedStyle(element);
+        return {
+          borderTop: style.borderTopStyle,
+          borderRight: style.borderRightStyle,
+          borderBottom: style.borderBottomStyle,
+          borderLeft: style.borderLeftStyle,
+          borderRadius: style.borderRadius,
+          clipPath: style.clipPath,
+          width: element.getBoundingClientRect().width,
+        };
+      };
+      return {
+        money: read('.money-hud'),
+        health: read('.health-hud__player'),
+        objective: read('.mission-objective-hud'),
+        notification: read('.mission-notification'),
+        minimap: read('.minimap-hud__map'),
+      };
+    });
+    expect(styles.money.borderTop).toBe('none');
+    expect(styles.money.borderLeft).toBe('none');
+    expect(styles.money.width).toBeLessThan(styles.health.width);
+    expect(styles.health.borderTop).toBe('none');
+    expect(styles.health.borderRight).toBe('none');
+    expect(styles.objective.borderRight).toBe('none');
+    expect(styles.objective.borderBottom).toBe('none');
+    expect(styles.notification.borderLeft).toBe('none');
+    expect(styles.notification.borderRight).toBe('none');
+    expect(styles.minimap.borderRadius).toBe('0px');
+    expect(styles.minimap.clipPath).toContain('polygon');
   });
 
   test('keeps visible fixtures inside simulated safe area without collisions', async ({
@@ -183,6 +252,45 @@ test.describe('Ashfall UI composition lab', () => {
       'transition-duration',
       '0s',
     );
+  });
+
+  test('keeps the open HUD clear in short ultrawide landscape', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 400 });
+    await openLab(page, { state: 'exploration', background: 'noisy' });
+    const rectangles = await page.evaluate(() => {
+      return [
+        '.player-hud-cluster',
+        '.ui-lab-navigation-fixture',
+        '.quickbar',
+        '.interaction-prompt',
+      ].map((selector) => {
+        const element = document.querySelector<HTMLElement>(selector);
+        if (!element) throw new Error(`Missing ${selector}`);
+        const rect = element.getBoundingClientRect();
+        return {
+          selector,
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+    });
+    for (let left = 0; left < rectangles.length; left += 1) {
+      for (let right = left + 1; right < rectangles.length; right += 1) {
+        const a = rectangles[left];
+        const b = rectangles[right];
+        const overlaps = !(
+          a.x + a.width <= b.x ||
+          b.x + b.width <= a.x ||
+          a.y + a.height <= b.y ||
+          b.y + b.height <= a.y
+        );
+        expect(overlaps, `${a.selector} overlaps ${b.selector}`).toBe(false);
+      }
+    }
   });
 });
 

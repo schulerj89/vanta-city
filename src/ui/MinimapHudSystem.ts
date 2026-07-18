@@ -92,13 +92,12 @@ export class MinimapHudSystem implements GameSystem<GameContext> {
     this.svg.setAttribute('viewBox', `0 0 ${mapSize} ${mapSize}`);
     this.svg.setAttribute('role', 'img');
     this.svg.setAttribute('aria-hidden', 'true');
-    const boundary = document.createElementNS(svgNamespace, 'rect');
+    const boundary = document.createElementNS(svgNamespace, 'path');
     boundary.classList.add('minimap-hud__boundary');
-    boundary.setAttribute('x', '0.75');
-    boundary.setAttribute('y', '0.75');
-    boundary.setAttribute('width', '98.5');
-    boundary.setAttribute('height', '98.5');
-    boundary.setAttribute('rx', '2');
+    boundary.setAttribute(
+      'd',
+      'M 18 0.75 H 82 L 99.25 18 V 82 L 82 99.25 H 18 L 0.75 82 V 18 Z',
+    );
     const north = document.createElementNS(svgNamespace, 'text');
     north.classList.add('minimap-hud__north');
     north.setAttribute('x', '50');

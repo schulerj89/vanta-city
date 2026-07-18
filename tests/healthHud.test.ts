@@ -44,11 +44,34 @@ describe('HealthHudSystem', () => {
       targetHudVisible: true,
       targetOccluded: false,
     });
+    expect(
+      mount.querySelector('.health-hud__player .health-hud__label')
+        ?.textContent,
+    ).toBe('CONDITION');
+    expect(
+      mount.querySelector('.health-hud__player')?.getAttribute('data-status'),
+    ).toBe('steady');
 
     player.damage(25, 'test');
     expect(
       mount.querySelector('.health-hud__player')?.getAttribute('aria-valuenow'),
     ).toBe('75');
+    player.damage(50, 'test-critical');
+    expect(
+      mount.querySelector('.health-hud__player')?.getAttribute('data-status'),
+    ).toBe('critical');
+    expect(
+      mount.querySelector('.health-hud__player .health-hud__label')
+        ?.textContent,
+    ).toBe('CONDITION · CRITICAL');
+    player.damage(25, 'test-depleted');
+    expect(
+      mount.querySelector('.health-hud__player')?.getAttribute('data-status'),
+    ).toBe('depleted');
+    expect(
+      mount.querySelector('.health-hud__player .health-hud__label')
+        ?.textContent,
+    ).toBe('CONDITION · DEPLETED');
     obstructed = true;
     hud.update();
     expect(hud.getSnapshot()).toMatchObject({

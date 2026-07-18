@@ -25,6 +25,10 @@ describe('MoneyHudSystem', () => {
     const hud = new MoneyHudSystem(mount, account, false);
     hud.init();
     const balance = mount.querySelector('.money-hud__balance');
+    expect(mount.querySelector('.money-hud__label')?.textContent).toBe('FUNDS');
+    expect(
+      mount.querySelector('.money-hud__label')?.getAttribute('aria-hidden'),
+    ).toBe('true');
     expect(balance?.textContent).toBe('$500');
     expect(balance?.getAttribute('aria-hidden')).toBe('true');
     expect(mount.querySelector('[role="status"]')?.textContent).toBe(

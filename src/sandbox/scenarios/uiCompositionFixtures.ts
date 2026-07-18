@@ -1,6 +1,8 @@
 export type UiLabState =
   | 'exploration'
   | 'combat'
+  | 'health-depleted'
+  | 'money-transaction'
   | 'dialogue'
   | 'restoration'
   | 'mission-update'
@@ -21,6 +23,8 @@ export const uiCompositionPresentationFixtures: Readonly<
 > = {
   exploration: { label: 'Exploration', supported: true },
   combat: { label: 'Combat warning', supported: true },
+  'health-depleted': { label: 'Health depleted', supported: true },
+  'money-transaction': { label: 'Money transaction', supported: true },
   dialogue: { label: 'Dialogue', supported: true },
   restoration: { label: 'Restoration', supported: true },
   'mission-update': {

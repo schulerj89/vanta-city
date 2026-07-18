@@ -92,6 +92,9 @@ describe('MinimapHudSystem', () => {
     expect(
       mount.querySelector('[data-entry-id="v.road-east-west"]'),
     ).not.toBeNull();
+    expect(
+      mount.querySelector('.minimap-hud__boundary')?.getAttribute('d'),
+    ).toContain('L 99.25 18');
 
     hud.setLayerVisible('spawns', true);
     expect(hud.getSnapshot().layers.spawns).toBe(true);

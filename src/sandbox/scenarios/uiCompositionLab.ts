@@ -146,13 +146,15 @@ class UiCompositionLabSystem implements GameSystem<GameContext> {
       return;
     }
 
+    const health = healthFixture(this.current.state);
+    const moneyTransaction = this.current.state === 'money-transaction';
     this.add(
       'player-status',
       html(`<div class="player-hud-cluster" aria-label="Player status">
-        <section class="money-hud"><output class="money-hud__balance">$ 001,984</output></section>
-        <section class="health-hud__bar health-hud__player" aria-label="Player health: ${this.current.state === 'combat' ? '28' : '82'} of 100" data-depleted="false">
-          <strong>${this.current.state === 'combat' ? 'HEALTH · WARNING' : 'HEALTH'}</strong>
-          <div class="health-hud__track"><div class="health-hud__fill" style="transform:scaleX(${this.current.state === 'combat' ? '.28' : '.82'})"></div></div>
+        <section class="money-hud"${moneyTransaction ? ' data-direction="increase"' : ''}><span class="money-hud__label" aria-hidden="true">FUNDS</span><output class="money-hud__balance">${moneyTransaction ? '$2,084' : '$1,984'}</output>${moneyTransaction ? '<span class="money-hud__delta" data-kind="credit">+$100</span>' : ''}</section>
+        <section class="health-hud__bar health-hud__player" aria-label="Player health: ${health.value} of 100" data-depleted="${health.depleted}" data-status="${health.status}">
+          <span class="health-hud__label">${health.label}</span><span class="health-hud__value">${health.value} / 100</span>
+          <div class="health-hud__track"><div class="health-hud__fill" style="transform:scaleX(${health.normalized})"></div></div>
         </section>
       </div>`),
     );
@@ -163,6 +165,8 @@ class UiCompositionLabSystem implements GameSystem<GameContext> {
         <svg class="minimap-hud__map" viewBox="0 0 100 100" role="img" aria-label="North-up map, player near Relay Row">
           <path d="M0 58h100M44 0v100" stroke="#525d5d" stroke-width="16"/>
           <path d="M0 58h100M44 0v100" stroke="#a8a58e" stroke-width="2" stroke-dasharray="5 5"/>
+          <path class="minimap-hud__boundary" d="M 18 .75 H 82 L 99.25 18 V 82 L 82 99.25 H 18 L .75 82 V 18 Z"/>
+          <text class="minimap-hud__north" x="50" y="8" text-anchor="middle">N</text>
           <path class="minimap-hud__player" d="M44 41l4 8-4-2-4 2z"/>
         </svg>
       </aside>
@@ -213,6 +217,14 @@ class UiCompositionLabSystem implements GameSystem<GameContext> {
         'notifications',
         html(
           `<p class="ui-lab-warning" role="alert"><strong>!</strong> LOW HEALTH · Break line of sight</p>`,
+        ),
+      );
+    }
+    if (this.current.state === 'health-depleted') {
+      this.add(
+        'notifications',
+        html(
+          `<p class="ui-lab-warning" role="alert"><strong>×</strong> CONDITION DEPLETED · Recovery required</p>`,
         ),
       );
     }
@@ -341,6 +353,40 @@ class UiCompositionLabSystem implements GameSystem<GameContext> {
 
 function label(state: UiLabState): string {
   return uiCompositionPresentationFixtures[state].label;
+}
+
+function healthFixture(state: UiLabState): {
+  readonly value: number;
+  readonly normalized: string;
+  readonly depleted: boolean;
+  readonly status: 'steady' | 'low' | 'depleted';
+  readonly label: string;
+} {
+  if (state === 'combat') {
+    return {
+      value: 28,
+      normalized: '.28',
+      depleted: false,
+      status: 'low',
+      label: 'CONDITION · LOW',
+    };
+  }
+  if (state === 'health-depleted') {
+    return {
+      value: 0,
+      normalized: '0',
+      depleted: true,
+      status: 'depleted',
+      label: 'CONDITION · DEPLETED',
+    };
+  }
+  return {
+    value: 82,
+    normalized: '.82',
+    depleted: false,
+    status: 'steady',
+    label: 'CONDITION',
+  };
 }
 
 function parseState(value: string | null): UiLabState {

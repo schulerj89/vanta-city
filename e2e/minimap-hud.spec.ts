@@ -25,6 +25,14 @@ test.describe('north-up minimap HUD', () => {
       },
     });
     await expect(page.getByTestId('minimap-hud')).toBeVisible();
+    await expect(page.locator('.minimap-hud__map')).toHaveCSS(
+      'clip-path',
+      /polygon/,
+    );
+    await expect(page.locator('.minimap-hud__boundary')).toHaveAttribute(
+      'd',
+      /L 99\.25 18/,
+    );
     await expect(page.locator('[data-layer="roads"] rect')).toHaveCount(2);
     await expect(page.locator('[data-layer="roads"] path')).toHaveCount(1);
     await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(

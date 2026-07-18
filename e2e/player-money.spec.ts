@@ -174,8 +174,10 @@ async function assertPlayerHudLayout(page: Page, viewportWidth: number) {
   expect(healthBox).not.toBeNull();
   expect(moneyBox!.y + moneyBox!.height).toBeLessThanOrEqual(healthBox!.y);
   expect(healthBox!.x + healthBox!.width).toBeLessThanOrEqual(viewportWidth);
-  expect(Math.abs(moneyBox!.x - healthBox!.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(moneyBox!.width - healthBox!.width)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(moneyBox!.x + moneyBox!.width - (healthBox!.x + healthBox!.width)),
+  ).toBeLessThanOrEqual(1);
+  expect(moneyBox!.width).toBeLessThan(healthBox!.width);
 }
 
 async function attach(

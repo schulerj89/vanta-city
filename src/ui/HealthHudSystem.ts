@@ -22,10 +22,12 @@ export class HealthHudSystem implements GameSystem {
   private readonly playerBar = createHealthBar(
     'Player health',
     'health-hud__player',
+    'CONDITION',
   );
   private readonly targetBar = createHealthBar(
     'Sparring target health',
     'health-hud__target',
+    'TARGET',
   );
   private unsubscribePlayer: (() => void) | undefined;
   private targetHudVisible = false;
@@ -124,10 +126,15 @@ export class HealthHudSystem implements GameSystem {
 interface HealthBarElements {
   readonly root: HTMLDivElement;
   readonly fill: HTMLDivElement;
+  readonly label: HTMLSpanElement;
   readonly value: HTMLSpanElement;
 }
 
-function createHealthBar(label: string, className: string): HealthBarElements {
+function createHealthBar(
+  label: string,
+  className: string,
+  caption: string,
+): HealthBarElements {
   const root = document.createElement('div');
   root.className = `health-hud__bar ${className}`;
   root.setAttribute('role', 'progressbar');
@@ -138,10 +145,13 @@ function createHealthBar(label: string, className: string): HealthBarElements {
   const fill = document.createElement('div');
   fill.className = 'health-hud__fill';
   track.append(fill);
+  const visualLabel = document.createElement('span');
+  visualLabel.className = 'health-hud__label';
+  visualLabel.textContent = caption;
   const value = document.createElement('span');
   value.className = 'health-hud__value';
-  root.append(value, track);
-  return { root, fill, value };
+  root.append(visualLabel, value, track);
+  return { root, fill, label: visualLabel, value };
 }
 
 function syncHealthBar(
@@ -153,4 +163,17 @@ function syncHealthBar(
   elements.fill.style.transform = `scaleX(${health.normalized})`;
   elements.value.textContent = `${Math.round(health.current)} / ${Math.round(health.maximum)}`;
   elements.root.dataset.depleted = String(health.depleted);
+  const status = health.depleted
+    ? 'depleted'
+    : health.normalized <= 0.25
+      ? 'critical'
+      : health.normalized <= 0.45
+        ? 'low'
+        : 'steady';
+  elements.root.dataset.status = status;
+  const caption = elements.root.classList.contains('health-hud__player')
+    ? 'CONDITION'
+    : 'TARGET';
+  elements.label.textContent =
+    status === 'steady' ? caption : `${caption} · ${status.toUpperCase()}`;
 }
