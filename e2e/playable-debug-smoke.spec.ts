@@ -72,6 +72,8 @@ test.describe('playable debug district', () => {
     ).toBeLessThanOrEqual(0.2);
 
     expect(state.camera.active).toBe(true);
+    expect(state.camera.desiredDistance).toBe(4.8);
+    expect(state.camera.actualDistance).toBeCloseTo(4.8, 2);
     expect(
       state.camera.position.z,
       'default camera should begin behind the player and look into the district',

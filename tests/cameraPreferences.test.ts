@@ -1,6 +1,7 @@
 import {
   CameraPreferenceStore,
   cameraPreferenceLimits,
+  defaultCameraPreferences,
 } from '../src/camera/CameraPreferences';
 
 class MemoryStorage implements Pick<Storage, 'getItem' | 'setItem'> {
@@ -16,6 +17,13 @@ class MemoryStorage implements Pick<Storage, 'getItem' | 'setItem'> {
 }
 
 describe('CameraPreferenceStore', () => {
+  it('uses the closer full-body gameplay framing for untouched preferences', () => {
+    const preferences = new CameraPreferenceStore(new MemoryStorage());
+
+    expect(defaultCameraPreferences.followDistance).toBe(4.8);
+    expect(preferences.current.followDistance).toBe(4.8);
+  });
+
   it('persists versioned gameplay preferences', () => {
     const storage = new MemoryStorage();
     const first = new CameraPreferenceStore(storage);
@@ -31,6 +39,7 @@ describe('CameraPreferenceStore', () => {
     const restored = new CameraPreferenceStore(storage);
 
     expect(restored.current).toEqual(first.current);
+    expect(restored.current.followDistance).toBe(7);
     expect(
       JSON.parse(storage.getItem(CameraPreferenceStore.storageKey) ?? '{}'),
     ).toMatchObject({ version: CameraPreferenceStore.version });

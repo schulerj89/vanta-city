@@ -134,6 +134,15 @@ describe('ThirdPersonCameraSystem helpers', () => {
 });
 
 describe('ThirdPersonCameraSystem', () => {
+  it('starts at the closer untouched gameplay distance', () => {
+    const harness = createHarness();
+    const snapshot = harness.system.getDebugSnapshot();
+
+    expect(defaultThirdPersonCameraConfig.initialDistance).toBe(4.8);
+    expect(snapshot.desiredDistance).toBe(4.8);
+    expect(snapshot.actualDistance).toBeCloseTo(4.8, 5);
+  });
+
   it('does not orbit for backward movement but still honors explicit recenter', () => {
     const harness = createHarness();
     const initialYaw = harness.system.getDebugSnapshot().yaw;

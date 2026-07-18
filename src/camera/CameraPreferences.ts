@@ -22,7 +22,7 @@ export const defaultCameraPreferences: CameraPreferences = {
   horizontalSensitivity: 0.0025,
   verticalSensitivity: 0.0025,
   invertY: false,
-  followDistance: 5.5,
+  followDistance: 4.8,
   automaticRecenter: true,
   shoulderSide: 'right',
 };
