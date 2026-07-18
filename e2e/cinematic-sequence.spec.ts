@@ -200,6 +200,23 @@ function expectRestored(
     before.missions.runtime.activeMissionId,
   );
   expect(after.fullWorldMap.open).toBe(before.fullWorldMap.open);
+  expect(withoutUpdateCount(after.locationHud)).toEqual(
+    withoutUpdateCount(before.locationHud),
+  );
+  expect(withoutUpdateCount(after.minimapHud)).toEqual(
+    withoutUpdateCount(before.minimapHud),
+  );
+  expect(after.money.hud).toEqual(before.money.hud);
+  expect(after.vehicle.hud).toEqual(before.vehicle.hud);
+  expect(after.missions.hud).toEqual(before.missions.hud);
+}
+
+function withoutUpdateCount<T extends { readonly updateCount: number }>(
+  snapshot: T,
+): Omit<T, 'updateCount'> {
+  const { updateCount, ...rest } = snapshot;
+  void updateCount;
+  return rest;
 }
 
 async function attach(
