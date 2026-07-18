@@ -67,6 +67,7 @@ import { QuickbarSystem } from './ui/QuickbarSystem';
 import { PlayerMoneyAccount } from './economy/PlayerMoneyAccount';
 import { MoneyHudSystem } from './ui/MoneyHudSystem';
 import { PlayerHudClusterSystem } from './ui/PlayerHudClusterSystem';
+import { PlayerDeathSystem } from './ui/PlayerDeathSystem';
 import { HandgunPurchase } from './economy/HandgunPurchase';
 import type { DebugCashPickup } from './economy/DebugCashPickup';
 import { ProximityPickupSystem } from './pickups/ProximityPickupSystem';
@@ -371,6 +372,7 @@ async function bootstrap(): Promise<void> {
         camera,
         collision,
         fixtureEnabled: developmentParameters?.get('sparringFixture') === '1',
+        opponentEnabled: developmentParameters?.get('hostileOpponent') === '1',
         reportError: (scope, error) => development.errors.report(scope, error),
         gameplayAvailable: () =>
           runtime.state.current === 'playing' && !input.isUiFocused(),
@@ -389,6 +391,13 @@ async function bootstrap(): Promise<void> {
         ...(sparringDamageTarget ? [sparringDamageTarget] : []),
       ];
     },
+  );
+  const playerDeath = new PlayerDeathSystem(
+    mount,
+    player,
+    camera,
+    prefersReducedMotion,
+    () => sparringTarget?.reset(),
   );
   const healthHud = new HealthHudSystem(
     mount,
@@ -548,6 +557,7 @@ async function bootstrap(): Promise<void> {
           minimapHud,
           weaponAim,
           weaponCombat,
+          playerDeath,
         )
       : [];
 
@@ -579,6 +589,7 @@ async function bootstrap(): Promise<void> {
     .register(help)
     .register(player)
     .register(weaponAim)
+    .register(playerDeath)
     .register(proximityPickups)
     .register(traffic);
   if (sparringTarget) runtime.register(sparringTarget);
@@ -668,6 +679,7 @@ async function bootstrap(): Promise<void> {
           diagnostics: diagnosticRecorder,
           traffic,
           timeOfDay,
+          playerDeath,
         })
       : undefined;
 
@@ -717,6 +729,7 @@ function registerVerticalSliceDebug(
   minimapHud?: MinimapHudSystem,
   weaponAim?: WeaponAimSystem,
   weaponCombat?: WeaponCombatSystem,
+  playerDeath?: PlayerDeathSystem,
 ): (() => void)[] {
   const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
@@ -1181,6 +1194,13 @@ function registerVerticalSliceDebug(
           );
       },
     }),
+    debug.registerToggle({
+      id: 'sparring-target.hostile',
+      label: 'Enable hostile debug opponent',
+      group: sections.combat,
+      initialValue: sparringTarget.getSnapshot().opponent.active,
+      onChange: (enabled) => sparringTarget.setOpponentEnabled(enabled),
+    }),
     debug.registerCommand({
       id: 'sparring-target.reset',
       label: 'Reset / revive sparring target',
@@ -1220,7 +1240,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'weapon.target-at-aim',
       label: 'Move sparring target onto aim ray',
-      group: sections.actions,
+      group: sections.combat,
       argumentLabel: 'distance (default 6)',
       run: async (value) => {
         await ensureSparringTarget();
@@ -1273,7 +1293,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'weapon.aim-center',
       label: 'Center weapon aim point',
-      group: sections.actions,
+      group: sections.combat,
       run: () =>
         weaponAim?.setScreenPoint(
           window.innerWidth / 2,
@@ -1362,6 +1382,12 @@ function registerVerticalSliceDebug(
       run: () => {
         player.health.set(0, 'debug-command');
       },
+    }),
+    debug.registerCommand({
+      id: 'player.revive',
+      label: 'Revive player and restart debug combat',
+      group: sections.combat,
+      run: () => playerDeath?.reviveNow(),
     }),
     debug.registerCommand({
       id: 'sparring-target.health-damage',

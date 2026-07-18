@@ -15,6 +15,10 @@ export const sparringTargetCharacterDefinition = {
       clipNames: ['CharacterArmature|HitRecieve'],
       required: true,
     },
+    punchLeft: {
+      clipNames: ['CharacterArmature|Punch_Left'],
+      required: false,
+    },
     death: {
       clipNames: ['CharacterArmature|Death'],
       required: true,
@@ -33,6 +37,17 @@ export const sparringTargetConfig = {
   engagementMinimumFacingDot: 0.2,
   focusedCameraDistance: 4.25,
   damage: { punch: 8, kick: 12 },
+  opponent: {
+    engagementDistance: 6,
+    disengagementDistance: 8,
+    attackDistance: 1.15,
+    stopDistance: 0.92,
+    approachSpeed: 1.65,
+    attackWindup: 0.36,
+    attackDuration: 0.72,
+    recoveryDuration: 0.8,
+    damage: 12,
+  },
   volumes: {
     punch: {
       // Authored impact wrists are 0.41–0.44m forward; radius includes fist.

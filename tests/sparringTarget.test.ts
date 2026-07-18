@@ -15,6 +15,7 @@ import { sparringTargetConfig } from '../src/debug/sparringTarget';
 import type { PlayerActionEvents } from '../src/player/PlayerControllerSystem';
 import { GameObjectWorld } from '../src/entities/GameObjectWorld';
 import { StaticCollisionWorld } from '../src/physics/CollisionWorld';
+import { HealthComponent } from '../src/health/Health';
 import { defaultPlayerMovementConfig } from '../src/player/PlayerMovement';
 import { sparringTargetArea } from '../src/world/levels/intersectionLayout';
 import { testDistrict } from '../src/world/levels/testDistrict';
@@ -27,6 +28,7 @@ function player() {
   };
   return {
     events,
+    health: new HealthComponent('player', 100),
     getWorldPose: () => pose,
     setPose: (next: typeof pose) => {
       pose = next;
@@ -34,7 +36,7 @@ function player() {
   };
 }
 
-function loader() {
+function loader(withReactionClips = true) {
   const disposals: ReturnType<typeof vi.fn>[] = [];
   return {
     disposals,
@@ -51,13 +53,17 @@ function loader() {
       return {
         definition,
         root,
-        animationClips: new Map([
-          ['idle', new AnimationClip('CharacterArmature|Idle', 1, [])],
-          [
-            'getHit',
-            new AnimationClip('CharacterArmature|HitRecieve', 0.54, []),
-          ],
-        ]),
+        animationClips: new Map(
+          withReactionClips
+            ? [
+                ['idle', new AnimationClip('CharacterArmature|Idle', 1, [])],
+                [
+                  'getHit',
+                  new AnimationClip('CharacterArmature|HitRecieve', 0.54, []),
+                ],
+              ]
+            : [],
+        ),
         discoveredClipNames: [],
         source: 'asset' as const,
         warnings: [],
@@ -365,5 +371,78 @@ describe('action target foundation', () => {
     expect(characterLoader.disposals[0]).toHaveBeenCalledOnce();
     expect(characterLoader.disposals[1]).toHaveBeenCalledOnce();
     expect(collision.getColliderCount()).toBe(baseColliderCount);
+  });
+
+  it('approaches, attacks through player health, gates state, and falls back safely', async () => {
+    const scene = new Scene();
+    const objects = new GameObjectWorld(scene);
+    const actor = player();
+    actor.setPose({
+      position: { x: 16, y: 0.2, z: 7.3 },
+      forward: { x: 0, y: 0, z: 1 },
+    });
+    let gameplayAvailable = true;
+    const collision = new StaticCollisionWorld();
+    const system = new SparringTargetSystem(
+      loader(false),
+      objects,
+      actor,
+      { activeLevel: testDistrict.definition },
+      {
+        collision,
+        fixtureEnabled: true,
+        opponentEnabled: true,
+        gameplayAvailable: () => gameplayAvailable,
+      },
+    );
+    system.init();
+    await vi.waitFor(() => expect(system.getSnapshot().loaded).toBe(true));
+
+    for (
+      let frame = 0;
+      frame < 30 && actor.health.current === 100;
+      frame += 1
+    ) {
+      system.update({ delta: 0.1, elapsed: frame / 10, frame });
+      objects.update({ delta: 0.1, elapsed: frame / 10, frame });
+    }
+    expect(system.getSnapshot().opponent).toMatchObject({
+      active: true,
+      attackSequence: 1,
+      damageSequence: 1,
+    });
+    expect(actor.health.current).toBe(88);
+    expect(system.getSnapshot().opponent.distance).toBeGreaterThanOrEqual(
+      sparringTargetConfig.opponent.stopDistance - 0.01,
+    );
+
+    gameplayAvailable = false;
+    const healthBeforePause = actor.health.current;
+    system.update({ delta: 2, elapsed: 4, frame: 40 });
+    expect(system.getSnapshot().opponent.state).toBe('idle');
+    expect(actor.health.current).toBe(healthBeforePause);
+
+    gameplayAvailable = true;
+    system.teleport({ x: 16, y: 0.2, z: 9.5 }, Math.PI);
+    actor.setPose({
+      position: { x: 16, y: 0.2, z: 8.6 },
+      forward: { x: 0, y: 0, z: 1 },
+    });
+    actor.events.emit('character-action:impact', impact('punchLeft', 1));
+    expect(system.getSnapshot().animation).toContain('fallback');
+    expect(system.getSnapshot().health).toMatchObject({ current: 92 });
+    system.getHealth()?.set(0, 'test:death');
+    expect(system.getSnapshot().animation).toContain('fallback');
+    expect(system.getSnapshot().opponent.state).toBe('idle');
+    system.update({ delta: 0, elapsed: 5, frame: 50 });
+    expect(system.getSnapshot().opponent.state).toBe('dead');
+
+    await system.setEnabled(false);
+    await system.setEnabled(true);
+    expect(collision.getDebugSnapshot().dynamicCapsuleCount).toBe(0);
+    expect(system.getSnapshot().listenerCount).toBe(3);
+    system.dispose();
+    expect(collision.getColliderCount()).toBe(0);
+    actor.health.dispose();
   });
 });

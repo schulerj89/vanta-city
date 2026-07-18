@@ -17,6 +17,7 @@ const domTestFiles = [
   'tests/locationHud.test.ts',
   'tests/moneyHud.test.ts',
   'tests/minimapHud.test.ts',
+  'tests/playerDeathSystem.test.ts',
   'tests/quickbar.test.ts',
 ];
 

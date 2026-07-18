@@ -55,6 +55,11 @@ import {
   sparringTargetCharacterDefinition,
   sparringTargetConfig,
 } from './sparringTarget';
+import { CombatOpponentDecision } from './CombatOpponentDecision';
+import type {
+  CombatOpponentDecisionSnapshot,
+  CombatOpponentState,
+} from './CombatOpponentDecision';
 
 export interface SparringCharacterLoader {
   instantiate(definition: CharacterDefinition): Promise<LoadedCharacter>;
@@ -62,6 +67,7 @@ export interface SparringCharacterLoader {
 
 export interface SparringPlayer extends WorldPoseSource {
   readonly events: EventBus<PlayerActionEvents>;
+  readonly health: HealthComponent;
 }
 
 export interface SparringCameraFocusHandle {
@@ -79,12 +85,18 @@ export interface SparringCameraFocusSurface {
 export interface SparringTargetOptions {
   /** Keeps the combat fixture absent unless explicitly requested by development tooling. */
   readonly fixtureEnabled?: boolean;
+  readonly opponentEnabled?: boolean;
   readonly camera?: SparringCameraFocusSurface;
   readonly gameplayAvailable?: () => boolean;
   readonly reportError?: (scope: string, error: unknown) => void;
   readonly collision?: {
     addDefinition(definition: StaticColliderDefinition): void;
     remove(id: string): boolean;
+    castSegment(
+      from: Readonly<Vector3>,
+      to: Readonly<Vector3>,
+      options?: { readonly ignoreColliderIds?: readonly string[] },
+    ): { readonly obstructed: boolean };
   };
 }
 
@@ -161,6 +173,10 @@ export interface SparringTargetSnapshot {
   readonly position: WorldPosition | undefined;
   readonly collisionActive: boolean;
   readonly listenerCount: number;
+  readonly opponent: CombatOpponentDecisionSnapshot & {
+    readonly active: boolean;
+    readonly distance: number;
+  };
 }
 
 export class SparringTargetSystem implements GameSystem {
@@ -187,6 +203,11 @@ export class SparringTargetSystem implements GameSystem {
   private enabledRequested: boolean;
   private collisionActive = false;
   private disposed = false;
+  private readonly opponent = new CombatOpponentDecision(
+    sparringTargetConfig.opponent,
+  );
+  private lastOpponentDistance = Infinity;
+  private opponentEnabled: boolean;
 
   public constructor(
     private readonly loader: SparringCharacterLoader,
@@ -198,6 +219,7 @@ export class SparringTargetSystem implements GameSystem {
     private readonly options: SparringTargetOptions = {},
   ) {
     this.enabledRequested = options.fixtureEnabled === true;
+    this.opponentEnabled = options.opponentEnabled === true;
   }
 
   public get initiallyEnabled(): boolean {
@@ -268,6 +290,7 @@ export class SparringTargetSystem implements GameSystem {
     const entity = this.entity;
     const playerPose = this.player.getWorldPose();
     if (!entity || !playerPose) return;
+    this.updateOpponent(time, playerPose, entity);
     this.lastEvaluation = this.evaluate(playerPose, this.lastStrike);
     this.feedbackRemaining = Math.max(
       0,
@@ -307,6 +330,14 @@ export class SparringTargetSystem implements GameSystem {
     this.feedback = this.entity?.enabled ? 'ready' : 'inactive';
     this.feedbackRemaining = 0;
     this.entity?.reset();
+    this.opponent.reset();
+    this.lastOpponentDistance = Infinity;
+  }
+
+  public setOpponentEnabled(enabled: boolean): void {
+    this.opponentEnabled = enabled;
+    this.opponent.reset();
+    this.entity?.setCombatState('idle');
   }
 
   public getSnapshot(): SparringTargetSnapshot {
@@ -371,6 +402,11 @@ export class SparringTargetSystem implements GameSystem {
       position: entity?.getWorldPose().position,
       collisionActive: this.collisionActive,
       listenerCount: this.unsubscribePlayer.length,
+      opponent: {
+        ...this.opponent.getSnapshot(),
+        active: this.enabledRequested && this.opponentEnabled,
+        distance: this.lastOpponentDistance,
+      },
     };
   }
 
@@ -440,6 +476,66 @@ export class SparringTargetSystem implements GameSystem {
     this.lastImpactNormalizedTime = undefined;
     this.feedbackRemaining = 0;
     this.latestDecision = undefined;
+    this.opponent.reset();
+    this.lastOpponentDistance = Infinity;
+  }
+
+  private updateOpponent(
+    time: FrameTime,
+    playerPose: WorldPose,
+    entity: SparringTargetEntity,
+  ): void {
+    const targetPose = entity.getWorldPose();
+    const dx = playerPose.position.x - targetPose.position.x;
+    const dz = playerPose.position.z - targetPose.position.z;
+    const distance = Math.hypot(dx, dz);
+    this.lastOpponentDistance = distance;
+    const facingDot =
+      distance <= 1e-6
+        ? 1
+        : (targetPose.forward.x * dx + targetPose.forward.z * dz) / distance;
+    const decision = this.opponent.update({
+      delta: time.delta,
+      enabled: entity.enabled && this.opponentEnabled,
+      gameplayAvailable: this.options.gameplayAvailable?.() ?? true,
+      selfAlive: entity.health.alive,
+      targetAlive: this.player.health.alive,
+      distance,
+      facingDot,
+      pathClear: this.isApproachPathClear(targetPose, playerPose),
+    });
+    entity.setCombatState(decision.state);
+    if (decision.shouldFace && distance > 1e-6) {
+      entity.face(Math.atan2(dx, dz));
+    }
+    if (decision.shouldMove && distance > 1e-6) {
+      const travel = Math.min(
+        sparringTargetConfig.opponent.approachSpeed * Math.max(0, time.delta),
+        Math.max(0, distance - sparringTargetConfig.opponent.stopDistance),
+      );
+      entity.move((dx / distance) * travel, (dz / distance) * travel);
+      this.syncCollision();
+    }
+    if (decision.shouldDamage) {
+      this.player.health.damage(
+        sparringTargetConfig.opponent.damage,
+        'debug-sparring-opponent',
+      );
+    }
+  }
+
+  private isApproachPathClear(fromPose: WorldPose, toPose: WorldPose): boolean {
+    const collision = this.options.collision;
+    if (!collision) return true;
+    const from = new Vector3(
+      fromPose.position.x,
+      fromPose.position.y + 0.9,
+      fromPose.position.z,
+    );
+    const to = new Vector3(toPose.position.x, from.y, toPose.position.z);
+    return !collision.castSegment(from, to, {
+      ignoreColliderIds: [sparringTargetConfig.collisionId],
+    }).obstructed;
   }
 
   private syncCollision(): void {
@@ -672,6 +768,7 @@ class SparringTargetEntity
   private readonly clips = new Map<string, AnimationClip>();
   private readonly animationGraph = new CharacterAnimationStateMachine();
   private activeReaction: string | undefined;
+  private combatState: CombatOpponentState = 'idle';
   private readonly unsubscribeHealth: (() => void)[] = [];
 
   public get isBusy(): boolean {
@@ -753,10 +850,9 @@ class SparringTargetEntity
     }
     const logicalClip = 'getHit';
     const clip = this.clips.get(logicalClip);
-    if (!clip || !this.mixer) return false;
     this.activeReaction = logicalClip;
     this.busy = true;
-    this.fallbackRemaining = Math.max(0.05, clip.duration + 0.1);
+    this.fallbackRemaining = Math.max(0.05, (clip?.duration ?? 0.45) + 0.1);
     this.responseSequence += 1;
     this.lastAction = impact.action;
     this.applyGraphTransition();
@@ -788,10 +884,52 @@ class SparringTargetEntity
     return true;
   }
 
+  public face(yaw: number): void {
+    this.object3d.rotation.y = yaw;
+  }
+
+  public move(dx: number, dz: number): void {
+    this.object3d.position.x += dx;
+    this.object3d.position.z += dz;
+    this.groundedMinY =
+      this.groundedOffset === undefined
+        ? undefined
+        : this.object3d.position.y + this.groundedOffset;
+  }
+
+  public setCombatState(state: CombatOpponentState): void {
+    if (this.combatState === state || (this.busy && state !== 'dead')) return;
+    this.combatState = state;
+    if (state === 'attack') {
+      const clip = this.clips.get('punchLeft');
+      if (!clip || !this.mixer) {
+        this.animation = 'fallback:attack';
+        return;
+      }
+      this.action?.fadeOut(0.08);
+      this.action = this.mixer.clipAction(clip);
+      this.action.reset().setLoop(LoopOnce, 1).fadeIn(0.08).play();
+      this.action.clampWhenFinished = true;
+      this.animation = 'action:punchLeft';
+      return;
+    }
+    if (state === 'dead') {
+      this.applyGraphTransition();
+      return;
+    }
+    if (
+      this.animation === 'action:punchLeft' ||
+      this.animation === 'fallback:attack'
+    ) {
+      this.playIdle();
+    }
+  }
+
   public reset(): void {
     this.responseSequence = 0;
     this.lastAction = undefined;
     this.health.reset('sparring:reset');
+    this.combatState = 'idle';
     this.playIdle();
   }
 
@@ -881,8 +1019,6 @@ class SparringTargetEntity
   }
 
   private applyGraphTransition(): void {
-    const mixer = this.mixer;
-    if (!mixer) return;
     const transition = this.animationGraph.transition(
       {
         movement: 'idle',
@@ -892,6 +1028,8 @@ class SparringTargetEntity
       (logicalName) => this.clips.has(logicalName),
     );
     this.animation = transition.state.label;
+    const mixer = this.mixer;
+    if (!mixer) return;
     if (!transition.changed) return;
     this.action?.fadeOut(0.08);
     const clip = transition.state.resolvedClip

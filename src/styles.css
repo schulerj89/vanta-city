@@ -54,6 +54,127 @@ canvas {
   box-shadow: 0 0 0 1px rgb(0 0 0 / 70%);
 }
 
+.death-overlay {
+  position: absolute;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #f4f4f1;
+  background: rgb(4 6 8 / 72%);
+  isolation: isolate;
+  backdrop-filter: grayscale(1) contrast(1.08) blur(2px);
+}
+
+.death-overlay[hidden] {
+  display: none;
+}
+
+.death-overlay__wash {
+  position: absolute;
+  z-index: -1;
+  inset: -20%;
+  background:
+    repeating-linear-gradient(
+      112deg,
+      transparent 0 7px,
+      rgb(255 255 255 / 2%) 8px 9px
+    ),
+    radial-gradient(circle at 50% 44%, rgb(200 207 207 / 18%), transparent 42%),
+    #080b0d;
+  animation: death-wash-in 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.death-overlay__content {
+  width: min(38rem, calc(100vw - 2rem));
+  padding: 2.4rem 1.5rem;
+  border-block: 1px solid rgb(239 241 238 / 34%);
+  text-align: center;
+  animation: death-content-in 720ms 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.death-overlay__eyebrow {
+  margin: 0 0 0.65rem;
+  color: #aeb8b8;
+  font:
+    650 0.72rem/1.2 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.death-overlay h1 {
+  margin: 0;
+  font:
+    800 clamp(3.8rem, 15vw, 8.5rem)/0.88 ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 2rem rgb(255 255 255 / 12%);
+}
+
+.death-overlay__content > p:last-of-type {
+  max-width: 31rem;
+  margin: 1.25rem auto 1.6rem;
+  color: #c8cecc;
+  line-height: 1.55;
+}
+
+.death-overlay__revive {
+  min-height: 2.8rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid #d9ddda;
+  border-radius: 0.25rem;
+  color: #090c0d;
+  background: #e6e9e6;
+  font:
+    750 0.82rem/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.death-overlay__revive:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
+@keyframes death-wash-in {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes death-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .death-overlay *,
+  .death-overlay::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

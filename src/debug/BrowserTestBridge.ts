@@ -38,6 +38,7 @@ import type { TrafficSystem } from '../traffic/TrafficSystem';
 import type { TimeOfDayLightingSystem } from '../world/TimeOfDayLightingSystem';
 import type { WeaponAimSystem } from '../combat/WeaponAimSystem';
 import type { WeaponCombatSystem } from '../combat/WeaponCombatSystem';
+import type { PlayerDeathSystem } from '../ui/PlayerDeathSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -165,6 +166,7 @@ export interface BrowserTestSnapshot {
   };
   readonly traffic: ReturnType<TrafficSystem['getSnapshot']>;
   readonly lighting: ReturnType<TimeOfDayLightingSystem['getSnapshot']>;
+  readonly playerDeath: ReturnType<PlayerDeathSystem['getSnapshot']>;
 }
 
 export interface BrowserTestApi {
@@ -220,6 +222,7 @@ export interface BrowserTestBridgeDependencies {
   readonly diagnostics: DiagnosticRecorder;
   readonly traffic: TrafficSystem;
   readonly timeOfDay: TimeOfDayLightingSystem;
+  readonly playerDeath: PlayerDeathSystem;
 }
 
 /** Installs the opt-in development bridge used by Playwright smoke tests. */
@@ -382,6 +385,7 @@ function createSnapshot(
     runtimeErrors: dependencies.errors.getDebugSnapshot(),
     traffic: dependencies.traffic.getSnapshot(),
     lighting: dependencies.timeOfDay.getSnapshot(),
+    playerDeath: dependencies.playerDeath.getSnapshot(),
     performance: {
       renderer: dependencies.render.getPerformanceSnapshot(),
       runtime: dependencies.runtime.getPerformanceSnapshot(),
