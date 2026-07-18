@@ -1,10 +1,4 @@
-import {
-  Color,
-  PerspectiveCamera,
-  Scene,
-  SRGBColorSpace,
-  WebGLRenderer,
-} from 'three';
+import { PerspectiveCamera, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
 import type { GameSystem } from '../core/lifecycle';
 import type { PerformanceTimingSummary } from '../game/GameRuntime';
 
@@ -54,7 +48,6 @@ export class RenderSystem implements GameSystem {
   }
 
   public init(): void {
-    this.scene.background = new Color(0x92a8b8);
     this.camera.position.set(10, 9, 14);
     this.camera.lookAt(0, 1, 0);
     this.renderer.outputColorSpace = SRGBColorSpace;

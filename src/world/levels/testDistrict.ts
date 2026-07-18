@@ -369,6 +369,22 @@ export const testDistrict = {
         tags: ['interaction'],
       },
     ],
+    lighting: {
+      lamps: [
+        {
+          id: 'lamp.street-light-nw',
+          visualId: 'v.street-light-nw',
+          position: [-6.12, 6.57, 8.5],
+          emissiveMaterialName: 'Light',
+        },
+        {
+          id: 'lamp.street-light-se',
+          visualId: 'v.street-light-se',
+          position: [6.12, 6.57, -8.5],
+          emissiveMaterialName: 'Light',
+        },
+      ],
+    },
     mapPresentation: {
       orientation: 'north-up',
       bounds: {

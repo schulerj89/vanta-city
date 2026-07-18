@@ -1,9 +1,7 @@
 import {
-  AmbientLight,
   BufferGeometry,
   BoxGeometry,
   ConeGeometry,
-  DirectionalLight,
   EdgesGeometry,
   Group,
   Line,
@@ -182,7 +180,6 @@ export class LevelSystem implements GameSystem, LevelLocations {
     root.add(visuals, semanticMarkers, debug);
 
     try {
-      addLighting(visuals);
       const buildingRenderer = new AshfallBuildingRenderer(
         this.assets,
         resources,
@@ -240,15 +237,6 @@ export class LevelSystem implements GameSystem, LevelLocations {
     applyTransform(mesh, visual);
     return mesh;
   }
-}
-
-function addLighting(group: Group): void {
-  const sun = new DirectionalLight(0xffedcf, 2.5);
-  sun.position.set(18, 26, 12);
-  sun.name = 'environment:sun';
-  const ambient = new AmbientLight(0xbad7ed, 1.35);
-  ambient.name = 'environment:ambient';
-  group.add(ambient, sun);
 }
 
 function buildDebug(

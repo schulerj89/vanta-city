@@ -120,4 +120,26 @@ describe('validateLevelDefinition', () => {
     expect(() => validateLevelDefinition(invalid)).toThrow(/duplicates entry/);
     expect(() => validateLevelDefinition(invalid)).toThrow(/spawns marker/);
   });
+
+  it('bounds lamp lights and validates their visual references', () => {
+    const invalid: LevelDefinition = {
+      ...testDistrict.definition,
+      lighting: {
+        lamps: Array.from({ length: 5 }, (_, index) => ({
+          id: `lamp.invalid-${index}`,
+          visualId: 'v.missing-lamp',
+          position: [0, 6, index],
+          emissiveMaterialName: ' ',
+        })),
+      },
+    };
+
+    expect(() => validateLevelDefinition(invalid)).toThrow(/at most 4/);
+    expect(() => validateLevelDefinition(invalid)).toThrow(
+      /missing environment/,
+    );
+    expect(() => validateLevelDefinition(invalid)).toThrow(
+      /emissiveMaterialName is empty/,
+    );
+  });
 });

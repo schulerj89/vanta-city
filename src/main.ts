@@ -52,6 +52,7 @@ import type { SparringTargetSystem } from './debug/SparringTargetSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
+import { TimeOfDayLightingSystem } from './world/TimeOfDayLightingSystem';
 import type { WorldEvents } from './world/WorldEvents';
 import { testDistrict } from './world/levels/testDistrict';
 import { AccessibilityPreferenceStore } from './accessibility/AccessibilityPreferences';
@@ -176,6 +177,17 @@ async function bootstrap(): Promise<void> {
     levels,
     'test-district',
     worldEvents,
+  );
+  const requestedHour = Number(pageParameters.get('time'));
+  const timeOfDay = new TimeOfDayLightingSystem(
+    render.scene,
+    levelSystem,
+    worldEvents,
+    accessibility,
+    development?.debug,
+    pageParameters.has('time') && Number.isFinite(requestedHour)
+      ? requestedHour
+      : 13,
   );
   const collision = new StaticCollisionWorld();
   const worldCollision = new WorldCollisionSystem(collision, worldEvents);
@@ -534,6 +546,7 @@ async function bootstrap(): Promise<void> {
   runtime
     .register(worldCollision)
     .register(levelSystem)
+    .register(timeOfDay)
     .register(objects)
     .register(help)
     .register(player)
@@ -622,6 +635,7 @@ async function bootstrap(): Promise<void> {
           inputInspector,
           diagnostics: diagnosticRecorder,
           traffic,
+          timeOfDay,
         })
       : undefined;
 

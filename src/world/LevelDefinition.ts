@@ -111,6 +111,21 @@ export interface LevelMapPresentationDefinition {
   readonly markers: readonly LevelMapMarkerReference[];
 }
 
+/** Authored fixture facts consumed by the shared environment lighting system. */
+export interface LampFixtureDefinition {
+  readonly id: string;
+  readonly visualId: string;
+  /** World-space center of the fixture's emitting bulb. */
+  readonly position: Vector3Tuple;
+  /** Imported material to make emissive while the local light is active. */
+  readonly emissiveMaterialName: string;
+}
+
+export interface LevelLightingDefinition {
+  /** Kept deliberately small: each entry receives one shadow-free point light. */
+  readonly lamps: readonly LampFixtureDefinition[];
+}
+
 export interface LevelDefinition {
   readonly id: string;
   readonly name: string;
@@ -122,6 +137,7 @@ export interface LevelDefinition {
   readonly landmarks: readonly LevelLandmarkDefinition[];
   readonly triggers: readonly TriggerVolumeDefinition[];
   readonly cinematicAnchors: readonly CinematicAnchorDefinition[];
+  readonly lighting?: LevelLightingDefinition;
   readonly mapPresentation?: LevelMapPresentationDefinition;
 }
 
@@ -219,6 +235,29 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
         anchor.fieldOfView >= 180)
     ) {
       issues.push(`${anchor.id}.fieldOfView must be between 0 and 180`);
+    }
+  }
+
+  const environmentIds = new Set(definition.environment.map(({ id }) => id));
+  const lamps = definition.lighting?.lamps ?? [];
+  if (lamps.length > 4) {
+    issues.push(
+      `lighting supports at most 4 local lamp fixtures, found ${lamps.length}`,
+    );
+  }
+  const lampIds = new Set<string>();
+  for (const lamp of lamps) {
+    validateId(lamp.id, 'lamp', issues);
+    if (lampIds.has(lamp.id)) issues.push(`duplicate lamp id "${lamp.id}"`);
+    lampIds.add(lamp.id);
+    validateVector(lamp.position, `${lamp.id}.position`, issues);
+    if (!environmentIds.has(lamp.visualId)) {
+      issues.push(
+        `${lamp.id}.visualId references missing environment entry "${lamp.visualId}"`,
+      );
+    }
+    if (lamp.emissiveMaterialName.trim().length === 0) {
+      issues.push(`${lamp.id}.emissiveMaterialName is empty`);
     }
   }
 
