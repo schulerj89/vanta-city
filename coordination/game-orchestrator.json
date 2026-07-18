@@ -279,7 +279,7 @@
     {
       "id": "CORE-001",
       "title": "Boot directly as Casual",
-      "status": "ready",
+      "status": "completed",
       "dependencies": [],
       "owner": "runtime-worker",
       "acceptance": [
@@ -316,7 +316,7 @@
     {
       "id": "WORLD-001",
       "title": "Expand Ashfall by 25 percent with the first curved street",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["PERF-001"],
       "owner": "world-worker",
       "acceptance": [
@@ -443,7 +443,7 @@
     {
       "id": "UI-SYSTEM-001",
       "title": "Establish the Ashfall UI design system and composition lab",
-      "status": "ready",
+      "status": "completed",
       "priority": "high",
       "source": "explicit-user-request",
       "duplicateKey": "ui-ashfall-design-system-hud-layout-composition-lab",
@@ -511,8 +511,13 @@
     }
   ],
   "executionState": {
-    "lastIntegratedTaskIds": ["STORY-001", "PERF-001"],
-    "lastMapExpansion": null,
+    "lastIntegratedTaskIds": ["CORE-001", "WORLD-001", "UI-SYSTEM-001"],
+    "lastMapExpansion": {
+      "taskId": "WORLD-001",
+      "previousPlayableAreaSquareMetres": 3136,
+      "playableAreaSquareMetres": 3920,
+      "growthPercent": 25
+    },
     "lastPerformanceReport": {
       "taskId": "PERF-001",
       "referenceViewport": "1280x720",
