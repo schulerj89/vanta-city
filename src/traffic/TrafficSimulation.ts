@@ -3,6 +3,13 @@ import {
   type TrafficVehicleDefinition,
   type TrafficVehicleId,
 } from './TrafficVehicleCatalog';
+import { eastQuayCurvedRoad } from '../world/levels/intersectionLayout';
+import {
+  offsetSplineSamples,
+  pointAlongSamples,
+  sampleSplineRoad,
+  type SplineSample,
+} from '../world/levels/SplineRoadGeometry';
 
 export type TrafficApproach = 'north' | 'east' | 'south' | 'west';
 export type TrafficAxis = 'north-south' | 'east-west';
@@ -18,33 +25,85 @@ export interface TrafficLane {
   readonly directionZ: number;
   readonly yaw: number;
   readonly length: number;
+  readonly points: readonly TrafficLanePoint[];
+  readonly intersectionEntry: number;
+  readonly intersectionExit: number;
 }
 
+export interface TrafficLanePoint {
+  readonly x: number;
+  readonly z: number;
+  readonly distance: number;
+}
+
+const curvedCenterline = sampleSplineRoad(eastQuayCurvedRoad);
+const trafficBoundaryInset = 3;
+const eastIncomingCurve = trimLaneEnd(
+  offsetSplineSamples(curvedCenterline, 1.5),
+  trafficBoundaryInset,
+)
+  .map(({ position }) => [position[0], position[2]] as const)
+  .reverse();
+const westOutgoingCurve = trimLaneEnd(
+  offsetSplineSamples(curvedCenterline, -1.5),
+  trafficBoundaryInset,
+).map(({ position }) => [position[0], position[2]] as const);
+
 export const ashfallTrafficLanes: readonly TrafficLane[] = [
-  lane('north', 'north-south', -1.5, 24.5, 0, -1, Math.PI),
-  lane('east', 'east-west', 24.5, 1.5, -1, 0, -Math.PI / 2),
-  lane('south', 'north-south', 1.5, -24.5, 0, 1, 0),
-  lane('west', 'east-west', -24.5, -1.5, 1, 0, Math.PI / 2),
+  lane(
+    'north',
+    'north-south',
+    [
+      [-1.5, 24.5],
+      [-1.5, -24.5],
+    ],
+    19.2,
+    29.8,
+  ),
+  lane(
+    'east',
+    'east-west',
+    [...eastIncomingCurve, [-24.5, 1.5]],
+    polylineLength(eastIncomingCurve) + 19.2,
+    polylineLength(eastIncomingCurve) + 29.8,
+  ),
+  lane(
+    'south',
+    'north-south',
+    [
+      [1.5, -24.5],
+      [1.5, 24.5],
+    ],
+    19.2,
+    29.8,
+  ),
+  lane('west', 'east-west', [[-24.5, -1.5], ...westOutgoingCurve], 19.2, 29.8),
 ];
 
 function lane(
   approach: TrafficApproach,
   axis: TrafficAxis,
-  startX: number,
-  startZ: number,
-  directionX: number,
-  directionZ: number,
-  yaw: number,
+  path: readonly (readonly [x: number, z: number])[],
+  intersectionEntry: number,
+  intersectionExit: number,
 ): TrafficLane {
+  const points = cumulativePoints(path);
+  const start = points[0]!;
+  const next = points[1]!;
+  const directionX = (next.x - start.x) / (next.distance - start.distance);
+  const directionZ = (next.z - start.z) / (next.distance - start.distance);
   return {
     approach,
     axis,
-    startX,
-    startZ,
+    startX: start.x,
+    startZ: start.z,
     directionX,
     directionZ,
-    yaw,
-    length: 49,
+    yaw: Math.atan2(directionX, directionZ),
+    length: points.at(-1)!.distance,
+    points,
+    intersectionEntry,
+    intersectionExit,
   };
 }
 
@@ -75,6 +134,8 @@ export interface TrafficVehicleSnapshot {
   readonly x: number;
   readonly z: number;
   readonly yaw: number;
+  readonly directionX: number;
+  readonly directionZ: number;
   readonly progress: number;
   readonly speed: number;
   readonly stoppingReason: TrafficStopReason;
@@ -205,7 +266,7 @@ export class TrafficSimulation {
         }
       }
 
-      const intersectionEntry = 19.2;
+      const intersectionEntry = vehicle.lane.intersectionEntry;
       if (
         reservedAxis !== undefined &&
         vehicle.lane.axis !== reservedAxis &&
@@ -275,13 +336,20 @@ export class TrafficSimulation {
 
   private resolveIntersectionReservation(): TrafficAxis | undefined {
     const inside = this.vehicles
-      .filter(({ progress }) => progress >= 19.2 && progress <= 29.8)
+      .filter(
+        ({ progress, lane }) =>
+          progress >= lane.intersectionEntry &&
+          progress <= lane.intersectionExit,
+      )
       .sort((a, b) => a.id.localeCompare(b.id));
     if (inside[0]) return inside[0].lane.axis;
     const approaching = this.vehicles
-      .filter(({ progress }) => progress < 19.2)
+      .filter(({ progress, lane }) => progress < lane.intersectionEntry)
       .sort((a, b) => {
-        const distance = 19.2 - a.progress - (19.2 - b.progress);
+        const distance =
+          a.lane.intersectionEntry -
+          a.progress -
+          (b.lane.intersectionEntry - b.progress);
         return distance || a.id.localeCompare(b.id);
       });
     return approaching[0]?.lane.axis;
@@ -320,18 +388,86 @@ function slotCapacity(
 }
 
 function snapshot(vehicle: MutableVehicle): TrafficVehicleSnapshot {
+  const point = pointAlongLane(vehicle.lane, vehicle.progress);
   return {
     id: vehicle.id,
     approach: vehicle.lane.approach,
     axis: vehicle.lane.axis,
-    x: vehicle.lane.startX + vehicle.lane.directionX * vehicle.progress,
-    z: vehicle.lane.startZ + vehicle.lane.directionZ * vehicle.progress,
-    yaw: vehicle.lane.yaw,
+    x: point.x,
+    z: point.z,
+    yaw: Math.atan2(point.directionX, point.directionZ),
+    directionX: point.directionX,
+    directionZ: point.directionZ,
     progress: vehicle.progress,
     speed: vehicle.speed,
     stoppingReason: vehicle.stoppingReason,
     vehicleType: vehicle.definition.id,
     vehicleLength: vehicle.definition.presentation.length,
     detectionLength: vehicle.definition.presentation.detectionLength,
+  };
+}
+
+function cumulativePoints(
+  path: readonly (readonly [x: number, z: number])[],
+): readonly TrafficLanePoint[] {
+  let distance = 0;
+  return path.map(([x, z], index) => {
+    const previous = path[index - 1];
+    if (previous) distance += Math.hypot(x - previous[0], z - previous[1]);
+    return { x, z, distance };
+  });
+}
+
+function polylineLength(
+  path: readonly (readonly [x: number, z: number])[],
+): number {
+  return cumulativePoints(path).at(-1)?.distance ?? 0;
+}
+
+function trimLaneEnd(
+  samples: readonly SplineSample[],
+  inset: number,
+): readonly SplineSample[] {
+  const endDistance = Math.max(0, samples.at(-1)!.distance - inset);
+  return [
+    ...samples.filter(({ distance }) => distance < endDistance),
+    pointAlongSamples(samples, endDistance),
+  ];
+}
+
+export function pointAlongLane(
+  lane: TrafficLane,
+  distance: number,
+): {
+  readonly x: number;
+  readonly z: number;
+  readonly directionX: number;
+  readonly directionZ: number;
+} {
+  const clamped = Math.max(0, Math.min(distance, lane.length));
+  for (let index = 1; index < lane.points.length; index += 1) {
+    const end = lane.points[index]!;
+    if (end.distance < clamped) continue;
+    const start = lane.points[index - 1]!;
+    const span = end.distance - start.distance || 1;
+    const mix = (clamped - start.distance) / span;
+    const dx = end.x - start.x;
+    const dz = end.z - start.z;
+    const magnitude = Math.hypot(dx, dz) || 1;
+    return {
+      x: start.x + dx * mix,
+      z: start.z + dz * mix,
+      directionX: dx / magnitude,
+      directionZ: dz / magnitude,
+    };
+  }
+  const end = lane.points.at(-1)!;
+  const start = lane.points.at(-2)!;
+  const magnitude = Math.hypot(end.x - start.x, end.z - start.z) || 1;
+  return {
+    x: end.x,
+    z: end.z,
+    directionX: (end.x - start.x) / magnitude,
+    directionZ: (end.z - start.z) / magnitude,
   };
 }

@@ -21,6 +21,7 @@ import {
   TrafficSimulation,
   ashfallTrafficLanes,
   defaultTrafficConfig,
+  pointAlongLane,
 } from './TrafficSimulation';
 import type {
   TrafficApproach,
@@ -234,16 +235,13 @@ export class TrafficSystem implements GameSystem {
       slot.root.position.set(vehicle.x, 0.02, vehicle.z);
       slot.root.rotation.y = vehicle.yaw;
       slot.detection.visible = true;
-      const lane = ashfallTrafficLanes.find(
-        ({ approach }) => approach === vehicle.approach,
-      )!;
       const presentation = trafficVehicleById(vehicle.vehicleType).presentation;
       const detectorCenter =
         presentation.length / 2 + presentation.detectionLength / 2;
       slot.detection.position.set(
-        vehicle.x + lane.directionX * detectorCenter,
+        vehicle.x + vehicle.directionX * detectorCenter,
         presentation.detectionHeight / 2,
-        vehicle.z + lane.directionZ * detectorCenter,
+        vehicle.z + vehicle.directionZ * detectorCenter,
       );
       slot.detection.rotation.y = vehicle.yaw;
     }
@@ -253,12 +251,9 @@ export class TrafficSystem implements GameSystem {
     vehicle: TrafficVehicleSnapshot,
   ): number | undefined {
     if (!this.collision.castDynamicSegment) return undefined;
-    const lane = ashfallTrafficLanes.find(
-      ({ approach }) => approach === vehicle.approach,
-    )!;
     const presentation = trafficVehicleById(vehicle.vehicleType).presentation;
-    const frontX = vehicle.x + lane.directionX * (presentation.length / 2);
-    const frontZ = vehicle.z + lane.directionZ * (presentation.length / 2);
+    const frontX = vehicle.x + vehicle.directionX * (presentation.length / 2);
+    const frontZ = vehicle.z + vehicle.directionZ * (presentation.length / 2);
     const detectionLength = Math.min(
       presentation.detectionLength,
       this.simulation.config.detectionDistance,
@@ -266,9 +261,9 @@ export class TrafficSystem implements GameSystem {
     const hit = this.collision.castDynamicSegment(
       new Vector3(frontX, 0.8, frontZ),
       new Vector3(
-        frontX + lane.directionX * detectionLength,
+        frontX + vehicle.directionX * detectionLength,
         0.8,
-        frontZ + lane.directionZ * detectionLength,
+        frontZ + vehicle.directionZ * detectionLength,
       ),
       presentation.detectionWidth / 2,
     );
@@ -283,21 +278,21 @@ export class TrafficSystem implements GameSystem {
     )!;
     const presentation = trafficVehicleById(vehicle.vehicleType).presentation;
     const halfLength = presentation.length / 2;
-    const frontX = vehicle.x + lane.directionX * halfLength;
-    const frontZ = vehicle.z + lane.directionZ * halfLength;
+    const frontX = vehicle.x + vehicle.directionX * halfLength;
+    const frontZ = vehicle.z + vehicle.directionZ * halfLength;
     const distance = Math.min(
       presentation.detectionLength,
       this.simulation.config.detectionDistance,
       Math.max(0, lane.length - vehicle.progress - halfLength),
     );
     if (distance <= 0) return undefined;
+    const detectionEnd = pointAlongLane(
+      lane,
+      Math.min(lane.length, vehicle.progress + halfLength + distance),
+    );
     const hit = this.collision.castSegment(
       new Vector3(frontX, 0.9, frontZ),
-      new Vector3(
-        frontX + lane.directionX * distance,
-        0.9,
-        frontZ + lane.directionZ * distance,
-      ),
+      new Vector3(detectionEnd.x, 0.9, detectionEnd.z),
       { radius: presentation.staticSweepRadius },
     );
     return hit.obstructed ? hit.fraction * distance : undefined;
@@ -311,14 +306,9 @@ export class TrafficSystem implements GameSystem {
     for (const lane of ashfallTrafficLanes) {
       const geometry = own(
         this.debugResources,
-        new BufferGeometry().setFromPoints([
-          new Vector3(lane.startX, 0.08, lane.startZ),
-          new Vector3(
-            lane.startX + lane.directionX * lane.length,
-            0.08,
-            lane.startZ + lane.directionZ * lane.length,
-          ),
-        ]),
+        new BufferGeometry().setFromPoints(
+          lane.points.map(({ x, z }) => new Vector3(x, 0.08, z)),
+        ),
       );
       const line = new Line(geometry, material);
       line.name = `traffic-path:${lane.approach}`;

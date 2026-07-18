@@ -6,6 +6,7 @@ import { StaticCollisionWorld } from '../src/physics/CollisionWorld';
 import { DebugRegistry } from '../src/debug/DebugRegistry';
 import { TrafficSystem } from '../src/traffic/TrafficSystem';
 import {
+  ashfallTrafficLanes,
   TrafficSimulation,
   defaultTrafficConfig,
 } from '../src/traffic/TrafficSimulation';
@@ -77,8 +78,17 @@ describe('TrafficSimulation', () => {
       .getSnapshot()
       .vehicles.find(({ approach }) => approach === 'east')!;
     expect(north.progress).toBeGreaterThan(19.2);
-    expect(east.progress).toBe(19.2);
-    expect(east.stoppingReason).toBe('intersection');
+    expect(east.progress).toBe(22.5);
+
+    traffic.update(4);
+    const eastAtIntersection = traffic
+      .getSnapshot()
+      .vehicles.find(({ approach }) => approach === 'east')!;
+    expect(eastAtIntersection.progress).toBe(
+      ashfallTrafficLanes.find(({ approach }) => approach === 'east')!
+        .intersectionEntry,
+    );
+    expect(eastAtIntersection.stoppingReason).toBe('intersection');
 
     traffic.update(3);
     traffic.update(1);
@@ -87,6 +97,31 @@ describe('TrafficSimulation', () => {
         .getSnapshot()
         .vehicles.find(({ approach }) => approach === 'east')!.progress,
     ).toBeGreaterThan(19.2);
+  });
+
+  it('follows the spline-derived east and west lane paths through the expansion', () => {
+    const east = ashfallTrafficLanes.find(
+      ({ approach }) => approach === 'east',
+    )!;
+    const west = ashfallTrafficLanes.find(
+      ({ approach }) => approach === 'west',
+    )!;
+    expect(east.points.length).toBeGreaterThan(3);
+    expect(west.points.length).toBeGreaterThan(3);
+    expect(east.startX).toBeGreaterThan(38);
+    expect(east.startX).toBeLessThan(40);
+    expect(east.startZ).toBeGreaterThan(8);
+    expect(west.points.at(-1)!.x).toBeGreaterThan(39);
+    expect(west.points.at(-1)!.x).toBeLessThan(40);
+    expect(west.points.at(-1)!.z).toBeLessThan(8);
+
+    const traffic = new TrafficSimulation(config({ speed: 8 }));
+    traffic.spawn('east');
+    traffic.update(1);
+    const curved = traffic.getSnapshot().vehicles[0]!;
+    expect(Math.abs(curved.directionX)).toBeGreaterThan(0.7);
+    expect(Math.abs(curved.directionZ)).toBeGreaterThan(0.1);
+    expect(curved.yaw).not.toBeCloseTo(-Math.PI / 2, 2);
   });
 
   it('freezes while disabled and clears occupancy deterministically', () => {

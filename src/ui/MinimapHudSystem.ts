@@ -5,12 +5,14 @@ import type { GameContext } from '../game/GameRuntime';
 import type {
   BoxVisualDefinition,
   BuildingVisualDefinition,
+  SplineRoadVisualDefinition,
   LevelDefinition,
   LevelMapBoundsDefinition,
   LevelMapLayer,
   TransformDefinition,
 } from '../world/LevelDefinition';
 import { getAshfallBuildingVariant } from '../world/buildings/AshfallBuildingKit';
+import { sampleSplineRoad } from '../world/levels/SplineRoadGeometry';
 import type { ResolvedLevelLocation } from '../world/LocationResolver';
 import type { WorldPoseSource, WorldPosition } from '../world/Spatial';
 
@@ -191,25 +193,55 @@ export class MinimapHudSystem implements GameSystem<GameContext> {
     const geometry = new Map(
       level.environment
         .filter(
-          (entry): entry is BoxVisualDefinition | BuildingVisualDefinition =>
-            entry.kind === 'box' || entry.kind === 'building',
+          (
+            entry,
+          ): entry is
+            | BoxVisualDefinition
+            | BuildingVisualDefinition
+            | SplineRoadVisualDefinition =>
+            entry.kind === 'box' ||
+            entry.kind === 'building' ||
+            entry.kind === 'spline-road',
         )
-        .map((entry) => [entry.id, mapGeometry(entry)]),
+        .map((entry) => [entry.id, entry]),
     );
     for (const reference of map.geometry) {
       const entry = geometry.get(reference.entryId);
       if (!entry) continue;
+      if (entry.kind === 'spline-road') {
+        const path = document.createElementNS(svgNamespace, 'path');
+        path.setAttribute(
+          'd',
+          sampleSplineRoad(entry)
+            .map(({ position }, index) => {
+              const point = projectTupleToMap(position, map.bounds);
+              return `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`;
+            })
+            .join(' '),
+        );
+        path.setAttribute(
+          'stroke-width',
+          String((entry.width / (map.bounds.maxX - map.bounds.minX)) * mapSize),
+        );
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.dataset.entryId = entry.id;
+        this.groups.get(reference.layer)?.append(path);
+        continue;
+      }
+      const rectGeometry = mapGeometry(entry);
       const topLeft = projectWorldToMap(
         {
-          x: entry.position[0] - entry.size[0] / 2,
-          z: entry.position[2] + entry.size[2] / 2,
+          x: rectGeometry.position[0] - rectGeometry.size[0] / 2,
+          z: rectGeometry.position[2] + rectGeometry.size[2] / 2,
         },
         map.bounds,
       );
       const bottomRight = projectWorldToMap(
         {
-          x: entry.position[0] + entry.size[0] / 2,
-          z: entry.position[2] - entry.size[2] / 2,
+          x: rectGeometry.position[0] + rectGeometry.size[0] / 2,
+          z: rectGeometry.position[2] - rectGeometry.size[2] / 2,
         },
         map.bounds,
       );
@@ -219,9 +251,9 @@ export class MinimapHudSystem implements GameSystem<GameContext> {
       rect.setAttribute('width', String(bottomRight.x - topLeft.x));
       rect.setAttribute('height', String(bottomRight.y - topLeft.y));
       rect.setAttribute('rx', reference.layer === 'roads' ? '1.5' : '2.5');
-      const yaw = entry.rotation?.[1] ?? 0;
+      const yaw = rectGeometry.rotation?.[1] ?? 0;
       if (Math.abs(yaw) > 1e-6) {
-        const center = projectTupleToMap(entry.position, map.bounds);
+        const center = projectTupleToMap(rectGeometry.position, map.bounds);
         rect.setAttribute(
           'transform',
           `rotate(${(yaw * 180) / Math.PI} ${center.x} ${center.y})`,

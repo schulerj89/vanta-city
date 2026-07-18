@@ -1,4 +1,7 @@
-import type { Vector3Tuple } from '../LevelDefinition';
+import type {
+  SplineRoadVisualDefinition,
+  Vector3Tuple,
+} from '../LevelDefinition';
 
 /** Shared construction dimensions used by the level, maps, and consistency tests. */
 export const intersectionLayout = {
@@ -9,11 +12,46 @@ export const intersectionLayout = {
   sidewalkWidth: 4,
   curbHeight: 0.2,
   outerEdge: 28,
+  expandedEastEdge: 42,
   crosswalkSize: 8,
   defaultSpawn: [0, 0.02, 19] as Vector3Tuple,
   trafficLight: [8.2, 0.2, 8.2] as Vector3Tuple,
   signalController: [10.2, 0.65, 8.5] as Vector3Tuple,
 } as const;
+
+/** WORLD-001 machine-readable growth and construction record. */
+export const ashfallExpansionPlan = {
+  id: 'world-001-east-canal-curve',
+  baselineAreaSquareMetres: 3136,
+  bounds: { minX: -28, maxX: 42, minZ: -28, maxZ: 28 },
+  playableAreaSquareMetres: 3920,
+  growthSquareMetres: 784,
+  growthPercent: 25,
+  minimumPedestrianClearanceMetres: 4,
+  addedBuildingIds: [
+    'v.building-east-quay-north',
+    'v.building-east-quay-south',
+  ],
+  addedSectorId: 'sector.east-quay',
+  roadVisualId: 'v.road-east-quay-curve',
+} as const;
+
+/** One authored spline owns WORLD-001 road rendering, collision, lanes, and map. */
+export const eastQuayCurvedRoad = {
+  id: ashfallExpansionPlan.roadVisualId,
+  kind: 'spline-road',
+  position: [0, 0, 0],
+  controlPoints: [
+    [24, 0.025, 0],
+    [30, 0.025, 0],
+    [36, 0.025, 8],
+    [42, 0.025, 8],
+  ],
+  width: intersectionLayout.roadWidth,
+  thickness: 0.4,
+  color: 0x24282b,
+  segments: 8,
+} as const satisfies SplineRoadVisualDefinition;
 
 /**
  * Development-only combat pad on the open northeast sidewalk apron.

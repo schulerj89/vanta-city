@@ -15,6 +15,7 @@ import {
   SRGBColorSpace,
   SphereGeometry,
   Vector3,
+  Float32BufferAttribute,
 } from 'three';
 import type { Material, Scene, Texture } from 'three';
 import type { GameAssetLoader, ModelInstance } from '../assets/AssetLoader';
@@ -26,6 +27,7 @@ import type {
   CinematicAnchorDefinition,
   EnvironmentVisualDefinition,
   BoxVisualDefinition,
+  SplineRoadVisualDefinition,
   LevelDefinition,
   NamedLocationDefinition,
   SpawnPointDefinition,
@@ -41,6 +43,10 @@ import type { WorldEvents } from './WorldEvents';
 import type { WorldPosition } from './Spatial';
 import type { ResolvedLevelLocation } from './LocationResolver';
 import { AshfallBuildingRenderer } from './buildings/AshfallBuildingKit';
+import {
+  offsetSplineSamples,
+  sampleSplineRoad,
+} from './levels/SplineRoadGeometry';
 
 interface LoadedLevel {
   readonly definition: LevelDefinition;
@@ -377,6 +383,22 @@ export class LevelSystem implements GameSystem, LevelLocations {
     if (visual.kind === 'building') {
       throw new Error('Building visuals require the shared building renderer');
     }
+    if (visual.kind === 'spline-road') {
+      const geometry = own(resources, createSplineRoadGeometry(visual));
+      const material = own(
+        resources,
+        new MeshStandardMaterial({
+          color: visual.color,
+          flatShading: true,
+          roughness: 0.96,
+          metalness: 0,
+        }),
+      );
+      const mesh = new Mesh(geometry, material);
+      mesh.name = `visual:${visual.id}`;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
     const geometry = own(resources, new BoxGeometry(...visual.size));
     if (visual.textureAssetId && visual.uvMetersPerRepeat) {
       scaleBoxUvs(geometry, visual.size, visual.uvMetersPerRepeat);
@@ -523,6 +545,36 @@ export class LevelSystem implements GameSystem, LevelLocations {
       });
     }
   }
+}
+
+export function createSplineRoadGeometry(
+  visual: SplineRoadVisualDefinition,
+): BufferGeometry {
+  const center = sampleSplineRoad(visual);
+  const left = offsetSplineSamples(center, visual.width / 2);
+  const right = offsetSplineSamples(center, -visual.width / 2);
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  for (let index = 0; index < center.length; index += 1) {
+    positions.push(...left[index]!.position, ...right[index]!.position);
+    const v = center[index]!.distance / 4;
+    uvs.push(0, v, 1, v);
+  }
+  const indices: number[] = [];
+  for (let index = 0; index < center.length - 1; index += 1) {
+    const leftStart = index * 2;
+    const rightStart = leftStart + 1;
+    const leftEnd = leftStart + 2;
+    const rightEnd = leftStart + 3;
+    indices.push(leftStart, leftEnd, rightStart, rightStart, leftEnd, rightEnd);
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
 }
 
 function configureSurfaceTexture(texture: Texture): void {

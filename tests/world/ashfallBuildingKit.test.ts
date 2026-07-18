@@ -13,11 +13,14 @@ import { ashfallTrafficLanes } from '../../src/traffic/TrafficSimulation';
 import {
   fixturePlayerSpawns,
   fixtureSpawns,
+  ashfallExpansionPlan,
+  eastQuayCurvedRoad,
   intersectionApproachSpawns,
   intersectionCornerSpawns,
   intersectionLayout,
   sparringTargetArea,
 } from '../../src/world/levels/intersectionLayout';
+import { sampleSplineRoad } from '../../src/world/levels/SplineRoadGeometry';
 
 describe('Ashfall building kit', () => {
   it('provides 18 reusable, bounded variants across useful sizes', () => {
@@ -48,7 +51,7 @@ describe('Ashfall building kit', () => {
   });
 
   it('pairs each placed shell with an equivalent authored collision footprint', () => {
-    expect(ashfallBuildingPlacements).toHaveLength(8);
+    expect(ashfallBuildingPlacements).toHaveLength(10);
     for (const placement of ashfallBuildingPlacements) {
       const definition = getAshfallBuildingVariant(placement.visual.variantId);
       const rotated = Math.abs(placement.visual.rotation?.[1] ?? 0) > 0.5;
@@ -71,14 +74,48 @@ describe('Ashfall building kit', () => {
       const minZ = placement.collider.position[2] - depth / 2;
       const maxZ = placement.collider.position[2] + depth / 2;
       for (const lane of ashfallTrafficLanes) {
-        const laneX = lane.startX;
-        const laneZ = lane.startZ;
-        if (lane.axis === 'north-south') {
-          expect(laneX < minX || laneX > maxX, placement.visual.id).toBe(true);
-        } else {
-          expect(laneZ < minZ || laneZ > maxZ, placement.visual.id).toBe(true);
+        for (const point of lane.points) {
+          const overlapsLane =
+            point.x >= minX - 1.5 &&
+            point.x <= maxX + 1.5 &&
+            point.z >= minZ - 1.5 &&
+            point.z <= maxZ + 1.5;
+          expect(
+            overlapsLane,
+            `${placement.visual.id} / ${lane.approach}`,
+          ).toBe(false);
         }
       }
+    }
+  });
+
+  it('places the expansion buildings on the outer edge with four metres of curved-road clearance', () => {
+    const added = ashfallBuildingPlacements.filter(({ visual }) =>
+      ashfallExpansionPlan.addedBuildingIds.includes(
+        visual.id as (typeof ashfallExpansionPlan.addedBuildingIds)[number],
+      ),
+    );
+    expect(added).toHaveLength(2);
+    const centerline = sampleSplineRoad(eastQuayCurvedRoad);
+    for (const { visual, collider } of added) {
+      const [width, , depth] = collider.size;
+      const minX = collider.position[0] - width / 2;
+      const maxX = collider.position[0] + width / 2;
+      const minZ = collider.position[2] - depth / 2;
+      const maxZ = collider.position[2] + depth / 2;
+      expect(maxX, `${visual.id} outer edge`).toBe(
+        ashfallExpansionPlan.bounds.maxX,
+      );
+      const clearance = Math.min(
+        ...centerline.map(({ position }) => {
+          const dx = Math.max(minX - position[0], 0, position[0] - maxX);
+          const dz = Math.max(minZ - position[2], 0, position[2] - maxZ);
+          return Math.hypot(dx, dz) - eastQuayCurvedRoad.width / 2;
+        }),
+      );
+      expect(clearance, visual.id).toBeGreaterThanOrEqual(
+        ashfallExpansionPlan.minimumPedestrianClearanceMetres,
+      );
     }
   });
 

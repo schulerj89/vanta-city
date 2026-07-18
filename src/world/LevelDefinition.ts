@@ -36,8 +36,27 @@ export interface BuildingVisualDefinition extends WorldEntry {
   readonly variantId: string;
 }
 
+/** Authored cubic road corridor rendered and mapped from one centerline. */
+export interface SplineRoadVisualDefinition extends WorldEntry {
+  readonly kind: 'spline-road';
+  /** World-space start, two controls, and end point for a cubic Bezier. */
+  readonly controlPoints: readonly [
+    Vector3Tuple,
+    Vector3Tuple,
+    Vector3Tuple,
+    Vector3Tuple,
+  ];
+  readonly width: number;
+  readonly thickness: number;
+  readonly color: number;
+  readonly segments: number;
+}
+
 export type EnvironmentVisualDefinition =
-  GltfVisualDefinition | BoxVisualDefinition | BuildingVisualDefinition;
+  | GltfVisualDefinition
+  | BoxVisualDefinition
+  | BuildingVisualDefinition
+  | SplineRoadVisualDefinition;
 
 export type SpawnKind = 'player' | 'npc';
 
@@ -230,6 +249,17 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
         );
       }
     }
+    if (visual.kind === 'spline-road') {
+      visual.controlPoints.forEach((point, index) =>
+        validateVector(point, `${visual.id}.controlPoints[${index}]`, issues),
+      );
+      if (!Number.isFinite(visual.width) || visual.width <= 0)
+        issues.push(`${visual.id}.width must be positive`);
+      if (!Number.isFinite(visual.thickness) || visual.thickness <= 0)
+        issues.push(`${visual.id}.thickness must be positive`);
+      if (!Number.isInteger(visual.segments) || visual.segments < 2)
+        issues.push(`${visual.id}.segments must be an integer of at least 2`);
+    }
   }
   for (const zone of definition.zones) {
     if (zone.name.trim().length === 0) issues.push(`${zone.id}.name is empty`);
@@ -383,7 +413,12 @@ function validateMapPresentation(
   }
   const geometryEntries = new Set(
     definition.environment
-      .filter((entry) => entry.kind === 'box' || entry.kind === 'building')
+      .filter(
+        (entry) =>
+          entry.kind === 'box' ||
+          entry.kind === 'building' ||
+          entry.kind === 'spline-road',
+      )
       .map(({ id }) => id),
   );
   const landmarks = new Set(definition.landmarks.map(({ id }) => id));
@@ -403,7 +438,7 @@ function validateMapPresentation(
   for (const reference of map.geometry) {
     if (!geometryEntries.has(reference.entryId)) {
       issues.push(
-        `mapPresentation geometry "${reference.entryId}" must reference a box or building environment entry`,
+        `mapPresentation geometry "${reference.entryId}" must reference a box, building, or spline-road environment entry`,
       );
     }
   }

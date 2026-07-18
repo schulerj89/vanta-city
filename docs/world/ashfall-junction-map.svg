@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="720" viewBox="0 0 760 720" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="720" viewBox="0 0 900 720" role="img" aria-labelledby="title desc">
   <title id="title">Ashfall Junction construction map</title>
-  <desc id="desc">Top-down map of the four-way intersection, collision boundaries, traffic light, landmarks, and player spawns.</desc>
+  <desc id="desc">Top-down construction map of Ashfall Junction and the spline-derived East Quay curved road expansion.</desc>
   <style>
     text { font: 12px ui-monospace, monospace; fill: #e9eef0; paint-order: stroke; stroke: #172025; stroke-width: 3px; stroke-linejoin: round; }
     .road { fill: #293036; stroke: #59646a; stroke-width: 2; }
@@ -12,23 +12,27 @@
     .landmark { fill: #ffe270; stroke: #493f12; stroke-width: 2; }
     .collision { fill: none; stroke: #ff9b61; stroke-width: 2; stroke-dasharray: 8 5; }
   </style>
-  <rect width="760" height="720" fill="#172025"/>
-  <text id="map-data" x="70" y="32">layout: footprint=56;road=12;sidewalk=4;edge=28</text>
-  <rect x="70" y="70" width="560" height="560" fill="#596167"/>
+  <rect width="900" height="720" fill="#172025"/>
+  <text id="map-data" x="70" y="32">layout: bounds=-28,42,-28,28;area=3920;road=12;curve=cubic-8</text>
+  <rect x="70" y="70" width="700" height="560" fill="#596167"/>
   <rect class="sidewalk" x="70" y="70" width="220" height="220"/>
   <rect class="sidewalk" x="410" y="70" width="220" height="220"/>
   <rect class="sidewalk" x="70" y="410" width="220" height="220"/>
   <rect class="sidewalk" x="410" y="410" width="220" height="220"/>
+  <rect class="sidewalk" x="630" y="70" width="140" height="560"/>
   <rect class="road" x="70" y="290" width="560" height="120"/>
   <rect class="road" x="290" y="70" width="120" height="560"/>
+  <path class="road" d="M 590 350 C 650 350 710 270 770 270" fill="none" stroke="#293036" stroke-width="120" stroke-linecap="round"/>
   <rect x="310" y="310" width="80" height="80" fill="none" stroke="#f1e5bc" stroke-width="8" stroke-dasharray="12 7"/>
   <g class="building">
     <rect data-variant="seawall-court" x="90" y="100" width="140" height="120"/>
     <rect data-variant="breaker-block" x="480" y="80" width="140" height="120"/>
     <rect data-variant="freight-annex" x="70" y="525" width="170" height="90"/>
     <rect data-variant="drydock-office" x="490" y="525" width="130" height="90"/>
+    <rect data-variant="canal-workshop" x="735" y="70" width="70" height="100" transform="translate(-35 0)"/>
+    <rect data-variant="freight-annex" x="725" y="440" width="90" height="170" transform="translate(-45 0)"/>
   </g>
-  <rect class="boundary" x="75" y="75" width="550" height="550"/>
+  <rect class="boundary" x="75" y="75" width="690" height="550"/>
   <rect class="collision" x="290" y="290" width="120" height="120"/>
   <g><circle cx="350" cy="160" r="6" class="spawn"/><text x="359" y="152">player-default</text></g>
 <g><circle cx="350" cy="140" r="6" class="spawn"/><text x="359" y="132">approach-north</text></g>
@@ -46,7 +50,7 @@
 <g><path d="M 140 343 l 7 14 h -14 z" class="landmark"/><text x="149" y="354">West Approach</text></g>
   <g><rect x="426" y="262" width="12" height="12" fill="#ff453a"/><text x="442" y="285">traffic light</text></g>
   <g><rect x="447" y="260" width="10" height="10" fill="#48dbe0"/><text x="461" y="269">signal controller</text></g>
-  <g transform="translate(665 75)"><path d="M 0 45 L 18 0 L 36 45 L 18 34 Z" fill="#f2f3f3"/><text x="13" y="62" font-size="18">N</text></g>
+  <g transform="translate(815 75)"><path d="M 0 45 L 18 0 L 36 45 L 18 34 Z" fill="#f2f3f3"/><text x="13" y="62" font-size="18">N</text></g>
   <g transform="translate(70 655)">
     <text x="0" y="0">LEGEND</text><circle cx="20" cy="25" r="6" class="spawn"/><text x="35" y="29">player spawn</text>
     <path d="M 170 18 l 7 14 h -14 z" class="landmark"/><text x="185" y="29">landmark</text>

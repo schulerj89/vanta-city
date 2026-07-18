@@ -35,9 +35,9 @@ const [svg, ascii, levelSource] = await Promise.all([
   readFile(resolve('docs/world/ashfall-junction-map.txt'), 'utf8'),
   readFile(resolve('src/world/levels/testDistrict.ts'), 'utf8'),
 ]);
-const signature = 'footprint=56;road=12;sidewalk=4;edge=28';
+const signature = 'bounds=-28,42,-28,28;area=3920;road=12;curve=cubic-8';
 if (!svg.includes(signature)) throw new Error('SVG layout signature is stale');
-if (!ascii.includes('Footprint: 56m x 56m')) {
+if (!ascii.includes('Playable bounds: 70m x 56m = 3920m2')) {
   throw new Error('ASCII construction map is stale');
 }
 const cc0Records = levelSource.match(/license: 'CC0 1\.0'/g)?.length ?? 0;

@@ -2,8 +2,12 @@ import { Group, Scene, Texture } from 'three';
 import type { GameAssetLoader } from '../../src/assets/AssetLoader';
 import { EventBus } from '../../src/core/events';
 import { LevelRegistry } from '../../src/world/LevelRegistry';
-import { LevelSystem } from '../../src/world/LevelSystem';
+import {
+  createSplineRoadGeometry,
+  LevelSystem,
+} from '../../src/world/LevelSystem';
 import type { WorldEvents } from '../../src/world/WorldEvents';
+import { eastQuayCurvedRoad } from '../../src/world/levels/intersectionLayout';
 import { testDistrict } from '../../src/world/levels/testDistrict';
 
 const unusedAssets: GameAssetLoader = {
@@ -23,6 +27,15 @@ const unusedAssets: GameAssetLoader = {
 };
 
 describe('LevelSystem', () => {
+  it('builds the spline road with upward-facing render normals', () => {
+    const geometry = createSplineRoadGeometry(eastQuayCurvedRoad);
+    const normals = geometry.getAttribute('normal');
+    for (let index = 0; index < normals.count; index += 1) {
+      expect(normals.getY(index)).toBeGreaterThan(0.99);
+    }
+    geometry.dispose();
+  });
+
   it('loads through the registry, exposes debug groups, and unloads cleanly', async () => {
     const scene = new Scene();
     const events = new EventBus<WorldEvents>();
@@ -57,7 +70,7 @@ describe('LevelSystem', () => {
     expect(scene.getObjectByName('collision-geometry')?.visible).toBe(false);
     expect(loaded).toHaveBeenCalledOnce();
     expect(system.getStreamingSnapshot()).toMatchObject({
-      authored: 5,
+      authored: 6,
       active: ['sector.core', 'sector.northeast', 'sector.northwest'],
       loadCount: 3,
       unloadCount: 0,

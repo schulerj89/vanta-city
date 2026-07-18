@@ -25,13 +25,13 @@ The 18 reusable shells span 6–18m footprints, 4.5–18m heights, four wall mat
 
 ## Junction placement decisions
 
-Eight authored buildings form four outer-edge L-shaped corner groups. Each pair addresses both adjacent streets while leaving the whole inner sidewalk open. The closest facade is exactly 4m beyond the 12m road edge, matching `intersectionLayout.sidewalkWidth`.
+Eight baseline buildings form four outer-edge L-shaped corner groups; WORLD-001 adds two East Quay shells flush with the expanded X=42 edge. The baseline pairs address both adjacent streets while leaving the whole inner sidewalk open, and the expansion shells retain at least 4m from the spline-derived road edge. The closest facade is exactly 4m beyond the 12m road edge, matching `intersectionLayout.sidewalkWidth`.
 
 - Stable `c.ruin-*` collision IDs remain on the primary corner structures because camera diagnostics and browser coverage treat those IDs as an API.
 - Paired footprints touch only at boundary lines or retain open circulation; they never overlap and do not create narrow inaccessible slots.
 - Northeast stays outside the signal controller and sparring pad clearance. Southwest and southeast keep NPC fixtures, interaction sight lines, every approach/corner spawn, and traffic lanes open.
-- No footprint intersects a traffic lane. Roads, signals, barriers, spawns, trigger volumes, landmarks, map bounds, and zone ownership are unchanged.
-- All eight minimap rectangles derive footprint and rotation from the same building definitions used by rendering and authored collision.
+- No footprint intersects a traffic lane. The expansion revises the road, east barrier, map bounds, and district zone through the shared WORLD-001 plan while preserving signals, spawns, triggers, landmarks, and baseline ownership.
+- All ten minimap rectangles derive footprint and rotation from the same building definitions used by rendering and authored collision.
 - Eight thin curb-face visuals stop at inside corners and sit 2cm above the existing sidewalk top, avoiding coplanar z-fighting without changing walkable collision.
 
 ## Visual lab and coverage
@@ -51,5 +51,5 @@ Gameplay day/night coverage remains owned by the time-of-day suite. Placement te
 - Existing `LevelDefinition` box visuals gained optional `textureAssetId` and `uvMetersPerRepeat` fields. They resolve only through the existing asset loader; untextured boxes keep the previous color-material path.
 - Generated images were prompted as seamless, but image generation does not mathematically guarantee edge identity. Large 3–6m repeats, regular bays, and stepped silhouettes reduce repetition. Deterministic seam synthesis is the next art step if later inspection exposes seams.
 - Collision follows each full authored footprint, not rooftop setbacks, so the player/camera never enter apparent solid mass. Rooftop ledges remain inaccessible by design.
-- Buildings have no LODs because production contains eight instances. Profile before increasing count and do not add procedural placement by default.
+- Buildings have no independent mesh LOD variants; roof/cornice detail on the ten production instances uses the shared 24m sector distance policy. Profile before increasing count and do not add procedural placement by default.
 - The lab remains development-only and adds no runtime global listeners. Lifecycle, game state, input, player transform, health, collision, camera, debug registry, and browser bridge ownership are unchanged.

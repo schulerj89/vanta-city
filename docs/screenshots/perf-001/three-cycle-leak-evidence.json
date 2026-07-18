@@ -1,8 +1,8 @@
 {
   "baseline": {
     "active": ["sector.core", "sector.northeast", "sector.northwest"],
-    "sceneObjects": 98,
-    "ownedResources": 106,
+    "sceneObjects": 96,
+    "ownedResources": 101,
     "sectorModelInstances": 5,
     "assetSourceReferences": 15,
     "assetInstanceReferences": 6
@@ -10,24 +10,24 @@
   "cycles": [
     {
       "active": ["sector.core", "sector.northeast", "sector.northwest"],
-      "sceneObjects": 98,
-      "ownedResources": 106,
+      "sceneObjects": 96,
+      "ownedResources": 101,
       "sectorModelInstances": 5,
       "assetSourceReferences": 15,
       "assetInstanceReferences": 6
     },
     {
       "active": ["sector.core", "sector.northeast", "sector.northwest"],
-      "sceneObjects": 98,
-      "ownedResources": 106,
+      "sceneObjects": 96,
+      "ownedResources": 101,
       "sectorModelInstances": 5,
       "assetSourceReferences": 15,
       "assetInstanceReferences": 6
     },
     {
       "active": ["sector.core", "sector.northeast", "sector.northwest"],
-      "sceneObjects": 98,
-      "ownedResources": 106,
+      "sceneObjects": 96,
+      "ownedResources": 101,
       "sectorModelInstances": 5,
       "assetSourceReferences": 15,
       "assetInstanceReferences": 6
@@ -35,22 +35,22 @@
   ],
   "rendererCycles": [
     {
-      "geometries": 52,
+      "geometries": 51,
+      "textures": 25,
+      "drawCalls": 30,
+      "triangles": 6016
+    },
+    {
+      "geometries": 50,
       "textures": 25,
       "drawCalls": 23,
       "triangles": 5932
     },
     {
-      "geometries": 48,
+      "geometries": 51,
       "textures": 25,
-      "drawCalls": 23,
-      "triangles": 5932
-    },
-    {
-      "geometries": 52,
-      "textures": 25,
-      "drawCalls": 39,
-      "triangles": 7665
+      "drawCalls": 32,
+      "triangles": 6040
     }
   ],
   "network": {
@@ -61,11 +61,12 @@
   },
   "finalTransitions": {
     "levelId": "test-district",
-    "authored": 5,
+    "authored": 6,
     "active": ["sector.core", "sector.northeast", "sector.northwest"],
     "pending": [],
     "states": {
       "sector.core": "active",
+      "sector.east-quay": "inactive",
       "sector.northeast": "active",
       "sector.northwest": "active",
       "sector.southeast": "inactive",
@@ -73,10 +74,10 @@
     },
     "loadCount": 29,
     "unloadCount": 26,
-    "sceneObjects": 98,
-    "ownedResources": 106,
+    "sceneObjects": 96,
+    "ownedResources": 101,
     "modelInstances": 5,
-    "colliders": 15,
+    "colliders": 14,
     "lodHiddenObjects": 4,
     "transitionsPending": false
   }

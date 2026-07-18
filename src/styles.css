@@ -354,6 +354,7 @@ canvas {
 
 .minimap-hud__map [data-layer='roads'] {
   fill: #465157;
+  stroke: #465157;
 }
 
 .minimap-hud__boundary {

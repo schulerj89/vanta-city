@@ -58,22 +58,22 @@ VANTA_PERF=1 pnpm exec playwright test e2e/sector-streaming-performance.spec.ts
 
 It uses the production-intended 1280×720 scene, a 20-second warmup, and a 60-second sample for both `streaming=0` (full-level before) and authored streaming (after). Performance mode uses Chromium's Metal ANGLE backend and disables vsync/frame limiting so RAF intervals are a capacity proxy; ordinary E2E remains isolated on SwiftShader. Raw uncapped FPS must not be presented as display refresh. SwiftShader was separately observed to cap RAF at 14 FPS with normal scheduling and 35 FPS uncapped despite the small scene, so it is not used for the hardware budget decision.
 
-The July 17, 2026 capture at 1280×720 recorded:
+The July 18, 2026 WORLD-001 capture at 1280×720 recorded:
 
 | Metric                                                   | Full-level before |    Streamed after |
 | -------------------------------------------------------- | ----------------: | ----------------: |
-| Draw calls                                               |                52 |                33 |
-| Triangles                                                |            12,103 |             7,593 |
-| Renderer geometries / textures                           |           58 / 25 |           40 / 20 |
-| Scene objects / owned resources / sector model instances |     134 / 157 / 9 |      98 / 106 / 5 |
-| RAF capacity average / 1% low proxy                      | 735.9 / 370.4 FPS | 738.1 / 370.4 FPS |
-| RAF frame-time p95 / max                                 |      2.7 / 3.2 ms |      2.7 / 3.3 ms |
-| Renderer CPU p95                                         |            2.6 ms |            2.5 ms |
-| Browser JS heap peak proxy                               |           44.7 MB |           44.7 MB |
+| Draw calls                                               |                54 |                32 |
+| Triangles                                                |            12,127 |             7,581 |
+| Renderer geometries / textures                           |           60 / 25 |           39 / 20 |
+| Scene objects / owned resources / sector model instances |     159 / 203 / 9 |      96 / 101 / 5 |
+| RAF capacity average / 1% low proxy                      | 571.3 / 172.4 FPS | 550.8 / 163.9 FPS |
+| RAF frame-time p95 / max                                 |      4.7 / 6.9 ms |      4.9 / 7.6 ms |
+| Renderer CPU p95                                         |            4.5 ms |            4.5 ms |
+| Browser JS heap peak proxy                               |           39.6 MB |           39.6 MB |
 
-The uncapped after/before FPS difference is high-rate scheduling variance; workload counters and p95 are the useful comparison. The streamed capture passes the 50 FPS, 45 FPS 1%-low proxy, 20ms p95, and 900MB proxy ceiling gates. Chromium exposes JS heap, not browser-process working set, so 44.7MB is documented only as a browser memory proxy and is not claimed as total working set.
+The uncapped after/before FPS difference is high-rate scheduling variance; workload counters and p95 are the useful comparison. The streamed capture passes the 50 FPS, 45 FPS 1%-low proxy, 20ms p95, and 900MB proxy ceiling gates. Chromium exposes JS heap, not browser-process working set, so 39.6MB is documented only as a browser memory proxy and is not claimed as total working set.
 
-The deterministic leak scenario primes both halves, then completes three additional south/north cycles. Every north baseline returns to exactly 98 retained sector scene objects, 106 sector-owned resources, 5 sector model instances, 15 loader source references, and 6 global live model instances. The renderer's lazy-upload geometry proxy varied 52, 48, and 52 while textures stayed at 25, with no monotonic trend; draw-call and triangle samples vary with the rendered view and are not ownership oracles. Source cache size stays 15 by design and is disposed only with the loader. Evidence and inspected desktop/narrow screenshots live in [`screenshots/perf-001`](screenshots/perf-001/).
+The deterministic leak scenario primes both halves, then completes three additional south/north cycles. Every north baseline returns to exactly 96 retained sector scene objects, 101 sector-owned resources, 5 sector model instances, 15 loader source references, and 6 global live model instances. The renderer's lazy-upload geometry proxy varied 51, 50, and 51 while textures stayed at 25, with no monotonic trend; draw-call and triangle samples vary with the rendered view and are not ownership oracles. Source cache size stays 15 by design and is disposed only with the loader. Evidence and inspected desktop/narrow screenshots live in [`screenshots/perf-001`](screenshots/perf-001/).
 
 The production bundle comparison against base `eb717e5` is:
 

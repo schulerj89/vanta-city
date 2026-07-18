@@ -2,18 +2,20 @@
 
 ## Scope and geometry
 
-Traffic is intentionally limited to deterministic civilian vehicles driving
-straight through Ashfall Junction. There is no navigation mesh, route planning,
-turning, signaling, pedestrian logic, vehicle entry, damage, mission state, or
-runtime network access.
+Traffic is intentionally limited to deterministic civilian vehicles following
+four authored lane paths through Ashfall Junction. North/south remain straight;
+WORLD-001's east/west approaches follow offsets sampled from the authoritative
+East Quay cubic spline. There is no navigation mesh, route planning, signaling,
+pedestrian logic, vehicle entry, damage, mission state, or runtime network access.
 
-The authored road cross is 12 m wide with 3 m lanes and an outer edge at 28 m.
-Vehicle paths use the right-hand lane centers at ±1.5 m. Catalog models
+The authored road cross and curved corridor are 12 m wide with 3 m lanes.
+Vehicle paths use right-hand centers offset ±1.5 m from the shared centerline. Catalog models
 normalize to 4.4 m long, remain below 2.05 m wide, and use 1.8 m detectors.
 Path centers therefore leave at least 0.47 m on either side inside a lane.
-Centers spawn at 24.5 m (inside the visible road
-boundary at 27.5 m) and despawn at the opposite 24.5 m center. The static world
-query remains authoritative along each path.
+Baseline north/south centers spawn at 24.5 m inside the visible boundary at
+27.5 m. East/west endpoints are derived by trimming the sampled spline offsets
+3 m from the X=42 edge, retaining the same vehicle-body clearance. The static
+world query sweeps along each polyline and remains authoritative.
 
 ## Behavior and ownership
 
@@ -73,10 +75,10 @@ pause/resume, central occupancy, cleanup, and no page/console errors.
 - [Street-level vehicle and detector](screenshots/traffic-street-level.png)
 - [Narrow viewport](screenshots/traffic-narrow.png)
 
-The overhead view verifies the ±1.5 m lane centers and perpendicular conflict
-separation. The street view checks vehicle scale and stopping volume relative to
-the player. The narrow view verifies that traffic adds no viewport-specific UI
-and that existing debug/HUD surfaces remain usable.
+The overhead view verifies the ±1.5 m lane centers, curved east/west paths, and
+perpendicular conflict separation. The street view checks vehicle scale and
+stopping volume relative to the player. The narrow view verifies that traffic
+adds no viewport-specific UI and that existing debug/HUD surfaces remain usable.
 
 Asset provenance, hashes, sizes, triangle/material/texture counts, and license
 links are recorded in

@@ -27,7 +27,9 @@ test.describe('time-of-day lighting', () => {
       shadowsEnabled: false,
     });
     expect(night.performance.renderer.drawCalls).toBeLessThan(120);
-    await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(8);
+    await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(
+      10,
+    );
     expect(await loadedStreetscapeTextures(page)).toHaveLength(7);
     await attachScreenshot(page, testInfo, 'ashfall-night-desktop');
 

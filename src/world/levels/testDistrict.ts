@@ -9,12 +9,15 @@ import type { StaticColliderDefinition } from '../../physics/StaticCollider';
 import {
   fixturePlayerSpawns,
   fixtureSpawns,
+  ashfallExpansionPlan,
+  eastQuayCurvedRoad,
   intersectionApproachSpawns,
   intersectionAssetIds,
   intersectionCornerSpawns,
   intersectionLandmarks,
   intersectionLayout,
 } from './intersectionLayout';
+import { splineRoadColliders } from './SplineRoadGeometry';
 import {
   ashfallBuildingAssets,
   ashfallBuildingTextureIds,
@@ -59,6 +62,15 @@ function surface(
 
 surface('road-east-west', [0, -0.2, 0], [56, 0.4, 12], colors.asphalt);
 surface('road-north-south', [0, -0.2, 0], [12, 0.4, 56], colors.asphalt);
+surface(
+  'east-quay-ground',
+  [35, -0.225, 0],
+  [14, 0.35, 56],
+  colors.sidewalk,
+  ['walkable'],
+  ashfallBuildingTextureIds.sidewalkConcrete,
+  6,
+);
 
 for (const [id, x, z] of [
   ['northwest', -17, 17],
@@ -125,6 +137,18 @@ export const ashfallBuildingPlacements = [
     'c.ruin-southeast',
   ),
   buildingPlacement('southeast-east', 'beacon-works', [22.5, 0.2, -15.5], 0),
+  buildingPlacement(
+    'east-quay-north',
+    'canal-workshop',
+    [38.5, -0.05, 23],
+    Math.PI / 2,
+  ),
+  buildingPlacement(
+    'east-quay-south',
+    'freight-annex',
+    [37.5, -0.05, -18.5],
+    Math.PI / 2,
+  ),
 ] as const;
 
 const buildings = ashfallBuildingPlacements.map(({ visual }) => visual);
@@ -163,9 +187,9 @@ for (const [id, signX, signZ] of [
 
 // Visible, collidable termination at every road end and around the outer corners.
 for (const [id, position, size] of [
-  ['boundary-north', [0, 0.65, 27.5], [56, 1.3, 1]],
-  ['boundary-south', [0, 0.65, -27.5], [56, 1.3, 1]],
-  ['boundary-east', [27.5, 0.65, 0], [1, 1.3, 56]],
+  ['boundary-north', [7, 0.65, 27.5], [70, 1.3, 1]],
+  ['boundary-south', [7, 0.65, -27.5], [70, 1.3, 1]],
+  ['boundary-east', [41.5, 0.65, 0], [1, 1.3, 56]],
   ['boundary-west', [-27.5, 0.65, 0], [1, 1.3, 56]],
 ] as const)
   surface(id, position, size, colors.boundary, ['boundary']);
@@ -254,6 +278,7 @@ const signalControllerCollider = collider(
 
 const environment = [
   ...paired.map(({ visual }) => visual),
+  eastQuayCurvedRoad,
   ...markings,
   ...curbs,
   ...buildings,
@@ -263,6 +288,7 @@ const environment = [
 
 const staticCollision = [
   ...paired.map(({ collider: definition }) => definition),
+  ...splineRoadColliders(eastQuayCurvedRoad),
   ...buildingCollision,
   signalControllerCollider,
   collider(
@@ -289,12 +315,22 @@ const staticCollision = [
 
 const streamableEntries = [...environment, ...staticCollision];
 const coreEntryIds = streamableEntries
-  .filter(({ id }) =>
-    /road-|marking-|crosswalk|traffic-light|signal-controller/.test(id),
+  .filter(
+    ({ id }) =>
+      !id.includes('east-quay') &&
+      /road-|marking-|crosswalk|traffic-light|signal-controller/.test(id),
+  )
+  .map(({ id }) => id);
+const eastQuayEntryIds = streamableEntries
+  .filter(
+    ({ id }) =>
+      id.includes('east-quay') ||
+      id === 'v.boundary-east' ||
+      id === 'c.boundary-east',
   )
   .map(({ id }) => id);
 const quadrantEntries = streamableEntries.filter(
-  ({ id }) => !coreEntryIds.includes(id),
+  ({ id }) => !coreEntryIds.includes(id) && !eastQuayEntryIds.includes(id),
 );
 const quadrantIds = (east: boolean, north: boolean): string[] =>
   quadrantEntries
@@ -431,8 +467,8 @@ export const testDistrict = {
       {
         id: 'zone.ashfall-junction',
         name: 'Ashfall Junction',
-        position: [0, 3, 0],
-        size: [56, 10, 56],
+        position: [7, 3, 0],
+        size: [70, 10, 56],
       },
     ],
     landmarks: intersectionLandmarks.map(({ id, name, position }, index) => ({
@@ -474,6 +510,20 @@ export const testDistrict = {
         fieldOfView: 48,
         tags: ['interaction'],
       },
+      {
+        id: 'camera.east-quay-overhead',
+        position: [10, 58, 20],
+        lookAt: [10, 2.5, 0],
+        fieldOfView: 48,
+        tags: ['debug', 'world-001', 'map'],
+      },
+      {
+        id: 'camera.east-quay-street',
+        position: [30, 6, -8],
+        lookAt: [36, 1.2, 7],
+        fieldOfView: 52,
+        tags: ['debug', 'world-001', 'street'],
+      },
     ],
     lighting: {
       lamps: [
@@ -494,14 +544,12 @@ export const testDistrict = {
     mapPresentation: {
       orientation: 'north-up',
       bounds: {
-        minX: -intersectionLayout.outerEdge,
-        maxX: intersectionLayout.outerEdge,
-        minZ: -intersectionLayout.outerEdge,
-        maxZ: intersectionLayout.outerEdge,
+        ...ashfallExpansionPlan.bounds,
       },
       geometry: [
         { entryId: 'v.road-east-west', layer: 'roads' },
         { entryId: 'v.road-north-south', layer: 'roads' },
+        { entryId: eastQuayCurvedRoad.id, layer: 'roads' },
         ...ashfallBuildingPlacements.map(({ visual }) => ({
           entryId: visual.id,
           layer: 'structures' as const,
@@ -550,6 +598,13 @@ export const testDistrict = {
           unloadDistance: 32,
           entryIds: quadrantIds(east, north),
         })),
+        {
+          id: ashfallExpansionPlan.addedSectorId,
+          center: [35, 4],
+          loadDistance: 26,
+          unloadDistance: 32,
+          entryIds: eastQuayEntryIds,
+        },
       ],
     },
   },
