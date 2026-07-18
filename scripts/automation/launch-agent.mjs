@@ -63,15 +63,27 @@ function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function waitForServiceState(shouldBeLoaded, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const result = await run('launchctl', ['print', service]);
+    if ((result.code === 0) === shouldBeLoaded) return result;
+    await delay(250);
+  }
+  throw new Error(
+    `LaunchAgent did not become ${shouldBeLoaded ? 'loaded' : 'unloaded'} within ${timeoutMs}ms.`,
+  );
+}
+
 async function bootstrapLaunchAgent() {
   const retryDelays = [0, 500, 1_500, 3_000];
   let lastResult = null;
   for (const retryDelay of retryDelays) {
     if (retryDelay > 0) await delay(retryDelay);
     lastResult = await run('launchctl', ['bootstrap', domain, installedPlist]);
-    if (lastResult.code === 0) return;
+    if (lastResult.code === 0) return waitForServiceState(true);
     const loaded = await run('launchctl', ['print', service]);
-    if (loaded.code === 0) return;
+    if (loaded.code === 0) return loaded;
   }
   throw new Error(
     lastResult?.stderr || lastResult?.stdout || 'Bootstrap failed.',
@@ -206,10 +218,8 @@ async function install() {
   const lint = await run('plutil', ['-lint', installedPlist]);
   if (lint.code !== 0) throw new Error(lint.stderr || lint.stdout);
   await run('launchctl', ['bootout', service]);
-  await bootstrapLaunchAgent();
-  const loaded = await run('launchctl', ['print', service]);
-  if (loaded.code !== 0)
-    throw new Error('LaunchAgent bootstrap returned without a loaded service.');
+  await waitForServiceState(false);
+  const loaded = await bootstrapLaunchAgent();
   process.stdout.write(
     `${JSON.stringify(
       {

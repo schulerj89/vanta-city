@@ -53,6 +53,7 @@ const ACTIVE_STATUSES = new Set([
 ]);
 const children = new Set();
 let stopping = false;
+let wakeDaemon = null;
 
 function print(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
@@ -2100,7 +2101,17 @@ async function daemon() {
       });
       continue;
     }
-    await new Promise((resolve) => setTimeout(resolve, 30_000));
+    await new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        wakeDaemon = null;
+        resolve();
+      }, 30_000);
+      wakeDaemon = () => {
+        clearTimeout(timeout);
+        wakeDaemon = null;
+        resolve();
+      };
+    });
   }
 }
 
@@ -2155,6 +2166,7 @@ async function main() {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     stopping = true;
+    wakeDaemon?.();
     for (const child of children) terminateChild(child, 'SIGTERM');
     process.exitCode = 128;
   });
