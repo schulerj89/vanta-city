@@ -37,6 +37,20 @@ export interface PointerInputReader {
   isUiFocused?(): boolean;
 }
 
+export interface PointerAimSnapshot {
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly hasPosition: boolean;
+  readonly delta: PointerDelta;
+  readonly locked: boolean;
+}
+
+export interface PointerAimInputReader {
+  getPointerAimSnapshot(): PointerAimSnapshot;
+  releasePointerLock?(): void;
+  isUiFocused?(): boolean;
+}
+
 export interface InputDeviceActionSnapshot {
   readonly down: readonly ActionName[];
   readonly pressed: readonly ActionName[];
@@ -83,6 +97,9 @@ export class InputSystem
   private pointerTarget: HTMLElement | undefined;
   private pointerX = 0;
   private pointerY = 0;
+  private pointerClientX = 0;
+  private pointerClientY = 0;
+  private pointerHasPosition = false;
   private wheelDelta = 0;
   private lastPointerDelta: PointerDelta = { x: 0, y: 0, wheel: 0 };
   private attached = false;
@@ -136,6 +153,17 @@ export class InputSystem
     this.pointerY = 0;
     this.wheelDelta = 0;
     return delta;
+  }
+
+  /** Shared, non-consuming pointer state for weapon aiming and diagnostics. */
+  public getPointerAimSnapshot(): PointerAimSnapshot {
+    return {
+      clientX: this.pointerClientX,
+      clientY: this.pointerClientY,
+      hasPosition: this.pointerHasPosition,
+      delta: { x: this.pointerX, y: this.pointerY, wheel: this.wheelDelta },
+      locked: this.isPointerLocked(),
+    };
   }
 
   public isPointerLocked(): boolean {
@@ -407,6 +435,9 @@ export class InputSystem
   private readonly onBlur = (): void => this.clear();
 
   private readonly onMouseMove = (event: MouseEvent): void => {
+    this.pointerClientX = event.clientX;
+    this.pointerClientY = event.clientY;
+    this.pointerHasPosition = true;
     if (!this.isPointerLocked() && !this.downCodes.has('Mouse0')) return;
     this.pointerX += event.movementX;
     this.pointerY += event.movementY;

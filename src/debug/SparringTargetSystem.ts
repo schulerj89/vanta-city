@@ -48,6 +48,7 @@ import type { EventBus } from '../core/events';
 import type { StaticColliderDefinition } from '../physics/StaticCollider';
 import { HealthComponent } from '../health/Health';
 import type { HealthSnapshot } from '../health/Health';
+import type { WeaponDamageTarget } from '../combat/WeaponDamage';
 import { CharacterAnimationStateMachine } from '../characters/CharacterAnimationStateMachine';
 import type { CharacterAnimationGraphState } from '../characters/CharacterAnimationStateMachine';
 import {
@@ -377,6 +378,10 @@ export class SparringTargetSystem implements GameSystem {
     return this.entity?.health;
   }
 
+  public getWeaponDamageTarget(): WeaponDamageTarget | undefined {
+    return this.entity?.enabled ? this.entity : undefined;
+  }
+
   public getHealthAnchor(): WorldPosition | undefined {
     const entity = this.entity;
     if (!entity?.enabled) return undefined;
@@ -638,11 +643,17 @@ interface SparringPresentationSnapshot {
   readonly reactionDuration: number | undefined;
 }
 
-class SparringTargetEntity implements GameObject, CharacterActionTarget {
+class SparringTargetEntity
+  implements GameObject, CharacterActionTarget, WeaponDamageTarget
+{
   public readonly id = 'debug.sparring-target';
   public readonly object3d = new Group();
   public enabled = false;
   public readonly health = new HealthComponent('debug.sparring-target', 100);
+
+  public get ownerId(): string {
+    return this.id;
+  }
 
   private readonly visualRoot = new Group();
   private readonly fixtureMarker = createFixtureMarker();
@@ -749,6 +760,31 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     this.responseSequence += 1;
     this.lastAction = impact.action;
     this.applyGraphTransition();
+    return true;
+  }
+
+  public getHurtVolume(): { readonly radius: number; readonly height: number } {
+    return {
+      radius: sparringTargetConfig.volumes.hurt.radius,
+      height: this.height ?? sparringTargetConfig.volumes.hurt.height,
+    };
+  }
+
+  public getCollisionIgnoreIds(): readonly string[] {
+    return [sparringTargetConfig.collisionId];
+  }
+
+  public receiveWeaponDamage(): boolean {
+    if (!this.enabled || !this.health.alive) return false;
+    const clip = this.clips.get('getHit');
+    if (clip && this.mixer && !this.busy) {
+      this.activeReaction = 'getHit';
+      this.busy = true;
+      this.fallbackRemaining = Math.max(0.05, clip.duration + 0.1);
+      this.responseSequence += 1;
+      this.lastAction = 'weapon-impact';
+      this.applyGraphTransition();
+    }
     return true;
   }
 

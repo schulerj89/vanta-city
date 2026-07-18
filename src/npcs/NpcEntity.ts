@@ -20,6 +20,9 @@ import { CharacterEquipment } from '../equipment/CharacterEquipment';
 import { EquipmentPresentation } from '../equipment/EquipmentPresentation';
 import type { GameAssetLoader } from '../assets/AssetLoader';
 import type { EquipmentId } from '../equipment/EquipmentDefinition';
+import { HealthComponent } from '../health/Health';
+import { CharacterDeathPresentation } from '../characters/CharacterDeathPresentation';
+import type { WeaponDamageTarget } from '../combat/WeaponDamage';
 
 export interface NpcCharacterLoader {
   instantiate(definition: CharacterDefinition): Promise<LoadedCharacter>;
@@ -56,6 +59,7 @@ export interface NpcDebugSnapshot {
   readonly equipmentPresentation: ReturnType<
     EquipmentPresentation['getSnapshot']
   >;
+  readonly health: ReturnType<HealthComponent['getSnapshot']>;
 }
 
 export function calculateFacingYaw(
@@ -81,10 +85,11 @@ export function smoothFacingYaw(
   return current + difference * (1 - Math.exp(-sharpness * Math.max(0, delta)));
 }
 
-export class NpcEntity implements GameObject {
+export class NpcEntity implements GameObject, WeaponDamageTarget {
   public readonly id: string;
   public readonly object3d = new Group();
   public readonly equipment: CharacterEquipment;
+  public readonly health: HealthComponent;
 
   private readonly visualRoot = new Group();
   private readonly idleYaw: number;
@@ -102,6 +107,16 @@ export class NpcEntity implements GameObject {
   private elapsed = 0;
   private readonly modelOffset = new Vector3();
   private readonly equipmentPresentation: EquipmentPresentation;
+  private readonly deathPresentation = new CharacterDeathPresentation();
+  private readonly unsubscribeHealth: (() => void)[] = [];
+
+  public get ownerId(): string {
+    return this.id;
+  }
+
+  public get enabled(): boolean {
+    return this.health.alive;
+  }
 
   public constructor(
     public readonly definition: NpcDefinition,
@@ -113,6 +128,7 @@ export class NpcEntity implements GameObject {
     assets?: Pick<GameAssetLoader, 'instantiateModel'>,
   ) {
     this.id = `npc.${definition.id}`;
+    this.health = new HealthComponent(this.id, 100);
     this.equipment = new CharacterEquipment(this.id);
     this.equipmentPresentation = new EquipmentPresentation(
       this.equipment,
@@ -145,6 +161,7 @@ export class NpcEntity implements GameObject {
         groundedMinY: bounds.min.y + alignment.appliedVisualOffset,
       };
       this.visualRoot.add(loaded.root);
+      this.deathPresentation.bind(loaded.root);
       this.equipmentPresentation.bind(
         loaded.root,
         this.character.equipmentRigId,
@@ -154,6 +171,17 @@ export class NpcEntity implements GameObject {
         this.mixer = new AnimationMixer(loaded.root);
       }
       this.playIdle();
+      this.unsubscribeHealth.push(
+        this.health.events.on('depleted', () => {
+          this.gestureActive = false;
+          const nativeDeath = this.triggerOneShot('death', 'health:depleted');
+          this.deathPresentation.setDepleted(true, nativeDeath);
+        }),
+        this.health.events.on('restored', () => {
+          this.deathPresentation.setDepleted(false, false);
+          this.playIdle();
+        }),
+      );
     } catch (error) {
       this.dispose();
       throw error;
@@ -190,12 +218,13 @@ export class NpcEntity implements GameObject {
     const delta = Math.max(0, time.delta);
     this.mixer?.update(delta);
     this.equipmentPresentation.update(delta);
+    this.deathPresentation.update(delta);
     if (this.loaded) this.loaded.root.position.copy(this.modelOffset);
     if (this.gestureActive) {
       this.gestureRemaining = Math.max(0, this.gestureRemaining - delta);
       if (this.gestureRemaining === 0) {
         this.gestureActive = false;
-        this.playIdle();
+        if (this.health.alive) this.playIdle();
       }
     }
   }
@@ -213,6 +242,20 @@ export class NpcEntity implements GameObject {
       (action, requestSource) => this.triggerOneShot(action, requestSource),
       source,
     );
+  }
+
+  public getHurtVolume(): { readonly radius: number; readonly height: number } {
+    return { radius: 0.38, height: this.visualBounds?.height ?? 1.8 };
+  }
+
+  public getCollisionIgnoreIds(): readonly string[] {
+    return [`c.npc-${this.definition.id}`];
+  }
+
+  public receiveWeaponDamage(): boolean {
+    if (!this.health.alive) return false;
+    this.triggerOneShot('getHit', 'weapon-impact');
+    return true;
   }
 
   private triggerOneShot(logicalClip: string, source: string): boolean {
@@ -289,6 +332,7 @@ export class NpcEntity implements GameObject {
       facingYaw: this.object3d.rotation.y,
       equipment: this.equipment.getSnapshot(),
       equipmentPresentation: this.equipmentPresentation.getSnapshot(),
+      health: this.health.getSnapshot(),
     };
   }
 
@@ -296,6 +340,9 @@ export class NpcEntity implements GameObject {
     this.action?.stop();
     this.equipmentPresentation.dispose();
     this.equipment.dispose();
+    for (const unsubscribe of this.unsubscribeHealth.splice(0)) unsubscribe();
+    this.deathPresentation.dispose();
+    this.health.dispose();
     if (this.mixer && this.loaded) {
       this.mixer.stopAllAction();
       this.mixer.uncacheRoot(this.loaded.root);

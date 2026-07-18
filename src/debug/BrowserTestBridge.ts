@@ -36,6 +36,8 @@ import type { DebugCashPickup } from '../economy/DebugCashPickup';
 import type { ProximityPickupSystem } from '../pickups/ProximityPickupSystem';
 import type { TrafficSystem } from '../traffic/TrafficSystem';
 import type { TimeOfDayLightingSystem } from '../world/TimeOfDayLightingSystem';
+import type { WeaponAimSystem } from '../combat/WeaponAimSystem';
+import type { WeaponCombatSystem } from '../combat/WeaponCombatSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -118,6 +120,8 @@ export interface BrowserTestSnapshot {
   readonly selectedCharacterId: string;
   readonly picker: ReturnType<CharacterPickerSystem['getSnapshot']>;
   readonly camera: ReturnType<ThirdPersonCameraSystem['getDebugSnapshot']>;
+  readonly weaponAim: ReturnType<WeaponAimSystem['getSnapshot']>;
+  readonly weaponCombat: ReturnType<WeaponCombatSystem['getSnapshot']>;
   readonly interaction: {
     readonly activeTargetId: string | undefined;
     readonly completedTargetIds: readonly string[];
@@ -189,6 +193,8 @@ export interface BrowserTestBridgeDependencies {
   readonly collision: StaticCollisionWorld;
   readonly player: PlayerControllerSystem;
   readonly camera: ThirdPersonCameraSystem;
+  readonly weaponAim: WeaponAimSystem;
+  readonly weaponCombat: WeaponCombatSystem;
   readonly interactions: InteractionSystem;
   readonly npcs: NpcSystem;
   readonly npcDefinitions: typeof npcDefinitions;
@@ -338,6 +344,8 @@ function createSnapshot(
     selectedCharacterId: dependencies.characterSelection.getSelectedId(),
     picker: dependencies.characterPicker.getSnapshot(),
     camera: dependencies.camera.getDebugSnapshot(),
+    weaponAim: dependencies.weaponAim.getSnapshot(),
+    weaponCombat: dependencies.weaponCombat.getSnapshot(),
     interaction: {
       activeTargetId: dependencies.interactions.getActiveTarget()?.id,
       completedTargetIds: [...completedTargetIds],

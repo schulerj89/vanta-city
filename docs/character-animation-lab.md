@@ -25,6 +25,8 @@ The panel provides:
 - logical graph-state and protected authored-clip selection;
 - handgun, knife, or no-equipment selection through the production
   `EquipmentPresentation` path;
+- live asset-local model and handgun muzzle position/rotation/scale controls,
+  plus socket/muzzle axes and transformed weapon bounds;
 - live asset-local position, rotation-in-radians, and uniform-scale controls,
   with a copyable JSON value and reset to the authoritative definition;
 - front, right, rear, and left camera views;

@@ -31,6 +31,7 @@ import { HealthComponent } from '../health/Health';
 import { CharacterEquipment } from '../equipment/CharacterEquipment';
 import type { CharacterLocomotionSnapshot } from '../characters/CharacterLocomotionPolicy';
 import type { EquipmentId } from '../equipment/EquipmentDefinition';
+import type { WeaponDamageTarget } from '../combat/WeaponDamage';
 
 const idleCharacterActionState: CharacterActionRequestState = {
   active: undefined,
@@ -152,11 +153,19 @@ interface ActiveRoll {
 
 const controlledStates: readonly GameState[] = ['playing'];
 
-export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
+export class PlayerControllerSystem
+  implements GameSystem, WorldPoseSource, WeaponDamageTarget
+{
   public readonly id = 'player-controller';
   public readonly movement: PlayerMovementSimulation;
   public readonly events = new EventBus<PlayerActionEvents>();
   public readonly health = new HealthComponent('player', 100);
+
+  public readonly ownerId = 'player';
+
+  public get enabled(): boolean {
+    return this.health.alive;
+  }
 
   private readonly spawnPosition: Vector3;
   private input: InputReader | undefined;
@@ -434,6 +443,17 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
         z: Math.cos(this.movement.facingYaw),
       },
     };
+  }
+
+  public getHurtVolume(): { readonly radius: number; readonly height: number } {
+    return {
+      radius: this.movement.config.radius,
+      height: this.movement.config.height,
+    };
+  }
+
+  public getCollisionIgnoreIds(): readonly string[] {
+    return ['dynamic.player'];
   }
 
   /** Faces presentation toward a live subject without changing simulation yaw. */

@@ -111,4 +111,27 @@ describe('InputSystem', () => {
     button.remove();
     input.dispose();
   });
+
+  it('shares pointer aim state through its single listener lifecycle', () => {
+    const input = new InputSystem(defaultBindings);
+    input.init();
+    window.dispatchEvent(
+      new MouseEvent('mousemove', { clientX: 123, clientY: 234 }),
+    );
+    expect(input.getPointerAimSnapshot()).toMatchObject({
+      clientX: 123,
+      clientY: 234,
+      hasPosition: true,
+      locked: false,
+    });
+
+    input.dispose();
+    window.dispatchEvent(
+      new MouseEvent('mousemove', { clientX: 456, clientY: 567 }),
+    );
+    expect(input.getPointerAimSnapshot()).toMatchObject({
+      clientX: 123,
+      clientY: 234,
+    });
+  });
 });

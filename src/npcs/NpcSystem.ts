@@ -13,6 +13,7 @@ import type { NpcCharacterLoader } from './NpcEntity';
 import type { NpcDefinition } from './NpcDefinition';
 import type { EquipmentId } from '../equipment/EquipmentDefinition';
 import type { GameAssetLoader } from '../assets/AssetLoader';
+import type { WeaponDamageTarget } from '../combat/WeaponDamage';
 
 export interface NpcInteractionRegistry {
   register(interactable: Interactable): () => void;
@@ -77,6 +78,10 @@ export class NpcSystem implements GameSystem {
 
   public getWorldPoseSource(id: string): WorldPoseSource | undefined {
     return this.spawned.get(id)?.entity;
+  }
+
+  public getWeaponDamageTargets(): readonly WeaponDamageTarget[] {
+    return [...this.spawned.values()].map(({ entity }) => entity);
   }
 
   public getDefinition(id: string): NpcDefinition | undefined {
@@ -161,7 +166,8 @@ export class NpcSystem implements GameSystem {
             : { range: definition.interactionRadius }),
           collisionIgnoreIds: [`c.npc-${definition.id}`],
           requiredStates: ['playing'],
-          isAvailable: () => this.conversations.active === undefined,
+          isAvailable: () =>
+            entity.health.alive && this.conversations.active === undefined,
           interact: () => {
             const conversationStarted = this.conversations.start(
               definition.conversationId,

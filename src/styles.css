@@ -27,6 +27,33 @@ canvas {
   height: 100%;
 }
 
+.weapon-reticle {
+  position: absolute;
+  z-index: 18;
+  top: 0;
+  left: 0;
+  width: 1.65rem;
+  height: 1.65rem;
+  box-sizing: border-box;
+  margin: -0.825rem 0 0 -0.825rem;
+  border: 2px solid rgb(240 255 250 / 92%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 90%));
+}
+
+.weapon-reticle__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 50%;
+  background: #f0fffa;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 70%);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

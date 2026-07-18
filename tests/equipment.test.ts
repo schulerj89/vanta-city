@@ -120,6 +120,11 @@ describe('CharacterEquipment', () => {
       0, 3.15, 1.5,
     ]);
     expect(scene.scale.toArray()).toEqual([5, 5, 5]);
+    const muzzle = presentation.getAttachmentDebugObjects()?.muzzle;
+    expect(muzzle?.parent).toBe(scene);
+    expect(muzzle?.position.toArray()).toEqual([0, 0.014, 0.0231]);
+    expect(muzzle?.scale.toArray()).toEqual([0.08, 0.08, 0.08]);
+    expect(presentation.getSnapshot().muzzleAttached).toBe(true);
 
     equipment.equip('knife');
     expect(dispose).toHaveBeenCalledOnce();

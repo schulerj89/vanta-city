@@ -23,7 +23,12 @@ export interface EquipmentDefinition {
     readonly position: readonly [number, number, number];
     readonly rotation: readonly [number, number, number];
     readonly scale: number;
-    readonly muzzlePosition?: readonly [number, number, number];
+    /** Asset-local barrel socket used by flash and future projectile presentation. */
+    readonly muzzle?: {
+      readonly position: readonly [number, number, number];
+      readonly rotation: readonly [number, number, number];
+      readonly scale: number;
+    };
   };
   readonly useAction: CharacterActionName;
   readonly ammunition?: {
@@ -32,6 +37,17 @@ export interface EquipmentDefinition {
   };
   readonly idleAnimation?: string;
   readonly runAnimation?: string;
+  readonly damage:
+    | { readonly kind: 'gun'; readonly perUse: number; readonly range: number }
+    | {
+        readonly kind: 'knife';
+        readonly perUse: number;
+        readonly forwardOffset: number;
+        readonly reach: number;
+        readonly radius: number;
+        readonly minimumY: number;
+        readonly maximumY: number;
+      };
   readonly presentations: Readonly<
     Partial<Record<EquipmentRigId, EquipmentSocketPresentation>>
   >;
@@ -51,12 +67,18 @@ export const equipmentDefinitions = [
       position: [0.04, -0.04, -0.215],
       rotation: [0, 3.15, 1.5],
       scale: 5,
-      muzzlePosition: [0, 0.04, -0.215],
+      // Source pistol points +Z; the model transform turns that toward prop -Z.
+      muzzle: {
+        position: [0, 0.014, 0.0231],
+        rotation: [Math.PI / 2, 0, 0],
+        scale: 0.08,
+      },
     },
     useAction: 'gunFire',
     ammunition: { capacity: 8, repeatCadenceSeconds: 0.72 },
     idleAnimation: 'gunIdle',
     runAnimation: 'gunRun',
+    damage: { kind: 'gun', perUse: 34, range: 35 },
     presentations: {
       'ultimate-men': {
         boneName: 'WristR',
@@ -83,6 +105,15 @@ export const equipmentDefinitions = [
     },
     useAction: 'knifeSlash',
     idleAnimation: 'knifeIdle',
+    damage: {
+      kind: 'knife',
+      perUse: 45,
+      forwardOffset: 0.35,
+      reach: 1.05,
+      radius: 0.28,
+      minimumY: 0.45,
+      maximumY: 1.65,
+    },
     presentations: {
       'ultimate-men': {
         boneName: 'WristR',

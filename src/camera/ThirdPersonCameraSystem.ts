@@ -211,6 +211,7 @@ const UP = new Vector3(0, 1, 0);
 export class ThirdPersonCameraSystem implements GameSystem {
   public readonly id = 'third-person-camera';
   public readonly updateMode = 'always' as const;
+  private weaponAimActive = false;
   public obstructed = false;
 
   private input: InputReader | undefined;
@@ -486,6 +487,11 @@ export class ThirdPersonCameraSystem implements GameSystem {
     }
   }
 
+  /** Input policy only; camera transforms remain exclusively owned here. */
+  public setWeaponAimActive(active: boolean): void {
+    this.weaponAimActive = active;
+  }
+
   public snapToPlayer(): void {
     const position = this.player.movement.position;
     this.target.set(
@@ -564,6 +570,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
     const preferences = this.preferences.current;
     const orbiting =
       acceptsInput &&
+      !this.weaponAimActive &&
       (this.pointer.isPointerLocked() ||
         this.input?.isDown('cameraOrbit') === true);
     if (orbiting && (pointerDelta.x !== 0 || pointerDelta.y !== 0)) {

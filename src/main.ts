@@ -52,6 +52,7 @@ import { HealthHudSystem } from './ui/HealthHudSystem';
 import { LocationHudSystem } from './ui/LocationHudSystem';
 import { MinimapHudSystem } from './ui/MinimapHudSystem';
 import type { SparringTargetSystem } from './debug/SparringTargetSystem';
+import { sparringTargetConfig } from './debug/sparringTarget';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
@@ -71,6 +72,8 @@ import type { DebugCashPickup } from './economy/DebugCashPickup';
 import { ProximityPickupSystem } from './pickups/ProximityPickupSystem';
 import { TrafficSystem } from './traffic/TrafficSystem';
 import { defaultTrafficConfig } from './traffic/TrafficSimulation';
+import { WeaponAimSystem } from './combat/WeaponAimSystem';
+import { WeaponCombatSystem } from './combat/WeaponCombatSystem';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -290,6 +293,13 @@ async function bootstrap(): Promise<void> {
   );
   cameraReference.current = camera;
   input.setPointerTarget(render.renderer.domElement);
+  const weaponAim = new WeaponAimSystem(
+    mount,
+    render.camera,
+    input,
+    playerEquipment,
+    camera,
+  );
   const help = new LazyHelpOverlaySystem(
     mount,
     runtime,
@@ -367,6 +377,19 @@ async function bootstrap(): Promise<void> {
       },
     );
   }
+  const weaponCombat = new WeaponCombatSystem(
+    player,
+    playerEquipment,
+    weaponAim,
+    collision,
+    () => {
+      const sparringDamageTarget = sparringTarget?.getWeaponDamageTarget();
+      return [
+        ...npcs.getWeaponDamageTargets(),
+        ...(sparringDamageTarget ? [sparringDamageTarget] : []),
+      ];
+    },
+  );
   const healthHud = new HealthHudSystem(
     mount,
     player.health,
@@ -523,6 +546,8 @@ async function bootstrap(): Promise<void> {
           handgunPurchase,
           cashPickup,
           minimapHud,
+          weaponAim,
+          weaponCombat,
         )
       : [];
 
@@ -553,6 +578,7 @@ async function bootstrap(): Promise<void> {
     .register(objects)
     .register(help)
     .register(player)
+    .register(weaponAim)
     .register(proximityPickups)
     .register(traffic);
   if (sparringTarget) runtime.register(sparringTarget);
@@ -566,7 +592,8 @@ async function bootstrap(): Promise<void> {
     .register(locationHud)
     .register(interactions)
     .register(conversations)
-    .register(npcs);
+    .register(npcs)
+    .register(weaponCombat);
   if (interactionScenario) runtime.register(interactionScenario);
   runtime
     .register(dialogue)
@@ -614,6 +641,8 @@ async function bootstrap(): Promise<void> {
           collision,
           player,
           camera,
+          weaponAim,
+          weaponCombat,
           interactions,
           npcs,
           npcDefinitions: activeNpcDefinitions,
@@ -686,6 +715,8 @@ function registerVerticalSliceDebug(
   handgunPurchase?: HandgunPurchase,
   cashPickup?: DebugCashPickup,
   minimapHud?: MinimapHudSystem,
+  weaponAim?: WeaponAimSystem,
+  weaponCombat?: WeaponCombatSystem,
 ): (() => void)[] {
   const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
@@ -822,6 +853,29 @@ function registerVerticalSliceDebug(
       label: 'Run mode',
       group: sections.player,
       read: () => player.getDebugSnapshot().runMode,
+    }),
+    debug.registerValue({
+      id: 'weapon.aim',
+      label: 'Weapon aim / reticle',
+      group: sections.player,
+      read: () => {
+        const aim = weaponAim?.getSnapshot();
+        return aim
+          ? `${aim.visible ? 'visible' : 'hidden'} · ${aim.itemId ?? 'none'} · ${aim.screen.x.toFixed(0)},${aim.screen.y.toFixed(0)} · ${aim.releaseReason ?? 'active'}`
+          : 'unavailable';
+      },
+    }),
+    debug.registerValue({
+      id: 'weapon.damage',
+      label: 'Weapon damage result',
+      group: sections.player,
+      read: () => {
+        const combat = weaponCombat?.getSnapshot();
+        const result = combat?.lastResult;
+        return combat
+          ? `${combat.attackSequence} attacks · ${combat.hitCount} hits · ${result?.outcome ?? 'none'} · ${result?.targetId ?? 'no target'} · ${result?.damage ?? 0} damage`
+          : 'unavailable';
+      },
     }),
     debug.registerValue({
       id: 'player.health',
@@ -1164,6 +1218,29 @@ function registerVerticalSliceDebug(
       },
     }),
     debug.registerCommand({
+      id: 'weapon.target-at-aim',
+      label: 'Move sparring target onto aim ray',
+      group: sections.actions,
+      argumentLabel: 'distance (default 6)',
+      run: async (value) => {
+        await ensureSparringTarget();
+        const requested = Number(value);
+        const distance =
+          Number.isFinite(requested) && requested > 0 ? requested : 6;
+        const ray = weaponAim?.getAimRay();
+        if (!ray) throw new Error('Weapon aim is unavailable');
+        const center = ray.origin
+          .clone()
+          .addScaledVector(ray.direction, distance);
+        sparringTarget.teleport({
+          x: center.x,
+          y: center.y - sparringTargetConfig.volumes.hurt.height / 2,
+          z: center.z,
+        });
+        sparringTarget.reset();
+      },
+    }),
+    debug.registerCommand({
       id: 'sparring-target.teleport-position',
       label: 'Teleport sparring target',
       group: sections.combat,
@@ -1192,6 +1269,16 @@ function registerVerticalSliceDebug(
       run: () => {
         player.health.damage(10, 'debug-command');
       },
+    }),
+    debug.registerCommand({
+      id: 'weapon.aim-center',
+      label: 'Center weapon aim point',
+      group: sections.actions,
+      run: () =>
+        weaponAim?.setScreenPoint(
+          window.innerWidth / 2,
+          window.innerHeight / 2,
+        ),
     }),
     debug.registerCommand({
       id: 'player.money-credit',

@@ -238,6 +238,26 @@ test('edits and resets asset-local equipment transforms without moving simulatio
     rotation: [0, 3.15, 1.5],
     scale: 5,
   });
+  expect((await labSnapshot(page)).muzzleTransform).toEqual({
+    position: [0, 0.014, 0.0231],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.08,
+  });
+  await page.evaluate(() =>
+    window.__VANTA_ANIMATION_LAB__!.setMuzzleTransform({
+      position: [0.001, 0.015, 0.024],
+      rotation: [1.6, 0.1, 0],
+      scale: 0.25,
+    }),
+  );
+  expect((await labSnapshot(page)).muzzleTransform).toEqual({
+    position: [0.001, 0.015, 0.024],
+    rotation: [1.6, 0.1, 0],
+    scale: 0.25,
+  });
+  await expect(page.getByLabel('Muzzle values to send back')).toHaveValue(
+    /"scale": 0\.25/,
+  );
   expect((await labSnapshot(page)).alignment?.simulationOrigin).toEqual([
     0, 0, 0,
   ]);

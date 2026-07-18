@@ -5,6 +5,7 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  Vector3,
 } from 'three';
 import type { BufferGeometry, Material, Object3D } from 'three';
 import type { GameAssetLoader, ModelInstance } from '../assets/AssetLoader';
@@ -26,11 +27,14 @@ export interface EquipmentPresentationSnapshot {
   readonly source: 'asset' | 'procedural' | undefined;
   readonly assetId: string | undefined;
   readonly loadError: string | undefined;
+  readonly muzzleAttached: boolean;
+  readonly muzzleWorldPosition: readonly number[] | undefined;
 }
 
 export interface EquipmentAttachmentDebugObjects {
   readonly root: Object3D;
   readonly socket: Object3D;
+  readonly muzzle?: Object3D;
 }
 
 /** Disposable local-model presentation with a generated load-failure fallback. */
@@ -85,6 +89,13 @@ export class EquipmentPresentation {
     if (this.flashRemaining === 0 && this.flash) this.flash.visible = false;
   }
 
+  /** Development presentation hook; production uses still own the 80 ms pulse. */
+  public setMuzzleFlashPreview(active: boolean): void {
+    if (!this.flash) return;
+    this.flash.visible = active;
+    this.flashRemaining = active ? Number.POSITIVE_INFINITY : 0;
+  }
+
   public getSnapshot(): EquipmentPresentationSnapshot {
     return {
       itemId: this.equipment.equipped?.id,
@@ -98,13 +109,23 @@ export class EquipmentPresentation {
       source: this.source,
       assetId: this.assetId,
       loadError: this.loadError,
+      muzzleAttached: Boolean(this.flash?.parent),
+      muzzleWorldPosition: this.flash?.parent
+        ? this.flash.getWorldPosition(new Vector3()).toArray()
+        : undefined,
     };
   }
 
   public getAttachmentDebugObjects():
     EquipmentAttachmentDebugObjects | undefined {
     const socket = this.prop?.parent;
-    return this.prop && socket ? { root: this.prop, socket } : undefined;
+    return this.prop && socket
+      ? {
+          root: this.prop,
+          socket,
+          ...(this.flash ? { muzzle: this.flash } : {}),
+        }
+      : undefined;
   }
 
   public dispose(): void {
@@ -170,6 +191,12 @@ export class EquipmentPresentation {
       instance.scene.rotation.set(...definition.model.rotation);
       instance.scene.scale.setScalar(definition.model.scale);
       root.add(instance.scene);
+      if (definition.model.muzzle && this.flash) {
+        instance.scene.add(this.flash);
+        this.flash.position.set(...definition.model.muzzle.position);
+        this.flash.rotation.set(...definition.model.muzzle.rotation);
+        this.flash.scale.setScalar(definition.model.muzzle.scale);
+      }
       this.assetInstance = instance;
       this.source = 'asset';
     } catch (error) {
@@ -209,10 +236,7 @@ function createEquipmentProp(definition: EquipmentDefinition): {
   generated.flash?.removeFromParent();
   root.add(generated.root);
   generated.root.name = 'Procedural fallback';
-  if (definition.model.muzzlePosition && generated.flash) {
-    generated.flash.position.set(...definition.model.muzzlePosition);
-    root.add(generated.flash);
-  }
+  if (generated.flash) root.add(generated.flash);
   return { root, ...(generated.flash ? { flash: generated.flash } : {}) };
 }
 

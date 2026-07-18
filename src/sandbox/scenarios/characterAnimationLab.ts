@@ -109,6 +109,7 @@ export interface CharacterAnimationLabSnapshot {
     | undefined;
   readonly socketPosition: readonly number[] | undefined;
   readonly equipmentTransform: EquipmentTransform | undefined;
+  readonly muzzleTransform: EquipmentTransform | undefined;
 }
 
 export interface CharacterAnimationLabBridge {
@@ -117,6 +118,7 @@ export interface CharacterAnimationLabBridge {
   selectAnimation(selection: string): boolean;
   selectEquipment(itemId: EquipmentId | 'none'): void;
   setEquipmentTransform(transform: EquipmentTransform): void;
+  setMuzzleTransform(transform: EquipmentTransform): void;
   setView(view: 'front' | 'right' | 'rear' | 'left'): void;
   setPlaying(playing: boolean): void;
   setLoop(loop: boolean): void;
@@ -157,6 +159,7 @@ class CharacterAnimationLabSystem implements GameSystem {
     0xffb347,
   );
   private readonly socketAxes = new AxesHelper(0.24);
+  private readonly muzzleAxes = new AxesHelper(0.18);
   private readonly simulationAxes = new AxesHelper(0.45);
   private readonly visualAxes = new AxesHelper(0.32);
   private readonly footPlane = new Mesh(
@@ -180,7 +183,9 @@ class CharacterAnimationLabSystem implements GameSystem {
   private readonly equipmentSelect = document.createElement('select');
   private readonly viewSelect = document.createElement('select');
   private readonly transformInputs = new Map<string, HTMLInputElement>();
+  private readonly muzzleInputs = new Map<string, HTMLInputElement>();
   private readonly transformOutput = document.createElement('textarea');
+  private readonly muzzleOutput = document.createElement('textarea');
   private readonly playButton = document.createElement('button');
   private readonly scrub = document.createElement('input');
   private readonly speed = document.createElement('input');
@@ -221,6 +226,7 @@ class CharacterAnimationLabSystem implements GameSystem {
   private readonly equipment = new CharacterEquipment('animation-lab');
   private readonly equipmentPresentation: EquipmentPresentation;
   private equipmentTransform: EquipmentTransform | undefined;
+  private muzzleTransform: EquipmentTransform | undefined;
   private currentGraph = this.graph.getState();
   private alignment:
     { readonly height: number; readonly visualOffset: number } | undefined;
@@ -310,6 +316,7 @@ class CharacterAnimationLabSystem implements GameSystem {
     this.boundsHelper.dispose();
     this.equipmentBoundsHelper.dispose();
     this.socketAxes.dispose();
+    this.muzzleAxes.dispose();
     disposeObject(this.stage);
     this.stage.clear();
   }
@@ -377,6 +384,9 @@ class CharacterAnimationLabSystem implements GameSystem {
       socketPosition,
       equipmentTransform: this.equipmentTransform
         ? cloneEquipmentTransform(this.equipmentTransform)
+        : undefined,
+      muzzleTransform: this.muzzleTransform
+        ? cloneEquipmentTransform(this.muzzleTransform)
         : undefined,
     };
   }
@@ -454,6 +464,9 @@ class CharacterAnimationLabSystem implements GameSystem {
     this.completionRelease = undefined;
     this.transitionSequence += 1;
     this.updateGraph(selection);
+    this.equipmentPresentation.setMuzzleFlashPreview(
+      parseSelection(selection)[1] === 'gunFire',
+    );
     this.updateRootTrail(selection);
     this.animationSelect.value = selection;
     return true;
@@ -463,19 +476,30 @@ class CharacterAnimationLabSystem implements GameSystem {
     if (itemId === 'none') {
       this.equipment.unequip();
       this.equipmentTransform = undefined;
+      this.muzzleTransform = undefined;
     } else {
       this.equipment.equip(itemId);
       const definition = equipmentById.get(itemId)!;
       this.equipmentTransform = cloneEquipmentTransform(definition.model);
+      this.muzzleTransform = definition.model.muzzle
+        ? cloneEquipmentTransform(definition.model.muzzle)
+        : undefined;
     }
     this.equipmentSelect.value = itemId;
     this.refreshTransformControls();
+    this.refreshMuzzleControls();
   }
 
   public setEquipmentTransform(transform: EquipmentTransform): void {
     this.equipmentTransform = cloneEquipmentTransform(transform);
     this.applyEquipmentTransform();
     this.refreshTransformControls();
+  }
+
+  public setMuzzleTransform(transform: EquipmentTransform): void {
+    this.muzzleTransform = cloneEquipmentTransform(transform);
+    this.applyEquipmentTransform();
+    this.refreshMuzzleControls();
   }
 
   public setView(view: 'front' | 'right' | 'rear' | 'left'): void {
@@ -546,6 +570,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       this.boundsHelper,
       this.equipmentBoundsHelper,
       this.socketAxes,
+      this.muzzleAxes,
       this.simulationAxes,
       this.footPlane,
       this.impactMarker,
@@ -644,6 +669,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       field('Cross-fade (s)', this.fade),
     );
     const transformControls = this.buildTransformControls();
+    const muzzleControls = this.buildMuzzleControls();
     const overlays = document.createElement('fieldset');
     const legend = document.createElement('legend');
     legend.textContent = 'Visual diagnostics';
@@ -669,6 +695,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       header,
       controls,
       transformControls,
+      muzzleControls,
       overlays,
       this.diagnostics,
     );
@@ -733,6 +760,80 @@ class CharacterAnimationLabSystem implements GameSystem {
     return controls;
   }
 
+  private buildMuzzleControls(): HTMLFieldSetElement {
+    const controls = document.createElement('fieldset');
+    controls.className = 'animation-lab__transform';
+    const legend = document.createElement('legend');
+    legend.textContent = 'Muzzle socket (asset-local barrel transform)';
+    controls.append(legend);
+    for (const [id, label, step] of [
+      ['px', 'Position X', '0.001'],
+      ['py', 'Position Y', '0.001'],
+      ['pz', 'Position Z', '0.001'],
+      ['rx', 'Rotation X (rad)', '0.05'],
+      ['ry', 'Rotation Y (rad)', '0.05'],
+      ['rz', 'Rotation Z (rad)', '0.05'],
+      ['scale', 'Flash scale', '0.05'],
+    ] as const) {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = step;
+      input.disabled = true;
+      input.addEventListener('input', () => this.readMuzzleControls());
+      this.muzzleInputs.set(id, input);
+      controls.append(field(label, input));
+    }
+    this.muzzleOutput.readOnly = true;
+    this.muzzleOutput.rows = 5;
+    this.muzzleOutput.setAttribute('aria-label', 'Muzzle values to send back');
+    controls.append(field('Muzzle values to send back', this.muzzleOutput));
+    this.refreshMuzzleControls();
+    return controls;
+  }
+
+  private readMuzzleControls(): void {
+    const current = this.muzzleTransform;
+    if (!current) return;
+    const value = (id: string, fallback: number): number => {
+      const candidate = Number(this.muzzleInputs.get(id)?.value);
+      return Number.isFinite(candidate) ? candidate : fallback;
+    };
+    this.setMuzzleTransform({
+      position: [
+        value('px', current.position[0]),
+        value('py', current.position[1]),
+        value('pz', current.position[2]),
+      ],
+      rotation: [
+        value('rx', current.rotation[0]),
+        value('ry', current.rotation[1]),
+        value('rz', current.rotation[2]),
+      ],
+      scale: Math.max(0.001, value('scale', current.scale)),
+    });
+  }
+
+  private refreshMuzzleControls(): void {
+    const transform = this.muzzleTransform;
+    const values: Readonly<Record<string, number | undefined>> = {
+      px: transform?.position[0],
+      py: transform?.position[1],
+      pz: transform?.position[2],
+      rx: transform?.rotation[0],
+      ry: transform?.rotation[1],
+      rz: transform?.rotation[2],
+      scale: transform?.scale,
+    };
+    for (const [id, input] of this.muzzleInputs) {
+      const value = values[id];
+      input.disabled = value === undefined;
+      input.value = value === undefined ? '' : String(value);
+    }
+    this.muzzleOutput.value = transform
+      ? JSON.stringify(transform, undefined, 2)
+      : 'The selected equipment has no muzzle socket.';
+  }
+
   private readTransformControls(): void {
     const current = this.equipmentTransform;
     if (!current) return;
@@ -788,6 +889,15 @@ class CharacterAnimationLabSystem implements GameSystem {
     model.position.set(...transform.position);
     model.rotation.set(...transform.rotation);
     model.scale.setScalar(transform.scale);
+    if (
+      this.muzzleTransform &&
+      attachment.muzzle &&
+      this.equipmentPresentation.getSnapshot().source === 'asset'
+    ) {
+      attachment.muzzle.position.set(...this.muzzleTransform.position);
+      attachment.muzzle.rotation.set(...this.muzzleTransform.rotation);
+      attachment.muzzle.scale.setScalar(this.muzzleTransform.scale);
+    }
   }
 
   private resolveClip(selection: string) {
@@ -897,12 +1007,17 @@ class CharacterAnimationLabSystem implements GameSystem {
       this.equipmentBounds.setFromObject(attachment.root);
       attachment.socket.getWorldPosition(this.socketAxes.position);
       attachment.socket.getWorldQuaternion(this.socketAxes.quaternion);
+      if (attachment.muzzle) {
+        attachment.muzzle.getWorldPosition(this.muzzleAxes.position);
+        attachment.muzzle.getWorldQuaternion(this.muzzleAxes.quaternion);
+      }
     } else {
       this.equipmentBounds.makeEmpty();
     }
     this.equipmentBoundsHelper.visible =
       Boolean(attachment) && equipmentOverlay;
     this.socketAxes.visible = Boolean(attachment) && equipmentOverlay;
+    this.muzzleAxes.visible = Boolean(attachment?.muzzle) && equipmentOverlay;
     this.equipmentBoundsHelper.updateMatrixWorld(true);
   }
 
@@ -988,6 +1103,7 @@ class CharacterAnimationLabSystem implements GameSystem {
     const attachment = this.equipmentPresentation.getAttachmentDebugObjects();
     this.equipmentBoundsHelper.visible = equipment && Boolean(attachment);
     this.socketAxes.visible = equipment && Boolean(attachment);
+    this.muzzleAxes.visible = equipment && Boolean(attachment?.muzzle);
   }
 
   private registerDebug(): void {
@@ -1033,6 +1149,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       selectEquipment: (itemId) => this.selectEquipment(itemId),
       setEquipmentTransform: (transform) =>
         this.setEquipmentTransform(transform),
+      setMuzzleTransform: (transform) => this.setMuzzleTransform(transform),
       setView: (view) => this.setView(view),
       setPlaying: (playing) => this.setPlaying(playing),
       setLoop: (loop) => this.setLoop(loop),

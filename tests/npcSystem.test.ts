@@ -128,6 +128,22 @@ describe('NPC foundation', () => {
       currentAnimation: 'static (idle unavailable)',
       modelFallback: true,
     });
+    const mackTarget = system
+      .getWeaponDamageTargets()
+      .find(({ id }) => id === 'npc.mack');
+    expect(mackTarget).toBeDefined();
+    mackTarget!.health.damage(100, 'unit:weapon');
+    expect(mackTarget).toMatchObject({ enabled: false });
+    expect(system.getDebugSnapshot('mack')?.health).toMatchObject({
+      current: 0,
+      alive: false,
+    });
+    expect(
+      interactions.entries.get('interaction.npc.mack')?.isAvailable?.({
+        gameState: 'playing',
+        targetId: 'interaction.npc.mack',
+      }),
+    ).toBe(false);
 
     worldEvents.emit('level:unloaded', { levelId: 'test-district' });
 
@@ -137,6 +153,9 @@ describe('NPC foundation', () => {
     expect(
       loader.disposals.every((dispose) => dispose.mock.calls.length === 1),
     ).toBe(true);
+    expect(() => mackTarget!.health.damage(1, 'after-disposal')).toThrow(
+      'Health "npc.mack" is disposed',
+    );
     system.dispose();
     conversations.dispose();
   });
