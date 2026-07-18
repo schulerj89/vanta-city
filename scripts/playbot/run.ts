@@ -687,6 +687,7 @@ async function exerciseMap(
   await page.keyboard.press('KeyM');
   await map.waitFor({ state: 'hidden' });
   evidence.mapRestored = true;
+  evidence.restored = true;
   await record(
     'map-close',
     'Closed the district map and restored the production HUD',
@@ -717,10 +718,10 @@ async function exerciseMissionAndDialogue(
   evidence.missionObserved = true;
   await screenshot('mission-started');
 
-  for (let step = 0; step < 5; step += 1) {
+  for (let step = 0; step < 6; step += 1) {
     const position = parsePosition((await capturePublicState(page)).location);
-    if (position && Math.abs(position.z - 10) < 1.4) break;
-    await holdKey(page, position && position.z > 10 ? 'KeyW' : 'KeyS', 350);
+    if (position && Math.abs(position.z - 10.5) < 0.4) break;
+    await holdKey(page, position && position.z > 10.5 ? 'KeyW' : 'KeyS', 350);
   }
 
   const beforeCalibration = parsePosition(
@@ -741,7 +742,7 @@ async function exerciseMissionAndDialogue(
     await holdKey(page, 'KeyA', 300);
   }
 
-  for (let step = 0; step < 14; step += 1) {
+  for (let step = 0; step < 18; step += 1) {
     const prompt = await visibleText(page, '.interaction-prompt');
     if (prompt?.includes('Talk')) break;
     await holdKey(page, towardMack, 350);
@@ -1013,6 +1014,12 @@ function observeFaults(page: Page, baseUrl: string): BrowserFaults {
 }
 
 function buildCapabilities(evidence: SessionEvidence): CapabilityResult[] {
+  const restoredSurfaces = [
+    'picker/help',
+    evidence.vehicleExited ? 'vehicle' : undefined,
+    evidence.mapRestored ? 'full-map' : undefined,
+    evidence.dialogueObserved ? 'dialogue' : undefined,
+  ].filter((surface): surface is string => surface !== undefined);
   const capability = (
     id: string,
     status: CapabilityStatus,
@@ -1096,7 +1103,7 @@ function buildCapabilities(evidence: SessionEvidence): CapabilityResult[] {
       'restoration',
       evidence.restored ? 'exercised' : 'partial',
       evidence.restored
-        ? 'Picker/help, vehicle, full-map, and dialogue transitions restored the production HUD and on-foot state.'
+        ? `${restoredSurfaces.join(', ')} transitions restored the production HUD and on-foot state.`
         : 'Picker/help closure was exercised; complete gameplay restoration was not reached.',
     ),
   ];

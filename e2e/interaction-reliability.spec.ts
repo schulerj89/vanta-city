@@ -92,17 +92,17 @@ test('captures exact Talk and prop range edges', async ({ page }, testInfo) => {
   for (const sample of [
     {
       name: 'talk-outside',
-      position: '-10,0.2,5.97,3.141592653589793',
+      position: '-12,0.2,5.47,3.141592653589793',
       target: undefined,
     },
     {
       name: 'talk-edge',
-      position: '-9,0.22,11.86,3.141592653589793',
+      position: '-12,0.22,11.36,3.141592653589793',
       target: 'interaction.npc.mack',
     },
     {
       name: 'talk-inside',
-      position: '-9,0.22,11.45,3.141592653589793',
+      position: '-12,0.22,10.95,3.141592653589793',
       target: 'interaction.npc.mack',
     },
     {

@@ -117,7 +117,9 @@ export const intersectionCornerSpawns = [
 export const fixtureSpawns = [
   {
     id: 'spawn.npc-mechanic',
-    position: [-9, 0.22, 10] as Vector3Tuple,
+    // Keep Mack west of the northwest streetlight so the common east-side
+    // conversation approach does not place the pole between both speakers.
+    position: [-12, 0.22, 9.5] as Vector3Tuple,
     yaw: Math.PI * 0.75,
   },
   {
@@ -140,7 +142,7 @@ export const fixtureSpawns = [
 export const fixturePlayerSpawns = [
   {
     id: 'spawn.player-talk-mack',
-    position: [-9, 0.22, 11.45] as Vector3Tuple,
+    position: [-12, 0.22, 10.95] as Vector3Tuple,
     yaw: Math.PI,
   },
   {

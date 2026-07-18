@@ -6,6 +6,8 @@ MISSION-001 adds one authoritative mission/objective runtime and the production 
 
 No later mission, cinematic sequence, map system, dynamic route, new dialogue, placeholder prose, loaded model, camera, DOM node, or browser listener belongs in mission definitions. The optional references `cinematic.ash-001.opening` and `cinematic.ash-001.mack-return` remain typed requests for CINEMATIC-001 and never advance objectives.
 
+Integration visual review keeps `spawn.npc-mechanic` authoritative but places it at `[-12, 0.22, 9.5]`, west of `c.street-light-nw`. The prior position made a common east-side interaction straddle the pole, so no participant-relative camera profile could reliably show both speakers. The stable NPC, speaker, conversation, portrait, character, mission, and spawn IDs remain unchanged; the camera system still exclusively owns the active camera.
+
 ## Authority and lifecycle
 
 - `MissionSystem` is the sole owner of prerequisites, active mission, ordered objective transitions, attempt state, world facts, cancellation, failure, retry, completion, rewards, and highlight requests.
