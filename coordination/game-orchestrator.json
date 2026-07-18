@@ -386,7 +386,7 @@
     {
       "id": "PERF-001",
       "title": "Build sector streaming and performance telemetry",
-      "status": "ready",
+      "status": "completed",
       "dependencies": [],
       "owner": "performance-worker",
       "acceptance": [
@@ -593,12 +593,21 @@
     }
   ],
   "executionState": {
-    "lastIntegratedTaskIds": ["STORY-001"],
+    "lastIntegratedTaskIds": ["STORY-001", "PERF-001"],
     "lastOrchestratorRun": null,
-    "lastIntegratorRun": "2026-07-18T06:06:47Z",
+    "lastIntegratorRun": "2026-07-18T06:24:33Z",
     "lastNightlyReleaseGate": null,
     "lastMapExpansion": null,
-    "lastPerformanceReport": null,
+    "lastPerformanceReport": {
+      "taskId": "PERF-001",
+      "referenceViewport": "1280x720",
+      "capture": "docs/screenshots/perf-001/performance-capture.json",
+      "leakEvidence": "docs/screenshots/perf-001/three-cycle-leak-evidence.json",
+      "averageFps": 738.1,
+      "onePercentLowFps": 370.4,
+      "frameTimeP95Ms": 2.7,
+      "peakJsHeapProxyMb": 44.7
+    },
     "notes": [
       "The hourly orchestrator must inspect live tasks and branches because this file is updated only after integration.",
       "The hourly integrator may update executionState and task statuses in the same focused commit as successful integration metadata."
