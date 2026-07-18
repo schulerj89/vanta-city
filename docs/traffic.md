@@ -8,9 +8,10 @@ turning, signaling, pedestrian logic, vehicle entry, damage, mission state, or
 runtime network access.
 
 The authored road cross is 12 m wide with 3 m lanes and an outer edge at 28 m.
-Vehicle paths use the right-hand lane centers at ±1.5 m. Models normalize to
-4.4 m long, simulation width is 1.8 m, and path centers therefore leave 0.6 m
-on either side inside a lane. Centers spawn at 24.5 m (inside the visible road
+Vehicle paths use the right-hand lane centers at ±1.5 m. Catalog models
+normalize to 4.4 m long, remain below 2.05 m wide, and use 1.8 m detectors.
+Path centers therefore leave at least 0.47 m on either side inside a lane.
+Centers spawn at 24.5 m (inside the visible road
 boundary at 27.5 m) and despawn at the opposite 24.5 m center. The static world
 query remains authoritative along each path.
 
@@ -32,8 +33,14 @@ query remains authoritative along each path.
 - Traffic updates only in `playing`. Pause and character selection are already
   simulation-gated by `GameRuntime`; traffic additionally freezes during
   dialogue and cinematics, then resumes without accumulating wall-clock time.
-- A six-instance model pool is loaded once. Spawn/despawn only assigns hidden
-  instances. Disposal clears occupancy, unregisters debug entries, removes
+- `TrafficVehicleCatalog.ts` is the single ordered civilian-vehicle catalog.
+  Each entry owns its asset ID, authored forward axis, target length, safe
+  width/height, ground clearance, and detector dimensions. Selection cycles
+  through that stable order and respects per-type pool quotas, preserving the
+  lane seed and bounded population even when types despawn in a different order.
+- A six-instance model pool is loaded once, split deterministically across every
+  catalog entry. Spawn/despawn only assigns a hidden instance of the selected
+  type. Disposal clears occupancy, unregisters debug entries, removes
   scene/debug nodes, releases every instance, and disposes owned helper geometry
   and materials. There are no browser listeners or independent timers.
 
@@ -47,10 +54,18 @@ helper displays cyan lane paths and orange detection volumes.
 Normal traffic defaults to enabled because the conservative cap stayed within
 the software-rendered browser bounds used by the feature suite: fewer than 150
 total draw calls, fewer than 150,000 total rendered triangles, and traffic update
-p95 below 5 ms at the six-model cap. The two local assets contribute at most
+p95 below 5 ms at the six-model cap. The repository audit finds exactly two
+compatible local civilian GLBs—Pickup Truck and Sports Car—and fails if a local
+vehicle file or `civilian-traffic` manifest entry lacks a runtime catalog entry.
+It also checks integrity, geometry counts, source and normalized safe bounds,
+forward/ground presentation data, and detector dimensions. No variants were
+created because the two source models are already materially distinct.
+
+The two local assets contribute at most
 28,494 model triangles when the alternating six-slot pool is visible. Gameplay
-tests also verified two repeated four-approach spawn-to-despawn cycles, player
-stop/resume, pause/resume, central occupancy, cleanup, and no page/console errors.
+tests verify every catalog type is pooled, spawned, moved, despawned, and
+disposed across two repeated four-approach cycles, plus player stop/resume,
+pause/resume, central occupancy, cleanup, and no page/console errors.
 
 ## Visual review
 

@@ -9,6 +9,7 @@ import {
   TrafficSimulation,
   defaultTrafficConfig,
 } from '../src/traffic/TrafficSimulation';
+import { trafficVehicleCatalog } from '../src/traffic/TrafficVehicleCatalog';
 
 const config = (overrides: Partial<typeof defaultTrafficConfig> = {}) => ({
   ...defaultTrafficConfig,
@@ -99,20 +100,36 @@ describe('TrafficSimulation', () => {
     traffic.clear();
     expect(traffic.getSnapshot().count).toBe(0);
   });
+
+  it('selects every catalog entry deterministically within its pool quota', () => {
+    const traffic = new TrafficSimulation(config({ maxPopulation: 6 }));
+    traffic.spawnEachApproach();
+    expect(
+      new Set(
+        traffic.getSnapshot().vehicles.map(({ vehicleType }) => vehicleType),
+      ),
+    ).toEqual(new Set(trafficVehicleCatalog.map(({ id }) => id)));
+    expect(
+      traffic.getSnapshot().vehicles.map(({ vehicleType }) => vehicleType),
+    ).toEqual(['pickup-truck', 'sports-car', 'pickup-truck', 'sports-car']);
+    for (let index = 0; index < 4; index += 1) traffic.update(11);
+    expect(traffic.getSnapshot()).toMatchObject({ count: 0, despawned: 4 });
+  });
 });
 
 describe('TrafficSystem lifecycle', () => {
   it('uses a bounded model pool and releases models, scene nodes, and debug registrations', async () => {
     const scene = new Scene();
     const disposals: ReturnType<typeof vi.fn>[] = [];
+    const instantiateModel = vi.fn(
+      async (assetId: string): Promise<ModelInstance> => {
+        const dispose = vi.fn();
+        disposals.push(dispose);
+        return { assetId, scene: new Group(), animations: [], dispose };
+      },
+    );
     const loader = {
-      instantiateModel: vi.fn(
-        async (assetId: string): Promise<ModelInstance> => {
-          const dispose = vi.fn();
-          disposals.push(dispose);
-          return { assetId, scene: new Group(), animations: [], dispose };
-        },
-      ),
+      instantiateModel,
     } as unknown as GameAssetLoader;
     const collision = new StaticCollisionWorld();
     const debug = new DebugRegistry();
@@ -125,9 +142,23 @@ describe('TrafficSystem lifecycle', () => {
     );
     const state = { current: 'dialogue' };
     await system.init({ state } as unknown as GameContext);
+    expect(instantiateModel).toHaveBeenCalledTimes(4);
+    expect(instantiateModel.mock.calls.map(([assetId]) => assetId)).toEqual([
+      trafficVehicleCatalog[0]!.assetId,
+      trafficVehicleCatalog[1]!.assetId,
+      trafficVehicleCatalog[0]!.assetId,
+      trafficVehicleCatalog[1]!.assetId,
+    ]);
     system.spawnEachApproach();
     system.update({ delta: 1, elapsed: 1, frame: 1 });
-    expect(system.getSnapshot()).toMatchObject({ count: 4, pooledModels: 4 });
+    expect(system.getSnapshot()).toMatchObject({
+      count: 4,
+      pooledModels: 4,
+      catalog: [
+        { id: 'pickup-truck', pooledModels: 2, activeVehicles: 2 },
+        { id: 'sports-car', pooledModels: 2, activeVehicles: 2 },
+      ],
+    });
     expect(
       system.getSnapshot().vehicles.every(({ progress }) => progress === 0),
     ).toBe(true);
@@ -147,6 +178,11 @@ describe('TrafficSystem lifecycle', () => {
     expect(debug.listCommands().map(({ id }) => id)).not.toContain(
       'traffic.clear',
     );
+    expect(
+      system
+        .getSnapshot()
+        .catalog.every(({ activeVehicles }) => activeVehicles === 0),
+    ).toBe(true);
   });
 
   it('queries the game-owned dynamic collision boundary', () => {

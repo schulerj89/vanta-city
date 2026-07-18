@@ -13,3 +13,21 @@ The individual source pages also explicitly label each model Public Domain
 (CC0). Files were downloaded on 2026-07-17 from the GLB download URLs exposed
 by those pages. Triangle/material/texture counts were read from the GLB JSON
 chunk. Runtime loading uses only these repository-local files.
+
+## Runtime presentation audit
+
+Both models author their front along local `+Z`. The data-driven traffic catalog
+uniformly scales each to 4.40 m long, centers it laterally, places its lowest
+point 0.02 m above the lane, and defines a 1.80 × 1.00 × 7.00 m forward detector.
+The static-world sweep retains a 0.75 m radius so curb geometry remains outside
+the traveled corridor.
+
+| Local file         | Source bounds (W × H × L) | Normalized bounds (W × H × L) | Safe maximum (W × H) |
+| ------------------ | ------------------------- | ----------------------------- | -------------------- |
+| `pickup-truck.glb` | 2.31 × 1.85 × 5.18 m      | 1.96 × 1.57 × 4.40 m          | 2.05 × 1.70 m        |
+| `sports-car.glb`   | 1.80 × 1.16 × 3.97 m      | 2.00 × 1.28 × 4.40 m          | 2.05 × 1.70 m        |
+
+The recursive local audit found no other vehicle GLBs. No synthetic variants
+were added because these two models are already materially distinct. Validation
+fails when a local GLB, a manifest entry marked `civilian-traffic`, and the
+runtime catalog stop matching one-to-one.

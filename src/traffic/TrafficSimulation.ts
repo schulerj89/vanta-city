@@ -1,3 +1,9 @@
+import {
+  trafficVehicleCatalog,
+  type TrafficVehicleDefinition,
+  type TrafficVehicleId,
+} from './TrafficVehicleCatalog';
+
 export type TrafficApproach = 'north' | 'east' | 'south' | 'west';
 export type TrafficAxis = 'north-south' | 'east-west';
 export type TrafficStopReason =
@@ -46,7 +52,6 @@ export interface TrafficConfig {
   readonly enabled: boolean;
   readonly maxPopulation: number;
   readonly speed: number;
-  readonly vehicleLength: number;
   readonly minimumSpacing: number;
   readonly detectionDistance: number;
   readonly spawnCadence: number;
@@ -57,7 +62,6 @@ export const defaultTrafficConfig: TrafficConfig = {
   enabled: true,
   maxPopulation: 6,
   speed: 4.5,
-  vehicleLength: 4.4,
   minimumSpacing: 2,
   detectionDistance: 7,
   spawnCadence: 4,
@@ -74,13 +78,15 @@ export interface TrafficVehicleSnapshot {
   readonly progress: number;
   readonly speed: number;
   readonly stoppingReason: TrafficStopReason;
-  readonly assetIndex: number;
+  readonly vehicleType: TrafficVehicleId;
+  readonly vehicleLength: number;
+  readonly detectionLength: number;
 }
 
 interface MutableVehicle {
   readonly id: string;
   readonly lane: TrafficLane;
-  readonly assetIndex: number;
+  readonly definition: TrafficVehicleDefinition;
   progress: number;
   speed: number;
   stoppingReason: TrafficStopReason;
@@ -103,12 +109,16 @@ export class TrafficSimulation {
 
   public constructor(
     public readonly config: TrafficConfig = defaultTrafficConfig,
+    private readonly catalog: readonly TrafficVehicleDefinition[] = trafficVehicleCatalog,
   ) {
     if (config.maxPopulation < 0 || !Number.isInteger(config.maxPopulation)) {
       throw new Error('Traffic maxPopulation must be a non-negative integer');
     }
     this.enabled = config.enabled;
     this.randomState = config.seed >>> 0;
+    if (catalog.length === 0) {
+      throw new Error('TrafficSimulation requires a vehicle catalog');
+    }
   }
 
   public setEnabled(enabled: boolean): void {
@@ -128,13 +138,15 @@ export class TrafficSimulation {
       (vehicle) =>
         vehicle.lane === lane &&
         vehicle.progress <
-          this.config.vehicleLength + this.config.minimumSpacing,
+          vehicle.definition.presentation.length + this.config.minimumSpacing,
     );
     if (rearBlocked) return undefined;
+    const definition = this.nextAvailableDefinition();
+    if (!definition) return undefined;
     const vehicle: MutableVehicle = {
       id: `traffic-${this.nextId++}`,
       lane,
-      assetIndex: this.spawned % 2,
+      definition,
       progress: 0,
       speed: 0,
       stoppingReason: undefined,
@@ -182,7 +194,10 @@ export class TrafficSimulation {
         const clearance =
           ahead.progress -
           vehicle.progress -
-          this.config.vehicleLength -
+          Math.max(
+            ahead.definition.presentation.length,
+            vehicle.definition.presentation.length,
+          ) -
           this.config.minimumSpacing;
         if (clearance < allowed) {
           allowed = Math.max(0, clearance);
@@ -207,7 +222,11 @@ export class TrafficSimulation {
       ] as const) {
         if (
           distance !== undefined &&
-          distance < this.config.detectionDistance
+          distance <
+            Math.min(
+              vehicle.definition.presentation.detectionLength,
+              this.config.detectionDistance,
+            )
         ) {
           const clearance = Math.max(0, distance - this.config.minimumSpacing);
           if (clearance < allowed) {
@@ -273,6 +292,31 @@ export class TrafficSimulation {
       (Math.imul(this.randomState, 1_664_525) + 1_013_904_223) >>> 0;
     return this.randomState;
   }
+
+  private nextAvailableDefinition(): TrafficVehicleDefinition | undefined {
+    for (let offset = 0; offset < this.catalog.length; offset += 1) {
+      const catalogIndex = (this.spawned + offset) % this.catalog.length;
+      const capacity = slotCapacity(
+        catalogIndex,
+        this.catalog.length,
+        this.config.maxPopulation,
+      );
+      const definition = this.catalog[catalogIndex]!;
+      const occupied = this.vehicles.filter(
+        (vehicle) => vehicle.definition.id === definition.id,
+      ).length;
+      if (occupied < capacity) return definition;
+    }
+    return undefined;
+  }
+}
+
+function slotCapacity(
+  index: number,
+  catalogSize: number,
+  poolSize: number,
+): number {
+  return Math.max(0, Math.ceil((poolSize - index) / catalogSize));
 }
 
 function snapshot(vehicle: MutableVehicle): TrafficVehicleSnapshot {
@@ -286,6 +330,8 @@ function snapshot(vehicle: MutableVehicle): TrafficVehicleSnapshot {
     progress: vehicle.progress,
     speed: vehicle.speed,
     stoppingReason: vehicle.stoppingReason,
-    assetIndex: vehicle.assetIndex,
+    vehicleType: vehicle.definition.id,
+    vehicleLength: vehicle.definition.presentation.length,
+    detectionLength: vehicle.definition.presentation.detectionLength,
   };
 }

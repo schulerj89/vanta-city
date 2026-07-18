@@ -17,6 +17,13 @@ test.describe('bounded autonomous traffic', () => {
       await expect
         .poll(async () => (await snapshot(page)).traffic.spawned)
         .toBe(run * 4);
+      const spawned = (await snapshot(page)).traffic;
+      expect(
+        new Set(spawned.vehicles.map(({ vehicleType }) => vehicleType)),
+      ).toEqual(new Set(spawned.catalog.map(({ id }) => id)));
+      expect(
+        spawned.catalog.every(({ activeVehicles }) => activeVehicles > 0),
+      ).toBe(true);
       await command(page, 'traffic.step', '3');
       await command(page, 'traffic.step', '3');
       expect((await snapshot(page)).traffic.despawned).toBe(run * 4);
@@ -25,6 +32,10 @@ test.describe('bounded autonomous traffic', () => {
     }
     const state = await snapshot(page);
     expect(state.traffic.pooledModels).toBe(6);
+    expect(state.traffic.catalog).toEqual([
+      expect.objectContaining({ id: 'pickup-truck', pooledModels: 3 }),
+      expect.objectContaining({ id: 'sports-car', pooledModels: 3 }),
+    ]);
     expect(state.runtimeErrors.count, state.runtimeErrors.last).toBe(0);
     expect(failures).toEqual([]);
   });
@@ -117,6 +128,9 @@ test.describe('bounded autonomous traffic', () => {
       .toBeGreaterThan(0);
     const state = await snapshot(page);
     expect(state.traffic.count).toBeLessThanOrEqual(6);
+    expect(
+      state.traffic.catalog.every(({ activeVehicles }) => activeVehicles > 0),
+    ).toBe(true);
     expect(state.performance.renderer.drawCalls).toBeLessThan(150);
     expect(state.performance.renderer.triangles).toBeLessThan(150_000);
     const runtime = state.performance.runtime;

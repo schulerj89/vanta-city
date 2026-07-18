@@ -27,16 +27,18 @@ import type {
   TrafficConfig,
   TrafficVehicleSnapshot,
 } from './TrafficSimulation';
-
-export const trafficAssetIds = [
-  'vehicle.traffic.pickup',
-  'vehicle.traffic.sports-car',
-] as const;
+import {
+  trafficVehicleById,
+  trafficVehicleCatalog,
+  type TrafficVehicleDefinition,
+  type TrafficVehicleId,
+  type VehicleForwardAxis,
+} from './TrafficVehicleCatalog';
 
 interface VehicleSlot {
   readonly instance: ModelInstance;
   readonly root: Group;
-  readonly assetIndex: number;
+  readonly vehicleType: TrafficVehicleId;
   readonly detection: Mesh;
   vehicleId?: string;
 }
@@ -76,11 +78,10 @@ export class TrafficSystem implements GameSystem {
         index < this.simulation.config.maxPopulation;
         index += 1
       ) {
-        const assetIndex = index % trafficAssetIds.length;
-        const instance = await this.assets.instantiateModel(
-          trafficAssetIds[assetIndex]!,
-        );
-        this.slots.push(this.createSlot(instance, assetIndex));
+        const definition =
+          trafficVehicleCatalog[index % trafficVehicleCatalog.length]!;
+        const instance = await this.assets.instantiateModel(definition.assetId);
+        this.slots.push(this.createSlot(instance, definition));
       }
       this.scene.add(this.root);
       this.registerDevelopmentControls();
@@ -128,11 +129,26 @@ export class TrafficSystem implements GameSystem {
 
   public getSnapshot(): ReturnType<TrafficSimulation['getSnapshot']> & {
     readonly pooledModels: number;
+    readonly catalog: readonly {
+      readonly id: TrafficVehicleId;
+      readonly assetId: string;
+      readonly pooledModels: number;
+      readonly activeVehicles: number;
+    }[];
     readonly visualizationVisible: boolean;
   } {
     return {
       ...this.simulation.getSnapshot(),
       pooledModels: this.slots.length,
+      catalog: trafficVehicleCatalog.map(({ id, assetId }) => ({
+        id,
+        assetId,
+        pooledModels: this.slots.filter(({ vehicleType }) => vehicleType === id)
+          .length,
+        activeVehicles: this.slots.filter(
+          ({ vehicleType, vehicleId }) => vehicleType === id && vehicleId,
+        ).length,
+      })),
       visualizationVisible: this.debugRoot.visible,
     };
   }
@@ -149,12 +165,15 @@ export class TrafficSystem implements GameSystem {
     this.state = undefined;
   }
 
-  private createSlot(instance: ModelInstance, assetIndex: number): VehicleSlot {
+  private createSlot(
+    instance: ModelInstance,
+    definition: TrafficVehicleDefinition,
+  ): VehicleSlot {
     const root = new Group();
     root.name = `traffic-model-slot:${this.slots.length}`;
     root.visible = false;
     const model = instance.scene;
-    normalizeVehicleModel(model);
+    normalizeVehicleModel(model, definition);
     model.traverse((child) => {
       if ('isMesh' in child) {
         const mesh = child as Mesh;
@@ -163,7 +182,15 @@ export class TrafficSystem implements GameSystem {
       }
     });
     root.add(model);
-    const geometry = own(this.debugResources, new BoxGeometry(1.8, 1, 7));
+    const { presentation } = definition;
+    const geometry = own(
+      this.debugResources,
+      new BoxGeometry(
+        presentation.detectionWidth,
+        presentation.detectionHeight,
+        presentation.detectionLength,
+      ),
+    );
     const material = own(
       this.debugResources,
       new MeshBasicMaterial({
@@ -179,7 +206,7 @@ export class TrafficSystem implements GameSystem {
     detection.visible = false;
     this.root.add(root);
     this.debugRoot.add(detection);
-    return { instance, root, assetIndex, detection };
+    return { instance, root, vehicleType: definition.id, detection };
   }
 
   private syncScene(): void {
@@ -196,11 +223,10 @@ export class TrafficSystem implements GameSystem {
     for (const vehicle of vehicles) {
       let slot = this.slots.find(({ vehicleId }) => vehicleId === vehicle.id);
       if (!slot) {
-        slot =
-          this.slots.find(
-            ({ vehicleId, assetIndex }) =>
-              vehicleId === undefined && assetIndex === vehicle.assetIndex,
-          ) ?? this.slots.find(({ vehicleId }) => vehicleId === undefined);
+        slot = this.slots.find(
+          ({ vehicleId, vehicleType }) =>
+            vehicleId === undefined && vehicleType === vehicle.vehicleType,
+        );
         if (!slot) continue;
         slot.vehicleId = vehicle.id;
       }
@@ -211,10 +237,13 @@ export class TrafficSystem implements GameSystem {
       const lane = ashfallTrafficLanes.find(
         ({ approach }) => approach === vehicle.approach,
       )!;
+      const presentation = trafficVehicleById(vehicle.vehicleType).presentation;
+      const detectorCenter =
+        presentation.length / 2 + presentation.detectionLength / 2;
       slot.detection.position.set(
-        vehicle.x + lane.directionX * 5.7,
-        0.7,
-        vehicle.z + lane.directionZ * 5.7,
+        vehicle.x + lane.directionX * detectorCenter,
+        presentation.detectionHeight / 2,
+        vehicle.z + lane.directionZ * detectorCenter,
       );
       slot.detection.rotation.y = vehicle.yaw;
     }
@@ -227,20 +256,23 @@ export class TrafficSystem implements GameSystem {
     const lane = ashfallTrafficLanes.find(
       ({ approach }) => approach === vehicle.approach,
     )!;
-    const frontX = vehicle.x + lane.directionX * 2.2;
-    const frontZ = vehicle.z + lane.directionZ * 2.2;
+    const presentation = trafficVehicleById(vehicle.vehicleType).presentation;
+    const frontX = vehicle.x + lane.directionX * (presentation.length / 2);
+    const frontZ = vehicle.z + lane.directionZ * (presentation.length / 2);
+    const detectionLength = Math.min(
+      presentation.detectionLength,
+      this.simulation.config.detectionDistance,
+    );
     const hit = this.collision.castDynamicSegment(
       new Vector3(frontX, 0.8, frontZ),
       new Vector3(
-        frontX + lane.directionX * this.simulation.config.detectionDistance,
+        frontX + lane.directionX * detectionLength,
         0.8,
-        frontZ + lane.directionZ * this.simulation.config.detectionDistance,
+        frontZ + lane.directionZ * detectionLength,
       ),
-      0.9,
+      presentation.detectionWidth / 2,
     );
-    return hit.obstructed
-      ? hit.fraction * this.simulation.config.detectionDistance
-      : undefined;
+    return hit.obstructed ? hit.fraction * detectionLength : undefined;
   }
 
   private staticObstacleDistance(
@@ -249,11 +281,14 @@ export class TrafficSystem implements GameSystem {
     const lane = ashfallTrafficLanes.find(
       ({ approach }) => approach === vehicle.approach,
     )!;
-    const frontX = vehicle.x + lane.directionX * 2.2;
-    const frontZ = vehicle.z + lane.directionZ * 2.2;
+    const presentation = trafficVehicleById(vehicle.vehicleType).presentation;
+    const halfLength = presentation.length / 2;
+    const frontX = vehicle.x + lane.directionX * halfLength;
+    const frontZ = vehicle.z + lane.directionZ * halfLength;
     const distance = Math.min(
+      presentation.detectionLength,
       this.simulation.config.detectionDistance,
-      Math.max(0, lane.length - vehicle.progress - 2.2),
+      Math.max(0, lane.length - vehicle.progress - halfLength),
     );
     if (distance <= 0) return undefined;
     const hit = this.collision.castSegment(
@@ -263,7 +298,7 @@ export class TrafficSystem implements GameSystem {
         0.9,
         frontZ + lane.directionZ * distance,
       ),
-      { radius: 0.75 },
+      { radius: presentation.staticSweepRadius },
     );
     return hit.obstructed ? hit.fraction * distance : undefined;
   }
@@ -347,8 +382,15 @@ export class TrafficSystem implements GameSystem {
             ? 'none'
             : vehicles
                 .map(
-                  ({ id, approach, progress, speed, stoppingReason }) =>
-                    `${id}:${approach}@${progress.toFixed(1)}m ${speed.toFixed(1)}m/s ${stoppingReason ?? 'moving'}`,
+                  ({
+                    id,
+                    vehicleType,
+                    approach,
+                    progress,
+                    speed,
+                    stoppingReason,
+                  }) =>
+                    `${id}[${vehicleType}]:${approach}@${progress.toFixed(1)}m ${speed.toFixed(1)}m/s ${stoppingReason ?? 'moving'}`,
                 )
                 .join(' | ');
         },
@@ -357,19 +399,45 @@ export class TrafficSystem implements GameSystem {
   }
 }
 
-function normalizeVehicleModel(model: Object3D): void {
+export function normalizeVehicleModel(
+  model: Object3D,
+  definition: TrafficVehicleDefinition,
+): void {
+  model.rotation.y += forwardAxisRotation(definition.presentation.forwardAxis);
   model.updateMatrixWorld(true);
   const initial = new Box3().setFromObject(model);
   const size = initial.getSize(new Vector3());
-  const horizontalLength = Math.max(size.x, size.z);
-  const scale = horizontalLength > 0 ? 4.4 / horizontalLength : 1;
+  const scale = size.z > 0 ? definition.presentation.length / size.z : 1;
   model.scale.multiplyScalar(scale);
   model.updateMatrixWorld(true);
   const scaled = new Box3().setFromObject(model);
   const center = scaled.getCenter(new Vector3());
   model.position.x -= center.x;
   model.position.z -= center.z;
-  model.position.y -= scaled.min.y;
+  model.position.y += definition.presentation.groundClearance - scaled.min.y;
+  model.updateMatrixWorld(true);
+  const normalizedSize = new Box3().setFromObject(model).getSize(new Vector3());
+  if (
+    normalizedSize.x > definition.presentation.maximumWidth + 1e-3 ||
+    normalizedSize.y > definition.presentation.maximumHeight + 1e-3
+  ) {
+    throw new Error(
+      `${definition.id} normalized bounds ${normalizedSize.x.toFixed(2)}×${normalizedSize.y.toFixed(2)} exceed presentation contract`,
+    );
+  }
+}
+
+function forwardAxisRotation(axis: VehicleForwardAxis): number {
+  switch (axis) {
+    case '+z':
+      return 0;
+    case '-z':
+      return Math.PI;
+    case '+x':
+      return -Math.PI / 2;
+    case '-x':
+      return Math.PI / 2;
+  }
 }
 
 function own<Resource extends BufferGeometry | Material>(
