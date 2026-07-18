@@ -59,6 +59,25 @@ async function exists(filePath) {
   }
 }
 
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function bootstrapLaunchAgent() {
+  const retryDelays = [0, 500, 1_500, 3_000];
+  let lastResult = null;
+  for (const retryDelay of retryDelays) {
+    if (retryDelay > 0) await delay(retryDelay);
+    lastResult = await run('launchctl', ['bootstrap', domain, installedPlist]);
+    if (lastResult.code === 0) return;
+    const loaded = await run('launchctl', ['print', service]);
+    if (loaded.code === 0) return;
+  }
+  throw new Error(
+    lastResult?.stderr || lastResult?.stdout || 'Bootstrap failed.',
+  );
+}
+
 async function legacyAutomationStatus() {
   const statuses = [];
   for (const id of legacyAutomationIds) {
@@ -187,15 +206,23 @@ async function install() {
   const lint = await run('plutil', ['-lint', installedPlist]);
   if (lint.code !== 0) throw new Error(lint.stderr || lint.stdout);
   await run('launchctl', ['bootout', service]);
-  const bootstrap = await run('launchctl', [
-    'bootstrap',
-    domain,
-    installedPlist,
-  ]);
-  if (bootstrap.code !== 0)
-    throw new Error(bootstrap.stderr || bootstrap.stdout);
+  await bootstrapLaunchAgent();
+  const loaded = await run('launchctl', ['print', service]);
+  if (loaded.code !== 0)
+    throw new Error('LaunchAgent bootstrap returned without a loaded service.');
   process.stdout.write(
-    `${JSON.stringify({ installed: true, service, installedPlist }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        installed: true,
+        service,
+        installedPlist,
+        pid:
+          Number.parseInt(loaded.stdout.match(/\bpid = (\d+)/)?.[1], 10) ||
+          null,
+      },
+      null,
+      2,
+    )}\n`,
   );
 }
 
