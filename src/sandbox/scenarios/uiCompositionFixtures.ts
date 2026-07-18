@@ -34,8 +34,7 @@ export const uiCompositionPresentationFixtures: Readonly<
   },
   'pause-map': {
     label: 'Pause / map',
-    supported: false,
-    unavailableReason: 'MAP-001 will provide the full-world map presentation.',
+    supported: true,
   },
   loading: {
     label: 'Loading',

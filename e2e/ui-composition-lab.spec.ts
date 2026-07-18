@@ -28,6 +28,7 @@ test.describe('Ashfall UI composition lab', () => {
     page,
   }) => {
     expect(uiCompositionPresentationFixtures.exploration.supported).toBe(true);
+    expect(uiCompositionPresentationFixtures['pause-map'].supported).toBe(true);
     expect(uiCompositionPresentationFixtures['mission-update']).toMatchObject({
       supported: true,
     });
@@ -90,6 +91,7 @@ test.describe('Ashfall UI composition lab', () => {
       background: 'bright',
       viewport: { width: 1920, height: 800 },
     },
+    { name: 'pause-map-desktop', state: 'pause-map', background: 'dark' },
   ] as const) {
     test(`${sample.name} @visual`, async ({ page }) => {
       if ('viewport' in sample && sample.viewport)

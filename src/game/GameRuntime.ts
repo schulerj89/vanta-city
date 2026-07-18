@@ -1,5 +1,6 @@
 import { EventBus } from '../core/events';
 import { GameStateMachine } from '../core/gameState';
+import type { GameState } from '../core/gameState';
 import type { StateEvents } from '../core/gameState';
 import { SystemRegistry } from '../core/lifecycle';
 import type { GameSystem } from '../core/lifecycle';
@@ -104,6 +105,23 @@ export class GameRuntime {
     this.systems.resume();
   }
 
+  public enterMap(): Extract<GameState, 'playing' | 'paused'> | undefined {
+    const previous = this.state.current;
+    if (previous !== 'playing' && previous !== 'paused') return undefined;
+    if (previous === 'playing') this.systems.pause();
+    this.state.transition('map');
+    this.input.consumeTransientActions?.();
+    return previous;
+  }
+
+  public exitMap(returnState: Extract<GameState, 'playing' | 'paused'>): void {
+    if (this.state.current !== 'map') return;
+    this.input.consumeTransientActions?.();
+    this.state.transition(returnState);
+    this.clock.resetFrameDelta();
+    if (returnState === 'playing') this.systems.resume();
+  }
+
   public dispose(): void {
     this.running = false;
     if (this.animationFrame !== undefined)
@@ -133,6 +151,7 @@ export class GameRuntime {
     this.systems.update(
       time,
       this.state.current !== 'paused' &&
+        this.state.current !== 'map' &&
         this.state.current !== 'character-select',
     );
     if (started !== undefined && this.diagnostics) {

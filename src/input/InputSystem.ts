@@ -389,15 +389,22 @@ export class InputSystem
     if (modal.classList.contains('character-picker')) {
       return action.startsWith('picker');
     }
+    if (modal.classList.contains('full-world-map')) {
+      return (
+        action === 'toggleMap' ||
+        action === 'closeMap' ||
+        action.startsWith('map')
+      );
+    }
     return false;
   }
 
   private activeModal(): HTMLElement | undefined {
-    return (
-      document.querySelector<HTMLElement>(
+    return Array.from(
+      document.querySelectorAll<HTMLElement>(
         '[aria-modal="true"]:not([hidden])',
-      ) ?? undefined
-    );
+      ),
+    ).at(-1);
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {

@@ -112,6 +112,9 @@ function formatCoordinate(value: number): string {
 
 function isGameplayHudState(state: GameState | undefined): boolean {
   return (
-    state !== undefined && state !== 'booting' && state !== 'character-select'
+    state !== undefined &&
+    state !== 'booting' &&
+    state !== 'map' &&
+    state !== 'character-select'
   );
 }

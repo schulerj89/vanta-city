@@ -4,6 +4,7 @@ export type GameState =
   | 'booting'
   | 'playing'
   | 'paused'
+  | 'map'
   | 'dialogue'
   | 'cinematic'
   | 'character-select';
@@ -14,8 +15,9 @@ export interface StateEvents {
 
 const allowedTransitions: Readonly<Record<GameState, readonly GameState[]>> = {
   booting: ['playing'],
-  playing: ['paused', 'dialogue', 'cinematic', 'character-select'],
-  paused: ['playing', 'character-select'],
+  playing: ['paused', 'map', 'dialogue', 'cinematic', 'character-select'],
+  paused: ['playing', 'map', 'character-select'],
+  map: ['playing', 'paused'],
   dialogue: ['playing', 'paused', 'cinematic', 'character-select'],
   cinematic: ['playing', 'paused', 'dialogue', 'character-select'],
   'character-select': ['playing', 'paused', 'dialogue', 'cinematic'],

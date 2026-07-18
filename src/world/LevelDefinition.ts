@@ -70,6 +70,8 @@ export type LocationKind = 'interaction' | 'mission';
 
 export interface NamedLocationDefinition extends WorldEntry {
   readonly kind: LocationKind;
+  /** Player-facing authored label for map and objective presentation. */
+  readonly name?: string;
   readonly tags?: readonly string[];
 }
 
@@ -264,6 +266,11 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
   for (const zone of definition.zones) {
     if (zone.name.trim().length === 0) issues.push(`${zone.id}.name is empty`);
     validateOptionalPriority(zone.priority, `${zone.id}.priority`, issues);
+  }
+  for (const location of definition.locations) {
+    if (location.name !== undefined && location.name.trim().length === 0) {
+      issues.push(`${location.id}.name is empty`);
+    }
   }
   for (const landmark of definition.landmarks) {
     if (landmark.name.trim().length === 0)

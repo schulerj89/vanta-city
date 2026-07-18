@@ -148,7 +148,7 @@ describe('GamepadInputAdapter', () => {
     expect(input.getDebugSnapshot().lastRawRejection).toMatchObject({
       device: 'keyboard',
       control: 'KeyW',
-      actions: ['moveForward'],
+      actions: ['mapPanUp', 'moveForward'],
       reason: 'focused-text-entry',
     });
 

@@ -55,6 +55,7 @@ import { LoadingScreen } from './ui/LoadingScreen';
 import { HealthHudSystem } from './ui/HealthHudSystem';
 import { LocationHudSystem } from './ui/LocationHudSystem';
 import { MinimapHudSystem } from './ui/MinimapHudSystem';
+import { FullWorldMapSystem } from './ui/FullWorldMapSystem';
 import type { SparringTargetSystem } from './debug/SparringTargetSystem';
 import { sparringTargetConfig } from './debug/sparringTarget';
 import { LevelRegistry } from './world/LevelRegistry';
@@ -473,6 +474,13 @@ async function bootstrap(): Promise<void> {
     player,
     levelSystem,
   );
+  const fullWorldMap = new FullWorldMapSystem(
+    uiLayout.zone('modal'),
+    runtime,
+    input,
+    player,
+    levelSystem,
+  );
   const unregisterCombatVolumes =
     development && sparringTarget
       ? development.visualHelpers.register('combatVolumes', {
@@ -681,6 +689,7 @@ async function bootstrap(): Promise<void> {
     .register(objects)
     .register(uiLayout)
     .register(help)
+    .register(fullWorldMap)
     .register(player)
     .register(weaponAim)
     .register(playerDeath)
@@ -766,6 +775,7 @@ async function bootstrap(): Promise<void> {
           proximityPickups,
           locationHud,
           minimapHud,
+          fullWorldMap,
           conversations,
           characterSelection,
           characterVisual,

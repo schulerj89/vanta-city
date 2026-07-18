@@ -453,12 +453,14 @@ export const testDistrict = {
       {
         id: 'interaction.signal-controller',
         kind: 'interaction',
+        name: 'Signal Controller',
         position: intersectionLayout.signalController,
         tags: ['street', 'signal'],
       },
       {
         id: 'mission.intersection-center',
         kind: 'mission',
+        name: 'Ashfall Crossing',
         position: [0, 0, 0],
         tags: ['future', 'intersection'],
       },

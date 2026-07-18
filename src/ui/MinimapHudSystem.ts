@@ -3,21 +3,27 @@ import type { GameSystem } from '../core/lifecycle';
 import type { FrameTime } from '../core/time';
 import type { GameContext } from '../game/GameRuntime';
 import type {
-  BoxVisualDefinition,
-  BuildingVisualDefinition,
-  SplineRoadVisualDefinition,
   LevelDefinition,
   LevelMapBoundsDefinition,
   LevelMapLayer,
-  TransformDefinition,
 } from '../world/LevelDefinition';
-import { getAshfallBuildingVariant } from '../world/buildings/AshfallBuildingKit';
-import { sampleSplineRoad } from '../world/levels/SplineRoadGeometry';
 import type { ResolvedLevelLocation } from '../world/LocationResolver';
 import type { WorldPoseSource, WorldPosition } from '../world/Spatial';
+import {
+  headingDegreesFromForward,
+  levelMapViewSize,
+  projectWorldToMap,
+  resolveLevelMapGeometry,
+  resolveLevelMapMarkers,
+} from './LevelMapPresentation';
+
+export {
+  headingDegreesFromForward,
+  projectWorldToMap,
+} from './LevelMapPresentation';
 
 const svgNamespace = 'http://www.w3.org/2000/svg';
-const mapSize = 100;
+const mapSize = levelMapViewSize;
 const updateInterval = 0.1;
 const layerOrder: readonly LevelMapLayer[] = [
   'roads',
@@ -190,88 +196,48 @@ export class MinimapHudSystem implements GameSystem<GameContext> {
     const map = level.mapPresentation;
     if (!map) return;
     for (const group of this.groups.values()) group.replaceChildren();
-    const geometry = new Map(
-      level.environment
-        .filter(
-          (
-            entry,
-          ): entry is
-            | BoxVisualDefinition
-            | BuildingVisualDefinition
-            | SplineRoadVisualDefinition =>
-            entry.kind === 'box' ||
-            entry.kind === 'building' ||
-            entry.kind === 'spline-road',
-        )
-        .map((entry) => [entry.id, entry]),
-    );
-    for (const reference of map.geometry) {
-      const entry = geometry.get(reference.entryId);
-      if (!entry) continue;
-      if (entry.kind === 'spline-road') {
+    for (const primitive of resolveLevelMapGeometry(level)) {
+      if (primitive.kind === 'path') {
         const path = document.createElementNS(svgNamespace, 'path');
         path.setAttribute(
           'd',
-          sampleSplineRoad(entry)
-            .map(({ position }, index) => {
-              const point = projectTupleToMap(position, map.bounds);
-              return `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`;
-            })
+          primitive.points
+            .map(
+              (point, index) =>
+                `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`,
+            )
             .join(' '),
         );
-        path.setAttribute(
-          'stroke-width',
-          String((entry.width / (map.bounds.maxX - map.bounds.minX)) * mapSize),
-        );
+        path.setAttribute('stroke-width', String(primitive.strokeWidth));
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('stroke-linejoin', 'round');
-        path.dataset.entryId = entry.id;
-        this.groups.get(reference.layer)?.append(path);
+        path.dataset.entryId = primitive.entryId;
+        this.groups.get(primitive.layer)?.append(path);
         continue;
       }
-      const rectGeometry = mapGeometry(entry);
-      const topLeft = projectWorldToMap(
-        {
-          x: rectGeometry.position[0] - rectGeometry.size[0] / 2,
-          z: rectGeometry.position[2] + rectGeometry.size[2] / 2,
-        },
-        map.bounds,
-      );
-      const bottomRight = projectWorldToMap(
-        {
-          x: rectGeometry.position[0] + rectGeometry.size[0] / 2,
-          z: rectGeometry.position[2] - rectGeometry.size[2] / 2,
-        },
-        map.bounds,
-      );
       const rect = document.createElementNS(svgNamespace, 'rect');
-      rect.setAttribute('x', String(topLeft.x));
-      rect.setAttribute('y', String(topLeft.y));
-      rect.setAttribute('width', String(bottomRight.x - topLeft.x));
-      rect.setAttribute('height', String(bottomRight.y - topLeft.y));
-      rect.setAttribute('rx', reference.layer === 'roads' ? '1.5' : '2.5');
-      const yaw = rectGeometry.rotation?.[1] ?? 0;
-      if (Math.abs(yaw) > 1e-6) {
-        const center = projectTupleToMap(rectGeometry.position, map.bounds);
+      rect.setAttribute('x', String(primitive.x));
+      rect.setAttribute('y', String(primitive.y));
+      rect.setAttribute('width', String(primitive.width));
+      rect.setAttribute('height', String(primitive.height));
+      rect.setAttribute('rx', primitive.layer === 'roads' ? '1.5' : '2.5');
+      if (Math.abs(primitive.rotationDegrees) > 1e-6) {
         rect.setAttribute(
           'transform',
-          `rotate(${(yaw * 180) / Math.PI} ${center.x} ${center.y})`,
+          `rotate(${primitive.rotationDegrees} ${primitive.center.x} ${primitive.center.y})`,
         );
       }
-      rect.dataset.entryId = entry.id;
-      this.groups.get(reference.layer)?.append(rect);
+      rect.dataset.entryId = primitive.entryId;
+      this.groups.get(primitive.layer)?.append(rect);
     }
-    for (const reference of map.markers) {
-      const entry = findMapEntry(level, reference.entryId);
-      if (!entry) continue;
-      const point = projectTupleToMap(entry.position, map.bounds);
+    for (const primitive of resolveLevelMapMarkers(level)) {
       const marker = document.createElementNS(svgNamespace, 'circle');
-      marker.setAttribute('cx', String(point.x));
-      marker.setAttribute('cy', String(point.y));
-      marker.setAttribute('r', reference.layer === 'landmarks' ? '1.8' : '2.2');
-      marker.dataset.entryId = reference.entryId;
-      this.groups.get(reference.layer)?.append(marker);
+      marker.setAttribute('cx', String(primitive.point.x));
+      marker.setAttribute('cy', String(primitive.point.y));
+      marker.setAttribute('r', primitive.layer === 'landmarks' ? '1.8' : '2.2');
+      marker.dataset.entryId = primitive.entryId;
+      this.groups.get(primitive.layer)?.append(marker);
     }
     for (const layer of layerOrder)
       this.setLayerVisible(layer, this.layerVisibility[layer]);
@@ -280,59 +246,15 @@ export class MinimapHudSystem implements GameSystem<GameContext> {
   }
 }
 
-function mapGeometry(
-  entry: BoxVisualDefinition | BuildingVisualDefinition,
-): TransformDefinition & {
-  readonly id: string;
-  readonly size: readonly [number, number, number];
-} {
-  if (entry.kind === 'box') return entry;
-  const variant = getAshfallBuildingVariant(entry.variantId);
-  return {
-    ...entry,
-    size: [variant.footprint[0], variant.height, variant.footprint[1]],
-  };
-}
-
-export function projectWorldToMap(
-  position: Pick<WorldPosition, 'x' | 'z'>,
-  bounds: LevelMapBoundsDefinition,
-): { readonly x: number; readonly y: number } {
-  return {
-    x: ((position.x - bounds.minX) / (bounds.maxX - bounds.minX)) * mapSize,
-    y: ((bounds.maxZ - position.z) / (bounds.maxZ - bounds.minZ)) * mapSize,
-  };
-}
-
-export function headingDegreesFromForward(
-  forward: Pick<WorldPosition, 'x' | 'z'>,
-): number {
-  const degrees = (Math.atan2(forward.x, forward.z) * 180) / Math.PI;
-  return (degrees + 360) % 360;
-}
-
-function projectTupleToMap(
-  position: readonly [number, number, number],
-  bounds: LevelMapBoundsDefinition,
-): { readonly x: number; readonly y: number } {
-  return projectWorldToMap({ x: position[0], z: position[2] }, bounds);
-}
-
-function findMapEntry(
-  level: LevelDefinition,
-  id: string,
-): TransformDefinition | undefined {
-  return [...level.landmarks, ...level.locations, ...level.spawns].find(
-    (entry) => entry.id === id,
-  );
-}
-
 function cardinalHeading(degrees: number): string {
   return ['north', 'east', 'south', 'west'][Math.round(degrees / 90) % 4]!;
 }
 
 function isGameplayHudState(state: GameState | undefined): boolean {
   return (
-    state !== undefined && state !== 'booting' && state !== 'character-select'
+    state !== undefined &&
+    state !== 'booting' &&
+    state !== 'map' &&
+    state !== 'character-select'
   );
 }

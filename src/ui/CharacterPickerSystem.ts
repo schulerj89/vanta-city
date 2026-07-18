@@ -54,8 +54,7 @@ export class CharacterPickerSystem implements GameSystem {
   private input: InputReader | undefined;
   private state: GameStateMachine | undefined;
   private unsubscribeSelection: (() => void) | undefined;
-  private returnState: Exclude<GameState, 'booting' | 'character-select'> =
-    'playing';
+  private returnState: Extract<GameState, 'playing' | 'paused'> = 'playing';
   private openState = false;
   private disposed = false;
   private focusedId: string;
@@ -126,7 +125,7 @@ export class CharacterPickerSystem implements GameSystem {
   public open(): void {
     if (this.openState || !this.state) return;
     const current = this.state.current;
-    if (current === 'booting' || current === 'character-select') return;
+    if (current !== 'playing' && current !== 'paused') return;
     this.returnState = current;
     const selected = this.definitionById(this.selection.getSelectedId());
     this.focusedId = selected?.id ?? this.definitions[0]!.id;

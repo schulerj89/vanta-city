@@ -133,6 +133,19 @@ class UiCompositionLabSystem implements GameSystem<GameContext> {
       return;
     }
 
+    if (this.current.state === 'pause-map') {
+      this.add(
+        'modal',
+        html(`<section class="full-world-map" role="dialog" aria-modal="true" aria-labelledby="full-world-map-title">
+          <div class="full-world-map__frame">
+            <header class="full-world-map__header"><div><span class="full-world-map__eyebrow">Municipal survey 94</span><h1 id="full-world-map-title">Ashfall Junction map</h1></div><button type="button">Close <kbd>M</kbd></button></header>
+            <div class="full-world-map__body"><div class="full-world-map__canvas"><svg class="full-world-map__svg" viewBox="0 0 100 100" role="img" aria-label="North-up Ashfall Junction map"><g class="full-world-map__grid"><path d="M10 0v100M20 0v100M30 0v100M40 0v100M50 0v100M60 0v100M70 0v100M80 0v100M90 0v100M0 10h100M0 20h100M0 30h100M0 40h100M0 50h100M0 60h100M0 70h100M0 80h100M0 90h100"/></g><g class="full-world-map__roads"><path d="M0 56h100" stroke-width="13"/><path d="M42 0v100" stroke-width="11"/><path d="M58 58c9-12 21-15 42-18" stroke-width="8"/></g><g class="full-world-map__structures"><rect x="10" y="18" width="18" height="12"/><rect x="56" y="16" width="19" height="14"/><rect x="12" y="70" width="16" height="18"/><rect x="61" y="68" width="14" height="17"/><rect x="82" y="25" width="12" height="10"/></g><g class="full-world-map__places"><circle cx="24" cy="44" r="1.5"/><circle cx="68" cy="48" r="1.5"/><circle cx="86" cy="38" r="1.5"/></g><path class="full-world-map__player" d="M0-2.2L1.7 1.8 0 .9-1.7 1.8Z" transform="translate(48 55) rotate(35)"/><rect class="full-world-map__boundary" x=".4" y=".4" width="99.2" height="99.2"/><text class="full-world-map__north" x="50" y="5">N</text></svg></div><aside class="full-world-map__index"><p class="full-world-map__coordinates">Relay Row · X +4.2 / Z −11.8</p><h2>Places</h2><ol><li><button><i></i><span>Relay Row</span><small>landmark</small></button></li><li><button><i></i><span>Ashfall Crossing</span><small>mission</small></button></li><li><button><i></i><span>Signal Controller</span><small>interaction</small></button></li></ol></aside></div>
+            <footer class="full-world-map__controls"><span>Pan <kbd>WASD</kbd> / <kbd>D-pad</kbd></span><div><button>−</button><output>100%</output><button>+</button><button>Reset</button></div></footer>
+          </div></section>`),
+      );
+      return;
+    }
+
     this.add(
       'player-status',
       html(`<div class="player-hud-cluster" aria-label="Player status">

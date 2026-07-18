@@ -21,6 +21,7 @@ export type InputControlOwner =
   | 'booting'
   | 'gameplay'
   | 'paused'
+  | 'map'
   | 'help'
   | 'picker'
   | 'dialogue'
@@ -28,7 +29,7 @@ export type InputControlOwner =
   | 'focused-ui';
 
 export type InputActionFamily =
-  'gameplay' | 'interface' | 'help' | 'picker' | 'dialogue' | 'debug';
+  'gameplay' | 'interface' | 'map' | 'help' | 'picker' | 'dialogue' | 'debug';
 
 export interface OwnedDeviceActions extends InputDeviceActionSnapshot {
   readonly accepted: readonly ActionName[];
@@ -45,6 +46,7 @@ export interface RejectedInputSnapshot {
     | 'help-modal-owns-input'
     | 'picker-modal-owns-input'
     | 'dialogue-owns-input'
+    | 'map-owns-input'
     | 'gameplay-paused'
     | 'cinematic-owns-input'
     | 'game-not-ready';
@@ -232,6 +234,7 @@ export class InputOwnershipInspector implements GameSystem {
       return 'dialogue';
     }
     if (this.state.current === 'character-select') return 'picker';
+    if (this.state.current === 'map') return 'map';
     if (this.state.current === 'playing') return 'gameplay';
     return this.state.current;
   }
@@ -455,6 +458,12 @@ export class InputOwnershipInspector implements GameSystem {
 }
 
 function actionFamilyFor(action: ActionName): InputActionFamily {
+  if (
+    action === 'toggleMap' ||
+    action === 'closeMap' ||
+    action.startsWith('map')
+  )
+    return 'map';
   if (action.startsWith('picker')) return 'picker';
   if (
     action === 'advanceDialogue' ||
@@ -483,11 +492,13 @@ function actionAcceptedBy(
     return action === 'closeHelp' || action === 'toggleHelp';
   if (owner === 'picker') return family === 'picker';
   if (owner === 'dialogue') return family === 'dialogue';
+  if (owner === 'map') return family === 'map';
   if (owner === 'paused') {
     return [
       'pause',
       'toggleHelp',
       'openCharacterPicker',
+      'toggleMap',
       'toggleDebug',
     ].includes(action);
   }
@@ -514,6 +525,7 @@ function rejectionReason(
   if (owner === 'help') return 'help-modal-owns-input';
   if (owner === 'picker') return 'picker-modal-owns-input';
   if (owner === 'dialogue') return 'dialogue-owns-input';
+  if (owner === 'map') return 'map-owns-input';
   if (owner === 'paused') return 'gameplay-paused';
   if (owner === 'cinematic') return 'cinematic-owns-input';
   return 'game-not-ready';

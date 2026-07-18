@@ -29,4 +29,19 @@ describe('GameStateMachine', () => {
     state.transition('playing');
     expect(state.current).toBe('playing');
   });
+
+  it('returns from the map to the exact playing or paused source state', () => {
+    const fromPlaying = new GameStateMachine(new EventBus<StateEvents>());
+    fromPlaying.transition('playing');
+    fromPlaying.transition('map');
+    fromPlaying.transition('playing');
+    expect(fromPlaying.current).toBe('playing');
+
+    const fromPaused = new GameStateMachine(new EventBus<StateEvents>());
+    fromPaused.transition('playing');
+    fromPaused.transition('paused');
+    fromPaused.transition('map');
+    fromPaused.transition('paused');
+    expect(fromPaused.current).toBe('paused');
+  });
 });

@@ -8,6 +8,7 @@ const domTestFiles = [
   'tests/diagnosticRecorder.test.ts',
   'tests/dialogueUI.test.ts',
   'tests/gamepadInput.test.ts',
+  'tests/fullWorldMap.test.ts',
   'tests/healthHud.test.ts',
   'tests/helpOverlay.test.ts',
   'tests/input.test.ts',
