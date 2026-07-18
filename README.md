@@ -103,4 +103,6 @@ pnpm test:e2e:release # exhaustive 71-test milestone/release gate only
 
 Use `pnpm preview` for a final manual check of the production build when relevant.
 
+Run `pnpm playtest:bot` for a bounded recorded production playtest with a deterministic critical path, two seeded explorations, public-surface diagnostics, video/screenshots, and ignored retention-limited reports. See [Recorded production playtest bot](docs/playtest-bot.md).
+
 See [Architecture](docs/architecture.md) and [First-wave integration decisions](docs/first-wave-integration.md) for design decisions, [World levels](docs/world-levels.md) for level APIs and environment GLB registration, [Unit-test performance](docs/test-suite-performance.md) for profiling and environment ownership, and [Browser smoke tests](docs/browser-smoke-tests.md) for deterministic playable-slice validation.

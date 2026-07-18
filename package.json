@@ -26,6 +26,7 @@
     "test:e2e:profile:parallel": "node scripts/profile-browser-tests.mjs --workers=2",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:install": "playwright install chromium",
+    "playtest:bot": "tsx scripts/playbot/run.ts",
     "sandbox": "vite --open '/?sandbox=foundation&debug=1'",
     "camera-lab": "vite --open '/?sandbox=camera-composition&debug=1'",
     "lab:characters": "vite --open '/?sandbox=character-animation-lab&debug=1'",
