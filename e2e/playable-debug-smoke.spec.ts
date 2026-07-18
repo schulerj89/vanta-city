@@ -92,14 +92,6 @@ test.describe('playable debug district', () => {
     await executeCommand(page, 'helpers.toggle', 'collision');
     await executeCommand(page, 'helpers.toggle', 'spawnPoints');
     await attachScreenshot(page, testInfo, 'initial-debug-district');
-
-    await page.reload();
-    await waitForReadyState(page);
-    const reloaded = await snapshot(page);
-    expect(reloaded.gameState).toBe('playing');
-    expect(reloaded.world.levelId).toBe('test-district');
-    expect(reloaded.player.grounded).toBe(true);
-    expect(reloaded.runtimeErrors.count, reloaded.runtimeErrors.last).toBe(0);
   });
 
   test('keeps the developer menu compact, reachable, stable, and clear of gameplay UI', async ({

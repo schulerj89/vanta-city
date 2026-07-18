@@ -13,6 +13,15 @@ async function waitForModel(page: import('@playwright/test').Page, id: string) {
   await expect.poll(async () => (await labSnapshot(page)).ready).toBe(true);
 }
 
+async function waitForRenderedFrame(page: import('@playwright/test').Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+}
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   runtimeErrors.set(page, errors);
@@ -256,7 +265,7 @@ test('renders stable playable and NPC grounding diagnostics @visual', async ({
     lab.setOverlay('bounds', true);
     lab.setOverlay('alignment', true);
   });
-  await page.waitForTimeout(500);
+  await waitForRenderedFrame(page);
   await expect(page.locator('.animation-lab')).toHaveScreenshot(
     'animation-lab-casual-controls.png',
     {
@@ -275,7 +284,7 @@ test('renders stable playable and NPC grounding diagnostics @visual', async ({
     window.__VANTA_ANIMATION_LAB__!.setNormalizedTime(0);
   });
   await waitForModel(page, 'punk');
-  await page.waitForTimeout(500);
+  await waitForRenderedFrame(page);
   await testInfo.attach('punk-bounds-grounding.png', {
     body: await page.screenshot(),
     contentType: 'image/png',
@@ -288,7 +297,7 @@ test('renders stable playable and NPC grounding diagnostics @visual', async ({
     window.__VANTA_ANIMATION_LAB__!.setOverlay('skeleton', true);
   });
   await waitForModel(page, 'npc-worker');
-  await page.waitForTimeout(500);
+  await waitForRenderedFrame(page);
   await expect(page.locator('.animation-lab')).toHaveScreenshot(
     'animation-lab-animated-man-controls.png',
     {
