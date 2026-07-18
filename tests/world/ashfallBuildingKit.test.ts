@@ -36,7 +36,7 @@ describe('Ashfall building kit', () => {
   });
 
   it('uses only the controlled local generated texture palette', () => {
-    expect(Object.keys(ashfallBuildingAssets)).toHaveLength(5);
+    expect(Object.keys(ashfallBuildingAssets)).toHaveLength(7);
     for (const descriptor of Object.values(ashfallBuildingAssets)) {
       expect(descriptor.type).toBe('texture');
       expect(descriptor.url).toMatch(
@@ -48,12 +48,14 @@ describe('Ashfall building kit', () => {
   });
 
   it('pairs each placed shell with an equivalent authored collision footprint', () => {
+    expect(ashfallBuildingPlacements).toHaveLength(8);
     for (const placement of ashfallBuildingPlacements) {
       const definition = getAshfallBuildingVariant(placement.visual.variantId);
+      const rotated = Math.abs(placement.visual.rotation?.[1] ?? 0) > 0.5;
       expect(placement.collider.size).toEqual([
-        definition.footprint[0],
+        rotated ? definition.footprint[1] : definition.footprint[0],
         definition.height,
-        definition.footprint[1],
+        rotated ? definition.footprint[0] : definition.footprint[1],
       ]);
       expect(placement.collider.tags).toEqual(
         expect.arrayContaining(['obstacle', 'camera', 'building']),
@@ -114,7 +116,36 @@ describe('Ashfall building kit', () => {
     }
   });
 
-  it('builds all variants through one cached five-texture renderer', async () => {
+  it('keeps an exact four-metre walking band and non-overlapping authored footprints', () => {
+    const roadEdge = intersectionLayout.roadWidth / 2;
+    const clearances = ashfallBuildingPlacements.flatMap(({ collider }) => {
+      const [width, , depth] = collider.size;
+      const [x, , z] = collider.position;
+      return [
+        Math.abs(x) - width / 2 - roadEdge,
+        Math.abs(z) - depth / 2 - roadEdge,
+      ];
+    });
+    expect(Math.min(...clearances)).toBe(intersectionLayout.sidewalkWidth);
+
+    for (let left = 0; left < ashfallBuildingPlacements.length; left += 1) {
+      const a = ashfallBuildingPlacements[left]!.collider;
+      for (
+        let right = left + 1;
+        right < ashfallBuildingPlacements.length;
+        right += 1
+      ) {
+        const b = ashfallBuildingPlacements[right]!.collider;
+        const overlapX =
+          Math.abs(a.position[0] - b.position[0]) < (a.size[0] + b.size[0]) / 2;
+        const overlapZ =
+          Math.abs(a.position[2] - b.position[2]) < (a.size[2] + b.size[2]) / 2;
+        expect(overlapX && overlapZ, `${a.id} overlaps ${b.id}`).toBe(false);
+      }
+    }
+  });
+
+  it('builds all variants through one cached five-building-texture renderer', async () => {
     const loadTexture = vi.fn(() => Promise.resolve(new Texture()));
     const assets: GameAssetLoader = {
       loadTexture,

@@ -54,7 +54,7 @@ test.describe('authoritative intersection collision', () => {
     await openReadyApp(page);
     await command(page, 'helpers.toggle', 'collision');
     for (let run = 0; run < 3; run += 1) {
-      await command(page, 'player.teleport-position', '-15,0.22,10,3.141593');
+      await command(page, 'player.teleport-position', '-15,0.22,18,0');
       await page.waitForFunction(
         () => window.__VANTA_TEST__!.snapshot().camera.obstructed,
       );

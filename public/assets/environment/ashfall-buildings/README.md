@@ -1,13 +1,27 @@
-# Ashfall generated building textures
+# Ashfall generated streetscape textures
 
-These five textures are original project assets generated with the Codex built-in image-generation tool on 2026-07-17. They were resized from the generated 1254×1254 PNG outputs to 512×512 JPEG at quality 82 for local runtime use. No external texture source or third-party license is involved, and the game performs no runtime network request for them.
+These seven original project assets were produced with the Codex built-in image-generation tool on 2026-07-17. Generated 1254×1254 PNG sources were resized to 512×512 JPEG at quality 82 for local runtime use. No external texture source or third-party license is involved, and the game performs no runtime network request for them.
 
-| Runtime file                    | Generated source retained by Codex              | Intent                                            |
-| ------------------------------- | ----------------------------------------------- | ------------------------------------------------- |
-| `concrete-deco.generated.jpg`   | `exec-5de483bf-accf-4caf-a078-8a305be688f4.png` | Ash-gray concrete with faded teal deco scoring    |
-| `brick-stucco.generated.jpg`    | `exec-a5e4b8b6-4224-47c6-b919-709b34d20265.png` | Patched brick, sand stucco, and teal bands        |
-| `corrugated-teal.generated.jpg` | `exec-117302c9-7448-462d-bc0e-4e1e16cd3366.png` | Oxidized blue-green corrugated metal              |
-| `window-deco.generated.jpg`     | `exec-8d35642a-755f-4f00-a219-d691969b0ff6.png` | Opaque smoked windows in weathered teal deco bays |
-| `roof-membrane.generated.jpg`   | `exec-a3676afa-1882-4e1c-8bc5-d30884d71cd8.png` | Charcoal patched industrial roof membrane         |
+| Runtime file                      | Generated source retained by Codex              | Intent                                              |
+| --------------------------------- | ----------------------------------------------- | --------------------------------------------------- |
+| `concrete-deco.generated.jpg`     | `exec-4d7e5e7f-846d-4b3c-82d4-f4182de6ab13.png` | Three-bay concrete facade with teal deco scoring    |
+| `brick-stucco.generated.jpg`      | `exec-e0d35a3c-513e-4f83-8e75-7f57c597e331.png` | Brick/stucco storefront bays, bulkheads, and fascia |
+| `window-deco.generated.jpg`       | `exec-5a8cfdbd-c9b8-43d9-8f13-fb5b73bdc884.png` | Opaque office windows with vertical piers           |
+| `corrugated-teal.generated.jpg`   | `exec-8b130b78-10d7-472e-88a6-427aee6f1662.png` | Corrugated service wall and concrete plinth         |
+| `roof-membrane.generated.jpg`     | `exec-b2f849b6-09af-411e-9643-98ea4bdb6e7a.png` | Charcoal patched industrial roof membrane           |
+| `sidewalk-concrete.generated.jpg` | `exec-02f69c63-b630-4a64-8f87-3d3d577a9349.png` | Scored pale concrete sidewalk slabs                 |
+| `curb-aggregate.generated.jpg`    | `exec-6c0c77e9-1545-4fb9-a568-b876e51be461.png` | Warm-gray salt-weathered aggregate curb face        |
 
-All prompts specified a square tileable orthographic flat-albedo game texture, continuous edges, neutral diffuse lighting, no text/logos/objects, and no real-city landmark imitation. The three opaque facade prompts prohibited windows and doors. The window prompt required clearly readable but opaque/sealed dark panes with no visible interiors, glow, reflections, or open holes. The roof prompt prohibited equipment, vents, puddles, and perspective. The complete material and palette constraints are recorded in `docs/ashfall-building-kit.md` and the generating task history.
+The final prompt set used the `stylized-concept` taxonomy and specified square, edge-to-edge seamless orthographic flat-albedo game textures with neutral shadowless diffuse lighting. Shared constraints prohibited copied photographs, real landmarks, readable text, signs, logos, trademarks, people, props, graffiti, watermarks, perspective, cast shadows, highlights, reflections, glow, and baked directional light.
+
+Per-texture prompt intent:
+
+- concrete: three regular facade bays, narrow piers, sealed dark teal windows, stepped parapet/cornice, faded geometric scoring, salt streaks, and repairs;
+- storefront: regular brick piers, repaired sand stucco, sealed display windows on bulkheads, transoms, recessed-looking entry bay, and strong teal fascia/cornice;
+- office: narrow vertical piers, paired opaque windows, concrete spandrels, streamline grooves, and stepped coping;
+- service: vertical corrugated teal sheets, charcoal posts, sealed louvers, concrete plinth, and restrained fastener rust;
+- roof: top-down bitumen rolls, seams, salt bleaching, fine aggregate, and restrained tar patches, with no equipment;
+- sidewalk: top-down large scored concrete slabs, shell aggregate, salt bleaching, and hairline repairs, with no trip-hazard cracks or objects;
+- curb: straight-on dense aggregate concrete with subtle salt wear, repaired chips, and lower-edge road darkening.
+
+Architecture/preservation source links and the derived non-copying design principles are recorded in `docs/ashfall-building-kit.md`.

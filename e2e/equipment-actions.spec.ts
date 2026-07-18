@@ -133,12 +133,12 @@ test.describe('reusable equipment and character actions', () => {
       await expect
         .poll(async () => (await snapshot(page)).player.grounded)
         .toBe(true);
-      const beforeRoll = (await snapshot(page)).player.position;
       await page.keyboard.down('KeyW');
       await page.keyboard.press('KeyB');
       await expect
         .poll(async () => (await snapshot(page)).character.animationState)
         .toBe('action:roll');
+      const admittedRoll = (await snapshot(page)).player;
       await attach(page, testInfo, `${characterId}-roll`);
       await page.waitForTimeout(250);
       await attach(page, testInfo, `${characterId}-roll-mid`);
@@ -152,14 +152,13 @@ test.describe('reusable equipment and character actions', () => {
       expect(state.player.roll.blockedBy).toBeTruthy();
       expect(state.player.roll.actualDistance).toBeGreaterThanOrEqual(0);
       expect(state.player.roll.actualDistance).toBeLessThan(3);
-      // W may contribute one browser frame before B is admitted; the roll's
-      // own requested/actual counters exclude that pre-admission locomotion.
+      // Collision can redirect the roll along a blocker, so accumulated path
+      // length must bound straight-line displacement after roll admission.
+      const remainingRollDistance =
+        state.player.roll.actualDistance - admittedRoll.roll.actualDistance;
       expect(
-        Math.abs(
-          horizontalDistance(state.player.position, beforeRoll) -
-            state.player.roll.actualDistance,
-        ),
-      ).toBeLessThan(0.12);
+        horizontalDistance(state.player.position, admittedRoll.position),
+      ).toBeLessThanOrEqual(remainingRollDistance + 0.05);
       expect(state.player.grounded).toBe(true);
       await attach(page, testInfo, `${characterId}-roll-wall-stop`);
       await expect

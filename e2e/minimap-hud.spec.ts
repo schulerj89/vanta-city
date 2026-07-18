@@ -26,7 +26,7 @@ test.describe('north-up minimap HUD', () => {
     });
     await expect(page.getByTestId('minimap-hud')).toBeVisible();
     await expect(page.locator('[data-layer="roads"] rect')).toHaveCount(2);
-    await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(4);
+    await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(8);
     await expect(page.locator('[data-layer="landmarks"] circle')).toHaveCount(
       5,
     );

@@ -92,6 +92,12 @@
   color: #a6c0bd;
 }
 
+.building-lab-panel footer {
+  padding: 0.75rem;
+  color: #9fd7cb;
+  border-top: 1px solid #3f5e61;
+}
+
 @media (max-width: 700px) {
   .building-lab-panel {
     inset: auto 0.5rem 0.5rem;

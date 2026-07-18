@@ -26,7 +26,9 @@ test.describe('time-of-day lighting', () => {
       maxLocalLights: 4,
       shadowsEnabled: false,
     });
-    expect(night.performance.renderer.drawCalls).toBeLessThan(100);
+    expect(night.performance.renderer.drawCalls).toBeLessThan(120);
+    await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(8);
+    expect(await loadedStreetscapeTextures(page)).toHaveLength(7);
     await attachScreenshot(page, testInfo, 'ashfall-night-desktop');
 
     await command(page, 'time.day');
@@ -130,6 +132,19 @@ async function waitAnimationFrames(page: Page, count: number): Promise<void> {
         requestAnimationFrame(next);
       }),
     count,
+  );
+}
+
+async function loadedStreetscapeTextures(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    performance
+      .getEntriesByType('resource')
+      .map(({ name }) => name)
+      .filter((name) =>
+        /\/assets\/environment\/ashfall-buildings\/[^/]+\.generated\.jpg$/.test(
+          name,
+        ),
+      ),
   );
 }
 

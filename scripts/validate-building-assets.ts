@@ -9,15 +9,19 @@ import {
 
 const hashes = {
   'brick-stucco.generated.jpg':
-    '2f4c0a516f9ec8a8c885115d6dec31a8f6267ba02184ce5fe9bb9284e3ce24b0',
+    'eaaabe6a6426d2fcb74a05d67e0b22d24fb5c806fd98362c2a2c1cbe0b0c7f1f',
   'concrete-deco.generated.jpg':
-    'da86c6509b158bb022fae974f313e72531e19f1d074d46895f8949a22a8b07db',
+    '139f002e9d40868e6d4fa2c97283cbf4d65f771d8bb2dbfd4c7d9c8a20e0f88d',
   'corrugated-teal.generated.jpg':
-    '31b43363b8bb45fdb1634caa5c1bc6685aae751329bafd9fec112f7696a2b2c9',
+    'd17e8e3683bab5d1c26ba735f6e46386122238ffae8e2312274e4d8ea275200c',
+  'curb-aggregate.generated.jpg':
+    '74f297441c6d9dd93a33aa924e894cfb5652b7b1f4ba6e4b25cd95a992241fda',
   'roof-membrane.generated.jpg':
-    '8f6f0b564e075d3d62710c83d1f3b0ceee7589b896b1ff1cd9c3b362e85ca9aa',
+    'f1b970387b3b4c3fd83d9b475526fc86b3c7a98df799203c19acc781e7e1c0a5',
+  'sidewalk-concrete.generated.jpg':
+    'c3b85ce5949b7b667a468335f3ba2b03987072c44e72f3939579936ef226fb3e',
   'window-deco.generated.jpg':
-    '1d300c6c240967960693178349f73c59021f2c9d11e75d18a528b6b919b7ad70',
+    'ed4c12fccda5335d8d9bdd9bab5f88199a3b696236a52f63acb86cb19848600d',
 } as const;
 
 const issues = validateAshfallBuildingKit();
@@ -26,8 +30,8 @@ const variantCount: number = ashfallBuildingVariants.length;
 if (variantCount !== 18) {
   throw new Error(`Expected 18 building variants, found ${variantCount}`);
 }
-if (Object.keys(ashfallBuildingAssets).length !== 5) {
-  throw new Error('Expected exactly five controlled building textures');
+if (Object.keys(ashfallBuildingAssets).length !== 7) {
+  throw new Error('Expected exactly seven controlled streetscape textures');
 }
 
 let totalBytes = 0;
@@ -45,8 +49,8 @@ for (const [file, expectedHash] of Object.entries(hashes)) {
     );
   }
 }
-if (totalBytes > 400_000) {
-  throw new Error(`Building textures exceed 400KB budget: ${totalBytes}`);
+if (totalBytes > 700_000) {
+  throw new Error(`Streetscape textures exceed 700KB budget: ${totalBytes}`);
 }
 for (const descriptor of Object.values(ashfallBuildingAssets)) {
   if (!descriptor.url.startsWith('/assets/environment/ashfall-buildings/')) {
@@ -60,7 +64,7 @@ for (const descriptor of Object.values(ashfallBuildingAssets)) {
 }
 
 console.log(
-  `Validated ${variantCount} variants and 5 generated 512px textures (${totalBytes} bytes).`,
+  `Validated ${variantCount} variants and 7 generated 512px textures (${totalBytes} bytes).`,
 );
 
 function jpegDimensions(bytes: Buffer): { width: number; height: number } {

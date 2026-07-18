@@ -15,16 +15,33 @@ test('building lab renders every variant, diagnostic, material, and view @visual
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?sandbox=building-visual-lab&e2e=1');
-  await expect.poll(async () => (await snapshot(page)).ready).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.__VANTA_BUILDING_LAB__?.snapshot().ready ?? false,
+      ),
+    )
+    .toBe(true);
 
   const overview = await snapshot(page);
   expect(overview).toMatchObject({
     view: 'overview',
     variantCount: 18,
-    textureCount: 5,
+    textureCount: 7,
   });
   expect(overview.meshCount).toBeGreaterThanOrEqual(36);
   expect(overview.variants).toHaveLength(18);
+  expect(new Set(overview.textures)).toEqual(
+    new Set([
+      'concrete-deco',
+      'brick-stucco',
+      'corrugated-teal',
+      'window-deco',
+      'roof-membrane',
+      'sidewalk-concrete',
+      'curb-aggregate',
+    ]),
+  );
   expect(new Set(overview.variants.map(({ id }) => id)).size).toBe(18);
   expect(
     overview.variants.every(
@@ -58,6 +75,13 @@ test('building lab renders every variant, diagnostic, material, and view @visual
     maxDiffPixelRatio: 0.02,
   });
 
+  await setView(page, 'materials');
+  await expect.poll(async () => (await snapshot(page)).view).toBe('materials');
+  await expect(page).toHaveScreenshot('building-lab-materials.png', {
+    animations: 'disabled',
+    maxDiffPixelRatio: 0.02,
+  });
+
   await page.setViewportSize({ width: 390, height: 760 });
   await setView(page, 'street');
   await expect(page.getByTestId('building-lab-panel')).toBeVisible();
@@ -74,7 +98,7 @@ async function snapshot(page: Page): Promise<BuildingLabSnapshot> {
 
 async function setView(
   page: Page,
-  view: 'overview' | 'street' | 'overhead',
+  view: 'overview' | 'street' | 'overhead' | 'materials',
 ): Promise<void> {
   await page.evaluate(
     (next) => window.__VANTA_BUILDING_LAB__!.setView(next),

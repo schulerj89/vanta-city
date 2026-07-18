@@ -24,6 +24,10 @@ export interface BoxVisualDefinition extends WorldEntry {
   readonly kind: 'box';
   readonly size: Vector3Tuple;
   readonly color: number;
+  /** Optional logical texture ID resolved by the authoritative asset loader. */
+  readonly textureAssetId?: string;
+  /** World metres represented by one texture repeat. */
+  readonly uvMetersPerRepeat?: number;
 }
 
 export interface BuildingVisualDefinition extends WorldEntry {
@@ -192,6 +196,20 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
     }
     if (visual.kind === 'building' && visual.variantId.trim().length === 0) {
       issues.push(`${visual.id}.variantId is empty`);
+    }
+    if (visual.kind === 'box' && visual.textureAssetId !== undefined) {
+      if (visual.textureAssetId.trim().length === 0) {
+        issues.push(`${visual.id}.textureAssetId is empty`);
+      }
+      if (
+        visual.uvMetersPerRepeat === undefined ||
+        !Number.isFinite(visual.uvMetersPerRepeat) ||
+        visual.uvMetersPerRepeat <= 0
+      ) {
+        issues.push(
+          `${visual.id}.uvMetersPerRepeat must be positive for a textured box`,
+        );
+      }
     }
   }
   for (const zone of definition.zones) {

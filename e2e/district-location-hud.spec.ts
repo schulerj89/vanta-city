@@ -65,7 +65,7 @@ test.describe('Ashfall Junction and location HUD', () => {
     expect(initial.sparringTarget.loaded).toBe(false);
     expect(initial.interaction.activeTargetId).toBeUndefined();
 
-    await command(page, 'player.teleport-position', '-15,0.22,10,3.141593');
+    await command(page, 'player.teleport-position', '-15,0.22,18,0');
     await expect
       .poll(async () => (await snapshot(page)).camera.obstructed)
       .toBe(true);

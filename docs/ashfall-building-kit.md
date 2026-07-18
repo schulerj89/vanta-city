@@ -1,42 +1,55 @@
 # Ashfall building kit
 
-## Identity
+## Identity and reference study
 
-Ashfall Junction is **Atlantic neon-deco / weathered coastal industrial**: salt-faded concrete scoring, patched brick-and-stucco utility blocks, oxidized blue-green corrugated sheds, charcoal roof membranes, and restrained warm rust. The identity is fictional and place-specific. It borrows broad coastal infrastructure and geometric deco principles, not a real city skyline, landmark, or neighborhood copy. “Neon” is expressed as the memory of teal and warm-orange civic color rather than live signage, which keeps the kit coherent with the post-apocalyptic low-poly street assets.
+Ashfall Junction is **Atlantic neon-deco / weathered coastal industrial**: salt-faded concrete scoring, patched brick-and-stucco utility blocks, oxidized blue-green corrugated sheds, charcoal roof membranes, and restrained warm rust. The identity is fictional and place-specific. It borrows broad coastal infrastructure and geometric deco principles, not a real skyline, landmark, neighborhood, photograph, sign, or trademark.
 
-The 18 blank shells span 6–18m footprints, 4.5–18m heights, four wall materials, and four massing profiles. Selected civic/office variants use opaque smoked-window rows directly in their facade texture; the panes reveal no interiors and own no collision. The shells intentionally contain no interiors, doors, text, brands, procedural generation, or simulation ownership. Each instance remains authored level data with one conservative box collision footprint.
+The visual grammar was derived from authoritative architecture and preservation sources:
+
+- The US National Park Service [Art Deco and Art Moderne design guidance](https://irma.nps.gov/DataStore/DownloadFile/581707) identifies vertical emphasis, geometric scoring, stepped towers/projections, horizontal grooves, smooth stucco, and flat parapet roofs.
+- NPS [Preservation Brief 11: Rehabilitating Historic Storefronts](https://www.nps.gov/orgs/1739/upload/preservation-brief-11-storefronts.pdf) describes pier-and-bay rhythm, bulkheads and transoms, recessed entrances, the cornice/fascia separating storefront and upper stories, and the storefront's planar relationship to the street.
+- NPS guidance on [common brick-masonry problems](https://www.nps.gov/articles/common-problems-with-brick-masonry.htm) grounds restrained mortar variation, salt/moisture wear, patches, and cracking around openings without turning deterioration into random noise.
+- Historic England's [Maritime and Naval Buildings selection guide](https://historicengland.org.uk/images-books/publications/dlsg-maritime-naval-buildings/) establishes the functional dockyard/harbour context and the coexistence of warehouses, workshops, offices, and service structures.
+- Historic England's [Streets for All guidance](https://historicengland.org.uk/advice/caring-for-heritage/streets-for-all/highway-engineers-and-designers/) treats surfacing and kerbs as integral, navigable parts of local character and recommends simple, uncluttered streetscape treatment.
+
+Derived Ashfall principles are therefore: repeat structural bays at believable 2.5–4m intervals; distinguish street frontage from plain service treatment; use a strong fascia/cornice and readable sealed entrance bays; keep flat roofs behind parapet/coping lines; concentrate deco scoring at piers and roofline; weather masonry consistently at joints, bases, and water paths; use corrugated metal and concrete plinths for service walls; and keep scored sidewalk slabs and continuous aggregate kerbs aligned to street/building geometry.
+
+The 18 reusable shells span 6–18m footprints, 4.5–18m heights, four wall materials, and four massing profiles. Opaque window/storefront bays reveal no interiors and own no collision. The shells contain no interiors, readable text, brands, procedural placement, or simulation ownership.
 
 ## Runtime and material policy
 
-- Five 512×512 JPEG albedo textures form the entire palette: three opaque wall surfaces, one smoked-window facade, and one roof. Total committed transfer size is capped at 400KB by `validate:buildings`; the current set is about 374KB.
+- Seven 512×512 JPEG albedo textures form the controlled palette: four facade/service surfaces, one roof, one sidewalk, and one curb. `validate:buildings` caps aggregate size at 700KB; the current set is about 640KB.
 - Textures load through the authoritative asset catalog and `GameAssetLoader`. Runtime URLs are local project paths; there is no runtime network dependency.
-- Repeating UVs are encoded in generated box geometry. Concrete and brick repeat every 4m; corrugated metal every 3m. Shared materials and loader-cached textures prevent one texture allocation per building.
-- Shells use flat box massing with shared textured materials. The production placement is four instances and remains deliberately below the lab’s worst-case 18-variant draw-call load.
+- Repeating UVs are encoded in box geometry. Facades repeat every 3–4m, the sidewalk every 6m, and the curb every 3m. Shared materials and loader-cached textures prevent per-building texture allocation.
+- Shallow cornice bands and roof caps improve street and overhead silhouettes without creating alternate collision or lifecycle ownership.
 
 ## Junction placement decisions
 
-The four old colored ruin boxes are replaced by `seawall-court`, `breaker-block`, `freight-annex`, and `drydock-office`. Their street-facing edges sit roughly 6–11m behind the 12m road, closer and more intentional than the former sparse silhouettes while leaving the inner sidewalks traversable. Stable `c.ruin-*` collision IDs are retained because camera diagnostics and browser coverage treat those IDs as an API.
+Eight authored buildings form four outer-edge L-shaped corner groups. Each pair addresses both adjacent streets while leaving the whole inner sidewalk open. The closest facade is exactly 4m beyond the 12m road edge, matching `intersectionLayout.sidewalkWidth`.
 
-- Northwest preserves the former 14×12m footprint and center exactly, retaining its proven camera-obstruction pose while gaining a stepped 13m brick civic silhouette.
-- Northeast stays north of the signal controller and sparring pad; its inner edge is kept at Z=15 so the pad’s north/south combat camera remains clear.
-- Southwest and southeast use longer industrial/office forms pushed toward the outer boundary, keeping NPC conversation fixtures and all approach/corner spawns open.
-- No footprint intersects the four traffic lane centerlines. Roads, signals, barriers, spawns, trigger volumes, landmarks, map bounds, and zone ownership are unchanged.
-- Minimap structure rectangles now derive their footprint from the same reusable variant definitions used by rendering and collision authoring.
+- Stable `c.ruin-*` collision IDs remain on the primary corner structures because camera diagnostics and browser coverage treat those IDs as an API.
+- Paired footprints touch only at boundary lines or retain open circulation; they never overlap and do not create narrow inaccessible slots.
+- Northeast stays outside the signal controller and sparring pad clearance. Southwest and southeast keep NPC fixtures, interaction sight lines, every approach/corner spawn, and traffic lanes open.
+- No footprint intersects a traffic lane. Roads, signals, barriers, spawns, trigger volumes, landmarks, map bounds, and zone ownership are unchanged.
+- All eight minimap rectangles derive footprint and rotation from the same building definitions used by rendering and authored collision.
+- Eight thin curb-face visuals stop at inside corners and sit 2cm above the existing sidewalk top, avoiding coplanar z-fighting without changing walkable collision.
 
-## Visual lab
+## Visual lab and coverage
 
-Run `pnpm lab:buildings` or open `/?sandbox=building-visual-lab&debug=1`. The lab loads every variant in a single grid and displays:
+Run `pnpm lab:buildings` or open `/?sandbox=building-visual-lab&debug=1`. The development-only lab displays:
 
-- live textured massing;
-- mint world bounds;
-- amber collision footprints;
-- exact width × depth × height;
-- wall texture, massing profile, and UV metres per repeat;
-- overview, street, and overhead camera presets through `window.__VANTA_BUILDING_LAB__` for deterministic browser coverage.
+- all 18 live textured variants;
+- mint world bounds and amber collision footprints;
+- exact width × depth × height, material, massing profile, and UV repeat;
+- all seven material swatches, including roof, sidewalk, and curb;
+- deterministic overview, street, overhead, materials, and narrow-viewport coverage through the existing `window.__VANTA_BUILDING_LAB__` bridge.
 
-## Risks and boundaries
+Gameplay day/night coverage remains owned by the time-of-day suite. Placement tests enforce a 4m minimum walking band, footprint non-overlap, protected-point clearance, and traffic-lane clearance. Browser performance coverage caps the district below 120 draw calls and checks for local texture loading and runtime/console errors.
 
-- Generated images are designed as seamless sources, but minor tonal seams may still be visible under extreme repetition. The larger 3–4m repeat and stepped silhouettes reduce repetition without extra textures.
-- Collision deliberately follows the full blank footprint, not visual setbacks, so the camera/player never enter apparent solid mass. This is conservative and may leave inaccessible rooftop-setback ledges.
-- Buildings do not have LODs because the entire authored district contains only four production instances. If the level grows, profile before increasing count; do not add procedural placement by default.
-- The lab is development-only through the existing sandbox route and adds no global runtime listeners.
+## Public contracts, risks, and boundaries
+
+- Existing `LevelDefinition` box visuals gained optional `textureAssetId` and `uvMetersPerRepeat` fields. They resolve only through the existing asset loader; untextured boxes keep the previous color-material path.
+- Generated images were prompted as seamless, but image generation does not mathematically guarantee edge identity. Large 3–6m repeats, regular bays, and stepped silhouettes reduce repetition. Deterministic seam synthesis is the next art step if later inspection exposes seams.
+- Collision follows each full authored footprint, not rooftop setbacks, so the player/camera never enter apparent solid mass. Rooftop ledges remain inaccessible by design.
+- Buildings have no LODs because production contains eight instances. Profile before increasing count and do not add procedural placement by default.
+- The lab remains development-only and adds no runtime global listeners. Lifecycle, game state, input, player transform, health, collision, camera, debug registry, and browser bridge ownership are unchanged.

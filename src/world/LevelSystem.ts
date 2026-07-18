@@ -11,10 +11,12 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
+  RepeatWrapping,
+  SRGBColorSpace,
   SphereGeometry,
   Vector3,
 } from 'three';
-import type { Material, Scene } from 'three';
+import type { Material, Scene, Texture } from 'three';
 import type { GameAssetLoader } from '../assets/AssetLoader';
 import type { EventBus } from '../core/events';
 import type { GameSystem } from '../core/lifecycle';
@@ -23,6 +25,7 @@ import type { StaticColliderDefinition } from '../physics/StaticCollider';
 import type {
   CinematicAnchorDefinition,
   EnvironmentVisualDefinition,
+  BoxVisualDefinition,
   LevelDefinition,
   NamedLocationDefinition,
   SpawnPointDefinition,
@@ -184,11 +187,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
         this.assets,
         resources,
       );
+      const surfaceMaterials = new Map<string, Promise<MeshStandardMaterial>>();
       const objects = await Promise.all(
         definition.environment.map((visual) =>
           visual.kind === 'building'
             ? buildingRenderer.create(visual)
-            : this.createVisual(visual, resources),
+            : this.createVisual(visual, resources, surfaceMaterials),
         ),
       );
       visuals.add(...objects);
@@ -210,6 +214,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
   private async createVisual(
     visual: EnvironmentVisualDefinition,
     resources: Set<BufferGeometry | Material>,
+    surfaceMaterials: Map<string, Promise<MeshStandardMaterial>>,
   ): Promise<Object3D> {
     if (visual.kind === 'gltf') {
       const gltf = await this.assets.loadGltf(visual.assetId);
@@ -222,14 +227,19 @@ export class LevelSystem implements GameSystem, LevelLocations {
       throw new Error('Building visuals require the shared building renderer');
     }
     const geometry = own(resources, new BoxGeometry(...visual.size));
-    const material = own(
-      resources,
-      new MeshStandardMaterial({
-        color: visual.color,
-        flatShading: true,
-        roughness: 0.9,
-      }),
-    );
+    if (visual.textureAssetId && visual.uvMetersPerRepeat) {
+      scaleBoxUvs(geometry, visual.size, visual.uvMetersPerRepeat);
+    }
+    const material = visual.textureAssetId
+      ? await this.texturedBoxMaterial(visual, resources, surfaceMaterials)
+      : own(
+          resources,
+          new MeshStandardMaterial({
+            color: visual.color,
+            flatShading: true,
+            roughness: 0.9,
+          }),
+        );
     const mesh = new Mesh(geometry, material);
     mesh.name = `visual:${visual.id}`;
     mesh.receiveShadow = true;
@@ -237,6 +247,53 @@ export class LevelSystem implements GameSystem, LevelLocations {
     applyTransform(mesh, visual);
     return mesh;
   }
+
+  private texturedBoxMaterial(
+    visual: BoxVisualDefinition,
+    resources: Set<BufferGeometry | Material>,
+    surfaceMaterials: Map<string, Promise<MeshStandardMaterial>>,
+  ): Promise<MeshStandardMaterial> {
+    const assetId = visual.textureAssetId!;
+    let pending = surfaceMaterials.get(assetId);
+    if (!pending) {
+      pending = this.assets.loadTexture(assetId).then((texture) => {
+        configureSurfaceTexture(texture);
+        return own(
+          resources,
+          new MeshStandardMaterial({
+            map: texture,
+            color: visual.color,
+            roughness: 0.96,
+            metalness: 0,
+          }),
+        );
+      });
+      surfaceMaterials.set(assetId, pending);
+    }
+    return pending;
+  }
+}
+
+function configureSurfaceTexture(texture: Texture): void {
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.colorSpace = SRGBColorSpace;
+  texture.needsUpdate = true;
+}
+
+function scaleBoxUvs(
+  geometry: BoxGeometry,
+  size: Vector3Tuple,
+  metersPerRepeat: number,
+): void {
+  const uv = geometry.getAttribute('uv');
+  const repeatX = Math.max(size[0], size[2]) / metersPerRepeat;
+  const repeatY =
+    Math.max(size[1], Math.min(size[0], size[2])) / metersPerRepeat;
+  for (let index = 0; index < uv.count; index += 1) {
+    uv.setXY(index, uv.getX(index) * repeatX, uv.getY(index) * repeatY);
+  }
+  uv.needsUpdate = true;
 }
 
 function buildDebug(

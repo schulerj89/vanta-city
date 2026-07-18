@@ -12,6 +12,7 @@ import {
   LineBasicMaterial,
   LineSegments,
   Mesh,
+  MeshStandardMaterial,
   Vector3,
 } from 'three';
 import type { BufferGeometry, Material, Object3D } from 'three';
@@ -19,10 +20,12 @@ import type { GameSystem } from '../../core/lifecycle';
 import type { SandboxContext, SandboxScenario } from '../SandboxScenario';
 import {
   AshfallBuildingRenderer,
+  ashfallBuildingAssets,
   ashfallBuildingVariants,
+  configureAshfallTexture,
 } from '../../world/buildings/AshfallBuildingKit';
 
-export type BuildingLabView = 'overview' | 'street' | 'overhead';
+export type BuildingLabView = 'overview' | 'street' | 'overhead' | 'materials';
 
 export interface BuildingLabSnapshot {
   readonly ready: boolean;
@@ -30,6 +33,7 @@ export interface BuildingLabSnapshot {
   readonly variantCount: number;
   readonly textureCount: number;
   readonly meshCount: number;
+  readonly textures: readonly string[];
   readonly variants: readonly {
     readonly id: string;
     readonly footprint: readonly [number, number];
@@ -104,6 +108,7 @@ class BuildingVisualLabSystem implements GameSystem {
         };
       }),
     );
+    await this.addTextureSwatches();
     this.ready = true;
     this.installBridge();
     this.refreshPanel();
@@ -135,8 +140,11 @@ class BuildingVisualLabSystem implements GameSystem {
       ready: this.ready,
       view: this.view,
       variantCount: ashfallBuildingVariants.length,
-      textureCount: 5,
+      textureCount: Object.keys(ashfallBuildingAssets).length,
       meshCount,
+      textures: Object.values(ashfallBuildingAssets).map(({ metadata }) =>
+        String(metadata.material),
+      ),
       variants: this.records.filter(Boolean),
     };
   }
@@ -153,11 +161,15 @@ class BuildingVisualLabSystem implements GameSystem {
       camera.position.set(-18, 5.8, 61);
       camera.lookAt(-8, 5.5, 0);
       camera.fov = 54;
-    } else {
+    } else if (view === 'overhead') {
       camera.position.set(30, 138, 0);
       camera.up.set(0, 0, -1);
       camera.lookAt(30, 0, 0);
       camera.fov = 43;
+    } else {
+      camera.position.set(60, 10, 48);
+      camera.lookAt(60, 10, 10);
+      camera.fov = 42;
     }
     camera.near = 0.1;
     camera.far = 240;
@@ -178,6 +190,30 @@ class BuildingVisualLabSystem implements GameSystem {
     const grid = new GridHelper(140, 28, 0x58777b, 0x2f4549);
     grid.name = 'building-lab:grid';
     this.stage.add(ambient, sun, grid);
+  }
+
+  private async addTextureSwatches(): Promise<void> {
+    const entries = Object.entries(ashfallBuildingAssets);
+    await Promise.all(
+      entries.map(async ([assetId], index) => {
+        const texture = await this.context.assets.loadTexture(assetId);
+        configureAshfallTexture(texture);
+        const geometry = this.own(new BoxGeometry(8, 6, 0.35));
+        const material = this.own(
+          new MeshStandardMaterial({ map: texture, roughness: 0.95 }),
+        );
+        const swatch = new Mesh(geometry, material);
+        swatch.name = `texture-swatch:${assetId}`;
+        swatch.position.set(
+          48 + (index % 3) * 12,
+          3.2 + Math.floor(index / 3) * 7,
+          10,
+        );
+        swatch.castShadow = true;
+        swatch.receiveShadow = true;
+        this.stage.add(swatch);
+      }),
+    );
   }
 
   private addDiagnostics(
@@ -221,9 +257,9 @@ class BuildingVisualLabSystem implements GameSystem {
       .join('');
     this.panel.innerHTML = `<header>
       <p>Ashfall Junction</p><h1>Building kit lab</h1>
-      <output>${this.ready ? '18 variants · 5 local textures · bounds + collision shown' : 'Loading local textures…'}</output>
+      <output>${this.ready ? '18 variants · 7 local textures · bounds + collision shown' : 'Loading local textures…'}</output>
       <nav aria-label="Lab views">
-        ${(['overview', 'street', 'overhead'] as const)
+        ${(['overview', 'street', 'overhead', 'materials'] as const)
           .map(
             (id) =>
               `<button type="button" data-view="${id}" aria-pressed="${this.view === id}">${id}</button>`,
@@ -231,7 +267,10 @@ class BuildingVisualLabSystem implements GameSystem {
           .join('')}
       </nav>
     </header>
-    <table><thead><tr><th>Variant</th><th>W×D×H</th><th>Texture</th><th>Massing</th><th>UV repeat</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <table><thead><tr><th>Variant</th><th>W×D×H</th><th>Texture</th><th>Massing</th><th>UV repeat</th></tr></thead><tbody>${rows}</tbody></table>
+    <footer>Texture swatches: ${Object.values(ashfallBuildingAssets)
+      .map(({ metadata }) => metadata.material)
+      .join(' · ')}</footer>`;
     for (const button of Array.from(
       this.panel.querySelectorAll<HTMLButtonElement>('[data-view]'),
     )) {

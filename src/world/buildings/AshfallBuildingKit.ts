@@ -32,6 +32,8 @@ export const ashfallBuildingTextureIds = {
   corrugatedTeal: 'environment.ashfall-building.corrugated-teal',
   windowDeco: 'environment.ashfall-building.window-deco',
   roofMembrane: 'environment.ashfall-building.roof-membrane',
+  sidewalkConcrete: 'environment.ashfall-building.sidewalk-concrete',
+  curbAggregate: 'environment.ashfall-building.curb-aggregate',
 } as const;
 
 export const ashfallBuildingAssets = {
@@ -59,6 +61,16 @@ export const ashfallBuildingAssets = {
     'roof-membrane.generated.jpg',
     'Ashfall weathered industrial roof membrane',
     'roof-membrane',
+  ),
+  [ashfallBuildingTextureIds.sidewalkConcrete]: generatedTexture(
+    'sidewalk-concrete.generated.jpg',
+    'Ashfall salt-weathered scored concrete sidewalk',
+    'sidewalk-concrete',
+  ),
+  [ashfallBuildingTextureIds.curbAggregate]: generatedTexture(
+    'curb-aggregate.generated.jpg',
+    'Ashfall salt-weathered aggregate curb',
+    'curb-aggregate',
   ),
 } as const;
 
@@ -244,6 +256,28 @@ export class AshfallBuildingRenderer {
       mesh.receiveShadow = true;
       group.add(mesh);
 
+      if (
+        piece.id === 'shell' ||
+        piece.id === 'lower' ||
+        piece.id === 'podium'
+      ) {
+        const corniceGeometry = this.own(
+          new BoxGeometry(piece.width + 0.18, 0.18, piece.depth + 0.18),
+        );
+        scaleUvs(
+          corniceGeometry,
+          piece.width,
+          0.18,
+          definition.uvMetersPerRepeat,
+        );
+        const cornice = new Mesh(corniceGeometry, wall);
+        cornice.name = `building:${definition.id}:${piece.id}:cornice`;
+        cornice.position.set(piece.x, piece.y + piece.height - 0.18, piece.z);
+        cornice.castShadow = true;
+        cornice.receiveShadow = true;
+        group.add(cornice);
+      }
+
       const roofGeometry = this.own(
         new BoxGeometry(piece.width + 0.12, 0.14, piece.depth + 0.12),
       );
@@ -281,7 +315,7 @@ export class AshfallBuildingRenderer {
     let pending = this.materials.get(key);
     if (!pending) {
       pending = this.assets.loadTexture(textureId).then((texture) => {
-        configureTexture(texture);
+        configureAshfallTexture(texture);
         return this.own(
           new MeshStandardMaterial({
             map: texture,
@@ -413,7 +447,7 @@ function variant(
   };
 }
 
-function configureTexture(texture: Texture): void {
+export function configureAshfallTexture(texture: Texture): void {
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
   texture.colorSpace = SRGBColorSpace;

@@ -32,7 +32,7 @@ test.describe('default gameplay camera framing', () => {
     await capture(page, testInfo, 'default-camera-narrow');
 
     await page.setViewportSize({ width: 1280, height: 720 });
-    await command(page, 'player.teleport-position', '-15,0.22,10,3.141593');
+    await command(page, 'player.teleport-position', '-15,0.22,18,0');
     await expect
       .poll(async () => (await snapshot(page)).camera.obstructed)
       .toBe(true);

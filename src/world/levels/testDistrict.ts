@@ -17,6 +17,7 @@ import {
 } from './intersectionLayout';
 import {
   ashfallBuildingAssets,
+  ashfallBuildingTextureIds,
   getAshfallBuildingVariant,
 } from '../buildings/AshfallBuildingKit';
 
@@ -40,9 +41,18 @@ function surface(
   size: Vector3Tuple,
   color: number,
   tags: readonly string[] = ['walkable'],
+  textureAssetId?: string,
+  uvMetersPerRepeat?: number,
 ): void {
   paired.push({
-    visual: box(`v.${id}`, position, size, color),
+    visual: box(
+      `v.${id}`,
+      position,
+      size,
+      color,
+      textureAssetId,
+      uvMetersPerRepeat,
+    ),
     collider: collider(`c.${id}`, position, size, tags),
   });
 }
@@ -56,20 +66,100 @@ for (const [id, x, z] of [
   ['southwest', -17, -17],
   ['southeast', 17, -17],
 ] as const) {
-  surface(`sidewalk-${id}`, [x, 0.1, z], [22, 0.2, 22], colors.sidewalk);
+  surface(
+    `sidewalk-${id}`,
+    [x, 0.1, z],
+    [22, 0.2, 22],
+    colors.sidewalk,
+    ['walkable'],
+    ashfallBuildingTextureIds.sidewalkConcrete,
+    6,
+  );
 }
 
 export const ashfallBuildingPlacements = [
-  buildingPlacement('northwest', 'seawall-court', [-19, 0.2, 19]),
-  buildingPlacement('northeast', 'breaker-block', [20, 0.2, 21]),
-  buildingPlacement('southwest', 'freight-annex', [-19.5, 0.2, -22]),
-  buildingPlacement('southeast', 'drydock-office', [20.5, 0.2, -22]),
+  buildingPlacement(
+    'northwest-north',
+    'foundry-long',
+    [-18, 0.2, 24],
+    0,
+    'c.ruin-northwest',
+  ),
+  buildingPlacement(
+    'northwest-west',
+    'canal-workshop',
+    [-24.5, 0.2, 15],
+    Math.PI / 2,
+  ),
+  buildingPlacement(
+    'northeast-north',
+    'channel-house',
+    [17.5, 0.2, 24],
+    Math.PI / 2,
+    'c.ruin-northeast',
+  ),
+  buildingPlacement(
+    'northeast-east',
+    'canal-workshop',
+    [24.5, 0.2, 15],
+    Math.PI / 2,
+  ),
+  buildingPlacement(
+    'southwest-south',
+    'foundry-long',
+    [-18, 0.2, -24],
+    0,
+    'c.ruin-southwest',
+  ),
+  buildingPlacement(
+    'southwest-west',
+    'canal-workshop',
+    [-24.5, 0.2, -15],
+    Math.PI / 2,
+  ),
+  buildingPlacement(
+    'southeast-south',
+    'harbor-row',
+    [18, 0.2, -24.5],
+    Math.PI / 2,
+    'c.ruin-southeast',
+  ),
+  buildingPlacement('southeast-east', 'beacon-works', [22.5, 0.2, -15.5], 0),
 ] as const;
 
 const buildings = ashfallBuildingPlacements.map(({ visual }) => visual);
 const buildingCollision = ashfallBuildingPlacements.map(
   ({ collider: definition }) => definition,
 );
+
+// Thin authored curb faces sit entirely above the sidewalk collision surface.
+// Their segments stop at the inside corner so no coplanar faces overlap.
+const curbs: BoxVisualDefinition[] = [];
+for (const [id, signX, signZ] of [
+  ['northwest', -1, 1],
+  ['northeast', 1, 1],
+  ['southwest', -1, -1],
+  ['southeast', 1, -1],
+] as const) {
+  curbs.push(
+    box(
+      `v.curb-${id}-vertical`,
+      [signX * 6.125, 0.11, signZ * 17.125],
+      [0.25, 0.22, 21.75],
+      colors.curb,
+      ashfallBuildingTextureIds.curbAggregate,
+      3,
+    ),
+    box(
+      `v.curb-${id}-horizontal`,
+      [signX * 17.125, 0.11, signZ * 6.125],
+      [21.75, 0.22, 0.25],
+      colors.curb,
+      ashfallBuildingTextureIds.curbAggregate,
+      3,
+    ),
+  );
+}
 
 // Visible, collidable termination at every road end and around the outer corners.
 for (const [id, position, size] of [
@@ -235,6 +325,7 @@ export const testDistrict = {
     environment: [
       ...paired.map(({ visual }) => visual),
       ...markings,
+      ...curbs,
       ...buildings,
       ...props,
       signalControllerVisual,
@@ -396,10 +487,10 @@ export const testDistrict = {
       geometry: [
         { entryId: 'v.road-east-west', layer: 'roads' },
         { entryId: 'v.road-north-south', layer: 'roads' },
-        { entryId: 'v.building-northwest', layer: 'structures' },
-        { entryId: 'v.building-northeast', layer: 'structures' },
-        { entryId: 'v.building-southwest', layer: 'structures' },
-        { entryId: 'v.building-southeast', layer: 'structures' },
+        ...ashfallBuildingPlacements.map(({ visual }) => ({
+          entryId: visual.id,
+          layer: 'structures' as const,
+        })),
       ],
       markers: [
         ...intersectionLandmarks.map(({ id }) => ({
@@ -428,8 +519,18 @@ function box(
   position: Vector3Tuple,
   size: Vector3Tuple,
   color: number,
+  textureAssetId?: string,
+  uvMetersPerRepeat?: number,
 ): BoxVisualDefinition {
-  return { id, kind: 'box', position, size, color };
+  return {
+    id,
+    kind: 'box',
+    position,
+    size,
+    color,
+    textureAssetId,
+    uvMetersPerRepeat,
+  };
 }
 
 function gltf(
@@ -451,27 +552,32 @@ function collider(
 }
 
 function buildingPlacement(
-  corner: 'northwest' | 'northeast' | 'southwest' | 'southeast',
+  id: string,
   variantId: string,
   position: Vector3Tuple,
+  yaw = 0,
+  colliderId = `c.building-${id}`,
 ): {
   readonly visual: BuildingVisualDefinition;
   readonly collider: StaticColliderDefinition;
 } {
   const definition = getAshfallBuildingVariant(variantId);
   const [width, depth] = definition.footprint;
+  const quarterTurn = Math.abs(Math.sin(yaw)) > 0.5;
+  const collisionWidth = quarterTurn ? depth : width;
+  const collisionDepth = quarterTurn ? width : depth;
   return {
     visual: {
-      id: `v.building-${corner}`,
+      id: `v.building-${id}`,
       kind: 'building',
       variantId,
       position,
+      rotation: [0, yaw, 0],
     },
     collider: {
-      // Retain stable collision IDs used by camera diagnostics and browser tests.
-      id: `c.ruin-${corner}`,
+      id: colliderId,
       position: [position[0], position[1] + definition.height / 2, position[2]],
-      size: [width, definition.height, depth],
+      size: [collisionWidth, definition.height, collisionDepth],
       tags: ['obstacle', 'camera', 'building'],
     },
   };
