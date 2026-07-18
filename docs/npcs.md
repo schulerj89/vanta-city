@@ -2,6 +2,35 @@
 
 NPCs are data-defined static district actors. `NpcSystem` listens to level load/unload events, resolves each definition's authored NPC spawn, loads its shared `CharacterDefinition` through the existing `CharacterLoader`, adds one `NpcEntity` to `GameObjectWorld`, and registers one generic Talk interaction. It does not implement navigation, schedules, combat, missions, traffic, or runtime network loading.
 
+## Production pedestrian presentation library
+
+`pedestrianCharacterDefinitions` provides four production-intended low-poly
+ambient pedestrian models without introducing a second loader, identity,
+animation, debug, or lifecycle abstraction. They join the authoritative
+`npcCharacterDefinitions` presentation registry, so existing `CharacterLoader`
+fallback/disposal behavior, character validation, and the character animation
+lab apply unchanged.
+
+| Definition            | Local model                   | Source model      |  Scale | Idle          | Interaction       |
+| --------------------- | ----------------------------- | ----------------- | -----: | ------------- | ----------------- |
+| `pedestrian-casual`   | `animated-women/casual.glb`   | Woman Casual      | `0.38` | `Female_Idle` | `Female_Clapping` |
+| `pedestrian-street`   | `animated-women/street.glb`   | Woman             | `0.38` | `Female_Idle` | `Female_Clapping` |
+| `pedestrian-tank-top` | `animated-women/tank-top.glb` | Woman in Tank Top | `0.38` | `Female_Idle` | `Female_Clapping` |
+| `pedestrian-dress`    | `animated-women/dress.glb`    | Woman in Dress    | `0.38` | `Female_Idle` | `Female_Clapping` |
+
+All four come from Quaternius's
+[Animated Women Pack](https://poly.pizza/bundle/Animated-Women-Pack-HHSKxnk1mY),
+verified CC0/Public Domain on 2026-07-18. Detailed provenance, archive and file
+hashes, complete animation inventory, forward axis, transforms, and
+modifications are committed beside the assets in
+`public/assets/characters/animated-women/README.md`.
+
+These definitions are ready for an ambient pedestrian spawner to select, but
+this task intentionally does not add AI, pathing, dialogue, missions, new
+spawns, or a default runtime roster. Consequently the production/default
+Ashfall startup remains empty until a later gameplay system owns pedestrian
+placement and behavior. The development Talk fixtures below remain separate.
+
 ## Development fixture roster
 
 The production/default Ashfall Junction startup passes an empty definition list to `NpcSystem`, so no ordinary NPC model, Talk prompt, occupancy, or health UI is present. The reusable definitions below remain system-test fixtures and are instantiated only in a Vite development build when the URL explicitly contains `?npcFixtures=1`. Production ignores the parameter.
@@ -14,7 +43,7 @@ The production/default Ashfall Junction startup passes an empty definition list 
 
 All three are selected from Quaternius's [Animated Men Pack](https://poly.pizza/bundle/Animated-Men-Pack-DAC9SDgMQT), a CC0/Public Domain source distinct from the playable Casual/Punk **Ultimate Modular Men Pack**. The three self-contained GLBs, CC0 legal text, archive hash, individual hashes, sizes, and full clip inventory are committed under `public/assets/characters/animated-men/`. No model conversion was needed.
 
-`npcDefinitions` remains authoritative for Mack, Nox, and Raze fixture identity, character reference, spawn, Talk prompt, conversation, and idle facing. `NpcSystem` applies the shared Talk range profile; `interactionRadius` exists only as an optional surface-gap override for exceptional geometry. `npcCharacterDefinitions` contains their non-selectable presentation definitions. The playable `characterDefinitions` remains exactly Casual and Punk.
+`npcDefinitions` remains authoritative for Mack, Nox, and Raze fixture identity, character reference, spawn, Talk prompt, conversation, and idle facing. `NpcSystem` applies the shared Talk range profile; `interactionRadius` exists only as an optional surface-gap override for exceptional geometry. `npcFixtureCharacterDefinitions` contains their non-selectable presentation definitions, while `npcCharacterDefinitions` is the aggregate NPC presentation registry consumed by validation and debug tooling. The playable `characterDefinitions` remains exactly Casual and Punk.
 
 ## Animation and grounding
 

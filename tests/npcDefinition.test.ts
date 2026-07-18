@@ -5,7 +5,12 @@ import { validateNpcDefinitions } from '../src/npcs/NpcDefinition';
 import { assetManifest } from '../src/assets/catalog';
 import type { AssetManifest } from '../src/assets/AssetCatalog';
 import { characterDefinitions } from '../src/characters/characters';
-import { npcCharacterDefinitions, npcDefinitions } from '../src/npcs/npcs';
+import {
+  npcCharacterDefinitions,
+  npcDefinitions,
+  npcFixtureCharacterDefinitions,
+  pedestrianCharacterDefinitions,
+} from '../src/npcs/npcs';
 
 const characters = [
   { id: 'worker', displayName: 'Worker', fallback: 'placeholder' },
@@ -109,17 +114,24 @@ describe('NPC definition validation', () => {
         conversationGesture: false,
       },
     ]);
-    expect(npcCharacterDefinitions.map(({ id }) => id)).toEqual([
+    expect(npcFixtureCharacterDefinitions.map(({ id }) => id)).toEqual([
       'npc-worker',
       'npc-hoodie',
       'npc-punk',
     ]);
+    expect(pedestrianCharacterDefinitions.map(({ id }) => id)).toEqual([
+      'pedestrian-casual',
+      'pedestrian-street',
+      'pedestrian-tank-top',
+      'pedestrian-dress',
+    ]);
+    expect(npcCharacterDefinitions).toHaveLength(7);
     expect(characterDefinitions.map(({ id }) => id)).toEqual([
       'casual',
       'punk',
     ]);
     const manifest: AssetManifest = assetManifest;
-    for (const definition of npcCharacterDefinitions) {
+    for (const definition of npcFixtureCharacterDefinitions) {
       expect(definition.animations).toMatchObject({
         idle: { clipNames: ['HumanArmature|Man_Idle'], required: true },
         gesture: {
@@ -138,6 +150,40 @@ describe('NPC definition validation', () => {
       });
       expect(asset.attribution?.sourceUrl).toMatch(
         /^https:\/\/poly\.pizza\/m\//,
+      );
+    }
+  });
+
+  it('registers four production pedestrian models with exact interaction clips', () => {
+    const manifest: AssetManifest = assetManifest;
+    for (const definition of pedestrianCharacterDefinitions) {
+      expect(definition.animations).toMatchObject({
+        idle: { clipNames: ['HumanArmature|Female_Idle'], required: true },
+        gesture: {
+          clipNames: ['HumanArmature|Female_Clapping'],
+          required: true,
+        },
+      });
+      expect(definition.transform).toEqual({
+        scale: 0.38,
+        rotation: [0, Math.PI, 0],
+      });
+      expect(definition.fallback).toBe('placeholder');
+      const asset = manifest[definition.modelAssetId!];
+      expect(asset).toMatchObject({
+        type: 'model',
+        attribution: {
+          creator: 'Quaternius',
+          license: 'CC0 1.0 Universal',
+        },
+        metadata: {
+          intendedUse: 'ambient-pedestrian',
+          embeddedAnimations: 11,
+        },
+      });
+      expect(asset?.url).toContain('/assets/characters/animated-women/');
+      expect(asset?.attribution?.sourceUrl).toBe(
+        'https://poly.pizza/bundle/Animated-Women-Pack-HHSKxnk1mY',
       );
     }
   });

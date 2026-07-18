@@ -512,6 +512,7 @@ class CharacterAnimationLabSystem implements GameSystem {
     const position = positions[view];
     this.context.camera.position.set(position[0], position[1], position[2]);
     this.context.camera.lookAt(0, 1.05, 0);
+    this.viewSelect.value = view;
     this.cameraConfigured = true;
   }
 

@@ -48,6 +48,10 @@ test('switches every registered definition and safely disposes prior instances',
     'npc-worker',
     'npc-hoodie',
     'npc-punk',
+    'pedestrian-casual',
+    'pedestrian-street',
+    'pedestrian-tank-top',
+    'pedestrian-dress',
     'debug-sparring-target',
   ];
   for (const id of ids) {
@@ -74,8 +78,55 @@ test('switches every registered definition and safely disposes prior instances',
     expect((await labSnapshot(page)).selectionKind).toBe('clip');
   }
   // The sandbox eagerly loads Casual once, then this loop deliberately reloads
-  // all six definitions to prove the previous instance is released each time.
+  // every definition to prove the previous instance is released each time.
   expect((await labSnapshot(page)).disposalCount).toBe(ids.length);
+});
+
+test('previews every production pedestrian idle and interaction gesture @visual', async ({
+  page,
+}, testInfo) => {
+  const ids = [
+    'pedestrian-casual',
+    'pedestrian-street',
+    'pedestrian-tank-top',
+    'pedestrian-dress',
+  ];
+  for (const id of ids) {
+    await page.evaluate(
+      async (modelId) =>
+        (window.__VANTA_ANIMATION_LAB__ as LabBridge).selectModel(modelId),
+      id,
+    );
+    await waitForModel(page, id);
+    for (const logical of ['idle', 'gesture']) {
+      expect(
+        await page.evaluate(
+          (selection) =>
+            window.__VANTA_ANIMATION_LAB__!.selectAnimation(selection),
+          `logical:${logical}`,
+        ),
+      ).toBe(true);
+      await page.evaluate(() => {
+        const lab = window.__VANTA_ANIMATION_LAB__!;
+        lab.setPlaying(false);
+        lab.setNormalizedTime(0.35);
+        lab.setView('front');
+        lab.setOverlay('bounds', true);
+        lab.setOverlay('alignment', true);
+      });
+      await waitForRenderedFrame(page);
+      const snapshot = await labSnapshot(page);
+      expect(snapshot.modelSource).toBe('asset');
+      expect(snapshot.selection).toBe(logical);
+      expect(snapshot.selectionKind).toBe('logical');
+      expect(snapshot.alignment?.simulationOrigin).toEqual([0, 0, 0]);
+      expect(snapshot.alignment?.footPlane).toBe(0);
+      await testInfo.attach(`${id}-${logical}.png`, {
+        body: await page.screenshot(),
+        contentType: 'image/png',
+      });
+    }
+  }
 });
 
 test('supports deterministic action lock, impact, scrub, speed, and mixer release', async ({
