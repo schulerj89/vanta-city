@@ -6,6 +6,12 @@ Vanta City uses TypeScript, Vite, and Three.js without a UI framework. The curre
 
 No third-party physics library is installed. The first vertical slice uses a deterministic game-owned `StaticCollisionWorld` behind the narrower `CollisionWorld` query contract. Authored `StaticColliderDefinition` data is shared by level loading and the collision adapter; player, interaction, and camera code do not depend on level files or a physics package. Character movement/ground probes, interaction visibility, and camera obstruction all query this one runtime model.
 
+### Building catalog and lab authority
+
+`AshfallBuildingKit` is the stable immutable catalog and renderer for production exterior shells. Variant metadata includes exact footprint/height, local +Z frontage, shallow entrance definitions, material IDs, massing, UV density, and LOD tags; it never owns level placement, collision registration, streaming distance, or simulation. `LevelSystem` constructs one renderer per sector, owns generated geometry/material disposal, and remains the only gameplay distance evaluator. `ThreeAssetLoader` owns cached local texture sources, so a renderer creates one shared material promise per used family without cloning textures per building.
+
+The development-only `building-visual-lab` consumes the same public catalog and renderer. Its bridge exposes serializable snapshots and controls for focus, view, LOD, bounds, and collision; it never exposes scene nodes or mutates runtime-private fields. Lab DOM, helpers, listeners, and generated resources are sandbox-owned and removed on disposal. BUILDINGS-002 keeps the existing gameplay level, registry, map, collision, and streaming contracts unchanged.
+
 ## Runtime lifecycle
 
 `GameRuntime` owns the animation frame, `GameClock`, `GameStateMachine`, event bus, and ordered `SystemRegistry`. `init()` initializes registered systems in registration order, transitions `booting` to `playing`, and starts the frame loop. `dispose()` stops the loop, disposes systems in reverse registration order, then clears events.

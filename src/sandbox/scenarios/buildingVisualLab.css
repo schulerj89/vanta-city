@@ -4,9 +4,11 @@
 
 .building-lab-panel {
   position: absolute;
-  inset: 1rem 1rem 1rem auto;
+  inset: calc(1rem + env(safe-area-inset-top))
+    calc(1rem + env(safe-area-inset-right))
+    calc(1rem + env(safe-area-inset-bottom)) auto;
   z-index: 20;
-  width: min(43rem, 40vw);
+  width: min(49rem, 46vw);
   overflow: auto;
   color: #e8f0e9;
   background: rgb(17 28 31 / 92%);
@@ -53,17 +55,56 @@
 
 .building-lab-panel nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   margin-top: 0.75rem;
 }
 
 .building-lab-panel button {
+  min-height: 2.25rem;
   padding: 0.35rem 0.65rem;
   color: inherit;
   background: #263d40;
   border: 1px solid #527477;
   border-radius: 0.25rem;
   text-transform: capitalize;
+}
+
+.building-lab-panel button:focus-visible,
+.building-lab-panel select:focus-visible {
+  outline: 2px solid #e8f0e9;
+  outline-offset: 2px;
+}
+
+.building-lab-controls {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.building-lab-controls label {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  color: #b9ceca;
+}
+
+.building-lab-panel select {
+  min-width: 0;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.45rem;
+  color: #e8f0e9;
+  background: #263d40;
+  border: 1px solid #527477;
+  border-radius: 0.25rem;
+  font: inherit;
+}
+
+.building-lab-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .building-lab-panel button[aria-pressed='true'] {
@@ -74,6 +115,10 @@
 .building-lab-panel table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.building-lab-table {
+  overflow: auto;
 }
 
 .building-lab-panel th,
@@ -88,6 +133,11 @@
   color: #dce9df;
 }
 
+.building-lab-panel tr[data-selected='true'] th {
+  color: #17282b;
+  background: #ffb665;
+}
+
 .building-lab-panel td {
   color: #a6c0bd;
 }
@@ -100,8 +150,40 @@
 
 @media (max-width: 700px) {
   .building-lab-panel {
-    inset: auto 0.5rem 0.5rem;
+    inset: auto calc(0.5rem + env(safe-area-inset-right))
+      calc(0.5rem + env(safe-area-inset-bottom))
+      calc(0.5rem + env(safe-area-inset-left));
     width: auto;
     max-height: 42vh;
+  }
+
+  .building-lab-panel header {
+    padding: 0.7rem;
+  }
+
+  .building-lab-panel h1 {
+    font-size: 1.05rem;
+  }
+
+  .building-lab-controls {
+    gap: 0.45rem;
+  }
+
+  .building-lab-controls label {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+  }
+
+  .building-lab-panel th,
+  .building-lab-panel td {
+    padding: 0.42rem 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .building-lab-panel *,
+  .building-lab-panel *::before,
+  .building-lab-panel *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
   }
 }
