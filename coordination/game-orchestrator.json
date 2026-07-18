@@ -337,7 +337,7 @@
     {
       "id": "NPC-001",
       "title": "Acquire and validate the first expanded pedestrian cast",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["PERF-001"],
       "owner": "asset-worker",
       "acceptance": [
@@ -361,7 +361,7 @@
     {
       "id": "VEHICLE-001",
       "title": "Implement enter, drive, and exit vehicle foundation",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["PERF-001"],
       "owner": "vehicle-worker",
       "acceptance": [
@@ -508,7 +508,7 @@
     {
       "id": "TEST-001",
       "title": "Reduce validation latency",
-      "status": "ready",
+      "status": "completed",
       "dependencies": [],
       "owner": "test-performance-worker",
       "acceptance": [
@@ -519,7 +519,7 @@
     }
   ],
   "executionState": {
-    "lastIntegratedTaskIds": ["CORE-001", "WORLD-001", "UI-SYSTEM-001"],
+    "lastIntegratedTaskIds": ["NPC-001", "VEHICLE-001", "TEST-001"],
     "lastMapExpansion": {
       "taskId": "WORLD-001",
       "previousPlayableAreaSquareMetres": 3136,
