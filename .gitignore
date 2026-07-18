@@ -3,6 +3,7 @@ dist/
 coverage/
 reports/character-validation.json
 reports/playbot/
+reports/release-gate/
 playwright-report/
 test-results/
 blob-report/

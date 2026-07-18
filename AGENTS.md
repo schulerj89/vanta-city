@@ -48,6 +48,7 @@ These rules apply to the entire repository.
 - Maintain four active workers when four independent dependency-ready tasks exist; use a fifth only when its ownership does not overlap. Never exceed five active workers.
 - The hourly cleaner runs after integration and may remove only clean, inactive, integrated registered worktrees under the Vanta worktree root. Preserve branches and report, rather than delete, unregistered orphan directories.
 - Hourly integration skips the complete E2E suite. Run changed-feature browser tests and smoke coverage; reserve full E2E for explicit release milestones or a separately approved scheduled gate.
+- The nightly release gate runs at 3:30 AM local time only after `TEST-001` is integrated and only when `origin/main` changed since the last successful gate. It is read-only QA: run the release-milestone checks, retain bounded ignored artifacts, record the tested SHA externally, and never edit source, merge, commit, or push.
 - A map-expansion milestone grows measured playable area by 20–30% (target 25%). Unrelated feature iterations must not inflate the map merely to satisfy the percentage.
 - Treat 900 MB as a tested hard memory ceiling, not a utilization goal. Performance, disposal, and leak checks block integration when budgets regress.
 - New gameplay acceptance must use production-intended, locally stored assets with verified provenance. Synthetic placeholders remain limited to explicit failure-path tests.

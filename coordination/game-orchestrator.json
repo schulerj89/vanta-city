@@ -42,6 +42,21 @@
       "removeOnlyCleanInactiveIntegratedWorktrees": true,
       "preserveBranches": true,
       "neverRemoveMain": true
+    },
+    "nightlyReleaseGate": {
+      "model": "gpt-5.6-sol",
+      "reasoningEffort": "medium",
+      "localHour": 3,
+      "localMinute": 30,
+      "activationDependency": "TEST-001",
+      "onlyWhenMainChangedSinceLastSuccess": true,
+      "sourceMutation": false,
+      "pushAllowed": false,
+      "artifactDirectory": "reports/release-gate",
+      "maxRunArtifactMb": 1000,
+      "maxTotalArtifactMb": 2000,
+      "artifactRetentionDays": 14,
+      "artifactRetentionRuns": 5
     }
   },
   "executionPolicy": {
@@ -517,6 +532,7 @@
     "lastIntegratedTaskIds": [],
     "lastOrchestratorRun": null,
     "lastIntegratorRun": null,
+    "lastNightlyReleaseGate": null,
     "lastMapExpansion": null,
     "lastPerformanceReport": null,
     "notes": [
