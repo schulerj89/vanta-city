@@ -15,6 +15,21 @@ export const intersectionLayout = {
   signalController: [10.2, 0.65, 8.5] as Vector3Tuple,
 } as const;
 
+/**
+ * Development-only combat pad on the open northeast sidewalk apron.
+ *
+ * The pad stays south of the northeast ruin, east of the signal fixture, and
+ * north of the east-road barrier. The player approaches from the south so the
+ * combat camera remains clear of both the ruin and the signal controller.
+ */
+export const sparringTargetArea = {
+  target: [16, 0.2, 9.5] as Vector3Tuple,
+  targetYaw: Math.PI,
+  player: [16, 0.22, 8.6] as Vector3Tuple,
+  playerYaw: 0,
+  supportColliderId: 'c.sidewalk-northeast',
+} as const;
+
 export const intersectionApproachSpawns = [
   {
     id: 'spawn.approach-north',
@@ -79,8 +94,8 @@ export const fixtureSpawns = [
   },
   {
     id: 'spawn.debug-sparring-target',
-    position: [3.5, 0, 11.8] as Vector3Tuple,
-    yaw: 0,
+    position: sparringTargetArea.target,
+    yaw: sparringTargetArea.targetYaw,
   },
 ] as const;
 
@@ -102,8 +117,8 @@ export const fixturePlayerSpawns = [
   },
   {
     id: 'spawn.player-sparring',
-    position: [3.5, 0, 14] as Vector3Tuple,
-    yaw: Math.PI,
+    position: sparringTargetArea.player,
+    yaw: sparringTargetArea.playerYaw,
   },
   {
     id: 'spawn.debug-interactions',

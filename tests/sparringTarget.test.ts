@@ -5,6 +5,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   Scene,
+  Vector3,
 } from 'three';
 import { evaluateActionTarget } from '../src/actions/ActionTarget';
 import type { LoadedCharacter } from '../src/characters/CharacterLoader';
@@ -13,13 +14,16 @@ import { SparringTargetSystem } from '../src/debug/SparringTargetSystem';
 import { sparringTargetConfig } from '../src/debug/sparringTarget';
 import type { PlayerActionEvents } from '../src/player/PlayerControllerSystem';
 import { GameObjectWorld } from '../src/entities/GameObjectWorld';
+import { StaticCollisionWorld } from '../src/physics/CollisionWorld';
+import { defaultPlayerMovementConfig } from '../src/player/PlayerMovement';
+import { sparringTargetArea } from '../src/world/levels/intersectionLayout';
 import { testDistrict } from '../src/world/levels/testDistrict';
 
 function player() {
   const events = new EventBus<PlayerActionEvents>();
   let pose = {
-    position: { x: 3.5, y: 0.15, z: 14 },
-    forward: { x: 0, y: 0, z: -1 },
+    position: { x: 16, y: 0.2, z: 7.3 },
+    forward: { x: 0, y: 0, z: 1 },
   };
   return {
     events,
@@ -158,6 +162,9 @@ describe('action target foundation', () => {
       active: true,
       release: focusRelease,
     }));
+    const collision = new StaticCollisionWorld();
+    collision.addDefinitions(testDistrict.definition.staticCollision);
+    const baseColliderCount = collision.getColliderCount();
     const system = new SparringTargetSystem(
       characterLoader,
       objects,
@@ -167,36 +174,63 @@ describe('action target foundation', () => {
       },
       {
         camera: { requestGameplayFocus },
+        collision,
         gameplayAvailable: () => gameplayAvailable,
       },
     );
-    await system.init();
+    system.init();
 
     const initial = system.getSnapshot();
     expect(initial).toMatchObject({
       enabled: false,
-      loaded: true,
-      animation: 'idle',
-      groundedMinY: 0,
+      loaded: false,
+      animation: 'unavailable',
+      collisionActive: false,
+      listenerCount: 0,
       responseSequence: 0,
     });
-    expect(initial.height).toBeCloseTo(1.8);
     actor.events.emit('character-action:impact', impact('punchLeft', 1));
     expect(system.getSnapshot()).toMatchObject({
       responseSequence: 0,
-      ignoredSequence: 1,
-      lastIgnoredReason: 'disabled',
-      feedback: 'ignored-disabled',
+      ignoredSequence: 0,
+      lastIgnoredReason: undefined,
+      feedback: 'inactive',
     });
 
-    system.setEnabled(true);
+    await system.setEnabled(true);
     system.setVisualizationVisible(true);
     system.update({ delta: 0, elapsed: 0, frame: 0 });
     expect(system.getSnapshot()).toMatchObject({
+      loaded: true,
+      groundedMinY: sparringTargetArea.target[1],
+      collisionActive: true,
+      listenerCount: 3,
       eligible: false,
       rejectionReason: 'out-of-range',
       engagement: { engaged: true, cameraRequested: false },
     });
+    expect(system.getSnapshot().height).toBeCloseTo(1.8);
+    expect(collision.getColliderCount()).toBe(baseColliderCount + 1);
+    expect(system.getHealthCollisionIgnoreIds()).toEqual([
+      sparringTargetConfig.collisionId,
+    ]);
+    const bodyContact = collision.moveCharacter(
+      new Vector3(...sparringTargetArea.player),
+      new Vector3(0, 0, 0.5),
+      defaultPlayerMovementConfig,
+      true,
+    );
+    expect(bodyContact.blocked).toBe(true);
+    expect(bodyContact.blockedColliderIds).toContain(
+      sparringTargetConfig.collisionId,
+    );
+    expect(
+      collision.castCamera(
+        new Vector3(16, 1.2, 8),
+        new Vector3(16, 1.2, 11),
+        0.2,
+      ).obstructed,
+    ).toBe(false);
     actor.events.emit('character-action:started', {
       action: 'punchLeft',
       source: 'keyboard',
@@ -220,8 +254,8 @@ describe('action target foundation', () => {
     });
     expect(requestGameplayFocus).toHaveBeenCalledTimes(2);
     actor.setPose({
-      position: { x: 3.5, y: 0.15, z: 12.7 },
-      forward: { x: 0, y: 0, z: -1 },
+      position: { x: 16, y: 0.2, z: 8.6 },
+      forward: { x: 0, y: 0, z: 1 },
     });
     actor.events.emit('character-action:impact', impact('punchLeft', 2));
     expect(system.getSnapshot()).toMatchObject({
@@ -236,12 +270,12 @@ describe('action target foundation', () => {
       health: { current: 92, changeSequence: 1 },
       lastAction: 'punchLeft',
       feedback: 'accepted',
-      impactSequence: 2,
+      impactSequence: 1,
     });
     actor.events.emit('character-action:impact', impact('kickRight', 3));
     expect(system.getSnapshot()).toMatchObject({
       responseSequence: 1,
-      ignoredSequence: 2,
+      ignoredSequence: 1,
       lastIgnoredReason: 'target-busy',
       feedback: 'ignored-target-busy',
     });
@@ -254,8 +288,8 @@ describe('action target foundation', () => {
     });
 
     actor.setPose({
-      position: { x: 3.5, y: 0.15, z: 20 },
-      forward: { x: 0, y: 0, z: -1 },
+      position: { x: 16, y: 0.2, z: 4 },
+      forward: { x: 0, y: 0, z: 1 },
     });
     actor.events.emit('character-action:impact', impact('kickLeft', 4));
     expect(system.getSnapshot()).toMatchObject({
@@ -263,8 +297,8 @@ describe('action target foundation', () => {
       feedback: 'ignored-out-of-range',
     });
     actor.setPose({
-      position: { x: 3.5, y: 0.15, z: 12.7 },
-      forward: { x: 0, y: 0, z: 1 },
+      position: { x: 16, y: 0.2, z: 8.6 },
+      forward: { x: 0, y: 0, z: -1 },
     });
     actor.events.emit('character-action:impact', impact('kickRight', 5));
     expect(system.getSnapshot()).toMatchObject({
@@ -272,8 +306,8 @@ describe('action target foundation', () => {
       feedback: 'ignored-not-facing',
     });
     actor.setPose({
-      position: { x: 3.5, y: 4, z: 12.7 },
-      forward: { x: 0, y: 0, z: -1 },
+      position: { x: 16, y: 4, z: 8.6 },
+      forward: { x: 0, y: 0, z: 1 },
     });
     actor.events.emit('character-action:impact', impact('punchRight', 6));
     expect(system.getSnapshot()).toMatchObject({
@@ -300,9 +334,36 @@ describe('action target foundation', () => {
       lastAction: undefined,
     });
 
+    await system.setEnabled(false);
+    expect(system.getSnapshot()).toMatchObject({
+      enabled: false,
+      loaded: false,
+      collisionActive: false,
+      listenerCount: 0,
+      health: undefined,
+      responseSequence: 0,
+      ignoredSequence: 0,
+      feedback: 'inactive',
+    });
+    expect(collision.getColliderCount()).toBe(baseColliderCount);
+    actor.events.emit('character-action:impact', impact('punchLeft', 8));
+    expect(system.getSnapshot().impactSequence).toBe(0);
+
+    await system.setEnabled(true);
+    expect(system.getSnapshot()).toMatchObject({
+      enabled: true,
+      loaded: true,
+      collisionActive: true,
+      listenerCount: 3,
+      health: { current: 100 },
+    });
+    expect(objects.get('debug.sparring-target')).toBeDefined();
+
     system.dispose();
     expect(objects.get('debug.sparring-target')).toBeUndefined();
     expect(objects.get('debug.sparring-eligibility')).toBeUndefined();
     expect(characterLoader.disposals[0]).toHaveBeenCalledOnce();
+    expect(characterLoader.disposals[1]).toHaveBeenCalledOnce();
+    expect(collision.getColliderCount()).toBe(baseColliderCount);
   });
 });

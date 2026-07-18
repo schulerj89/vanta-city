@@ -2,7 +2,10 @@ import { Vector3 } from 'three';
 import { StaticCollisionWorld } from '../../src/physics/CollisionWorld';
 import { defaultPlayerMovementConfig } from '../../src/player/PlayerMovement';
 import { findSpawn } from '../../src/world/LevelQueries';
-import { intersectionLayout } from '../../src/world/levels/intersectionLayout';
+import {
+  intersectionLayout,
+  sparringTargetArea,
+} from '../../src/world/levels/intersectionLayout';
 import { testDistrict } from '../../src/world/levels/testDistrict';
 
 const approaches = [
@@ -78,6 +81,33 @@ describe('Ashfall Junction intersection', () => {
         position: intersectionLayout.trafficLight,
       }),
     );
+  });
+
+  it('authors the sparring pad on clear northeast sidewalk collision', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addDefinitions(testDistrict.definition.staticCollision);
+    for (const position of [
+      sparringTargetArea.target,
+      sparringTargetArea.player,
+    ]) {
+      const result = collision.moveCharacter(
+        new Vector3(...position),
+        new Vector3(0, -0.4, 0),
+        defaultPlayerMovementConfig,
+        true,
+      );
+      expect(result.grounded).toBe(true);
+      expect(result.groundColliderId).toBe(
+        sparringTargetArea.supportColliderId,
+      );
+      expect(result.blockedColliderIds).toEqual([]);
+    }
+    expect(
+      Math.hypot(
+        sparringTargetArea.target[0] - intersectionLayout.signalController[0],
+        sparringTargetArea.target[2] - intersectionLayout.signalController[2],
+      ),
+    ).toBeGreaterThan(5.5);
   });
 
   it('registers only local, documented CC0 environment assets', () => {

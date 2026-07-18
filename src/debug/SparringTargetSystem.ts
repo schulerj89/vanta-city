@@ -1,6 +1,7 @@
 import {
   AnimationMixer,
   BufferGeometry,
+  BoxGeometry,
   CylinderGeometry,
   DoubleSide,
   Group,
@@ -44,6 +45,7 @@ import type {
 } from '../world/Spatial';
 import type { LevelDefinition } from '../world/LevelDefinition';
 import type { EventBus } from '../core/events';
+import type { StaticColliderDefinition } from '../physics/StaticCollider';
 import { HealthComponent } from '../health/Health';
 import type { HealthSnapshot } from '../health/Health';
 import { CharacterAnimationStateMachine } from '../characters/CharacterAnimationStateMachine';
@@ -78,6 +80,11 @@ export interface SparringTargetOptions {
   readonly fixtureEnabled?: boolean;
   readonly camera?: SparringCameraFocusSurface;
   readonly gameplayAvailable?: () => boolean;
+  readonly reportError?: (scope: string, error: unknown) => void;
+  readonly collision?: {
+    addDefinition(definition: StaticColliderDefinition): void;
+    remove(id: string): boolean;
+  };
 }
 
 export interface SparringTargetSnapshot {
@@ -150,6 +157,9 @@ export interface SparringTargetSnapshot {
   readonly groundedMinY: number | undefined;
   readonly height: number | undefined;
   readonly health: HealthSnapshot | undefined;
+  readonly position: WorldPosition | undefined;
+  readonly collisionActive: boolean;
+  readonly listenerCount: number;
 }
 
 export class SparringTargetSystem implements GameSystem {
@@ -172,6 +182,10 @@ export class SparringTargetSystem implements GameSystem {
   private lastImpactNormalizedTime: number | undefined;
   private feedbackRemaining = 0;
   private latestDecision: SparringTargetSnapshot['latestDecision'];
+  private activation: Promise<void> | undefined;
+  private enabledRequested: boolean;
+  private collisionActive = false;
+  private disposed = false;
 
   public constructor(
     private readonly loader: SparringCharacterLoader,
@@ -181,10 +195,34 @@ export class SparringTargetSystem implements GameSystem {
       readonly activeLevel: LevelDefinition | undefined;
     },
     private readonly options: SparringTargetOptions = {},
-  ) {}
+  ) {
+    this.enabledRequested = options.fixtureEnabled === true;
+  }
 
-  public async init(): Promise<void> {
-    if (this.options.fixtureEnabled === false) return;
+  public get initiallyEnabled(): boolean {
+    return this.enabledRequested;
+  }
+
+  public init(): void {
+    if (this.enabledRequested) {
+      void this.activate().catch((error: unknown) => {
+        this.options.reportError?.('sparring target URL activation', error);
+      });
+    }
+  }
+
+  private async activate(): Promise<void> {
+    if (this.disposed || !this.enabledRequested || this.entity) return;
+    if (this.activation) return this.activation;
+    this.activation = this.createFixture();
+    try {
+      await this.activation;
+    } finally {
+      this.activation = undefined;
+    }
+  }
+
+  private async createFixture(): Promise<void> {
     const level = this.levels.activeLevel;
     if (level?.id !== 'test-district') return;
     const spawn = level.spawns.find(
@@ -201,11 +239,17 @@ export class SparringTargetSystem implements GameSystem {
       this.loader,
     );
     await entity.init();
+    if (this.disposed || !this.enabledRequested) {
+      entity.dispose();
+      return;
+    }
+    entity.setEnabled(true);
     this.entity = entity;
     this.objects.add(entity);
     this.visualization = new SparringEligibilityVisualization();
     this.visualization.setVisible(this.visualizationRequested);
     this.objects.add(this.visualization);
+    this.syncCollision();
     this.unsubscribePlayer = [
       this.player.events.on('character-action:started', (action) =>
         this.onActionStarted(action),
@@ -241,12 +285,15 @@ export class SparringTargetSystem implements GameSystem {
     this.syncCameraFocus(playerPose, entity.getWorldPose());
   }
 
-  public setEnabled(enabled: boolean): void {
-    this.entity?.setEnabled(enabled);
-    if (!enabled) this.lastIgnoredReason = undefined;
-    this.feedback = enabled ? 'ready' : 'inactive';
-    this.feedbackRemaining = 0;
-    if (!enabled) this.releaseCameraFocus();
+  public async setEnabled(enabled: boolean): Promise<void> {
+    this.enabledRequested = enabled;
+    if (enabled) {
+      this.feedback = 'ready';
+      this.feedbackRemaining = 0;
+      await this.activate();
+      return;
+    }
+    this.deactivate();
   }
 
   public reset(): void {
@@ -320,6 +367,9 @@ export class SparringTargetSystem implements GameSystem {
       groundedMinY: presentation?.groundedMinY,
       height: presentation?.height,
       health: entity?.health.getSnapshot(),
+      position: entity?.getWorldPose().position,
+      collisionActive: this.collisionActive,
+      listenerCount: this.unsubscribePlayer.length,
     };
   }
 
@@ -338,6 +388,10 @@ export class SparringTargetSystem implements GameSystem {
     };
   }
 
+  public getHealthCollisionIgnoreIds(): readonly string[] {
+    return this.collisionActive ? [sparringTargetConfig.collisionId] : [];
+  }
+
   public setVisualizationVisible(visible: boolean): void {
     this.visualizationRequested = visible;
     this.visualization?.setVisible(visible);
@@ -345,17 +399,62 @@ export class SparringTargetSystem implements GameSystem {
 
   public teleport(position: WorldPosition, yaw?: number): void {
     this.entity?.teleport(position, yaw);
+    this.syncCollision();
     this.releaseCameraFocus();
   }
 
   public dispose(): void {
+    this.disposed = true;
+    this.enabledRequested = false;
+    this.deactivate();
+  }
+
+  private deactivate(): void {
     this.releaseCameraFocus();
     for (const unsubscribe of this.unsubscribePlayer) unsubscribe();
     this.unsubscribePlayer = [];
+    if (this.collisionActive) {
+      this.options.collision?.remove(sparringTargetConfig.collisionId);
+      this.collisionActive = false;
+    }
     if (this.visualization) this.objects.remove(this.visualization.id);
     this.visualization = undefined;
     if (this.entity) this.objects.remove(this.entity.id);
     this.entity = undefined;
+    this.clearDebugState();
+  }
+
+  private clearDebugState(): void {
+    this.ignoredSequence = 0;
+    this.lastIgnoredReason = undefined;
+    this.lastEvaluation = undefined;
+    this.lastStrike = 'punchLeft';
+    this.feedback = 'inactive';
+    this.feedbackSequence = 0;
+    this.impactSequence = 0;
+    this.lastImpactNormalizedTime = undefined;
+    this.feedbackRemaining = 0;
+    this.latestDecision = undefined;
+  }
+
+  private syncCollision(): void {
+    const collision = this.options.collision;
+    const pose = this.entity?.getWorldPose();
+    if (!collision || !pose) return;
+    if (this.collisionActive)
+      collision.remove(sparringTargetConfig.collisionId);
+    const [width, height, depth] = sparringTargetConfig.collisionSize;
+    collision.addDefinition({
+      id: sparringTargetConfig.collisionId,
+      position: [
+        pose.position.x,
+        pose.position.y + height / 2,
+        pose.position.z,
+      ],
+      size: [width, height, depth],
+      tags: ['obstacle', 'development-fixture', 'camera-pass-through'],
+    });
+    this.collisionActive = true;
   }
 
   private respond(impact: CharacterActionImpact): void {
@@ -546,6 +645,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   public readonly health = new HealthComponent('debug.sparring-target', 100);
 
   private readonly visualRoot = new Group();
+  private readonly fixtureMarker = createFixtureMarker();
   private loaded: LoadedCharacter | undefined;
   private mixer: AnimationMixer | undefined;
   private action: AnimationAction | undefined;
@@ -555,6 +655,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   private responseSequence = 0;
   private lastAction: string | undefined;
   private groundedMinY: number | undefined;
+  private groundedOffset: number | undefined;
   private height: number | undefined;
   private readonly modelOffset = new Vector3();
   private readonly clips = new Map<string, AnimationClip>();
@@ -577,6 +678,7 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     this.object3d.visible = false;
     this.visualRoot.name = 'Debug sparring target visual alignment';
     this.object3d.add(this.visualRoot);
+    this.object3d.add(this.fixtureMarker);
   }
 
   public async init(): Promise<void> {
@@ -591,8 +693,8 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     });
     this.modelOffset.copy(loaded.root.position);
     this.visualRoot.position.y = alignment.appliedVisualOffset;
-    this.groundedMinY =
-      this.object3d.position.y + bounds.min.y + alignment.appliedVisualOffset;
+    this.groundedOffset = bounds.min.y + alignment.appliedVisualOffset;
+    this.groundedMinY = this.object3d.position.y + this.groundedOffset;
     this.height = bounds.max.y - bounds.min.y;
     this.visualRoot.add(loaded.root);
     for (const [name, clip] of loaded.animationClips) {
@@ -675,6 +777,10 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
   public teleport(position: WorldPosition, yaw?: number): void {
     this.object3d.position.set(position.x, position.y, position.z);
     if (yaw !== undefined) this.object3d.rotation.y = yaw;
+    this.groundedMinY =
+      this.groundedOffset === undefined
+        ? undefined
+        : this.object3d.position.y + this.groundedOffset;
   }
 
   public getSnapshot(): SparringPresentationSnapshot {
@@ -707,6 +813,12 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     this.health.dispose();
     this.activeReaction = undefined;
     this.visualRoot.clear();
+    for (const child of this.fixtureMarker.children) {
+      if (!(child instanceof Mesh)) continue;
+      const mesh = child as Mesh<BufferGeometry, MeshBasicMaterial>;
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    }
     this.object3d.clear();
   }
 
@@ -764,6 +876,35 @@ class SparringTargetEntity implements GameObject, CharacterActionTarget {
     }
     this.action.play();
   }
+}
+
+function createFixtureMarker(): Group {
+  const marker = new Group();
+  marker.name = 'Ashfall sparring pad marker';
+  const padMaterial = new MeshBasicMaterial({
+    color: 0x10252a,
+    transparent: true,
+    opacity: 0.72,
+    side: DoubleSide,
+    depthWrite: false,
+  });
+  const lineMaterial = new MeshBasicMaterial({
+    color: 0x35c8ff,
+    transparent: true,
+    opacity: 0.85,
+    side: DoubleSide,
+    depthWrite: false,
+  });
+  const pad = new Mesh(new RingGeometry(0.58, 1.55, 48), padMaterial);
+  const target = new Mesh(new RingGeometry(0.43, 0.5, 32), lineMaterial);
+  const approach = new Mesh(new BoxGeometry(0.08, 0.025, 1.35), lineMaterial);
+  pad.rotation.x = -Math.PI / 2;
+  target.rotation.x = -Math.PI / 2;
+  pad.position.y = 0.025;
+  target.position.y = 0.035;
+  approach.position.set(0, 0.035, 1.15);
+  marker.add(pad, target, approach);
+  return marker;
 }
 
 class SparringEligibilityVisualization implements GameObject {

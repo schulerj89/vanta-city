@@ -342,7 +342,9 @@ async function bootstrap(): Promise<void> {
       levelSystem,
       {
         camera,
+        collision,
         fixtureEnabled: developmentParameters?.get('sparringFixture') === '1',
+        reportError: (scope, error) => development.errors.report(scope, error),
         gameplayAvailable: () =>
           runtime.state.current === 'playing' && !input.isUiFocused(),
       },
@@ -767,6 +769,10 @@ function registerVerticalSliceDebug(
   });
   let cameraPreview:
     ReturnType<ThirdPersonCameraSystem['requestCamera']> | undefined;
+  const ensureSparringTarget = async (): Promise<void> => {
+    debug.setToggle('sparring-target.active', true);
+    await sparringTarget.setEnabled(true);
+  };
   return [
     () => cameraPreview?.release(),
     ...npcDebug,
@@ -1036,7 +1042,7 @@ function registerVerticalSliceDebug(
       group: sections.characters,
       read: () => {
         const target = sparringTarget.getSnapshot();
-        return `${target.enabled ? 'active' : 'inactive'} · ${target.animation} · ${target.feedback} · responses ${target.responseSequence}`;
+        return `${target.enabled ? 'active' : target.loaded ? 'loaded' : 'absent'} · ${target.animation} · ${target.feedback} · collision ${target.collisionActive ? 'on' : 'off'} · listeners ${target.listenerCount}`;
       },
     }),
     debug.registerValue({
@@ -1065,7 +1071,8 @@ function registerVerticalSliceDebug(
       group: sections.interactions,
       read: () => {
         const engagement = sparringTarget.getSnapshot().engagement;
-        return `${engagement.engaged ? 'engaged' : 'disengaged'} · ${engagement.distance.toFixed(2)}/${engagement.distanceLimit.toFixed(2)}m · focus ${engagement.cameraRequested ? engagement.cameraDistance.toFixed(2) : 'off'}`;
+        const cameraState = camera.getDebugSnapshot();
+        return `${engagement.engaged ? 'engaged' : 'disengaged'} · ${engagement.distance.toFixed(2)}/${engagement.distanceLimit.toFixed(2)}m · owner ${cameraState.gameplayFocusOwner ?? 'none'} · zoom ${cameraState.actualDistance.toFixed(2)}/${cameraState.desiredDistance.toFixed(2)}m`;
       },
     }),
     debug.registerValue({
@@ -1092,14 +1099,50 @@ function registerVerticalSliceDebug(
       id: 'sparring-target.active',
       label: 'Activate debug sparring target',
       group: sections.actions,
-      initialValue: false,
-      onChange: (enabled) => sparringTarget.setEnabled(enabled),
+      initialValue: sparringTarget.initiallyEnabled,
+      onChange: (enabled) => {
+        void sparringTarget
+          .setEnabled(enabled)
+          .catch((error) =>
+            development.errors.report('sparring target activation', error),
+          );
+      },
     }),
     debug.registerCommand({
       id: 'sparring-target.reset',
-      label: 'Reset debug sparring target',
+      label: 'Reset / revive sparring target',
       group: sections.actions,
-      run: () => sparringTarget.reset(),
+      run: async () => {
+        await ensureSparringTarget();
+        sparringTarget.reset();
+      },
+    }),
+    debug.registerCommand({
+      id: 'sparring-target.teleport-player',
+      label: 'Teleport player to sparring pad',
+      group: sections.actions,
+      run: async () => {
+        await ensureSparringTarget();
+        const spawn = level.getSpawn('spawn.player-sparring');
+        player.teleport(new Vector3(...spawn.position), spawn.rotation?.[1]);
+      },
+    }),
+    debug.registerCommand({
+      id: 'sparring-target.teleport-to-player',
+      label: 'Move sparring target in front of player',
+      group: sections.actions,
+      run: async () => {
+        await ensureSparringTarget();
+        const pose = player.getWorldPose();
+        sparringTarget.teleport(
+          {
+            x: pose.position.x + pose.forward.x * 0.9,
+            y: pose.position.y,
+            z: pose.position.z + pose.forward.z * 0.9,
+          },
+          Math.atan2(-pose.forward.x, -pose.forward.z),
+        );
+      },
     }),
     debug.registerCommand({
       id: 'sparring-target.teleport-position',

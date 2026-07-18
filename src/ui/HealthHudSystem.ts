@@ -38,6 +38,7 @@ export class HealthHudSystem implements GameSystem {
     private readonly target: {
       getHealth(): HealthComponent | undefined;
       getHealthAnchor(): WorldPosition | undefined;
+      getHealthCollisionIgnoreIds?(): readonly string[];
     },
     private readonly camera: PerspectiveCamera,
     private readonly collision: CollisionWorld,
@@ -73,6 +74,7 @@ export class HealthHudSystem implements GameSystem {
     const cameraPosition = this.camera.getWorldPosition(new Vector3());
     const occlusion = this.collision.castSegment(cameraPosition, world, {
       radius: 0.025,
+      ignoreColliderIds: this.target.getHealthCollisionIgnoreIds?.(),
     });
     this.targetOccluded = occlusion.obstructed && occlusion.fraction < 0.98;
     const projected = world.clone().project(this.camera);

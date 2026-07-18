@@ -26,6 +26,9 @@ export const sparringTargetCharacterDefinition = {
 
 export const sparringTargetConfig = {
   spawnId: 'spawn.debug-sparring-target',
+  playerSpawnId: 'spawn.player-sparring',
+  collisionId: 'c.debug-sparring-target',
+  collisionSize: [0.68, 1.8, 0.68] as const,
   engagementDistance: 3,
   engagementMinimumFacingDot: 0.2,
   focusedCameraDistance: 4.25,

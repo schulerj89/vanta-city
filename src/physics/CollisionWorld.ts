@@ -74,6 +74,7 @@ export interface CollisionDebugSnapshot {
 export interface SegmentCastOptions {
   readonly radius?: number;
   readonly ignoreColliderIds?: readonly string[];
+  readonly ignoreColliderTags?: readonly string[];
   /** Ignore tagged volumes only when the sweep origin is already inside them. */
   readonly ignoreInitialOverlapTags?: readonly string[];
 }
@@ -370,7 +371,11 @@ export class StaticCollisionWorld implements CollisionWorld {
       'ignoreColliderIds' | 'ignoreInitialOverlapTags'
     > = {},
   ): CameraCastResult {
-    const segment = this.castSegment(from, to, { ...options, radius });
+    const segment = this.castSegment(from, to, {
+      ...options,
+      radius,
+      ignoreColliderTags: ['camera-pass-through'],
+    });
     let fraction = segment.fraction;
     let colliderId = segment.colliderId;
     const directionY = to.y - from.y;
@@ -442,6 +447,7 @@ export class StaticCollisionWorld implements CollisionWorld {
     options: SegmentCastOptions = {},
   ): SegmentCastResult {
     const ignored = new Set(options.ignoreColliderIds);
+    const ignoredTags = new Set(options.ignoreColliderTags);
     const initialOverlapTags = new Set(options.ignoreInitialOverlapTags);
     const radius = options.radius ?? 0;
     const hit = this.castBoxes(
@@ -450,6 +456,7 @@ export class StaticCollisionWorld implements CollisionWorld {
       radius,
       ({ id, tags }) =>
         ignored.has(id) ||
+        tags.some((tag) => ignoredTags.has(tag)) ||
         (tags.some((tag) => initialOverlapTags.has(tag)) &&
           this.boxContainsPoint(from, id, radius)),
     );
