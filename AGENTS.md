@@ -55,6 +55,16 @@ These rules apply to the entire repository.
 - Provider workers in Git worktrees must read approved values from `/Users/jschuler/Projects/vanta-city/.env` by absolute path because ignored files are not copied to worktrees. Never copy the file or values into a worktree or task prompt.
 - Radio-host TTS remains blocked until `ELEVENLABS_RADIOGUY_VOICE_ID` is accessible to the configured account. ElevenLabs theme generation and audio-pipeline implementation may proceed; character dialogue voice-over remains prohibited.
 
+## Continuous task discovery
+
+- User requests are the highest-priority source of new game tasks. Add them as bounded roadmap entries with acceptance criteria rather than leaving important direction only in task history.
+- The local playtest recorder runs against clean `origin/main` and may write only ignored artifacts under `reports/playbot/`. It may capture video, screenshots, traces, public debug snapshots, browser errors, FPS, frame time, memory, state transitions, action seeds, and reproduction commands; it must not edit source, call paid APIs, read secrets, create worktrees, merge, commit, or push.
+- Recorded exploration supplements deterministic tests. A bot run is evidence, not proof that a feature is correct, and it never replaces unit, targeted browser, visual, smoke, or release-level validation.
+- Keep playtest artifacts bounded by `coordination/game-orchestrator.json`. Artifact pruning may delete only generated content below `reports/playbot/`; worktree cleanup and playtest artifact retention are separate responsibilities.
+- When the dependency-safe ready queue falls below its configured threshold, or a critical reproducible defect appears, the xhigh orchestrator selects at most the configured number of proposals and dispatches a `gpt-5.6-sol` medium backlog-curation worker in a dedicated worktree. The orchestrator does not edit `main`.
+- Backlog-curation workers must attach evidence and reproduction steps, check task IDs and duplicate keys against the roadmap, active tasks, worktrees, branches, commits, and recent integration history, and prefer extending an existing authoritative task over creating a parallel abstraction.
+- The hourly integrator reviews roadmap additions like code: reject vague, duplicate, unbounded, unsupported, or product-divergent tasks. Autonomous discovery cannot authorize spending, credentials work, licensing exceptions, mature content, vision changes, or new external commitments; those require user direction.
+
 ## Efficient validation
 
 - Match validation scope to the change while iterating. Run affected unit tests, targeted lint/format checks, and the relevant browser feature suite instead of repeatedly running every check after each small edit.

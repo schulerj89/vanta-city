@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 reports/character-validation.json
+reports/playbot/
 playwright-report/
 test-results/
 blob-report/

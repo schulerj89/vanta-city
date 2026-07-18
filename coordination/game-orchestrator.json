@@ -249,6 +249,74 @@
       "memory-and-fps-benchmark"
     ]
   },
+  "continuousDiscovery": {
+    "goal": "Keep the roadmap useful after the initial queue is exhausted by converting user direction and reproducible local playtest evidence into small, reviewable tasks.",
+    "priorityOrder": [
+      "explicit-user-request",
+      "crash-or-data-loss",
+      "blocked-critical-flow",
+      "performance-budget-regression",
+      "repeatable-gameplay-or-visual-defect",
+      "approved-roadmap-opportunity"
+    ],
+    "queuePolicy": {
+      "targetReadyTasks": 8,
+      "proposalThreshold": 6,
+      "maxPromotedTasksPerOrchestratorRun": 3,
+      "bootstrapTaskId": "QA-PLAYBOT-001",
+      "policy": "When fewer than six dependency-safe tasks are ready, or a critical reproducible issue is found, the xhigh orchestrator may select proposals but must dispatch a medium-effort backlog-curation worker in a dedicated worktree to edit this file. The hourly integrator reviews and merges those edits. The orchestrator never edits main itself."
+    },
+    "evidenceSources": [
+      "explicit user requests",
+      "reports/playbot/latest.json and retained playbot artifacts",
+      "worker follow-up recommendations",
+      "integrator conflict and risk reports",
+      "browser console and uncaught runtime errors",
+      "FPS, frame-time, memory, streaming, and disposal telemetry",
+      "visual screenshot review",
+      "asset, accessibility, and input audits"
+    ],
+    "taskRequirements": [
+      "Give every task a stable ID, title, source, priority, bounded scope, owner, dependencies, acceptance criteria, validation, risks, and a duplicate key.",
+      "Include report artifact paths and deterministic reproduction steps for defect tasks.",
+      "Check proposed work against task IDs, duplicate keys, roadmap entries, active Codex tasks, worktrees, branches, commits, and recent integration history before promotion.",
+      "Prefer fixing a root contract or extending an existing task over creating adjacent duplicates.",
+      "Do not create autonomous tasks that change the product vision, authorize spending, handle credentials, weaken safety or licensing, introduce mature content, or expand into unapproved legal or external-service commitments; request user direction instead.",
+      "Do not promote purely aesthetic observations without screenshots, an articulated design goal, and objective acceptance criteria."
+    ],
+    "playtestRecorder": {
+      "scheduleHours": 4,
+      "model": "gpt-5.6-sol",
+      "reasoningEffort": "medium",
+      "command": "npm run playtest:bot -- --scheduled",
+      "sourceMutation": false,
+      "outputDirectory": "reports/playbot",
+      "latestReport": "reports/playbot/latest.json",
+      "maxRunMinutes": 5,
+      "maxSeedsPerRun": 2,
+      "maxRunArtifactMb": 500,
+      "maxTotalArtifactMb": 1000,
+      "retainCompletedRuns": 5,
+      "retainDays": 7,
+      "modes": ["deterministic-critical-path", "seeded-exploration"],
+      "requiredArtifacts": [
+        "Playwright video for each completed seed",
+        "screenshots at state transitions and anomalies",
+        "JSON action timeline with seed and reproduction commands",
+        "browser console, page errors, failed requests, and uncaught exceptions",
+        "public game-state, camera, player, mission, interaction, combat, vehicle, streaming, FPS, frame-time, and memory diagnostics when available",
+        "artifact manifest with byte sizes, hashes, timestamps, Git SHA, viewport, browser version, and pass/fail summary"
+      ],
+      "rules": [
+        "Run against clean origin/main using a production build or the repository's documented production-preview path.",
+        "Use public inputs and debug/test snapshots for observation; do not mutate private runtime fields to manufacture progress.",
+        "Exercise only capabilities currently registered by the game and record skipped actions as unavailable rather than failing the whole run.",
+        "Do not call paid APIs, access secrets, download assets, commit artifacts, edit source, create worktrees, merge, or push.",
+        "Keep generated videos, screenshots, traces, and raw diagnostics ignored by Git. Prune only files beneath reports/playbot according to this retention policy.",
+        "The recorder supplements deterministic tests; its output never replaces unit, targeted browser, visual, smoke, or release gates."
+      ]
+    }
+  },
   "roadmap": [
     {
       "id": "CORE-001",
@@ -412,6 +480,24 @@
         "Validate the configured radio voice through the authenticated metadata endpoint before generating up to three bounded radio-host TTS candidates; block only the radio-host generation subtask if access still fails.",
         "Implement local runtime playback, streaming/disposal rules, volume/accessibility controls, and radio interruption behavior.",
         "Do not generate character dialogue voice-over in this milestone."
+      ]
+    },
+    {
+      "id": "QA-PLAYBOT-001",
+      "title": "Build the local recorded playtest bot",
+      "status": "ready",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "qa-local-recorded-playtest-bot",
+      "dependencies": [],
+      "owner": "playtest-automation-worker",
+      "acceptance": [
+        "Add a bounded npm playtest:bot command that runs deterministic critical-path and seeded-exploration sessions against a local production build without modifying source or runtime private fields.",
+        "Record Playwright video, transition and anomaly screenshots, an action timeline, browser errors, failed requests, game diagnostics, FPS, frame-time, memory, Git SHA, seed, and exact reproduction commands into ignored reports/playbot run directories.",
+        "Exercise available boot, movement, interaction, dialogue, combat, equipment, pickup, mission, vehicle, map, pause, and restoration capabilities through public inputs; explicitly report capabilities that are not yet registered.",
+        "Enforce five-minute, two-seed, 500 MB per-run, 1 GB total, five-run, and seven-day retention bounds without deleting anything outside reports/playbot.",
+        "Produce latest.json and a concise human-readable summary whose findings can be promoted into nonduplicate roadmap tasks.",
+        "Pass two repeated local runs without uncaught bot failures and document why recorded exploration complements rather than replaces deterministic browser tests."
       ]
     },
     {
