@@ -47,6 +47,7 @@ import type { HelpOverlayController } from './ui/LazyHelpOverlaySystem';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { HealthHudSystem } from './ui/HealthHudSystem';
 import { LocationHudSystem } from './ui/LocationHudSystem';
+import { MinimapHudSystem } from './ui/MinimapHudSystem';
 import type { SparringTargetSystem } from './debug/SparringTargetSystem';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
@@ -359,6 +360,7 @@ async function bootstrap(): Promise<void> {
     playerHudCluster.element,
   );
   const locationHud = new LocationHudSystem(mount, player, levelSystem);
+  const minimapHud = new MinimapHudSystem(mount, player, levelSystem);
   const unregisterCombatVolumes =
     development && sparringTarget
       ? development.visualHelpers.register('combatVolumes', {
@@ -501,6 +503,7 @@ async function bootstrap(): Promise<void> {
           moneyHud,
           handgunPurchase,
           cashPickup,
+          minimapHud,
         )
       : [];
 
@@ -539,6 +542,7 @@ async function bootstrap(): Promise<void> {
     .register(moneyHud)
     .register(healthHud)
     .register(quickbar)
+    .register(minimapHud)
     .register(locationHud)
     .register(interactions)
     .register(conversations)
@@ -601,6 +605,7 @@ async function bootstrap(): Promise<void> {
           cashPickup: cashPickup!,
           proximityPickups,
           locationHud,
+          minimapHud,
           conversations,
           characterSelection,
           characterVisual,
@@ -659,6 +664,7 @@ function registerVerticalSliceDebug(
   moneyHud?: MoneyHudSystem,
   handgunPurchase?: HandgunPurchase,
   cashPickup?: DebugCashPickup,
+  minimapHud?: MinimapHudSystem,
 ): (() => void)[] {
   const { debug, visualHelpers, sections } = development;
   const npcDebug = npcDefinitions.flatMap((definition) => {
@@ -764,6 +770,28 @@ function registerVerticalSliceDebug(
   return [
     () => cameraPreview?.release(),
     ...npcDebug,
+    debug.registerValue({
+      id: 'world.minimap',
+      label: 'Minimap',
+      group: sections.world,
+      read: () => {
+        const snapshot = minimapHud?.getSnapshot();
+        return snapshot
+          ? `${snapshot.orientation} · ${snapshot.locationName ?? 'pending'}`
+          : 'unavailable';
+      },
+    }),
+    ...(
+      ['roads', 'structures', 'landmarks', 'interactions', 'spawns'] as const
+    ).map((layer) =>
+      debug.registerToggle({
+        id: `minimap.layer.${layer}`,
+        label: `Minimap · ${layer}`,
+        group: sections.actions,
+        initialValue: minimapHud?.getSnapshot().layers[layer] ?? false,
+        onChange: (enabled) => minimapHud?.setLayerVisible(layer, enabled),
+      }),
+    ),
     debug.registerValue({
       id: 'player.run-mode',
       label: 'Run mode',

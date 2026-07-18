@@ -29,6 +29,7 @@ import type { DiagnosticTraceSummary } from './DiagnosticTrace';
 import type { HealthHudSystem } from '../ui/HealthHudSystem';
 import type { QuickbarSystem } from '../ui/QuickbarSystem';
 import type { LocationHudSystem } from '../ui/LocationHudSystem';
+import type { MinimapHudSystem } from '../ui/MinimapHudSystem';
 import type { PlayerMoneyAccount } from '../economy/PlayerMoneyAccount';
 import type { MoneyHudSystem } from '../ui/MoneyHudSystem';
 import type { DebugCashPickup } from '../economy/DebugCashPickup';
@@ -134,6 +135,7 @@ export interface BrowserTestSnapshot {
     readonly proximityPickups: ReturnType<ProximityPickupSystem['getSnapshot']>;
   };
   readonly locationHud: ReturnType<LocationHudSystem['getSnapshot']>;
+  readonly minimapHud: ReturnType<MinimapHudSystem['getSnapshot']>;
   readonly conversation: {
     readonly npcId: string | undefined;
     readonly conversationId: string | undefined;
@@ -192,6 +194,7 @@ export interface BrowserTestBridgeDependencies {
   readonly cashPickup: DebugCashPickup;
   readonly proximityPickups: ProximityPickupSystem;
   readonly locationHud: LocationHudSystem;
+  readonly minimapHud: MinimapHudSystem;
   readonly conversations: ConversationCoordinator;
   readonly characterSelection: CharacterSelectionReader;
   readonly characterVisual: CharacterPlayerVisual;
@@ -348,6 +351,7 @@ function createSnapshot(
       proximityPickups: dependencies.proximityPickups.getSnapshot(),
     },
     locationHud: dependencies.locationHud.getSnapshot(),
+    minimapHud: dependencies.minimapHud.getSnapshot(),
     conversation: {
       npcId: dependencies.conversations.active?.npcId,
       conversationId: dependencies.conversations.active?.definition.id,

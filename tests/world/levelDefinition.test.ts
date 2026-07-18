@@ -100,4 +100,24 @@ describe('validateLevelDefinition', () => {
       /priority must be finite/,
     );
   });
+
+  it('validates minimap bounds and authoritative entry references', () => {
+    const invalid: LevelDefinition = {
+      ...testDistrict.definition,
+      mapPresentation: {
+        orientation: 'north-up',
+        bounds: { minX: 10, maxX: -10, minZ: -10, maxZ: 10 },
+        geometry: [{ entryId: 'v.missing-road', layer: 'roads' }],
+        markers: [
+          { entryId: 'landmark.missing', layer: 'landmarks' },
+          { entryId: 'landmark.missing', layer: 'spawns' },
+        ],
+      },
+    };
+
+    expect(() => validateLevelDefinition(invalid)).toThrow(/bounds minimums/);
+    expect(() => validateLevelDefinition(invalid)).toThrow(/missing-road/);
+    expect(() => validateLevelDefinition(invalid)).toThrow(/duplicates entry/);
+    expect(() => validateLevelDefinition(invalid)).toThrow(/spawns marker/);
+  });
 });

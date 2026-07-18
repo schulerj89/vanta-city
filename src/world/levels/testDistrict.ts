@@ -376,6 +376,41 @@ export const testDistrict = {
         tags: ['interaction'],
       },
     ],
+    mapPresentation: {
+      orientation: 'north-up',
+      bounds: {
+        minX: -intersectionLayout.outerEdge,
+        maxX: intersectionLayout.outerEdge,
+        minZ: -intersectionLayout.outerEdge,
+        maxZ: intersectionLayout.outerEdge,
+      },
+      geometry: [
+        { entryId: 'v.road-east-west', layer: 'roads' },
+        { entryId: 'v.road-north-south', layer: 'roads' },
+        { entryId: 'v.ruin-northwest', layer: 'structures' },
+        { entryId: 'v.ruin-northeast', layer: 'structures' },
+        { entryId: 'v.ruin-southwest', layer: 'structures' },
+        { entryId: 'v.ruin-southeast', layer: 'structures' },
+      ],
+      markers: [
+        ...intersectionLandmarks.map(({ id }) => ({
+          entryId: id,
+          layer: 'landmarks' as const,
+        })),
+        {
+          entryId: 'interaction.signal-controller',
+          layer: 'interactions',
+        },
+        ...intersectionApproachSpawns.map(({ id }) => ({
+          entryId: id,
+          layer: 'spawns' as const,
+        })),
+        ...intersectionCornerSpawns.map(({ id }) => ({
+          entryId: id,
+          layer: 'spawns' as const,
+        })),
+      ],
+    },
   },
 } as const satisfies LevelModule;
 

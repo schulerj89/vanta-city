@@ -73,6 +73,38 @@ export interface CinematicAnchorDefinition extends WorldEntry {
   readonly tags?: readonly string[];
 }
 
+export type LevelMapLayer =
+  'roads' | 'structures' | 'landmarks' | 'interactions' | 'spawns';
+
+export interface LevelMapBoundsDefinition {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minZ: number;
+  readonly maxZ: number;
+}
+
+/** References authoritative level entries; it does not duplicate world transforms. */
+export interface LevelMapGeometryReference {
+  readonly entryId: string;
+  readonly layer: Extract<LevelMapLayer, 'roads' | 'structures'>;
+}
+
+export interface LevelMapMarkerReference {
+  readonly entryId: string;
+  readonly layer: Extract<
+    LevelMapLayer,
+    'landmarks' | 'interactions' | 'spawns'
+  >;
+}
+
+/** Small, level-owned contract describing which authored facts belong on a minimap. */
+export interface LevelMapPresentationDefinition {
+  readonly orientation: 'north-up';
+  readonly bounds: LevelMapBoundsDefinition;
+  readonly geometry: readonly LevelMapGeometryReference[];
+  readonly markers: readonly LevelMapMarkerReference[];
+}
+
 export interface LevelDefinition {
   readonly id: string;
   readonly name: string;
@@ -84,6 +116,7 @@ export interface LevelDefinition {
   readonly landmarks: readonly LevelLandmarkDefinition[];
   readonly triggers: readonly TriggerVolumeDefinition[];
   readonly cinematicAnchors: readonly CinematicAnchorDefinition[];
+  readonly mapPresentation?: LevelMapPresentationDefinition;
 }
 
 export interface LevelModule {
@@ -180,6 +213,8 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
     }
   }
 
+  validateMapPresentation(definition, issues);
+
   const defaultPlayers = definition.spawns.filter(
     (spawn) => spawn.kind === 'player' && spawn.default,
   );
@@ -190,6 +225,59 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
   }
 
   if (issues.length > 0) throw new LevelDefinitionError(issues);
+}
+
+function validateMapPresentation(
+  definition: LevelDefinition,
+  issues: string[],
+): void {
+  const map = definition.mapPresentation;
+  if (!map) return;
+  const { minX, maxX, minZ, maxZ } = map.bounds;
+  if (![minX, maxX, minZ, maxZ].every(Number.isFinite)) {
+    issues.push('mapPresentation.bounds must contain finite numbers');
+  } else if (minX >= maxX || minZ >= maxZ) {
+    issues.push('mapPresentation.bounds minimums must be less than maximums');
+  }
+  const boxes = new Set(
+    definition.environment
+      .filter((entry): entry is BoxVisualDefinition => entry.kind === 'box')
+      .map(({ id }) => id),
+  );
+  const landmarks = new Set(definition.landmarks.map(({ id }) => id));
+  const interactions = new Set(
+    definition.locations
+      .filter(({ kind }) => kind === 'interaction')
+      .map(({ id }) => id),
+  );
+  const spawns = new Set(definition.spawns.map(({ id }) => id));
+  const referenced = new Set<string>();
+  for (const reference of [...map.geometry, ...map.markers]) {
+    if (referenced.has(reference.entryId)) {
+      issues.push(`mapPresentation duplicates entry "${reference.entryId}"`);
+    }
+    referenced.add(reference.entryId);
+  }
+  for (const reference of map.geometry) {
+    if (!boxes.has(reference.entryId)) {
+      issues.push(
+        `mapPresentation geometry "${reference.entryId}" must reference a box environment entry`,
+      );
+    }
+  }
+  for (const reference of map.markers) {
+    const valid =
+      reference.layer === 'landmarks'
+        ? landmarks.has(reference.entryId)
+        : reference.layer === 'interactions'
+          ? interactions.has(reference.entryId)
+          : spawns.has(reference.entryId);
+    if (!valid) {
+      issues.push(
+        `mapPresentation ${reference.layer} marker "${reference.entryId}" is missing`,
+      );
+    }
+  }
 }
 
 function validateOptionalPriority(

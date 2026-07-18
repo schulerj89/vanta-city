@@ -14,6 +14,15 @@ Each `LevelModule` exports a `definition` and logical `assets` manifest. A defin
 - `landmarks`: named radius-based points of interest with optional vertical tolerance and priority;
 - `triggers`: non-rendered box volumes for later overlap systems;
 - `cinematicAnchors`: camera transforms, look-at targets, and optional fields of view.
+- `mapPresentation` (optional): north-up playable bounds plus layer references to authored box geometry, landmarks, interactions, and spawns.
+
+### Minimap presentation contract
+
+`mapPresentation` is the only level-specific input to the compact minimap. Its bounds define the X/Z projection and playable edge. Its `geometry` and `markers` arrays contain logical entry IDs, not copied coordinates: road and structure references must point to box entries in `environment`; landmark, interaction, and spawn markers must point to their corresponding authored collections. Validation rejects missing, duplicate, or wrong-kind references. The HUD then reads the referenced entries' authoritative transforms, so changing a road, ruin, landmark, interaction, or spawn updates both the world and map without maintaining a screenshot-shaped second dataset.
+
+The orientation is deliberately `north-up`: world +Z is map north/top, +X is east/right, and the public player forward vector rotates the player arrow clockwise from north. This matches the player/camera yaw convention where yaw zero faces +Z. An SVG keeps the small number of primitives inspectable and deterministic for accessibility and browser tests; it has no map tiles or runtime network dependency.
+
+Future districts opt in by supplying `orientation: 'north-up'`, finite ordered `bounds`, and only the references useful at HUD scale. Omit `mapPresentation` to hide the minimap for a level that is not ready. Keep ordinary player spawns or development fixtures off the default marker list unless they are genuinely useful; layers can be exposed through development toggles without changing the runtime map contract.
 
 Runtime consumers use `LevelLocations` methods (`getSpawn`, `getLocation`, `getTrigger`, `getCinematicAnchor`, `getStaticColliders`, and `resolveLocation`) instead of searching the Three.js scene. `level:loaded` and `level:unloaded` events publish lifecycle facts. Loading remains a direct command on the owning system.
 
@@ -30,6 +39,8 @@ The previous sprawling market/yard/overlook assembly was removed rather than ret
 `LocationHudSystem` is an `always` lifecycle observer and creates no render loop. It samples `WorldPoseSource.getWorldPose()` and `LevelLocations.resolveLocation()` at 10Hz, formats signed one-decimal X/Y/Z values, and disposes its DOM root with the runtime. It remains visible but noninteractive during gameplay, pause, dialogue, cinematics, and help; boot/loading and character selection hide it. Desktop layout uses the lower-left safe-area corner opposite the lower-right health HUD and anticipated centered quickbar. At narrow widths it moves to the upper-right safe area.
 
 Development browser tests may use `camera.preview-anchor` and `camera.release-preview` to capture an authored camera anchor through the public camera ownership API. These commands and `window.__VANTA_TEST__` exist only in Vite development builds with `?e2e=1`; production exposes neither control.
+
+`MinimapHudSystem` is a sibling `always` observer. It samples the same public pose and location APIs at 10Hz, retains north-up orientation, and renders only the level's referenced facts. Its accessible text reports district/location, X/Z position, cardinal heading, and map bounds. It remains visible through pause and dialogue like the location HUD, hides for boot and character selection, and disposes its SVG root with the runtime. Desktop places it directly above the lower-left location card; narrow layout separates the upper-left location card from the lower-left map. Dialogue and developer-panel layout reserve space rather than covering the map. Development toggles `minimap.layer.roads`, `.structures`, `.landmarks`, `.interactions`, and `.spawns` expose each layer independently.
 
 Ordinary NPCs and the sparring target are absent from normal startup. Development/system coverage opts into Mack, Nox, and Raze with `?npcFixtures=1`; combat coverage separately opts into the stationary target with `?sparringFixture=1`. The level retains tagged spawn metadata for those explicit fixtures, but the runtime creates no actor, prompt, health bar, or occupancy until its development flag is present.
 
