@@ -135,7 +135,7 @@
         ]
       },
       "elevenLabsAudio": {
-        "status": "ready-theme-and-pipeline-radio-voice-blocked",
+        "status": "ready",
         "apiKeyEnvironmentVariable": "ELEVENLABS_API_KEY",
         "radioVoiceIdEnvironmentVariable": "ELEVENLABS_RADIOGUY_VOICE_ID",
         "musicModel": "music_v2",
@@ -144,11 +144,11 @@
         "maxTtsCandidatesPerWorkerIteration": 3,
         "maxTtsCharactersPerWorkerIteration": 1500,
         "apiAccessValidated": true,
-        "radioVoiceAccessValidated": false,
+        "radioVoiceAccessValidated": true,
         "lastAccessCheck": {
-          "date": "2026-07-17",
+          "date": "2026-07-18",
           "apiResult": "voices-list-http-200",
-          "radioVoiceResult": "voice-not-found-http-400"
+          "radioVoiceResult": "voice-metadata-http-200"
         },
         "requirements": [
           "Use only official ElevenLabs API endpoints from development scripts; runtime playback uses accepted local audio files.",
@@ -387,7 +387,7 @@
     {
       "id": "CINEMATIC-001",
       "title": "Create the cinematic sequence system",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["STORY-001", "MISSION-001"],
       "owner": "cinematic-worker",
       "skill": "vanta-cinematic-director",
@@ -432,16 +432,16 @@
     {
       "id": "AUDIO-001",
       "title": "Create the theme and radio audio pipeline",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["STORY-001"],
       "owner": "audio-worker",
       "availableEnvironmentVariables": [
         "ELEVENLABS_API_KEY",
         "ELEVENLABS_RADIOGUY_VOICE_ID"
       ],
-      "knownBlockers": [
-        "The configured radio voice ID is well formed but is not currently accessible to the configured ElevenLabs account; authenticated voice lookup returns voice_not_found.",
-        "Radio-host TTS remains blocked until the voice is added to the account library or ELEVENLABS_RADIOGUY_VOICE_ID is replaced with an accessible voice."
+      "knownBlockers": [],
+      "resolvedBlockers": [
+        "The replacement configured radio voice was validated through authenticated metadata lookup on 2026-07-18 before the accepted station break was generated."
       ],
       "acceptance": [
         "Implement the local audio catalog/playback pipeline and generate at most two original instrumental theme candidates through the official ElevenLabs Music API with recorded provenance and API parameters.",
@@ -490,6 +490,38 @@
       ]
     },
     {
+      "id": "UI-TIGHTEN-001",
+      "title": "Tighten the HUD into open Ashfall instruments",
+      "status": "completed",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "ui-open-instrument-health-money-mission-minimap",
+      "dependencies": ["UI-SYSTEM-001", "MISSION-001", "MAP-001"],
+      "owner": "ui-design-worker",
+      "skill": "vanta-ui-art-director",
+      "requiresUiDesign": true,
+      "requiresVisualReview": true,
+      "uiStates": [
+        "exploration",
+        "low-health",
+        "mission-update",
+        "money-transaction",
+        "restoration"
+      ],
+      "viewports": ["1280x720", "390x844", "1920x800"],
+      "designBrief": "docs/ui/ui-tighten-001-open-hud.md",
+      "visualEvidence": [
+        "docs/screenshots/ui-tighten-001",
+        "e2e/ui-composition-lab.spec.ts-snapshots"
+      ],
+      "acceptance": [
+        "Money, player health, mission objectives, and mission updates use distinct open-instrument treatments instead of one repeated boxed-card family.",
+        "The compact minimap uses an original non-square harbor plotting silhouette without changing authoritative map geometry or the full-world map.",
+        "Desktop, narrow, ultrawide, safe-area, enlarged-text, reduced-motion, bright, dark, and noisy-background evidence remains readable and collision-free.",
+        "Existing HUD snapshots, domain ownership, input ownership, and the authoritative screen-space layout remain unchanged."
+      ]
+    },
+    {
       "id": "QA-PLAYBOT-001",
       "title": "Build the local recorded playtest bot",
       "status": "completed",
@@ -521,7 +553,7 @@
     }
   ],
   "executionState": {
-    "lastIntegratedTaskIds": ["MISSION-001", "MAP-001", "QA-PLAYBOT-001"],
+    "lastIntegratedTaskIds": ["CINEMATIC-001", "AUDIO-001", "UI-TIGHTEN-001"],
     "lastMapExpansion": {
       "taskId": "WORLD-001",
       "previousPlayableAreaSquareMetres": 3136,
