@@ -9,102 +9,13 @@
     "vision": "A distinctive 1990s low-poly browser crime drama built around Ashfall City, with authored open-world exploration, memorable characters, cinematic missions, vehicles, and reliable browser performance.",
     "creativeBoundary": "Use the open-world crime genre as a design reference, but do not copy GTA names, dialogue, missions, branding, artwork, UI layouts, music, characters, or story beats."
   },
-  "automation": {
-    "orchestrator": {
-      "model": "gpt-5.6-sol",
-      "reasoningEffort": "xhigh",
-      "intervalMinutes": 60,
-      "minuteOfHour": 5,
-      "targetActiveWorkers": {
-        "minimum": 4,
-        "maximum": 4
-      },
-      "maxActiveWorkers": 4,
-      "maxNewWorkersPerRun": 4,
-      "workerModel": "gpt-5.6-sol",
-      "workerReasoningEffort": "medium",
-      "taskControlGuard": {
-        "backend": "local-codex-exec",
-        "maxSeconds": 20,
-        "attemptsPerRun": 1,
-        "requireCodexExecutable": true,
-        "requireSavedChatGptLogin": true,
-        "requirePinnedPnpm": true,
-        "requireExactGitRoot": true,
-        "createGitStateBeforePass": false,
-        "onFailure": "Stop the hourly attempt immediately without retries, branches, worktrees, or roadmap mutation. The next hourly slot may try again."
-      },
-      "implementationPolicy": "The orchestrator plans, reviews dependencies, and dispatches bounded work. Implementation, asset acquisition, editing, and QA belong to medium-effort workers in dedicated worktrees."
-    },
-    "integrator": {
-      "model": "gpt-5.6-sol",
-      "reasoningEffort": "xhigh",
-      "intervalMinutes": 60,
-      "minuteOfHour": 50,
-      "mergeOnlyCleanCommittedWorkers": true,
-      "pushTarget": "origin/main",
-      "fullE2EEachHour": false
-    },
-    "worktreeCleaner": {
-      "implementation": "deterministic-local-supervisor",
-      "intervalMinutes": 60,
-      "minuteOfHour": 58,
-      "removeOnlyCleanInactiveIntegratedWorktrees": true,
-      "preserveBranches": true,
-      "neverRemoveMain": true
-    },
-    "localSupervisor": {
-      "implementation": "launchd-codex-exec",
-      "launchAgentLabel": "com.vantacity.codex-supervisor",
-      "codexPath": "/Applications/ChatGPT.app/Contents/Resources/codex",
-      "pnpmPath": "/Users/jschuler/Projects/vanta-city/.git/vanta-orchestration/tooling/node_modules/.bin/pnpm",
-      "maxConcurrentWorkers": 4,
-      "maximumTotalCodexProcesses": 5,
-      "plannerModel": "gpt-5.6-sol",
-      "plannerReasoningEffort": "xhigh",
-      "workerModel": "gpt-5.6-sol",
-      "workerReasoningEffort": "medium",
-      "integratorModel": "gpt-5.6-sol",
-      "integratorReasoningEffort": "xhigh",
-      "plannerTimeoutMinutes": 5,
-      "workerTimeoutMinutes": 40,
-      "integratorTimeoutMinutes": 40,
-      "staleLockMinutes": 60,
-      "retainedRuns": 40,
-      "nodeModulesStrategy": "apfs-clone-main",
-      "nativeSchedulesPreserved": [
-        "vanta-city-playtest-recorder",
-        "vanta-city-nightly-release-gate"
-      ],
-      "nativeSchedulesSuperseded": [
-        "vanta-city-hourly-orchestrator",
-        "vanta-city-hourly-integrator",
-        "vanta-city-hourly-worktree-cleaner"
-      ]
-    },
-    "nightlyReleaseGate": {
-      "model": "gpt-5.6-sol",
-      "reasoningEffort": "medium",
-      "localHour": 3,
-      "localMinute": 30,
-      "activationDependency": "TEST-001",
-      "onlyWhenMainChangedSinceLastSuccess": true,
-      "sourceMutation": false,
-      "pushAllowed": false,
-      "artifactDirectory": "reports/release-gate",
-      "maxRunArtifactMb": 1000,
-      "maxTotalArtifactMb": 2000,
-      "artifactRetentionDays": 14,
-      "artifactRetentionRuns": 5
-    }
-  },
   "executionPolicy": {
     "selection": [
       "Read this entire file and AGENTS.md.",
       "Inspect current Codex task status, Git worktrees, branches, and main before dispatching.",
       "Do not duplicate a task whose task ID appears in an active task title, branch name, worktree path, commit, or completed roadmap entry.",
       "Select only tasks whose dependencies are completed and whose status is ready.",
-      "Fill safe capacity toward four independent workers and never exceed four worker processes.",
+      "Use the smallest useful team and never exceed four concurrent worker processes.",
       "Balance architecture, gameplay, content, visual/assets, and test-performance work rather than assigning multiple workers to the same foundational contract.",
       "Do not start more work when four worker worktrees are occupied or more than six worktrees including main and a temporary integration worktree are registered."
     ],
@@ -113,9 +24,9 @@
       "Name branches worker/<task-id>-<short-name> and include the task ID in the task title.",
       "Start from the current origin/main unless the task explicitly depends on an unmerged worker.",
       "Begin every worker prompt with an exact cd to its assigned /Users/jschuler/Projects/vanta-city-worktrees/<name> path, then verify git rev-parse --show-toplevel, git branch --show-current, git rev-parse HEAD, and git status --short --branch before any read or edit.",
-      "Stop without editing if the verified repository root is not the assigned Vanta City worktree or if the starting state differs from the orchestrator's assignment.",
+      "Stop without editing if the verified repository root is not the assigned Vanta City worktree or if the starting state differs from the primary session's assignment.",
       "Workers must not merge or push main.",
-      "Workers edit and validate only their assigned worktrees and must not stage or commit; the deterministic supervisor validates paths and creates focused worker commits after successful structured completion.",
+      "Workers edit, validate, and create focused commits only in their assigned worktrees; the primary session reviews and integrates them.",
       "Visual workers must inspect screenshots and the browser console. Runtime changes must use existing public lifecycle, input, camera, collision, asset, game-state, debug, and browser-test contracts.",
       "If a suitable production-intended asset cannot be found with verified usage rights, block the task instead of shipping a placeholder. Synthetic assets remain allowed only in explicit failure-path tests."
     ],
@@ -124,12 +35,12 @@
       "Prefer one authoritative system over adapters or duplicate browser listeners.",
       "Never merge an active, dirty, uncommitted, failing, or conceptually incompatible worker.",
       "Run formatting, linting, type-checking, unit tests, relevant asset validators, production build, bundle size, targeted browser tests, and smoke tests.",
-      "Skip the complete E2E suite during hourly integration. Reserve it for explicit release milestones or a separately approved scheduled gate.",
-      "Perform review and corrections in a dedicated integration worktree. The deterministic supervisor commits corrections, fast-forwards unchanged clean main, verifies and pushes the exact expected SHA, and reports exactly what changed.",
+      "Use targeted browser coverage while iterating and reserve the complete E2E suite for the final integration gate or an explicit release milestone.",
+      "Perform review and corrections in the primary session or a dedicated integration worktree. The primary session owns final commits, merges, validation, and user-authorized pushes.",
       "Never delete a dirty or active worktree. Preserve worker branches when cleaning completed worktrees."
     ],
     "cleanupRules": [
-      "Run only after the hourly integrator's scheduled window and re-audit task state immediately before deletion.",
+      "Run cleanup only when the user requests it or after the primary session finishes integration, and re-audit task state immediately before deletion.",
       "Remove only registered worktrees below /Users/jschuler/Projects/vanta-city-worktrees whose Git status is completely clean and whose owning Codex task is inactive or completed.",
       "Require evidence that the worker result is integrated into origin/main through ancestry, patch equivalence, or a completed roadmap entry with an integration commit before removal.",
       "Never remove /Users/jschuler/Projects/vanta-city, a worktree used by an active process, a dirty worktree, an uncommitted branch, or a worktree with unresolved validation or integration status.",
@@ -303,12 +214,12 @@
   "testStrategy": {
     "goals": [
       "Keep unit tests under ten seconds on the reference machine.",
-      "Keep hourly targeted browser validation under three minutes.",
+      "Keep targeted browser validation under three minutes.",
       "Use deterministic public snapshots and events instead of arbitrary sleeps.",
       "Run screenshot-heavy labs only for changed visual systems.",
       "Profile before increasing Playwright workers and preserve WebGL isolation."
     ],
-    "hourlyIntegration": [
+    "integration": [
       "format:check",
       "lint",
       "typecheck",
@@ -320,7 +231,7 @@
       "smoke"
     ],
     "releaseMilestone": [
-      "hourlyIntegration",
+      "integration",
       "full-e2e",
       "repeated-critical-flow",
       "manual-browser-console-review",
@@ -341,15 +252,15 @@
     "queuePolicy": {
       "targetReadyTasks": 8,
       "proposalThreshold": 6,
-      "maxPromotedTasksPerOrchestratorRun": 3,
+      "maxPromotedTasksPerReview": 3,
       "bootstrapTaskId": "QA-PLAYBOT-001",
-      "policy": "When fewer than six dependency-safe tasks are ready, or a critical reproducible issue is found, the xhigh orchestrator may select proposals but must dispatch a medium-effort backlog-curation worker in a dedicated worktree to edit this file. The hourly integrator reviews and merges those edits. The orchestrator never edits main itself."
+      "policy": "Review proposals only when the user requests roadmap planning or a critical reproducible issue is found. A dedicated worker may update this file; the primary session reviews and integrates the change."
     },
     "evidenceSources": [
       "explicit user requests",
       "reports/playbot/latest.json and retained playbot artifacts",
       "worker follow-up recommendations",
-      "integrator conflict and risk reports",
+      "integration conflict and risk reports",
       "browser console and uncaught runtime errors",
       "FPS, frame-time, memory, streaming, and disposal telemetry",
       "visual screenshot review",
@@ -362,39 +273,7 @@
       "Prefer fixing a root contract or extending an existing task over creating adjacent duplicates.",
       "Do not create autonomous tasks that change the product vision, authorize spending, handle credentials, weaken safety or licensing, introduce mature content, or expand into unapproved legal or external-service commitments; request user direction instead.",
       "Do not promote purely aesthetic observations without screenshots, an articulated design goal, and objective acceptance criteria."
-    ],
-    "playtestRecorder": {
-      "scheduleHours": 4,
-      "model": "gpt-5.6-sol",
-      "reasoningEffort": "medium",
-      "command": "npm run playtest:bot -- --scheduled",
-      "sourceMutation": false,
-      "outputDirectory": "reports/playbot",
-      "latestReport": "reports/playbot/latest.json",
-      "maxRunMinutes": 5,
-      "maxSeedsPerRun": 2,
-      "maxRunArtifactMb": 500,
-      "maxTotalArtifactMb": 1000,
-      "retainCompletedRuns": 5,
-      "retainDays": 7,
-      "modes": ["deterministic-critical-path", "seeded-exploration"],
-      "requiredArtifacts": [
-        "Playwright video for each completed seed",
-        "screenshots at state transitions and anomalies",
-        "JSON action timeline with seed and reproduction commands",
-        "browser console, page errors, failed requests, and uncaught exceptions",
-        "public game-state, camera, player, mission, interaction, combat, vehicle, streaming, FPS, frame-time, and memory diagnostics when available",
-        "artifact manifest with byte sizes, hashes, timestamps, Git SHA, viewport, browser version, and pass/fail summary"
-      ],
-      "rules": [
-        "Run against clean origin/main using a production build or the repository's documented production-preview path.",
-        "Use public inputs and debug/test snapshots for observation; do not mutate private runtime fields to manufacture progress.",
-        "Exercise only capabilities currently registered by the game and record skipped actions as unavailable rather than failing the whole run.",
-        "Do not call paid APIs, access secrets, download assets, commit artifacts, edit source, create worktrees, merge, or push.",
-        "Keep generated videos, screenshots, traces, and raw diagnostics ignored by Git. Prune only files beneath reports/playbot according to this retention policy.",
-        "The recorder supplements deterministic tests; its output never replaces unit, targeted browser, visual, smoke, or release gates."
-      ]
-    }
+    ]
   },
   "roadmap": [
     {
@@ -608,7 +487,7 @@
       "source": "explicit-user-request",
       "duplicateKey": "qa-local-recorded-playtest-bot",
       "dependencies": [],
-      "owner": "playtest-automation-worker",
+      "owner": "playtest-qa-worker",
       "acceptance": [
         "Add a bounded npm playtest:bot command that runs deterministic critical-path and seeded-exploration sessions against a local production build without modifying source or runtime private fields.",
         "Record Playwright video, transition and anomaly screenshots, an action timeline, browser errors, failed requests, game diagnostics, FPS, frame-time, memory, Git SHA, seed, and exact reproduction commands into ignored reports/playbot run directories.",
@@ -620,22 +499,19 @@
     },
     {
       "id": "TEST-001",
-      "title": "Reduce hourly validation latency",
+      "title": "Reduce validation latency",
       "status": "ready",
       "dependencies": [],
       "owner": "test-performance-worker",
       "acceptance": [
         "Profile current unit and browser suites before editing.",
-        "Keep unit runtime below ten seconds and hourly targeted browser validation below three minutes without deleting meaningful regression coverage.",
+        "Keep unit runtime below ten seconds and targeted browser validation below three minutes without deleting meaningful regression coverage.",
         "Separate deterministic state tests, smoke paths, visual labs, and release-only full E2E coverage."
       ]
     }
   ],
   "executionState": {
     "lastIntegratedTaskIds": ["STORY-001", "PERF-001"],
-    "lastOrchestratorRun": null,
-    "lastIntegratorRun": "2026-07-18T06:24:33Z",
-    "lastNightlyReleaseGate": null,
     "lastMapExpansion": null,
     "lastPerformanceReport": {
       "taskId": "PERF-001",
@@ -648,8 +524,8 @@
       "peakJsHeapProxyMb": 44.7
     },
     "notes": [
-      "The hourly orchestrator must inspect live tasks and branches because this file is updated only after integration.",
-      "The hourly integrator may update executionState and task statuses in the same focused commit as successful integration metadata."
+      "The primary session must inspect live tasks, worktrees, branches, commits, and main before dispatching or integrating manual Codex workers.",
+      "Update executionState and roadmap task statuses in the same focused commit as successful manual integration metadata."
     ]
   }
 }

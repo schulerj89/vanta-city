@@ -34,17 +34,7 @@
     "validate:buildings": "tsx scripts/validate-building-assets.ts",
     "validate:traffic": "tsx scripts/validate-traffic-assets.ts",
     "validate:narrative": "node scripts/narrative/validate-story-bible.mjs",
-    "narrative:render": "node scripts/narrative/render-story-bible.mjs",
-    "automation:daemon": "node scripts/automation/supervisor.mjs daemon",
-    "automation:orchestrate": "node scripts/automation/supervisor.mjs orchestrate",
-    "automation:integrate": "node scripts/automation/supervisor.mjs integrate",
-    "automation:clean": "node scripts/automation/supervisor.mjs clean",
-    "automation:status": "node scripts/automation/supervisor.mjs status",
-    "automation:dry-run": "node scripts/automation/supervisor.mjs dry-run",
-    "automation:doctor": "node scripts/automation/launch-agent.mjs doctor",
-    "automation:test": "node --test scripts/automation/supervisor-locks.test.mjs",
-    "automation:install": "node scripts/automation/launch-agent.mjs install",
-    "automation:uninstall": "node scripts/automation/launch-agent.mjs uninstall"
+    "narrative:render": "node scripts/narrative/render-story-bible.mjs"
   },
   "dependencies": {
     "three": "^0.185.1"

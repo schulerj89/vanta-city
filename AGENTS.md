@@ -38,21 +38,18 @@ These rules apply to the entire repository.
 - Commit integration corrections separately when they express a distinct conflict-resolution decision.
 - Push only when the user explicitly asks to push. Do not delete branches during routine worktree cleanup.
 
-## Scheduled orchestration
+## Manual Codex workflow
 
-- Treat `coordination/game-orchestrator.json` as the authoritative roadmap, performance budget, asset policy, and scheduled-worker contract.
-- The authoritative hourly control plane is the checked-in local `launchd` supervisor using documented non-interactive `codex exec`; it replaces Desktop thread/project spawning for orchestration, integration, and worktree cleanup. Keep the Desktop playtest recorder and nightly release gate as externally owned schedules.
-- The xhigh hourly planner may select bounded roadmap tasks using the model and effort declared in that file. It is read-only and must not implement features, create Git state, or edit `main`.
-- Before acquiring the supervisor lock or creating Git state, run one bounded 20-second direct-exec health check for the configured Codex executable, saved ChatGPT login, exact pinned pnpm, and exact Git root. On failure, stop that hourly attempt without retrying or creating branches/worktrees.
-- Because the saved Codex project root is `/Users/jschuler/Projects`, every scheduled prompt and worker handoff must explicitly change into `/Users/jschuler/Projects/vanta-city` or the assigned Vanta worktree and verify the Git root, branch, HEAD, and status before reading or editing.
-- Scheduled medium workers edit and validate only their assigned worktrees. Nested multi-agent delegation is disabled. The deterministic supervisor owns worktree branches, worker commits, integration Git operations, and cleanup so a non-interactive sandbox never needs approval to mutate shared Git metadata.
-- The xhigh integrator first reviews candidates read-only, then resolves overlap and validates in a dedicated integration worktree. The deterministic supervisor may commit corrections, fast-forward an unchanged clean `main`, verify the exact remote SHA, and push because the user explicitly authorized that recurring workflow.
-- Stagger orchestration and integration runs. Never duplicate a roadmap task that already has an active task, worktree, branch, commit, or completed entry.
-- Maintain four active workers when four independent dependency-ready tasks exist. Never exceed four worker processes or five total concurrent Codex processes including the planner or integrator.
-- The deterministic hourly cleaner runs after integration and may remove only clean, inactive, exact-ledger, origin-verified integrated worktrees under the Vanta worktree root. Preserve branches and report, rather than delete, unregistered orphan directories.
-- Treat paused Desktop automation results and `PENDING_REVIEW` catalog entries as historical notifications, not active worker or worktree evidence. Current worker counts come only from the local supervisor ledger plus verified live worker PIDs; every cleaner/status report must identify its control plane and observation timestamp.
-- Hourly integration skips the complete E2E suite. Run changed-feature browser tests and smoke coverage; reserve full E2E for explicit release milestones or a separately approved scheduled gate.
-- The nightly release gate runs at 3:30 AM local time only after `TEST-001` is integrated and only when `origin/main` changed since the last successful gate. It is read-only QA: run the release-milestone checks, retain bounded ignored artifacts, record the tested SHA externally, and never edit source, merge, commit, or push.
+- Vanta City has no scheduled orchestrator, integrator, cleaner, recorder, release gate, or local supervisor. Start Codex workers only in response to a user request in the active conversation.
+- Treat `coordination/game-orchestrator.json` as a durable product roadmap, performance budget, asset policy, and source of bounded candidate tasks—not as permission to start work automatically.
+- Before creating or reusing workers, inspect current Codex sessions, Git worktrees, branches, commits, and `main`; never duplicate work already active or completed.
+- The primary conversation owns dispatch, progress reporting, architectural review, integration, validation, commits, pushes, and reviewed worktree cleanup.
+- Workers must verify their assigned repository root, branch, base commit, and clean status before editing. They work only in their dedicated worktree and return a focused commit plus validation evidence.
+- Do not infer that a worker, integration, cleanup, recorder, or release check is running in the background. Report only processes and worktrees verified during the current request.
+- Use changed-feature tests while iterating and the full validation tier before integrating shared gameplay changes or declaring a substantial milestone complete.
+
+## Product constraints
+
 - A map-expansion milestone grows measured playable area by 20–30% (target 25%). Unrelated feature iterations must not inflate the map merely to satisfy the percentage.
 - Treat 900 MB as a tested hard memory ceiling, not a utilization goal. Performance, disposal, and leak checks block integration when budgets regress.
 - New gameplay acceptance must use production-intended, locally stored assets with verified provenance. Synthetic placeholders remain limited to explicit failure-path tests.
@@ -60,15 +57,11 @@ These rules apply to the entire repository.
 - Provider workers in Git worktrees must read approved values from `/Users/jschuler/Projects/vanta-city/.env` by absolute path because ignored files are not copied to worktrees. Never copy the file or values into a worktree or task prompt.
 - Radio-host TTS remains blocked until `ELEVENLABS_RADIOGUY_VOICE_ID` is accessible to the configured account. ElevenLabs theme generation and audio-pipeline implementation may proceed; character dialogue voice-over remains prohibited.
 
-## Continuous task discovery
+## Task discovery
 
-- User requests are the highest-priority source of new game tasks. Add them as bounded roadmap entries with acceptance criteria rather than leaving important direction only in task history.
-- The local playtest recorder runs against clean `origin/main` and may write only ignored artifacts under `reports/playbot/`. It may capture video, screenshots, traces, public debug snapshots, browser errors, FPS, frame time, memory, state transitions, action seeds, and reproduction commands; it must not edit source, call paid APIs, read secrets, create worktrees, merge, commit, or push.
-- Recorded exploration supplements deterministic tests. A bot run is evidence, not proof that a feature is correct, and it never replaces unit, targeted browser, visual, smoke, or release-level validation.
-- Keep playtest artifacts bounded by `coordination/game-orchestrator.json`. Artifact pruning may delete only generated content below `reports/playbot/`; worktree cleanup and playtest artifact retention are separate responsibilities.
-- When the dependency-safe ready queue falls below its configured threshold, or a critical reproducible defect appears, the xhigh orchestrator selects at most the configured number of proposals and dispatches a `gpt-5.6-sol` medium backlog-curation worker in a dedicated worktree. The orchestrator does not edit `main`.
-- Backlog-curation workers must attach evidence and reproduction steps, check task IDs and duplicate keys against the roadmap, active tasks, worktrees, branches, commits, and recent integration history, and prefer extending an existing authoritative task over creating a parallel abstraction.
-- The hourly integrator reviews roadmap additions like code: reject vague, duplicate, unbounded, unsupported, or product-divergent tasks. Autonomous discovery cannot authorize spending, credentials work, licensing exceptions, mature content, vision changes, or new external commitments; those require user direction.
+- User requests are the highest-priority source of new game tasks. Add durable direction as bounded roadmap entries with acceptance criteria rather than relying only on conversation history.
+- Manual playtests and recorded exploration are evidence, not proof, and never replace unit, targeted browser, visual, smoke, or release-level validation.
+- Review roadmap additions like code: reject vague, duplicate, unbounded, unsupported, or product-divergent tasks. New spending, credentials work, licensing exceptions, mature content, vision changes, and external commitments require user direction.
 
 ## UI design direction
 
