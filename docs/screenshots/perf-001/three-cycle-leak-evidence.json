@@ -37,20 +37,20 @@
     {
       "geometries": 52,
       "textures": 25,
-      "drawCalls": 27,
-      "triangles": 5980
+      "drawCalls": 23,
+      "triangles": 5932
+    },
+    {
+      "geometries": 48,
+      "textures": 25,
+      "drawCalls": 23,
+      "triangles": 5932
     },
     {
       "geometries": 52,
       "textures": 25,
-      "drawCalls": 35,
-      "triangles": 6576
-    },
-    {
-      "geometries": 52,
-      "textures": 25,
-      "drawCalls": 32,
-      "triangles": 6040
+      "drawCalls": 39,
+      "triangles": 7665
     }
   ],
   "network": {

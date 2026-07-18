@@ -2,19 +2,19 @@
   "before": {
     "warmupMs": 20000,
     "measurementMs": 60000,
-    "frames": 43762,
-    "averageFps": 729.3557263307717,
-    "onePercentLowFps": 357.14285714294994,
-    "frameTimeP95Ms": 2.7000000000007276,
-    "frameTimeMaxMs": 3.400000000001455,
+    "frames": 44157,
+    "averageFps": 735.9499999999999,
+    "onePercentLowFps": 370.37037036977154,
+    "frameTimeP95Ms": 2.6999999999970896,
+    "frameTimeMaxMs": 3.2000000000116415,
     "renderer": {
       "frameTime": {
         "enabled": true,
         "samples": 120,
         "minMs": 0,
-        "averageMs": 1.331666666890184,
-        "maxMs": 2.7999999970197678,
-        "p95Ms": 2.6000000089406967
+        "averageMs": 1.2983333323150874,
+        "maxMs": 2.6000000089406967,
+        "p95Ms": 2.5999999940395355
       },
       "drawCalls": 52,
       "triangles": 12103,
@@ -67,18 +67,18 @@
   "after": {
     "warmupMs": 20000,
     "measurementMs": 60000,
-    "frames": 44287,
-    "averageFps": 738.1166666666667,
+    "frames": 44284,
+    "averageFps": 738.0666666666667,
     "onePercentLowFps": 370.3703703687735,
     "frameTimeP95Ms": 2.6999999999970896,
-    "frameTimeMaxMs": 3.3000000000029104,
+    "frameTimeMaxMs": 3.2999999999956344,
     "renderer": {
       "frameTime": {
         "enabled": true,
         "samples": 120,
         "minMs": 0,
-        "averageMs": 1.3008333334078392,
-        "maxMs": 2.7999999970197678,
+        "averageMs": 1.2633333314210176,
+        "maxMs": 2.5999999940395355,
         "p95Ms": 2.5
       },
       "drawCalls": 33,

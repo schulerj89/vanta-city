@@ -66,14 +66,14 @@ The July 17, 2026 capture at 1280×720 recorded:
 | Triangles                                                |            12,103 |             7,593 |
 | Renderer geometries / textures                           |           58 / 25 |           40 / 20 |
 | Scene objects / owned resources / sector model instances |     134 / 157 / 9 |      98 / 106 / 5 |
-| RAF capacity average / 1% low proxy                      | 729.4 / 357.1 FPS | 738.1 / 370.4 FPS |
-| RAF frame-time p95 / max                                 |      2.7 / 3.4 ms |      2.7 / 3.3 ms |
+| RAF capacity average / 1% low proxy                      | 735.9 / 370.4 FPS | 738.1 / 370.4 FPS |
+| RAF frame-time p95 / max                                 |      2.7 / 3.2 ms |      2.7 / 3.3 ms |
 | Renderer CPU p95                                         |            2.6 ms |            2.5 ms |
 | Browser JS heap peak proxy                               |           44.7 MB |           44.7 MB |
 
 The uncapped after/before FPS difference is high-rate scheduling variance; workload counters and p95 are the useful comparison. The streamed capture passes the 50 FPS, 45 FPS 1%-low proxy, 20ms p95, and 900MB proxy ceiling gates. Chromium exposes JS heap, not browser-process working set, so 44.7MB is documented only as a browser memory proxy and is not claimed as total working set.
 
-The deterministic leak scenario primes both halves, then completes three additional south/north cycles. Every north baseline returns to exactly 98 retained sector scene objects, 106 sector-owned resources, 5 sector model instances, 15 loader source references, and 6 global live model instances. Renderer geometries stayed 52 and textures stayed 25 across all three measured cycles. Source cache size stays 15 by design and is disposed only with the loader. Evidence and inspected desktop/narrow screenshots live in [`screenshots/perf-001`](screenshots/perf-001/).
+The deterministic leak scenario primes both halves, then completes three additional south/north cycles. Every north baseline returns to exactly 98 retained sector scene objects, 106 sector-owned resources, 5 sector model instances, 15 loader source references, and 6 global live model instances. The renderer's lazy-upload geometry proxy varied 52, 48, and 52 while textures stayed at 25, with no monotonic trend; draw-call and triangle samples vary with the rendered view and are not ownership oracles. Source cache size stays 15 by design and is disposed only with the loader. Evidence and inspected desktop/narrow screenshots live in [`screenshots/perf-001`](screenshots/perf-001/).
 
 The production bundle comparison against base `eb717e5` is:
 
