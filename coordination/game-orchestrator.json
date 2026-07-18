@@ -220,10 +220,35 @@
   "creativeRoles": {
     "storyWriterSkill": "/Users/jschuler/.codex/skills/vanta-story-writer/SKILL.md",
     "cinematicDirectorSkill": "/Users/jschuler/.codex/skills/vanta-cinematic-director/SKILL.md",
+    "uiArtDirectorSkill": "/Users/jschuler/.codex/skills/vanta-ui-art-director/SKILL.md",
     "consultationModel": "gpt-5.6-sol",
     "consultationReasoningEffort": "xhigh",
     "implementationModel": "gpt-5.6-sol",
     "implementationReasoningEffort": "medium"
+  },
+  "uiDesign": {
+    "authority": "One shared HUD layout owns screen-space zones, safe-area behavior, stacking, region collisions, and state-driven visibility. Feature UI observes authoritative public snapshots and events without owning simulation truth.",
+    "taskTriggers": [
+      "src/ui or shared UI style changes",
+      "new HUD information or notification",
+      "dialogue, cinematic, mission, map, menu, loading, title, pause, death, or vehicle presentation",
+      "input focus, pointer, accessibility, responsive, typography, icon, or motion changes"
+    ],
+    "requiredTaskMetadata": [
+      "requiresUiDesign",
+      "requiresVisualReview",
+      "uiStates",
+      "viewports",
+      "designBrief",
+      "visualEvidence"
+    ],
+    "rules": [
+      "Use the vanta-ui-art-director skill for design briefs and final visual review before implementation tasks that match a trigger.",
+      "Use xhigh consultation for design judgment and medium workers in dedicated worktrees for implementation and QA.",
+      "Prefer shared semantic tokens and layout zones over component-local global positioning, colors, z-indexes, fonts, breakpoints, and animation curves.",
+      "Review deterministic UI composition-lab and live-game screenshots over bright, dark, and visually noisy backgrounds at required viewports.",
+      "Do not accept snapshot updates without a recorded design reason, inaccessible controls, placeholder interface art, unlicensed fonts or icons, private runtime state access, or copied franchise presentation."
+    ]
   },
   "productRules": {
     "defaultPlayableCharacterId": "casual",
@@ -495,6 +520,45 @@
         "Validate the configured radio voice through the authenticated metadata endpoint before generating up to three bounded radio-host TTS candidates; block only the radio-host generation subtask if access still fails.",
         "Implement local runtime playback, streaming/disposal rules, volume/accessibility controls, and radio interruption behavior.",
         "Do not generate character dialogue voice-over in this milestone."
+      ]
+    },
+    {
+      "id": "UI-SYSTEM-001",
+      "title": "Establish the Ashfall UI design system and composition lab",
+      "status": "ready",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "ui-ashfall-design-system-hud-layout-composition-lab",
+      "dependencies": [],
+      "owner": "ui-foundation-worker",
+      "skill": "vanta-ui-art-director",
+      "requiresUiDesign": true,
+      "requiresVisualReview": true,
+      "uiStates": [
+        "exploration",
+        "combat",
+        "dialogue",
+        "mission-update",
+        "driving",
+        "pause-map",
+        "loading",
+        "death",
+        "restoration"
+      ],
+      "viewports": ["1280x720", "390x844", "1920x800"],
+      "designBrief": "Create a tracked Ashfall UI foundation brief before implementation using the vanta-ui-art-director contract.",
+      "visualEvidence": [
+        "deterministic ui-composition-lab screenshot matrix",
+        "live gameplay desktop, narrow, and ultrawide screenshots",
+        "bright daytime, dark nighttime, and visually noisy background stress screenshots"
+      ],
+      "acceptance": [
+        "Audit the existing HUD, menus, dialogue, overlays, styles, game-state presentation, input/focus ownership, screenshots, and public snapshots before changing architecture.",
+        "Define an original 1990s Ashfall design language and semantic tokens for typography, color, spacing, layers, panels, icons, motion, safe areas, contrast, and responsive behavior without copying another game's recognizable interface.",
+        "Create one authoritative screen-space HUD layout with semantic zones for player status, navigation, loadout, interaction, objectives, notifications, conversation, modal, presentation, and world indicators; migrate existing UI without duplicating state or listeners.",
+        "Build a deterministic UI composition lab that renders available exploration, combat, dialogue, mission, driving, pause/map, loading, death, failure, warning, unavailable, and restoration states through public presentation fixtures on real game backgrounds.",
+        "Meet keyboard focus, accessible naming, live-region, non-color cue, text enlargement, safe-area, narrow, ultrawide, and reduced-motion requirements.",
+        "Inspect console output and the required screenshot matrix manually, add intentional visual baselines and behavioral tests, document every shared design decision, and report unavailable future-state dependencies rather than shipping placeholders."
       ]
     },
     {

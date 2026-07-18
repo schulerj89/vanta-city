@@ -66,6 +66,14 @@ These rules apply to the entire repository.
 - Backlog-curation workers must attach evidence and reproduction steps, check task IDs and duplicate keys against the roadmap, active tasks, worktrees, branches, commits, and recent integration history, and prefer extending an existing authoritative task over creating a parallel abstraction.
 - The hourly integrator reviews roadmap additions like code: reject vague, duplicate, unbounded, unsupported, or product-divergent tasks. Autonomous discovery cannot authorize spending, credentials work, licensing exceptions, mature content, vision changes, or new external commitments; those require user direction.
 
+## UI design direction
+
+- Use `/Users/jschuler/.codex/skills/vanta-ui-art-director/SKILL.md` whenever a task changes player-facing HUD, menus, prompts, dialogue, cinematics, maps, missions, loading, title, pause, death, vehicle presentation, shared UI styles, focus, accessibility, responsive behavior, typography, icons, or motion.
+- Require an xhigh design brief or review before implementation when roadmap metadata contains `requiresUiDesign`. Medium workers implement and validate the approved brief in dedicated worktrees; the design reviewer does not silently rewrite the feature.
+- One authoritative HUD layout owns screen-space zones, safe areas, stacking, collisions between regions, and state-driven visibility. Feature UI observes public snapshots and events and must not own simulation state, camera transforms, or duplicate input listeners.
+- Add or extend the deterministic UI composition lab for components with multiple states or cross-region impact. Review real-game screenshots at the task's required viewports over bright, dark, and visually noisy backgrounds, including relevant enlarged-text and reduced-motion cases.
+- Snapshot changes require a recorded design reason. Do not approve copied franchise presentation, inaccessible controls, private-field fixtures, overlapping HUD regions, unlicensed fonts or icons, or placeholder interface art as completed design.
+
 ## Efficient validation
 
 - Match validation scope to the change while iterating. Run affected unit tests, targeted lint/format checks, and the relevant browser feature suite instead of repeatedly running every check after each small edit.
