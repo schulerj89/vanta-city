@@ -15,9 +15,9 @@
       "Inspect current Codex task status, Git worktrees, branches, and main before dispatching.",
       "Do not duplicate a task whose task ID appears in an active task title, branch name, worktree path, commit, or completed roadmap entry.",
       "Select only tasks whose dependencies are completed and whose status is ready.",
-      "Use the smallest useful team and never exceed four concurrent worker processes.",
+      "Use the smallest useful team and respect the active Codex runtime's available concurrency.",
       "Balance architecture, gameplay, content, visual/assets, and test-performance work rather than assigning multiple workers to the same foundational contract.",
-      "Do not start more work when four worker worktrees are occupied or more than six worktrees including main and a temporary integration worktree are registered."
+      "Do not start more work when six worktrees including main and a temporary integration worktree are already registered."
     ],
     "workerRules": [
       "Create or reuse one dedicated worker task and worktree per bounded task.",
