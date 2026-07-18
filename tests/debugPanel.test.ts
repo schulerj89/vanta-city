@@ -57,12 +57,12 @@ describe('DebugPanelSystem', () => {
     registry.registerToggle({
       id: 'visual.collision',
       label: 'Collision geometry',
-      group: debugSections.actions,
+      group: debugSections.collision,
     });
     registry.registerCommand({
       id: 'player.reset',
       label: 'Reset player',
-      group: debugSections.actions,
+      group: debugSections.player,
       run: () => {},
     });
     const { mount, panel } = createPanel(registry);
@@ -72,9 +72,9 @@ describe('DebugPanelSystem', () => {
     ];
     expect(sections.map(({ dataset }) => dataset.debugSection)).toEqual([
       debugSections.player,
+      debugSections.collision,
       debugSections.camera,
       debugSections.runtime,
-      debugSections.actions,
     ]);
     expect(sections.every(({ open }) => !open)).toBe(true);
     expect(
@@ -86,12 +86,19 @@ describe('DebugPanelSystem', () => {
       section(mount, debugSections.player).querySelector(
         '.debug-section__count',
       )?.textContent,
-    ).toBe('1 value');
+    ).toBe('1 diagnostic · 1 control');
     expect(
-      section(mount, debugSections.actions).querySelector(
+      section(mount, debugSections.collision).querySelector(
         '.debug-section__count',
       )?.textContent,
-    ).toBe('1 toggle · 1 command');
+    ).toBe('1 control');
+    expect(
+      [
+        ...section(mount, debugSections.player).querySelectorAll(
+          '.debug-section__subheading',
+        ),
+      ].map(({ textContent }) => textContent),
+    ).toEqual(['Diagnostics', 'Controls']);
 
     panel.dispose();
     mount.remove();
@@ -142,7 +149,7 @@ describe('DebugPanelSystem', () => {
     expect(rebuilt.open).toBe(true);
     expect(document.activeElement).toBe(rebuilt.querySelector('summary'));
     expect(rebuilt.querySelector('.debug-section__count')?.textContent).toBe(
-      '2 values',
+      '2 diagnostics',
     );
     expect(section(mount, 'Custom extension').open).toBe(false);
 
@@ -162,7 +169,7 @@ describe('DebugPanelSystem', () => {
     registry.registerCommand({
       id: 'player.reset',
       label: 'Reset player',
-      group: debugSections.actions,
+      group: debugSections.player,
       run,
     });
     const { mount, panel } = createPanel(registry);
@@ -197,21 +204,21 @@ describe('DebugPanelSystem', () => {
     registry.registerToggle({
       id: 'visual.collision',
       label: 'Collision geometry',
-      group: debugSections.actions,
+      group: debugSections.collision,
     });
     registry.registerCommand({
       id: 'player.teleport',
       label: 'Teleport to spawn',
-      group: debugSections.actions,
+      group: debugSections.player,
       argumentLabel: 'spawn id',
       run,
     });
     const { mount, panel } = createPanel(registry);
-    const actions = section(mount, debugSections.actions);
-    expect(actions.open).toBe(false);
-    actions.open = true;
-    actions.dispatchEvent(new Event('toggle'));
-    const command = actions.querySelector<HTMLFormElement>(
+    const player = section(mount, debugSections.player);
+    expect(player.open).toBe(false);
+    player.open = true;
+    player.dispatchEvent(new Event('toggle'));
+    const command = player.querySelector<HTMLFormElement>(
       '[data-debug-command="player.teleport"]',
     )!;
     const field = command.querySelector('input')!;
@@ -220,7 +227,7 @@ describe('DebugPanelSystem', () => {
 
     registry.setToggle('visual.collision', true);
     panel.update({ ...frame, frame: 2 });
-    expect(actions.open).toBe(true);
+    expect(player.open).toBe(true);
     expect(document.activeElement).toBe(field);
     expect(
       mount.querySelector<HTMLInputElement>(
@@ -239,6 +246,42 @@ describe('DebugPanelSystem', () => {
       read: () => 1,
     });
     expect(mount.childElementCount).toBe(0);
+    mount.remove();
+  });
+
+  it('renders bounded numeric controls and keeps their live value current', async () => {
+    const registry = new DebugRegistry();
+    let distance = 4.4;
+    registry.registerNumber({
+      id: 'camera.set-follow-distance',
+      label: 'Live follow distance (m)',
+      group: debugSections.camera,
+      min: 2.2,
+      max: 9,
+      step: 0.1,
+      read: () => distance,
+      onChange: (value) => {
+        distance = value;
+      },
+    });
+    const { mount, panel } = createPanel(registry);
+    const input = mount.querySelector<HTMLInputElement>(
+      '[data-debug-number="camera.set-follow-distance"] input',
+    )!;
+
+    expect(input.type).toBe('number');
+    expect(input.min).toBe('2.2');
+    expect(input.max).toBe('9');
+    input.value = '5.2';
+    input.dispatchEvent(new Event('change'));
+    await Promise.resolve();
+    expect(distance).toBe(5.2);
+
+    distance = 3.8;
+    panel.update({ ...frame, frame: 2 });
+    expect(input.value).toBe('3.8');
+
+    panel.dispose();
     mount.remove();
   });
 });

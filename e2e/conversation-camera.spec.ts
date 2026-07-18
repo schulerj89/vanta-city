@@ -43,7 +43,7 @@ test('live participant framing and exact gameplay camera restoration', async ({
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('/?e2e=1&skipPicker=1&dialogueTypewriter=0&npcFixtures=1');
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
-  await command(page, 'camera.set-follow-distance', '7');
+  await setNumber(page, 'camera.set-follow-distance', 7);
   await command(page, 'camera.set-shoulder', 'left');
 
   for (const npcCase of cases) {
@@ -247,6 +247,17 @@ async function command(
       await api.executeDebugCommand(id, argument);
     },
     { id, argument },
+  );
+}
+
+async function setNumber(page: Page, id: string, value: number): Promise<void> {
+  await page.evaluate(
+    async ({ id, value }) => {
+      const api: BrowserTestApi | undefined = window.__VANTA_TEST__;
+      if (!api) throw new Error('Browser bridge unavailable');
+      await api.setDebugNumber(id, value);
+    },
+    { id, value },
   );
 }
 

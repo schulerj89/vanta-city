@@ -24,7 +24,7 @@ Missions, rewards, pickups, purchases, and any future shop are callers of this A
 
 ## Development fixtures
 
-Development tools expose passive money/pickup state under the existing Player and Interactions groups. Mutations stay in Commands / Actions:
+Development tools expose money diagnostics and mutation controls under **Player**, while cash-pickup diagnostics and controls live under **Interactions**. Each section visually separates Diagnostics from Controls:
 
 - `player.money-credit [amount]`
 - `player.money-spend [amount]`

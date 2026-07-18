@@ -1493,8 +1493,24 @@ canvas {
   padding-top: 0.25rem;
 }
 
+.debug-section__group + .debug-section__group {
+  margin-top: 0.45rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.debug-section__subheading {
+  margin-bottom: 0.15rem;
+  color: #75978e;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .debug-value,
 .debug-toggle,
+.debug-number,
 .debug-command {
   display: flex;
   align-items: center;
@@ -1515,6 +1531,21 @@ canvas {
 
 .debug-toggle input {
   margin: 0;
+}
+
+.debug-number {
+  justify-content: space-between;
+}
+
+.debug-number input {
+  width: 6.2rem;
+  min-width: 0;
+  padding: 0.2rem 0.3rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.25rem;
+  color: inherit;
+  background: rgb(255 255 255 / 8%);
+  font: inherit;
 }
 
 .debug-command input,
@@ -1564,6 +1595,7 @@ canvas {
 
   .debug-value,
   .debug-toggle,
+  .debug-number,
   .debug-command {
     min-height: 2rem;
   }

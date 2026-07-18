@@ -424,7 +424,7 @@ export class DiagnosticRecorder implements GameSystem {
       debug.registerCommand({
         id: 'diagnostics.start',
         label: 'Start diagnostic recording',
-        group: debugSections.actions,
+        group: debugSections.runtime,
         argumentLabel: 'duration seconds (default 8)',
         run: (argument) =>
           this.start(
@@ -434,31 +434,31 @@ export class DiagnosticRecorder implements GameSystem {
       debug.registerCommand({
         id: 'diagnostics.stop',
         label: 'Stop diagnostic recording',
-        group: debugSections.actions,
+        group: debugSections.runtime,
         run: () => this.stop(),
       }),
       debug.registerCommand({
         id: 'diagnostics.freeze',
         label: 'Freeze diagnostic recording',
-        group: debugSections.actions,
+        group: debugSections.runtime,
         run: () => this.freeze(),
       }),
       debug.registerCommand({
         id: 'diagnostics.clear',
         label: 'Clear diagnostic recording',
-        group: debugSections.actions,
+        group: debugSections.runtime,
         run: () => this.clear(),
       }),
       debug.registerCommand({
         id: 'diagnostics.export',
         label: 'Export diagnostic JSON',
-        group: debugSections.actions,
+        group: debugSections.runtime,
         run: () => this.download(),
       }),
       debug.registerCommand({
         id: 'diagnostics.readback',
         label: 'Read back diagnostic JSON',
-        group: debugSections.actions,
+        group: debugSections.runtime,
         argumentLabel: 'paste exported JSON',
         run: (argument) => {
           if (!argument) throw new Error('Diagnostic JSON is required');

@@ -461,7 +461,7 @@ class CameraCompositionLabSystem implements GameSystem<GameContext> {
       this.context.debug.registerCommand({
         id: `camera-lab.${id}`,
         label,
-        group: debugSections.actions,
+        group: debugSections.camera,
         ...(argumentLabel ? { argumentLabel } : {}),
         run: (argument) => this.execute(id, argument),
       });

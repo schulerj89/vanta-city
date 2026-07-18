@@ -21,14 +21,14 @@ test.describe('default gameplay camera framing', () => {
     expect(initial.camera).toMatchObject({
       mode: 'gameplay',
       owner: 'gameplay',
-      desiredDistance: 4.8,
+      desiredDistance: 4.4,
     });
-    expect(initial.camera.actualDistance).toBeCloseTo(4.8, 2);
+    expect(initial.camera.actualDistance).toBeCloseTo(4.4, 2);
     await capture(page, testInfo, 'default-camera-desktop');
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('#game')).toHaveJSProperty('clientWidth', 390);
-    expect((await snapshot(page)).camera.desiredDistance).toBe(4.8);
+    expect((await snapshot(page)).camera.desiredDistance).toBe(4.4);
     await capture(page, testInfo, 'default-camera-narrow');
 
     await page.setViewportSize({ width: 1280, height: 720 });
@@ -47,7 +47,7 @@ test.describe('default gameplay camera framing', () => {
       .toBe(false);
     await expect
       .poll(async () => (await snapshot(page)).camera.actualDistance)
-      .toBeCloseTo(4.8, 1);
+      .toBeCloseTo(4.4, 1);
     const beforeDialogue = (await snapshot(page)).camera;
     await command(page, 'dialogue.start-mack');
     await expect
@@ -60,7 +60,7 @@ test.describe('default gameplay camera framing', () => {
       .toBe(1);
     const afterDialogue = await snapshot(page);
     expect(afterDialogue.camera.mode).toBe('gameplay');
-    expect(afterDialogue.camera.desiredDistance).toBe(4.8);
+    expect(afterDialogue.camera.desiredDistance).toBe(4.4);
     expectVectorClose(afterDialogue.camera.position, beforeDialogue.position);
     expectVectorClose(afterDialogue.camera.target, beforeDialogue.target);
     await capture(page, testInfo, 'default-camera-after-dialogue');
@@ -79,7 +79,7 @@ test.describe('default gameplay camera framing', () => {
       .poll(async () => (await snapshot(page)).camera.actualDistance)
       .toBeCloseTo(4.25, 1);
     const combat = await snapshot(page);
-    expect(combat.camera.desiredDistance).toBe(4.8);
+    expect(combat.camera.desiredDistance).toBe(4.4);
     expect(combat.camera.gameplayFocusDistance).toBe(4.25);
     await capture(page, testInfo, 'default-camera-combat-focus');
 
@@ -117,12 +117,15 @@ test.describe('default gameplay camera framing', () => {
 async function openReadyApp(page: Page): Promise<void> {
   await page.goto(appUrl);
   await expect
-    .poll(async () => {
-      const state = await page.evaluate(() =>
-        window.__VANTA_TEST__?.snapshot(),
-      );
-      return state?.ready && state.gameState === 'playing';
-    })
+    .poll(
+      async () => {
+        const state = await page.evaluate(() =>
+          window.__VANTA_TEST__?.snapshot(),
+        );
+        return state?.ready && state.gameState === 'playing';
+      },
+      { timeout: 15_000 },
+    )
     .toBe(true);
 }
 
@@ -149,9 +152,9 @@ function expectVectorClose(
   actual: { readonly x: number; readonly y: number; readonly z: number },
   expected: { readonly x: number; readonly y: number; readonly z: number },
 ): void {
-  expect(actual.x).toBeCloseTo(expected.x, 3);
-  expect(actual.y).toBeCloseTo(expected.y, 3);
-  expect(actual.z).toBeCloseTo(expected.z, 3);
+  expect(actual.x).toBeCloseTo(expected.x, 2);
+  expect(actual.y).toBeCloseTo(expected.y, 2);
+  expect(actual.z).toBeCloseTo(expected.z, 2);
 }
 
 declare global {

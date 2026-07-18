@@ -1,21 +1,21 @@
 export type DebugValue = string | number | boolean | null | undefined;
 
-/**
- * One shared information architecture keeps registrations predictable. Values
- * belong to the subsystem they describe; every mutating toggle or command goes
- * in Commands / Actions so passive observation is visually unambiguous.
- */
+/** One shared information architecture keeps subsystem registrations predictable. */
 export const debugSections = {
-  player: 'Player / Coordinates',
+  player: 'Player',
   input: 'Input / Ownership',
   collision: 'Collision / Physics',
   camera: 'Camera',
-  world: 'World / Level / Spawns',
-  characters: 'Characters / Assets',
+  world: 'World',
+  lighting: 'Lighting',
+  traffic: 'Traffic',
+  combat: 'Combat',
   interactions: 'Interactions',
   dialogue: 'Dialogue / Conversation',
+  assets: 'Assets',
+  /** @deprecated Register controls in their owning subsystem section. */
+  characters: 'Assets',
   runtime: 'Runtime / State',
-  actions: 'Commands / Actions',
 } as const;
 
 export const debugSectionOrder: readonly string[] =
@@ -44,6 +44,17 @@ export interface DebugCommandRegistration {
   readonly run: (argument?: string) => void | Promise<void>;
 }
 
+export interface DebugNumberRegistration {
+  readonly id: string;
+  readonly label: string;
+  readonly group?: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step?: number;
+  readonly read: () => number;
+  readonly onChange: (value: number) => void | Promise<void>;
+}
+
 export interface DebugToggleSnapshot {
   readonly id: string;
   readonly label: string;
@@ -58,15 +69,25 @@ export interface DebugCommandSnapshot {
   readonly argumentLabel?: string;
 }
 
+export interface DebugNumberSnapshot {
+  readonly id: string;
+  readonly label: string;
+  readonly group: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step?: number;
+  readonly value: number;
+}
+
 export type DebugUnregister = () => void;
 
 export interface DebugRegistryChange {
-  readonly kind: 'structure' | 'toggle';
+  readonly kind: 'structure' | 'toggle' | 'number';
   readonly id: string;
 }
 
 const DEFAULT_VALUE_GROUP = debugSections.runtime;
-const DEFAULT_CONTROL_GROUP = debugSections.actions;
+const DEFAULT_CONTROL_GROUP = debugSections.runtime;
 
 export class DebugRegistry {
   private readonly values = new Map<string, DebugValueRegistration>();
@@ -75,6 +96,7 @@ export class DebugRegistry {
     DebugToggleRegistration & { enabled: boolean }
   >();
   private readonly commands = new Map<string, DebugCommandRegistration>();
+  private readonly numbers = new Map<string, DebugNumberRegistration>();
   private readonly listeners = new Set<(change: DebugRegistryChange) => void>();
 
   public registerValue(registration: DebugValueRegistration): DebugUnregister {
@@ -104,6 +126,24 @@ export class DebugRegistry {
     this.commands.set(registration.id, registration);
     this.notify({ kind: 'structure', id: registration.id });
     return this.unregister(this.commands, registration.id, registration);
+  }
+
+  public registerNumber(
+    registration: DebugNumberRegistration,
+  ): DebugUnregister {
+    this.assertAvailable(registration.id);
+    if (
+      !Number.isFinite(registration.min) ||
+      !Number.isFinite(registration.max) ||
+      registration.min >= registration.max ||
+      (registration.step !== undefined &&
+        (!Number.isFinite(registration.step) || registration.step <= 0))
+    ) {
+      throw new Error(`Invalid debug number bounds: ${registration.id}`);
+    }
+    this.numbers.set(registration.id, registration);
+    this.notify({ kind: 'structure', id: registration.id });
+    return this.unregister(this.numbers, registration.id, registration);
   }
 
   public readValues(): readonly (DebugValueRegistration & {
@@ -137,6 +177,18 @@ export class DebugRegistry {
     }));
   }
 
+  public listNumbers(): readonly DebugNumberSnapshot[] {
+    return [...this.numbers.values()].map((entry) => ({
+      id: entry.id,
+      label: entry.label,
+      group: entry.group ?? DEFAULT_CONTROL_GROUP,
+      min: entry.min,
+      max: entry.max,
+      ...(entry.step === undefined ? {} : { step: entry.step }),
+      value: entry.read(),
+    }));
+  }
+
   public isToggleEnabled(id: string): boolean {
     return this.requireToggle(id).enabled;
   }
@@ -161,6 +213,18 @@ export class DebugRegistry {
     await command.run(argument);
   }
 
+  public async setNumber(id: string, value: number): Promise<void> {
+    const number = this.numbers.get(id);
+    if (!number) throw new Error(`Unknown debug number: ${id}`);
+    if (!Number.isFinite(value) || value < number.min || value > number.max) {
+      throw new Error(
+        `${number.label} must be between ${number.min} and ${number.max}`,
+      );
+    }
+    await number.onChange(value);
+    this.notify({ kind: 'number', id });
+  }
+
   public subscribe(
     listener: (change: DebugRegistryChange) => void,
   ): DebugUnregister {
@@ -169,7 +233,12 @@ export class DebugRegistry {
   }
 
   private assertAvailable(id: string): void {
-    if (this.values.has(id) || this.toggles.has(id) || this.commands.has(id)) {
+    if (
+      this.values.has(id) ||
+      this.toggles.has(id) ||
+      this.commands.has(id) ||
+      this.numbers.has(id)
+    ) {
       throw new Error(`Debug registration id already exists: ${id}`);
     }
   }

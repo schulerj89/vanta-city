@@ -14,6 +14,17 @@ export const standardVisualHelpers = {
 
 export type StandardVisualHelper = keyof typeof standardVisualHelpers;
 
+const visualHelperSections: Record<StandardVisualHelper, string> = {
+  collision: debugSections.collision,
+  triggers: debugSections.interactions,
+  entityIds: debugSections.world,
+  spawnPoints: debugSections.world,
+  interactionRanges: debugSections.interactions,
+  navigation: debugSections.player,
+  characterAlignment: debugSections.assets,
+  combatVolumes: debugSections.combat,
+};
+
 export interface DebugVisualHelper {
   setVisible(visible: boolean): void;
 }
@@ -32,7 +43,7 @@ export class DebugVisualHelpers {
       registry.registerToggle({
         id: this.toggleId(id),
         label,
-        group: debugSections.actions,
+        group: visualHelperSections[id],
         onChange: (enabled) => this.apply(id, enabled),
       }),
     );

@@ -332,14 +332,14 @@ export class TrafficSystem implements GameSystem {
       this.debug.registerToggle({
         id: 'traffic.enabled',
         label: 'Traffic enabled',
-        group: debugSections.actions,
+        group: debugSections.traffic,
         initialValue: this.simulation.isEnabled,
         onChange: (enabled) => this.simulation.setEnabled(enabled),
       }),
       this.debug.registerCommand({
         id: 'traffic.spawn-each-approach',
         label: 'Spawn traffic on each approach',
-        group: debugSections.actions,
+        group: debugSections.traffic,
         run: () => {
           this.spawnEachApproach();
         },
@@ -347,13 +347,13 @@ export class TrafficSystem implements GameSystem {
       this.debug.registerCommand({
         id: 'traffic.clear',
         label: 'Clear traffic',
-        group: debugSections.actions,
+        group: debugSections.traffic,
         run: () => this.clear(),
       }),
       this.debug.registerCommand({
         id: 'traffic.step',
         label: 'Step traffic deterministically',
-        group: debugSections.actions,
+        group: debugSections.traffic,
         argumentLabel: 'seconds (0–10)',
         run: (argument) => {
           const seconds = Number(argument);
@@ -366,7 +366,7 @@ export class TrafficSystem implements GameSystem {
       this.debug.registerValue({
         id: 'traffic.population',
         label: 'Traffic population',
-        group: debugSections.world,
+        group: debugSections.traffic,
         read: () => {
           const state = this.simulation.getSnapshot();
           return `${state.count}/${state.maxPopulation} · ${state.enabled ? 'enabled' : 'disabled'}`;

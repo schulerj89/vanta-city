@@ -56,7 +56,7 @@ describe('DebugRegistry', () => {
     );
   });
 
-  it('uses passive and control defaults and distinguishes structural and toggle changes', () => {
+  it('uses subsystem defaults and distinguishes structural and control changes', async () => {
     const debug = new DebugRegistry();
     const changes = vi.fn<(change: DebugRegistryChange) => void>();
     debug.subscribe(changes);
@@ -65,15 +65,38 @@ describe('DebugRegistry', () => {
       id: 'test.toggle',
       label: 'Test',
     });
+    let distance = 4.4;
+    debug.registerNumber({
+      id: 'camera.distance',
+      label: 'Distance',
+      group: debugSections.camera,
+      min: 2.2,
+      max: 9,
+      read: () => distance,
+      onChange: (value) => {
+        distance = value;
+      },
+    });
 
     expect(debug.readValues()[0]?.group).toBe(debugSections.runtime);
-    expect(debug.listToggles()[0]?.group).toBe(debugSections.actions);
+    expect(debug.listToggles()[0]?.group).toBe(debugSections.runtime);
+    expect(debug.listNumbers()[0]).toMatchObject({
+      group: debugSections.camera,
+      value: 4.4,
+    });
+    await debug.setNumber('camera.distance', 5.1);
+    expect(distance).toBe(5.1);
+    await expect(debug.setNumber('camera.distance', 10)).rejects.toThrow(
+      'between 2.2 and 9',
+    );
     debug.setToggle('test.toggle', true);
     unregister();
 
     expect(changes.mock.calls.map(([change]) => change)).toEqual([
       { kind: 'structure', id: 'test.value' },
       { kind: 'structure', id: 'test.toggle' },
+      { kind: 'structure', id: 'camera.distance' },
+      { kind: 'number', id: 'camera.distance' },
       { kind: 'toggle', id: 'test.toggle' },
       { kind: 'structure', id: 'test.toggle' },
     ]);

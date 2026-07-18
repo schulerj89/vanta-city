@@ -164,6 +164,7 @@ export interface BrowserTestApi {
   snapshot(): BrowserTestSnapshot;
   executeDebugCommand(id: string, argument?: string): Promise<void>;
   setDebugToggle(id: string, enabled: boolean): void;
+  setDebugNumber(id: string, value: number): Promise<void>;
   setVirtualGamepad(fixture?: VirtualGamepadFixture): void;
   exportDiagnosticTrace(): string;
   readbackDiagnosticTrace(input: string): DiagnosticTraceSummary;
@@ -247,6 +248,7 @@ export function installBrowserTestBridge(
     executeDebugCommand: (id, argument) =>
       dependencies.debug.executeCommand(id, argument),
     setDebugToggle: (id, enabled) => dependencies.debug.setToggle(id, enabled),
+    setDebugNumber: (id, value) => dependencies.debug.setNumber(id, value),
     setVirtualGamepad: (fixture) =>
       dependencies.inputInspector.setVirtualGamepad(fixture),
     exportDiagnosticTrace: () => dependencies.diagnostics.serialize(),

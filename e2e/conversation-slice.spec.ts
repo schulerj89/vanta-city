@@ -145,9 +145,11 @@ test('character picker through repeatable Mack conversation', async ({
       );
     }
     if (index === expected.length - 1) {
-      const actions = page.locator('[data-debug-section="Commands / Actions"]');
-      await actions.locator('summary').click();
-      await actions.getByRole('button', { name: 'Advance dialogue' }).click();
+      const dialogue = page.locator(
+        '[data-debug-section="Dialogue / Conversation"]',
+      );
+      await dialogue.locator('summary').click();
+      await dialogue.getByRole('button', { name: 'Advance dialogue' }).click();
     } else {
       await page.keyboard.press('Enter');
     }
@@ -222,11 +224,14 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
     const revealButton = page.getByRole('button', {
       name: 'Reveal full dialogue line',
     });
-    await expect(revealButton).toBeVisible();
     // The first line is intentionally short. Activate the observed reveal
-    // control in the same browser task so natural completion cannot turn this
-    // synchronization assertion into an unintended advance.
-    await revealButton.evaluate((button: HTMLButtonElement) => button.click());
+    // control when it still exists. Natural completion may remove it between
+    // the state snapshot and this DOM task, which is already the desired state.
+    if (await revealButton.isVisible()) {
+      await revealButton.evaluate((button: HTMLButtonElement) =>
+        button.click(),
+      );
+    }
   }
   await expect
     .poll(async () => (await snapshot(page)).dialogue.session.state)

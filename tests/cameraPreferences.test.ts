@@ -20,8 +20,8 @@ describe('CameraPreferenceStore', () => {
   it('uses the closer full-body gameplay framing for untouched preferences', () => {
     const preferences = new CameraPreferenceStore(new MemoryStorage());
 
-    expect(defaultCameraPreferences.followDistance).toBe(4.8);
-    expect(preferences.current.followDistance).toBe(4.8);
+    expect(defaultCameraPreferences.followDistance).toBe(4.4);
+    expect(preferences.current.followDistance).toBe(4.4);
   });
 
   it('persists versioned gameplay preferences', () => {

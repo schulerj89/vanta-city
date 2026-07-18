@@ -82,13 +82,13 @@ class FoundationSandboxSystem implements GameSystem {
       this.context.debug.registerCommand({
         id: 'player.reset',
         label: 'Reset player',
-        group: debugSections.actions,
+        group: debugSections.player,
         run: () => this.teleport('origin'),
       }),
       this.context.debug.registerCommand({
         id: 'player.teleport',
         label: 'Teleport to spawn',
-        group: debugSections.actions,
+        group: debugSections.player,
         argumentLabel: Object.keys(spawns).join(', '),
         run: (name) => this.teleport(name),
       }),

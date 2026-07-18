@@ -15,13 +15,13 @@ const criticalFacts = [
 
 interface DebugSectionElements {
   readonly details: HTMLDetailsElement;
-  readonly body: HTMLElement;
+  readonly diagnostics: HTMLElement;
+  readonly controls: HTMLElement;
 }
 
 interface DebugSectionCounts {
-  values: number;
-  toggles: number;
-  commands: number;
+  diagnostics: number;
+  controls: number;
 }
 
 export class DebugPanelSystem implements GameSystem {
@@ -32,6 +32,7 @@ export class DebugPanelSystem implements GameSystem {
   private readonly valueElements = new Map<string, HTMLElement>();
   private readonly summaryElements = new Map<string, HTMLElement>();
   private readonly toggleElements = new Map<string, HTMLInputElement>();
+  private readonly numberElements = new Map<string, HTMLInputElement>();
   private readonly sectionElements = new Map<string, DebugSectionElements>();
   private readonly sectionOpen = new Map<string, boolean>();
   private visible: boolean;
@@ -96,6 +97,7 @@ export class DebugPanelSystem implements GameSystem {
     this.valueElements.clear();
     this.summaryElements.clear();
     this.toggleElements.clear();
+    this.numberElements.clear();
     this.sectionElements.clear();
     this.sectionOpen.clear();
     this.element.removeEventListener('keydown', this.stopPanelKeyboardEvent);
@@ -110,6 +112,7 @@ export class DebugPanelSystem implements GameSystem {
     this.valueElements.clear();
     this.summaryElements.clear();
     this.toggleElements.clear();
+    this.numberElements.clear();
     this.sectionElements.clear();
 
     const heading = document.createElement('header');
@@ -128,9 +131,12 @@ export class DebugPanelSystem implements GameSystem {
     glance.setAttribute('aria-label', 'Critical runtime summary');
     this.element.replaceChildren(heading, glance);
 
-    const groupFor = (name: string): HTMLElement => {
+    const groupFor = (
+      name: string,
+      kind: 'diagnostics' | 'controls',
+    ): HTMLElement => {
       const existing = this.sectionElements.get(name);
-      if (existing) return existing.body;
+      if (existing) return existing[kind];
       const details = document.createElement('details');
       details.className = 'debug-section';
       details.dataset.debugSection = name;
@@ -149,17 +155,28 @@ export class DebugPanelSystem implements GameSystem {
       summary.append(sectionTitle, count);
       const body = document.createElement('div');
       body.className = 'debug-section__body';
+      const diagnostics = this.createSectionGroup('Diagnostics');
+      const sectionControls = this.createSectionGroup('Controls');
+      const counts = sectionCounts.get(name);
+      diagnostics.hidden = !counts?.diagnostics;
+      sectionControls.hidden = !counts?.controls;
+      body.append(diagnostics, sectionControls);
       details.addEventListener('toggle', () => {
         this.sectionOpen.set(name, details.open);
       });
       details.append(summary, body);
-      this.sectionElements.set(name, { details, body });
-      return body;
+      this.sectionElements.set(name, {
+        details,
+        diagnostics,
+        controls: sectionControls,
+      });
+      return kind === 'diagnostics' ? diagnostics : sectionControls;
     };
 
     const values = this.registry.readValues();
     const toggles = this.registry.listToggles();
     const commands = this.registry.listCommands();
+    const numbers = this.registry.listNumbers();
     const valuesById = new Map(values.map((value) => [value.id, value]));
     for (const fact of criticalFacts) {
       if (!valuesById.has(fact.id)) continue;
@@ -179,22 +196,24 @@ export class DebugPanelSystem implements GameSystem {
     const sectionCounts = new Map<string, DebugSectionCounts>();
     const increment = (name: string, kind: keyof DebugSectionCounts): void => {
       const counts = sectionCounts.get(name) ?? {
-        values: 0,
-        toggles: 0,
-        commands: 0,
+        diagnostics: 0,
+        controls: 0,
       };
       counts[kind] += 1;
       sectionCounts.set(name, counts);
     };
-    for (const { group } of values) increment(group, 'values');
-    for (const { group } of toggles) increment(group, 'toggles');
-    for (const { group } of commands) increment(group, 'commands');
+    for (const { group } of values) increment(group, 'diagnostics');
+    for (const { group } of toggles) increment(group, 'controls');
+    for (const { group } of numbers) increment(group, 'controls');
+    for (const { group } of commands) increment(group, 'controls');
     const names = new Set([
       ...values.map(({ group }) => group),
       ...toggles.map(({ group }) => group),
+      ...numbers.map(({ group }) => group),
       ...commands.map(({ group }) => group),
     ]);
-    for (const name of [...names].sort(compareSections)) groupFor(name);
+    for (const name of [...names].sort(compareSections))
+      groupFor(name, 'diagnostics');
     for (const { details } of this.sectionElements.values())
       this.element.append(details);
 
@@ -206,7 +225,7 @@ export class DebugPanelSystem implements GameSystem {
       const output = document.createElement('output');
       output.dataset.debugValue = value.id;
       row.append(label, output);
-      groupFor(value.group).append(row);
+      groupFor(value.group, 'diagnostics').append(row);
       this.valueElements.set(value.id, output);
     }
 
@@ -227,8 +246,41 @@ export class DebugPanelSystem implements GameSystem {
         }
       });
       label.append(input, toggle.label);
-      groupFor(toggle.group).append(label);
+      groupFor(toggle.group, 'controls').append(label);
       this.toggleElements.set(toggle.id, input);
+    }
+
+    for (const number of numbers) {
+      const label = document.createElement('label');
+      label.className = 'debug-number';
+      label.dataset.debugNumber = number.id;
+      const text = document.createElement('span');
+      text.textContent = number.label;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = String(number.min);
+      input.max = String(number.max);
+      input.step = String(number.step ?? 'any');
+      input.value = String(number.value);
+      input.dataset.debugFocus = `number:${number.id}`;
+      input.setAttribute(
+        'aria-label',
+        `${number.label} (${number.min} to ${number.max})`,
+      );
+      input.addEventListener('change', () => {
+        void this.registry
+          .setNumber(number.id, input.valueAsNumber)
+          .catch((error: unknown) => {
+            input.value = String(
+              this.registry.listNumbers().find(({ id }) => id === number.id)
+                ?.value ?? number.value,
+            );
+            this.reportError(`debug number "${number.id}"`, error);
+          });
+      });
+      label.append(text, input);
+      groupFor(number.group, 'controls').append(label);
+      this.numberElements.set(number.id, input);
     }
 
     for (const command of commands) {
@@ -261,7 +313,7 @@ export class DebugPanelSystem implements GameSystem {
           });
       });
       row.append(button);
-      groupFor(command.group).append(row);
+      groupFor(command.group, 'controls').append(row);
     }
 
     this.restoreFocus(focusedKey);
@@ -273,6 +325,12 @@ export class DebugPanelSystem implements GameSystem {
       if (output) output.textContent = this.formatValue(entry.value);
       const summary = this.summaryElements.get(entry.id);
       if (summary) summary.textContent = this.formatValue(entry.value);
+    }
+    for (const entry of this.registry.listNumbers()) {
+      const input = this.numberElements.get(entry.id);
+      if (input && document.activeElement !== input) {
+        input.value = String(entry.value);
+      }
     }
   }
 
@@ -302,6 +360,16 @@ export class DebugPanelSystem implements GameSystem {
     return button;
   }
 
+  private createSectionGroup(label: string): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'debug-section__group';
+    const heading = document.createElement('div');
+    heading.className = 'debug-section__subheading';
+    heading.textContent = label;
+    group.append(heading);
+    return group;
+  }
+
   private setAllSections(open: boolean): void {
     for (const [name, { details }] of this.sectionElements) {
       this.sectionOpen.set(name, open);
@@ -312,13 +380,13 @@ export class DebugPanelSystem implements GameSystem {
   private formatSectionCounts(counts?: DebugSectionCounts): string {
     if (!counts) return '0 items';
     const labels: string[] = [];
-    if (counts.values > 0)
-      labels.push(`${counts.values} ${pluralize('value', counts.values)}`);
-    if (counts.toggles > 0)
-      labels.push(`${counts.toggles} ${pluralize('toggle', counts.toggles)}`);
-    if (counts.commands > 0)
+    if (counts.diagnostics > 0)
       labels.push(
-        `${counts.commands} ${pluralize('command', counts.commands)}`,
+        `${counts.diagnostics} ${pluralize('diagnostic', counts.diagnostics)}`,
+      );
+    if (counts.controls > 0)
+      labels.push(
+        `${counts.controls} ${pluralize('control', counts.controls)}`,
       );
     return labels.join(' · ');
   }

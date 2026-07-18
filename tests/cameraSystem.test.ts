@@ -138,9 +138,27 @@ describe('ThirdPersonCameraSystem', () => {
     const harness = createHarness();
     const snapshot = harness.system.getDebugSnapshot();
 
-    expect(defaultThirdPersonCameraConfig.initialDistance).toBe(4.8);
-    expect(snapshot.desiredDistance).toBe(4.8);
-    expect(snapshot.actualDistance).toBeCloseTo(4.8, 5);
+    expect(defaultThirdPersonCameraConfig.initialDistance).toBe(4.4);
+    expect(snapshot.desiredDistance).toBe(4.4);
+    expect(snapshot.actualDistance).toBeCloseTo(4.4, 5);
+  });
+
+  it('applies a bounded session follow-distance override without persisting it', () => {
+    const harness = createHarness();
+    harness.system.setPreferences({ followDistance: 6 });
+
+    expect(harness.system.setFollowDistanceOverride(3.7)).toBe(3.7);
+    update(harness, 120);
+    const overridden = harness.system.getDebugSnapshot();
+    expect(overridden.desiredDistance).toBe(3.7);
+    expect(overridden.savedPreferenceDistance).toBe(6);
+    expect(overridden.followDistanceOverride).toBe(3.7);
+    expect(overridden.actualDistance).toBeCloseTo(3.7, 2);
+
+    expect(harness.system.setFollowDistanceOverride(100)).toBe(9);
+    expect(harness.system.preferences.current.followDistance).toBe(6);
+    harness.system.setFollowDistanceOverride(undefined);
+    expect(harness.system.getDebugSnapshot().desiredDistance).toBe(6);
   });
 
   it('does not orbit for backward movement but still honors explicit recenter', () => {

@@ -8,7 +8,7 @@ The lab is a deterministic tuning surface for the existing participant-relative 
 
 The NPC selector derives Mack, Nox, and Raze profile defaults from the authoritative NPC definitions. Profiles remain the shared `default`, `close`, and `wide` definitions. Re-requesting after a control change retains the original saved gameplay-camera snapshot. Restore releases the normal ownership handle and visualizes the return to that saved relationship.
 
-The saved/restored gameplay fixture uses the same untouched `4.8m` follow-distance default as live gameplay. Conversation fixtures retain their profile-authored distances, so the lab can detect accidental coupling between default gameplay framing and dialogue composition.
+The saved/restored gameplay fixture uses the same untouched `4.4m` follow-distance default as live gameplay. Conversation fixtures retain their profile-authored distances, so the lab can detect accidental coupling between default gameplay framing and dialogue composition.
 
 ## Controls
 

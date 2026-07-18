@@ -396,7 +396,7 @@ export class InputOwnershipInspector implements GameSystem {
       this.debug.registerCommand({
         id: 'input.virtual-gamepad-connect',
         label: 'Connect virtual gamepad',
-        group: debugSections.actions,
+        group: debugSections.input,
         run: () =>
           this.setVirtualGamepad({
             connected: true,
@@ -407,7 +407,7 @@ export class InputOwnershipInspector implements GameSystem {
       this.debug.registerCommand({
         id: 'input.virtual-gamepad-disconnect',
         label: 'Disconnect virtual gamepad',
-        group: debugSections.actions,
+        group: debugSections.input,
         run: () =>
           this.setVirtualGamepad({
             connected: false,
@@ -418,7 +418,7 @@ export class InputOwnershipInspector implements GameSystem {
       this.debug.registerCommand({
         id: 'input.virtual-gamepad-axes',
         label: 'Set virtual gamepad axes',
-        group: debugSections.actions,
+        group: debugSections.input,
         argumentLabel: 'lx,ly,rx,ry',
         run: (argument) => {
           const axes = parseAxes(argument);
@@ -434,7 +434,7 @@ export class InputOwnershipInspector implements GameSystem {
       this.debug.registerCommand({
         id: 'input.virtual-gamepad-button',
         label: 'Set virtual gamepad button',
-        group: debugSections.actions,
+        group: debugSections.input,
         argumentLabel: 'index,value (0–1)',
         run: (argument) => {
           const [index, value] = parseButton(argument);

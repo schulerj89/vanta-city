@@ -317,7 +317,7 @@ export class TimeOfDayLightingSystem implements GameSystem {
       this.debug.registerValue({
         id: 'world.time-of-day',
         label: 'Time of day',
-        group: debugSections.world,
+        group: debugSections.lighting,
         read: () => {
           const snapshot = this.getSnapshot();
           return `${snapshot.hour.toFixed(2)}h · ${snapshot.preset}${snapshot.transitioning ? ` · ${(snapshot.transitionProgress * 100).toFixed(0)}%` : ''}`;
@@ -326,7 +326,7 @@ export class TimeOfDayLightingSystem implements GameSystem {
       this.debug.registerValue({
         id: 'world.lighting',
         label: 'Environment lighting',
-        group: debugSections.world,
+        group: debugSections.lighting,
         read: () => {
           const snapshot = this.getSnapshot();
           return `night ${snapshot.nightBlend.toFixed(2)} · lamps ${snapshot.localLightCount}/${snapshot.maxLocalLights} · emissive ${snapshot.emissiveFixtureCount} · shadows off`;
@@ -335,19 +335,19 @@ export class TimeOfDayLightingSystem implements GameSystem {
       this.debug.registerCommand({
         id: 'time.day',
         label: 'Set daytime',
-        group: debugSections.actions,
+        group: debugSections.lighting,
         run: () => this.setPreset('day'),
       }),
       this.debug.registerCommand({
         id: 'time.night',
         label: 'Set nighttime',
-        group: debugSections.actions,
+        group: debugSections.lighting,
         run: () => this.setPreset('night'),
       }),
       this.debug.registerCommand({
         id: 'time.set',
         label: 'Set time of day',
-        group: debugSections.actions,
+        group: debugSections.lighting,
         argumentLabel: 'hour (0–24)',
         run: (value) => {
           const hour = Number(value);

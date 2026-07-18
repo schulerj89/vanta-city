@@ -35,7 +35,7 @@ export function setupDevelopmentTools(
   debug.registerCommand({
     id: 'runtime.pause-resume',
     label: 'Pause / resume',
-    group: debugSections.actions,
+    group: debugSections.runtime,
     run: () => {
       if (runtime.state.current === 'paused') runtime.resume();
       else runtime.pause();
@@ -44,7 +44,7 @@ export function setupDevelopmentTools(
   debug.registerCommand({
     id: 'helpers.toggle',
     label: 'Toggle helper',
-    group: debugSections.actions,
+    group: debugSections.runtime,
     argumentLabel: 'collision, triggers, entityIds…',
     run: (argument) => {
       if (!argument || !(argument in standardVisualHelpers)) {

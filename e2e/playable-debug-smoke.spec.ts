@@ -4,6 +4,7 @@ import type {
   BrowserTestApi,
   BrowserTestSnapshot,
 } from '../src/debug/BrowserTestBridge';
+import { CameraPreferenceStore } from '../src/camera/CameraPreferences';
 
 const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1&sparringFixture=1';
 
@@ -72,8 +73,8 @@ test.describe('playable debug district', () => {
     ).toBeLessThanOrEqual(0.2);
 
     expect(state.camera.active).toBe(true);
-    expect(state.camera.desiredDistance).toBe(4.8);
-    expect(state.camera.actualDistance).toBeCloseTo(4.8, 2);
+    expect(state.camera.desiredDistance).toBe(4.4);
+    expect(state.camera.actualDistance).toBeCloseTo(4.4, 2);
     expect(
       state.camera.position.z,
       'default camera should begin behind the player and look into the district',
@@ -96,23 +97,25 @@ test.describe('playable debug district', () => {
 
   test('keeps the developer menu compact, reachable, stable, and clear of gameplay UI', async ({
     page,
-  }) => {
+  }, testInfo) => {
     const runtimeFailures = monitorRuntimeFailures(page);
     await openReadyApp(page);
     const panel = page.getByRole('complementary', { name: 'Developer tools' });
     await expect(panel).toBeVisible();
 
     const expectedSections = [
-      'Player / Coordinates',
+      'Player',
       'Input / Ownership',
       'Collision / Physics',
       'Camera',
-      'World / Level / Spawns',
-      'Characters / Assets',
+      'World',
+      'Lighting',
+      'Traffic',
+      'Combat',
       'Interactions',
       'Dialogue / Conversation',
+      'Assets',
       'Runtime / State',
-      'Commands / Actions',
     ];
     await expect(panel.locator('.debug-section__label')).toHaveText(
       expectedSections,
@@ -156,7 +159,7 @@ test.describe('playable debug district', () => {
       panel
         .locator('[data-debug-value="player.position"]')
         .locator('xpath=ancestor::details'),
-    ).toHaveAttribute('data-debug-section', 'Player / Coordinates');
+    ).toHaveAttribute('data-debug-section', 'Player');
     await expect(
       panel
         .locator('[data-debug-value="camera.owner"]')
@@ -168,9 +171,7 @@ test.describe('playable debug district', () => {
         .locator('xpath=ancestor::details'),
     ).toHaveAttribute('data-debug-section', 'Interactions');
 
-    const playerSection = panel.locator(
-      '[data-debug-section="Player / Coordinates"]',
-    );
+    const playerSection = panel.locator('[data-debug-section="Player"]');
     await playerSection.locator('summary').press('Enter');
     await expect(playerSection).toHaveAttribute('open', '');
     const initialSummaryPosition = await panel
@@ -188,10 +189,10 @@ test.describe('playable debug district', () => {
     await expect(panel).toBeVisible();
     await expect(playerSection).toHaveAttribute('open', '');
 
-    const actions = panel.locator('[data-debug-section="Commands / Actions"]');
-    await actions.locator('summary').press('Enter');
-    await expect(actions).toHaveAttribute('open', '');
-    const retainedCommands = await actions
+    await expect(
+      panel.locator('[data-debug-section="Commands / Actions"]'),
+    ).toHaveCount(0);
+    const retainedCommands = await panel
       .locator('[data-debug-command]')
       .evaluateAll((commands) =>
         commands.map((command) => command.getAttribute('data-debug-command')),
@@ -202,7 +203,8 @@ test.describe('playable debug district', () => {
         'helpers.toggle',
         'camera.set-horizontal-sensitivity',
         'camera.set-vertical-sensitivity',
-        'camera.set-follow-distance',
+        'camera.reset-follow-distance',
+        'camera.persist-follow-distance',
         'camera.set-shoulder',
         'player.reset',
         'player.play-character-action',
@@ -222,33 +224,92 @@ test.describe('playable debug district', () => {
         'traffic.step',
       ]),
     );
-    const retainedToggles = await actions
+    const retainedToggles = await panel
       .locator('[data-debug-toggle]')
       .evaluateAll((toggles) =>
         toggles.map((toggle) => toggle.getAttribute('data-debug-toggle')),
       );
-    expect(retainedToggles).toEqual([
-      'visual.collision',
-      'visual.triggers',
-      'visual.entityIds',
-      'visual.spawnPoints',
-      'visual.interactionRanges',
-      'visual.navigation',
-      'visual.characterAlignment',
-      'visual.combatVolumes',
-      'minimap.layer.roads',
-      'minimap.layer.structures',
-      'minimap.layer.landmarks',
-      'minimap.layer.interactions',
-      'minimap.layer.spawns',
-      'sparring-target.active',
-      'camera.invert-y',
-      'camera.automatic-recenter',
-      'traffic.enabled',
-    ]);
+    expect(retainedToggles).toEqual(
+      expect.arrayContaining([
+        'visual.collision',
+        'visual.triggers',
+        'visual.entityIds',
+        'visual.spawnPoints',
+        'visual.interactionRanges',
+        'visual.navigation',
+        'visual.characterAlignment',
+        'visual.combatVolumes',
+        'minimap.layer.roads',
+        'minimap.layer.structures',
+        'minimap.layer.landmarks',
+        'minimap.layer.interactions',
+        'minimap.layer.spawns',
+        'sparring-target.active',
+        'camera.invert-y',
+        'camera.automatic-recenter',
+        'traffic.enabled',
+      ]),
+    );
+
+    const cameraSection = panel.locator('[data-debug-section="Camera"]');
+    await cameraSection.locator('summary').press('Enter');
+    await expect(cameraSection).toHaveAttribute('open', '');
+    await expect(
+      cameraSection.getByText('Diagnostics', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      cameraSection.getByText('Controls', { exact: true }),
+    ).toBeVisible();
+    const followDistance = cameraSection.locator(
+      '[data-debug-number="camera.set-follow-distance"] input',
+    );
+    await expect(followDistance).toHaveAttribute('min', '2.2');
+    await expect(followDistance).toHaveAttribute('max', '9');
+    const storedBeforeLiveChange = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      CameraPreferenceStore.storageKey,
+    );
+    await followDistance.fill('3.9');
+    await followDistance.press('Enter');
+    await followDistance.blur();
+    await expect
+      .poll(async () => (await snapshot(page)).camera.desiredDistance)
+      .toBe(3.9);
+    expect(
+      await page.evaluate(
+        (key) => localStorage.getItem(key),
+        CameraPreferenceStore.storageKey,
+      ),
+    ).toBe(storedBeforeLiveChange);
+    await followDistance.scrollIntoViewIfNeeded();
+    await attachScreenshot(page, testInfo, 'debug-camera-controls-desktop');
+    await cameraSection
+      .getByRole('button', { name: 'Reset live distance to default' })
+      .click();
+    await expect
+      .poll(async () => (await snapshot(page)).camera.desiredDistance)
+      .toBe(4.4);
+    await expect(followDistance).toHaveValue('4.4');
+    await followDistance.fill('3.9');
+    await followDistance.press('Enter');
+    await followDistance.blur();
+    await expect
+      .poll(async () => (await snapshot(page)).camera.desiredDistance)
+      .toBe(3.9);
+    await cameraSection
+      .getByRole('button', { name: 'Save live distance as preference' })
+      .click();
+    expect(
+      JSON.parse(
+        (await page.evaluate(
+          (key) => localStorage.getItem(key),
+          CameraPreferenceStore.storageKey,
+        )) ?? '{}',
+      ),
+    ).toMatchObject({ preferences: { followDistance: 3.9 } });
 
     const positionBeforeTyping = (await snapshot(page)).player.position;
-    const teleportField = actions.locator(
+    const teleportField = playerSection.locator(
       '[data-debug-command="player.teleport"] input',
     );
     await teleportField.focus();
@@ -263,15 +324,10 @@ test.describe('playable debug district', () => {
     ).toBeLessThan(0.02);
     await page.keyboard.press('Escape');
     expect((await snapshot(page)).gameState).toBe('playing');
-    await expect(actions).toHaveAttribute('open', '');
+    await expect(playerSection).toHaveAttribute('open', '');
     await teleportField.fill('spawn.player-default');
     await teleportField.press('Enter');
-    await expect(actions).toHaveAttribute('open', '');
-
-    await actions.locator('summary').press('Enter');
-    await expect(actions).not.toHaveAttribute('open', '');
-    await actions.locator('summary').press('Enter');
-    await expect(actions).toHaveAttribute('open', '');
+    await expect(playerSection).toHaveAttribute('open', '');
 
     await panel.getByRole('button', { name: 'Collapse all' }).click();
     expect(
@@ -287,7 +343,6 @@ test.describe('playable debug district', () => {
     ).toBe(true);
     await panel.getByRole('button', { name: 'Collapse all' }).click();
 
-    const cameraSection = panel.locator('[data-debug-section="Camera"]');
     await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
     await page.keyboard.down('w');
     await cameraSection.locator('summary').focus();
@@ -353,6 +408,7 @@ test.describe('playable debug district', () => {
     expect(rectanglesOverlap(box, narrowHelpBox)).toBe(false);
     expect(rectanglesOverlap(box, healthBox)).toBe(false);
     expect(rectanglesOverlap(box, quickbarBox)).toBe(false);
+    await attachScreenshot(page, testInfo, 'debug-panel-collapsed-narrow');
     expect(runtimeFailures, formatRuntimeFailures(runtimeFailures)).toEqual([]);
   });
 

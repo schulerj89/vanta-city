@@ -152,6 +152,8 @@ export interface ThirdPersonCameraDebugSnapshot {
   readonly yaw: number;
   readonly pitch: number;
   readonly desiredDistance: number;
+  readonly savedPreferenceDistance: number;
+  readonly followDistanceOverride: number | undefined;
   readonly gameplayFocusOwner: string | undefined;
   readonly gameplayFocusDistance: number | undefined;
   readonly actualDistance: number;
@@ -240,6 +242,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
   private activeRequest: InternalRequest | undefined;
   private savedGameplayView: GameplayViewState | undefined;
   private restoringGameplayView: GameplayViewState | undefined;
+  private followDistanceOverride: number | undefined;
 
   public constructor(
     private readonly camera: PerspectiveCamera,
@@ -298,7 +301,17 @@ export class ThirdPersonCameraSystem implements GameSystem {
         ? {}
         : { followDistance: clampZoom(update.followDistance, this.config) }),
     };
-    return this.preferences.update(bounded);
+    const preferences = this.preferences.update(bounded);
+    if (update.followDistance !== undefined)
+      this.followDistanceOverride = undefined;
+    return preferences;
+  }
+
+  /** Applies a session-only gameplay follow distance without writing preferences. */
+  public setFollowDistanceOverride(distance: number | undefined): number {
+    this.followDistanceOverride =
+      distance === undefined ? undefined : clampZoom(distance, this.config);
+    return this.resolveFollowDistance();
   }
 
   public switchShoulder(): CameraShoulderSide {
@@ -415,7 +428,9 @@ export class ThirdPersonCameraSystem implements GameSystem {
       target: vectorSnapshot(this.target),
       yaw: this.yaw,
       pitch: this.pitch,
-      desiredDistance: this.preferences.current.followDistance,
+      desiredDistance: this.resolveFollowDistance(),
+      savedPreferenceDistance: this.preferences.current.followDistance,
+      followDistanceOverride: this.followDistanceOverride,
       gameplayFocusOwner: gameplayFocus?.owner,
       gameplayFocusDistance: gameplayFocus?.maxDistance,
       actualDistance: this.actualDistance,
@@ -620,7 +635,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
     const gameplayFocus = this.resolveGameplayFocus();
     const followDistance = clampZoom(
       Math.min(
-        currentPreferences.followDistance,
+        this.resolveFollowDistance(),
         gameplayFocus?.maxDistance ?? Infinity,
       ),
       this.config,
@@ -673,6 +688,12 @@ export class ThirdPersonCameraSystem implements GameSystem {
       this.gameplayFieldOfView,
       time.delta,
       this.config.followSharpness,
+    );
+  }
+
+  private resolveFollowDistance(): number {
+    return (
+      this.followDistanceOverride ?? this.preferences.current.followDistance
     );
   }
 

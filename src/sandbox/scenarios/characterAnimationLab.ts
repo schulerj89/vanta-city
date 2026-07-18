@@ -1018,7 +1018,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       this.context.debug.registerCommand({
         id: 'animation-lab.reset',
         label: 'Reset animation lab',
-        group: debugSections.actions,
+        group: debugSections.assets,
         run: () => this.selectModel(this.modelSelect.value),
       }),
     ];

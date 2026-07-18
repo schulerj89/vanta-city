@@ -37,7 +37,10 @@ import { WorldCollisionSystem } from './physics/WorldCollisionSystem';
 import { CharacterPlayerVisual } from './player/CharacterPlayerVisual';
 import { PlayerControllerSystem } from './player/PlayerControllerSystem';
 import { RenderSystem } from './render/RenderSystem';
-import { CameraPreferenceStore } from './camera/CameraPreferences';
+import {
+  CameraPreferenceStore,
+  defaultCameraPreferences,
+} from './camera/CameraPreferences';
 import { ThirdPersonCameraSystem } from './camera/ThirdPersonCameraSystem';
 import { resolveConversationCameraProfile } from './camera/ConversationCameraProfile';
 import { InteractionPromptSystem } from './ui/InteractionPromptSystem';
@@ -809,7 +812,7 @@ function registerVerticalSliceDebug(
       debug.registerToggle({
         id: `minimap.layer.${layer}`,
         label: `Minimap · ${layer}`,
-        group: sections.actions,
+        group: sections.world,
         initialValue: minimapHud?.getSnapshot().layers[layer] ?? false,
         onChange: (enabled) => minimapHud?.setLayerVisible(layer, enabled),
       }),
@@ -823,7 +826,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.health',
       label: 'Player health',
-      group: sections.player,
+      group: sections.combat,
       read: () => {
         const health = player.health.getSnapshot();
         return `${health.current}/${health.maximum} · ${health.alive ? 'alive' : 'depleted'} · ${(health.normalized * 100).toFixed(0)}%`;
@@ -884,7 +887,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.fire-ammo',
       label: 'Fire / ammunition',
-      group: sections.player,
+      group: sections.combat,
       read: () => {
         const snapshot = player.getDebugSnapshot();
         const ammo = snapshot.equipment.ammunition.handgun;
@@ -1008,7 +1011,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-action',
       label: 'Character action',
-      group: sections.characters,
+      group: sections.combat,
       read: () => {
         const action = player.getCharacterActionState();
         return action.active ? `${action.active} · busy` : 'none · ready';
@@ -1017,7 +1020,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-action-last',
       label: 'Last action request',
-      group: sections.characters,
+      group: sections.combat,
       read: () => {
         const action = player.getCharacterActionState();
         if (!action.lastRequested) return 'none';
@@ -1027,7 +1030,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-action-completion',
       label: 'Last action completion',
-      group: sections.characters,
+      group: sections.combat,
       read: () => {
         const action = player.getCharacterActionState();
         return action.lastCompleted
@@ -1038,7 +1041,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-action-impact',
       label: 'Last action impact',
-      group: sections.characters,
+      group: sections.combat,
       read: () => {
         const action = player.getCharacterActionState();
         return action.lastImpact
@@ -1049,13 +1052,13 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'player.character-action-rejections',
       label: 'Busy action rejections',
-      group: sections.characters,
+      group: sections.combat,
       read: () => player.getCharacterActionState().busyRejectionCount,
     }),
     debug.registerValue({
       id: 'sparring-target.status',
       label: 'Sparring target · status',
-      group: sections.characters,
+      group: sections.combat,
       read: () => {
         const target = sparringTarget.getSnapshot();
         return `${target.enabled ? 'active' : target.loaded ? 'loaded' : 'absent'} · ${target.animation} · ${target.feedback} · collision ${target.collisionActive ? 'on' : 'off'} · listeners ${target.listenerCount}`;
@@ -1064,7 +1067,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'sparring-target.range',
       label: 'Sparring target · range / facing',
-      group: sections.interactions,
+      group: sections.combat,
       read: () => {
         const target = sparringTarget.getSnapshot();
         return `${target.distance.toFixed(2)}m · gap ${target.horizontalGap.toFixed(2)}m · vertical ${target.verticalOverlap.toFixed(2)}m · facing ${target.facingDot.toFixed(2)} · ${target.eligible ? 'contact' : (target.rejectionReason ?? 'blocked')}`;
@@ -1073,7 +1076,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'sparring-target.health',
       label: 'Sparring target · health',
-      group: sections.characters,
+      group: sections.combat,
       read: () => {
         const health = sparringTarget.getSnapshot().health;
         return health
@@ -1084,7 +1087,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'sparring-target.engagement',
       label: 'Sparring target · camera engagement',
-      group: sections.interactions,
+      group: sections.combat,
       read: () => {
         const engagement = sparringTarget.getSnapshot().engagement;
         const cameraState = camera.getDebugSnapshot();
@@ -1094,7 +1097,7 @@ function registerVerticalSliceDebug(
     debug.registerValue({
       id: 'sparring-target.feedback',
       label: 'Sparring target · impact feedback',
-      group: sections.interactions,
+      group: sections.combat,
       read: () => {
         const target = sparringTarget.getSnapshot();
         return `${target.feedback} · impacts ${target.impactSequence} · ignored ${target.ignoredSequence}${target.lastIgnoredReason ? ` (${target.lastIgnoredReason})` : ''}`;
@@ -1114,7 +1117,7 @@ function registerVerticalSliceDebug(
     debug.registerToggle({
       id: 'sparring-target.active',
       label: 'Activate debug sparring target',
-      group: sections.actions,
+      group: sections.combat,
       initialValue: sparringTarget.initiallyEnabled,
       onChange: (enabled) => {
         void sparringTarget
@@ -1127,7 +1130,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'sparring-target.reset',
       label: 'Reset / revive sparring target',
-      group: sections.actions,
+      group: sections.combat,
       run: async () => {
         await ensureSparringTarget();
         sparringTarget.reset();
@@ -1136,7 +1139,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'sparring-target.teleport-player',
       label: 'Teleport player to sparring pad',
-      group: sections.actions,
+      group: sections.combat,
       run: async () => {
         await ensureSparringTarget();
         const spawn = level.getSpawn('spawn.player-sparring');
@@ -1146,7 +1149,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'sparring-target.teleport-to-player',
       label: 'Move sparring target in front of player',
-      group: sections.actions,
+      group: sections.combat,
       run: async () => {
         await ensureSparringTarget();
         const pose = player.getWorldPose();
@@ -1163,7 +1166,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'sparring-target.teleport-position',
       label: 'Teleport sparring target',
-      group: sections.actions,
+      group: sections.combat,
       argumentLabel: 'x,y,z,yaw',
       run: (value) => {
         const [rawX = '', rawY = '', rawZ = '', rawYaw] = (value ?? '').split(
@@ -1185,7 +1188,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.health-damage',
       label: 'Damage player health (10)',
-      group: sections.actions,
+      group: sections.combat,
       run: () => {
         player.health.damage(10, 'debug-command');
       },
@@ -1193,7 +1196,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.money-credit',
       label: 'Credit player money',
-      group: sections.actions,
+      group: sections.player,
       argumentLabel: 'positive integer (default 100)',
       run: (value) => {
         account?.credit(parsePositiveInteger(value, 100), {
@@ -1205,7 +1208,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.money-spend',
       label: 'Spend player money',
-      group: sections.actions,
+      group: sections.player,
       argumentLabel: 'positive integer (default 100)',
       run: (value) => {
         account?.debit(parsePositiveInteger(value, 100), {
@@ -1217,7 +1220,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.money-reset',
       label: 'Reset player money',
-      group: sections.actions,
+      group: sections.player,
       run: () => {
         account?.reset(undefined, {
           reason: 'debug-reset',
@@ -1228,7 +1231,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.cash-pickup-spawn',
       label: 'Spawn cash pickup',
-      group: sections.actions,
+      group: sections.interactions,
       run: () => {
         cashPickup?.spawn();
       },
@@ -1236,7 +1239,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.cash-pickup-remove',
       label: 'Remove cash pickup',
-      group: sections.actions,
+      group: sections.interactions,
       run: () => {
         cashPickup?.remove();
       },
@@ -1244,7 +1247,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.handgun-purchase',
       label: 'Purchase and equip handgun',
-      group: sections.actions,
+      group: sections.player,
       run: () => {
         handgunPurchase?.purchase();
       },
@@ -1252,7 +1255,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.health-heal',
       label: 'Heal player health (10)',
-      group: sections.actions,
+      group: sections.combat,
       run: () => {
         player.health.heal(10, 'debug-command');
       },
@@ -1260,7 +1263,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.health-reset',
       label: 'Reset player health',
-      group: sections.actions,
+      group: sections.combat,
       run: () => {
         player.health.reset('debug-command');
       },
@@ -1268,7 +1271,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.health-deplete',
       label: 'Deplete player health',
-      group: sections.actions,
+      group: sections.combat,
       run: () => {
         player.health.set(0, 'debug-command');
       },
@@ -1276,7 +1279,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'sparring-target.health-damage',
       label: 'Damage sparring target health (10)',
-      group: sections.actions,
+      group: sections.combat,
       run: () => {
         sparringTarget.getHealth()?.damage(10, 'debug-command');
       },
@@ -1284,7 +1287,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'sparring-target.health-heal',
       label: 'Heal sparring target health (10)',
-      group: sections.actions,
+      group: sections.combat,
       run: () => {
         sparringTarget.getHealth()?.heal(10, 'debug-command');
       },
@@ -1292,7 +1295,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'sparring-target.health-deplete',
       label: 'Deplete sparring target health',
-      group: sections.actions,
+      group: sections.combat,
       run: () => {
         sparringTarget.getHealth()?.set(0, 'debug-command');
       },
@@ -1417,11 +1420,20 @@ function registerVerticalSliceDebug(
     }),
     debug.registerValue({
       id: 'camera.distance',
-      label: 'Desired / actual distance',
+      label: 'Current / desired distance',
       group: sections.camera,
       read: () => {
         const snapshot = camera.getDebugSnapshot();
-        return `${snapshot.desiredDistance.toFixed(2)} / ${snapshot.actualDistance.toFixed(2)}`;
+        return `${snapshot.actualDistance.toFixed(2)} / ${snapshot.desiredDistance.toFixed(2)} m`;
+      },
+    }),
+    debug.registerValue({
+      id: 'camera.saved-follow-distance',
+      label: 'Saved preference distance',
+      group: sections.camera,
+      read: () => {
+        const snapshot = camera.getDebugSnapshot();
+        return `${snapshot.savedPreferenceDistance.toFixed(2)} m${snapshot.followDistanceOverride === undefined ? '' : ' · live override active'}`;
       },
     }),
     debug.registerValue({
@@ -1469,14 +1481,14 @@ function registerVerticalSliceDebug(
     debug.registerToggle({
       id: 'camera.invert-y',
       label: 'Invert Y',
-      group: sections.actions,
+      group: sections.camera,
       initialValue: camera.preferences.current.invertY,
       onChange: (enabled) => camera.setPreferences({ invertY: enabled }),
     }),
     debug.registerToggle({
       id: 'camera.automatic-recenter',
       label: 'Automatic recenter',
-      group: sections.actions,
+      group: sections.camera,
       initialValue: camera.preferences.current.automaticRecenter,
       onChange: (enabled) =>
         camera.setPreferences({ automaticRecenter: enabled }),
@@ -1484,7 +1496,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.set-horizontal-sensitivity',
       label: 'Set horizontal sensitivity',
-      group: sections.actions,
+      group: sections.camera,
       argumentLabel: '0.0005–0.01',
       run: (value) => {
         camera.setPreferences({
@@ -1495,7 +1507,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.set-vertical-sensitivity',
       label: 'Set vertical sensitivity',
-      group: sections.actions,
+      group: sections.camera,
       argumentLabel: '0.0005–0.01',
       run: (value) => {
         camera.setPreferences({
@@ -1503,19 +1515,42 @@ function registerVerticalSliceDebug(
         });
       },
     }),
-    debug.registerCommand({
+    debug.registerNumber({
       id: 'camera.set-follow-distance',
-      label: 'Set follow distance',
-      group: sections.actions,
-      argumentLabel: `${camera.config.minDistance}–${camera.config.maxDistance}`,
-      run: (value) => {
-        camera.setPreferences({ followDistance: parseCameraSetting(value) });
+      label: 'Live follow distance (m)',
+      group: sections.camera,
+      min: camera.config.minDistance,
+      max: camera.config.maxDistance,
+      step: 0.1,
+      read: () => camera.getDebugSnapshot().desiredDistance,
+      onChange: (value) => {
+        camera.setFollowDistanceOverride(value);
+      },
+    }),
+    debug.registerCommand({
+      id: 'camera.reset-follow-distance',
+      label: 'Reset live distance to default',
+      group: sections.camera,
+      run: () => {
+        camera.setFollowDistanceOverride(
+          defaultCameraPreferences.followDistance,
+        );
+      },
+    }),
+    debug.registerCommand({
+      id: 'camera.persist-follow-distance',
+      label: 'Save live distance as preference',
+      group: sections.camera,
+      run: () => {
+        camera.setPreferences({
+          followDistance: camera.getDebugSnapshot().desiredDistance,
+        });
       },
     }),
     debug.registerCommand({
       id: 'camera.set-shoulder',
       label: 'Set shoulder',
-      group: sections.actions,
+      group: sections.camera,
       argumentLabel: 'left or right',
       run: (value) => {
         if (value !== 'left' && value !== 'right') {
@@ -1663,13 +1698,13 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.reset',
       label: 'Reset player',
-      group: sections.actions,
+      group: sections.player,
       run: () => player.reset(),
     }),
     debug.registerCommand({
       id: 'player.play-character-action',
       label: 'Play character action',
-      group: sections.actions,
+      group: sections.player,
       argumentLabel:
         'wave, interact, punchLeft, punchRight, kickLeft, kickRight, roll, gunFire, or knifeSlash',
       run: (action) => {
@@ -1689,7 +1724,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.equip-item',
       label: 'Equip player item',
-      group: sections.actions,
+      group: sections.player,
       argumentLabel: 'handgun, knife, or none',
       run: (value) => {
         if (value === 'none') {
@@ -1704,7 +1739,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.use-equipment',
       label: 'Use equipped player item',
-      group: sections.actions,
+      group: sections.player,
       run: () => {
         if (!player.useEquippedItem('debug-command')) {
           throw new Error('Equipped item use was rejected');
@@ -1714,7 +1749,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.reload-equipment',
       label: 'Reload equipped player item',
-      group: sections.actions,
+      group: sections.player,
       run: () => {
         if (!player.reloadEquippedItem('debug-command')) {
           throw new Error('Equipped item reload was rejected');
@@ -1724,7 +1759,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'npc.equip-item',
       label: 'Equip NPC item',
-      group: sections.actions,
+      group: sections.assets,
       argumentLabel: 'npc id,item id',
       run: (value) => {
         const [npcId, itemId] = (value ?? '').split(',');
@@ -1738,7 +1773,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'npc.use-equipment',
       label: 'Use NPC equipment',
-      group: sections.actions,
+      group: sections.assets,
       argumentLabel: 'npc id',
       run: (value) => {
         if (!value || !npcs.useEquipment(value, 'debug-command')) {
@@ -1749,13 +1784,13 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'ui.open-character-picker',
       label: 'Open character picker',
-      group: sections.actions,
+      group: sections.assets,
       run: () => characterPicker.open(),
     }),
     debug.registerCommand({
       id: 'dialogue.start-mack',
       label: 'Start Mack dialogue',
-      group: sections.actions,
+      group: sections.dialogue,
       run: () => {
         conversations.start('conversation.mack.introduction', 'mack');
       },
@@ -1763,13 +1798,13 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'dialogue.advance',
       label: 'Advance dialogue',
-      group: sections.actions,
+      group: sections.dialogue,
       run: () => dialogue.advance(),
     }),
     debug.registerCommand({
       id: 'dialogue.set-typewriter',
       label: 'Set typewriter',
-      group: sections.actions,
+      group: sections.dialogue,
       argumentLabel: 'on / off',
       run: (value) => {
         if (value !== 'on' && value !== 'off') {
@@ -1781,7 +1816,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.select-character',
       label: 'Select character',
-      group: sections.actions,
+      group: sections.assets,
       argumentLabel: 'character id',
       run: (id) => {
         if (!id) throw new Error('A character id is required');
@@ -1791,7 +1826,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.cycle-character',
       label: 'Cycle character',
-      group: sections.actions,
+      group: sections.assets,
       run: () => {
         characterSelection.cycle();
       },
@@ -1799,13 +1834,13 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.reload-character',
       label: 'Reload character',
-      group: sections.actions,
+      group: sections.assets,
       run: () => characterVisual.reload(),
     }),
     debug.registerCommand({
       id: 'conversation.end',
       label: 'End conversation',
-      group: sections.actions,
+      group: sections.dialogue,
       run: () => {
         conversations.end();
       },
@@ -1813,7 +1848,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'level.reload',
       label: 'Reload level',
-      group: sections.actions,
+      group: sections.world,
       run: async () => {
         const id = level.activeLevel?.id;
         if (!id) throw new Error('No level is loaded');
@@ -1823,7 +1858,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.teleport',
       label: 'Teleport to spawn',
-      group: sections.actions,
+      group: sections.player,
       argumentLabel: 'spawn id',
       run: (id) => {
         const spawn = level.getSpawn(id || undefined);
@@ -1833,7 +1868,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'player.teleport-position',
       label: 'Teleport to position',
-      group: sections.actions,
+      group: sections.player,
       argumentLabel: 'x,y,z,yaw',
       run: (value) => {
         const [x, y, z, yaw] = (value ?? '').split(',').map(Number);
@@ -1849,7 +1884,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.preview-anchor',
       label: 'Preview camera anchor',
-      group: sections.actions,
+      group: sections.camera,
       argumentLabel: 'camera anchor id',
       run: (id) => {
         if (!id) throw new Error('A camera anchor id is required');
@@ -1878,7 +1913,7 @@ function registerVerticalSliceDebug(
     debug.registerCommand({
       id: 'camera.release-preview',
       label: 'Release camera anchor preview',
-      group: sections.actions,
+      group: sections.camera,
       run: () => {
         cameraPreview?.release();
         cameraPreview = undefined;
