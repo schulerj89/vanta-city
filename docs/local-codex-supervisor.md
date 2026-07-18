@@ -34,6 +34,8 @@ The local service replaces these Desktop schedules:
 
 They must be paused before installing the LaunchAgent. The installer fails closed while any is still active.
 
+Old Desktop results can remain visible as pending-review inbox items after their schedules are paused. They are immutable historical reports, not live worker state. Their statements describe the repository at the report timestamp and must not be combined with current LaunchAgent status. `pnpm automation:doctor` is authoritative for schedule ownership; `pnpm automation:status` is authoritative for current workers, worktrees, `main`, and roadmap state.
+
 These Desktop schedules remain native and active:
 
 - `vanta-city-playtest-recorder`
@@ -70,6 +72,8 @@ pnpm automation:clean
 ```
 
 `automation:dry-run` does not invoke Codex or mutate Git. `automation:status` reports active/blocked tasks, worktrees, disk allocation, candidates, and recent runs.
+
+Cleaner reports always identify `controlPlane.authoritative: launchd-codex-exec`, distinguish live worker processes from occupied or historical tasks, and exclude Desktop pending-review counts. Cleanup first requires a clean synchronized `main`. It runs `git worktree prune` only when the preceding dry-run finds stale metadata; a no-op dry-run correctly produces `prune.ran: false` with an explicit reason.
 
 ## Adding and discovering work
 

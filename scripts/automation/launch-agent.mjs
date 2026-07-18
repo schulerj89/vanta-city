@@ -144,13 +144,28 @@ async function doctor({ requirePaused = false } = {}) {
     });
   }
   const serviceResult = await run('launchctl', ['print', service]);
+  const [sourcePlistContent, installedPlistContent] = await Promise.all([
+    readFile(sourcePlist, 'utf8'),
+    readFile(installedPlist, 'utf8').catch(() => null),
+  ]);
   const report = {
+    observedAt: new Date().toISOString(),
+    controlPlane: {
+      authoritative: 'launchd-codex-exec',
+      launchAgentLabel: 'com.vantacity.codex-supervisor',
+      desktopHourlySchedulesSuperseded: true,
+      historicalDesktopPendingReviewRunsCountAsWorkers: false,
+    },
     repository: repoRoot,
     stateRoot,
     sourcePlist,
     installedPlist,
     legacyAutomations: legacy,
     launchAgentLoaded: serviceResult.code === 0,
+    launchAgentPid:
+      Number.parseInt(serviceResult.stdout.match(/\bpid = (\d+)/)?.[1], 10) ||
+      null,
+    installedPlistMatchesSource: installedPlistContent === sourcePlistContent,
     checks,
   };
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

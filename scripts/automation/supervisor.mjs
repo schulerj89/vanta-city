@@ -9,6 +9,7 @@ import {
   readFile,
   rename,
   rm,
+  stat,
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
@@ -1615,8 +1616,9 @@ async function integrate(context) {
 async function clean(context) {
   const { config, settings, paths, state } = context;
   const startedAt = Date.now();
-  await git(['fetch', '--quiet', 'origin', 'main']);
+  await assertCleanMain({ fetch: true, fastForward: false });
   const worktrees = await listWorktrees();
+  const worktreeKibBefore = await sumWorktreeKib(worktrees);
   const registeredPaths = new Set(
     worktrees.map((entry) => path.resolve(entry.path)),
   );
@@ -1673,10 +1675,16 @@ async function clean(context) {
       integrationPublished
         ? await branchPatchEquivalent(taskState.branch, 'origin/main')
         : false;
+    const processAudit = registered
+      ? await processesUsingWorktree(taskState.worktree)
+      : { safe: true, references: [], detail: 'worktree is not registered' };
     const decision = canCleanTask(taskState, {
       registered,
       isMain: path.resolve(taskState.worktree) === REPO_ROOT,
-      processAlive: isPidAlive(taskState.workerPid),
+      processAlive:
+        isPidAlive(taskState.workerPid) ||
+        !processAudit.safe ||
+        processAudit.references.length > 0,
       clean: cleanStatus === '',
       patchEquivalent,
     });
@@ -1690,30 +1698,105 @@ async function clean(context) {
     )
       decision.eligible = false;
     if (!decision.eligible) {
-      if (taskState.status === 'integrated')
-        skipped.push({ taskId: taskState.taskId, reason: decision.reason });
+      skipped.push({
+        taskId: taskState.taskId,
+        status: taskState.status,
+        worktree: taskState.worktree,
+        reason: decision.reason,
+        processAudit,
+      });
       continue;
     }
 
+    await assertCleanMain({ fetch: true, fastForward: false });
     await git(['worktree', 'remove', taskState.worktree]);
     taskState.status = 'cleaned';
     taskState.cleanedAt = new Date().toISOString();
     removed.push({ taskId: taskState.taskId, worktree: taskState.worktree });
+    await saveState(paths.statePath, state);
   }
-  await git(['worktree', 'prune']);
+  const finalSync = await assertCleanMain({ fetch: true, fastForward: false });
+  const prunePreview = await gitText([
+    'worktree',
+    'prune',
+    '--dry-run',
+    '--verbose',
+  ]);
+  let pruneRan = false;
+  if (prunePreview) {
+    await git(['worktree', 'prune']);
+    pruneRan = true;
+  }
+  const finalWorktrees = await listWorktrees();
+  const worktreeKibAfter = await sumWorktreeKib(finalWorktrees);
   const orphanDirectories = await findOrphanDirectories(
     config.project.worktreeRoot,
-    await listWorktrees(),
+    finalWorktrees,
   );
   await pruneRunLogs(paths.stateRoot, settings.retainedRuns);
+  const localBranchCount = (
+    await gitText(['branch', '--format=%(refname:short)'])
+  )
+    .split('\n')
+    .filter(Boolean).length;
+  const runningWorkers = Object.values(state.tasks).filter(
+    (task) => task.status === 'running' && isPidAlive(task.workerPid),
+  );
+  const occupiedTasks = activeTaskStates(state);
   const run = {
     id: paths.runId,
     mode: 'clean',
+    observedAt: new Date().toISOString(),
+    controlPlane: {
+      authoritative: 'launchd-codex-exec',
+      historicalDesktopPendingReviewRunsCountAsWorkers: false,
+    },
     status: removed.length > 0 ? 'cleaned' : 'no-op',
     startedAt: new Date(startedAt).toISOString(),
     finishedAt: new Date().toISOString(),
+    main: {
+      branch: 'main',
+      clean: true,
+      head: finalSync.local,
+      originMain: finalSync.remote,
+      synchronized: finalSync.local === finalSync.remote,
+    },
     removed,
     skipped,
+    prune: {
+      staleMetadataFound: Boolean(prunePreview),
+      preview: prunePreview ? prunePreview.split('\n') : [],
+      ran: pruneRan,
+      reason: pruneRan
+        ? 'stale metadata was verified by dry-run'
+        : 'dry-run found no stale metadata',
+    },
+    branches: {
+      preserved: localBranchCount,
+      deleted: 0,
+    },
+    workers: {
+      live: runningWorkers.map((task) => task.taskId),
+      liveCount: runningWorkers.length,
+      occupied: occupiedTasks.map((task) => ({
+        taskId: task.taskId,
+        status: task.status,
+      })),
+      occupiedCount: occupiedTasks.length,
+      historicalDesktopRunsExcluded: true,
+    },
+    roadmapCompletedTaskIds: config.roadmap
+      .filter((task) => task.status === 'completed')
+      .map((task) => task.id),
+    registeredWorktrees: {
+      before: worktrees.length,
+      after: finalWorktrees.length,
+    },
+    disk: {
+      worktreeKibBefore,
+      worktreeKibAfter,
+      reclaimedKib: Math.max(0, worktreeKibBefore - worktreeKibAfter),
+    },
     orphanDirectories,
   };
   appendBoundedRun(state, run, settings.retainedRuns);
@@ -1721,15 +1804,77 @@ async function clean(context) {
   print(run);
 }
 
+async function sumWorktreeKib(worktrees) {
+  let total = 0;
+  for (const entry of worktrees) {
+    const result = await run('du', ['-sk', entry.path], { allowFailure: true });
+    total += Number.parseInt(result.stdout, 10) || 0;
+  }
+  return total;
+}
+
+async function processesUsingWorktree(worktree) {
+  const result = await run(
+    '/usr/sbin/lsof',
+    ['-a', '-d', 'cwd', '-Fpcn', '--', worktree],
+    { allowFailure: true },
+  ).catch((error) => ({ code: null, stdout: '', stderr: error.message }));
+  if (result.code === 1)
+    return { safe: true, references: [], detail: 'no process cwd references' };
+  if (result.code !== 0)
+    return {
+      safe: false,
+      references: [],
+      detail: `process audit failed: ${(result.stderr || 'unknown error').trim().slice(-500)}`,
+    };
+
+  const references = [];
+  let current = null;
+  for (const line of result.stdout.split('\n')) {
+    if (line.startsWith('p')) {
+      if (current) references.push(current);
+      current = { pid: Number.parseInt(line.slice(1), 10) || null };
+    } else if (current && line.startsWith('c')) {
+      current.command = line.slice(1);
+    } else if (current && line.startsWith('n')) {
+      current.cwd = line.slice(1);
+    }
+  }
+  if (current) references.push(current);
+  return {
+    safe: true,
+    references,
+    detail: references.length
+      ? 'one or more processes use the worktree as cwd'
+      : 'no process cwd references',
+  };
+}
+
 async function findOrphanDirectories(root, worktrees) {
   if (!(await exists(root))) return [];
   const registered = new Set(
     worktrees.map((entry) => path.resolve(entry.path)),
   );
-  return (await readdir(root, { withFileTypes: true }))
+  const orphans = (await readdir(root, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
     .map((entry) => path.join(root, entry.name))
     .filter((entryPath) => !registered.has(path.resolve(entryPath)));
+  return Promise.all(
+    orphans.map(async (entryPath) => {
+      const [metadata, disk, entries] = await Promise.all([
+        stat(entryPath),
+        run('du', ['-sk', entryPath], { allowFailure: true }),
+        readdir(entryPath).catch(() => []),
+      ]);
+      return {
+        path: entryPath,
+        kib: Number.parseInt(disk.stdout, 10) || null,
+        modifiedAt: metadata.mtime.toISOString(),
+        topLevelEntries: entries.slice(0, 20),
+        topLevelEntriesTruncated: entries.length > 20,
+      };
+    }),
+  );
 }
 
 async function pruneRunLogs(stateRoot, retainedRuns) {
@@ -1750,7 +1895,21 @@ async function status(context) {
   const { config, settings, paths, state } = context;
   const worktrees = await listWorktrees();
   const candidates = readyRoadmapTasks(config.roadmap, state.tasks);
-  const active = activeTaskStates(state);
+  const occupied = activeTaskStates(state);
+  const running = Object.values(state.tasks).filter(
+    (task) => task.status === 'running' && isPidAlive(task.workerPid),
+  );
+  const mainHead = await gitText(['rev-parse', 'main']);
+  const originMain = await gitText(['rev-parse', 'origin/main']);
+  const mainStatus = await gitText(['status', '--porcelain']);
+  const schedule = await readJson(path.join(paths.stateRoot, 'schedule.json'), {
+    version: 1,
+    attempted: {},
+  });
+  const scheduleAttempts = Object.entries(schedule.attempted ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .slice(-12)
+    .map(([key, value]) => ({ key, ...value }));
   const sizes = await Promise.all(
     worktrees.map(async (entry) => {
       const result = await run('du', ['-sk', entry.path], {
@@ -1765,13 +1924,40 @@ async function status(context) {
   );
   print({
     mode: 'status',
+    observedAt: new Date().toISOString(),
+    controlPlane: {
+      authoritative: 'launchd-codex-exec',
+      historicalDesktopPendingReviewRunsCountAsWorkers: false,
+    },
     repository: REPO_ROOT,
     statePath: paths.statePath,
     maxConcurrentWorkers: settings.maxConcurrentWorkers,
-    activeTasks: active,
+    main: {
+      head: mainHead,
+      originMain,
+      synchronized: mainHead === originMain,
+      clean: mainStatus === '',
+      dirtyPaths: mainStatus ? mainStatus.split('\n') : [],
+    },
+    workers: {
+      live: running,
+      liveCount: running.length,
+      occupied,
+      occupiedCount: occupied.length,
+      historicalDesktopRunsExcluded: true,
+    },
+    roadmap: {
+      completedTaskIds: config.roadmap
+        .filter((task) => task.status === 'completed')
+        .map((task) => task.id),
+      readyTaskIds: config.roadmap
+        .filter((task) => task.status === 'ready')
+        .map((task) => task.id),
+    },
     dependencyReadyTaskIds: candidates.map((task) => task.id),
     worktreeCount: worktrees.length,
     worktrees: sizes,
+    scheduleAttempts,
     recentRuns: state.runs.slice(-10),
   });
 }
@@ -1897,13 +2083,20 @@ async function daemon() {
         [fileURLToPath(import.meta.url), mode],
         { cwd: REPO_ROOT, allowFailure: true },
       );
+      const outcome = {
+        ...schedule.attempted[key],
+        finishedAt: new Date().toISOString(),
+        exitCode: result.code,
+        durationSeconds: result.durationSeconds,
+        stderrTail: result.stderr.trim().slice(-2_000),
+      };
+      schedule.attempted[key] = outcome;
+      await atomicWriteJson(schedulePath, schedule);
       print({
         mode: 'daemon',
         action: mode,
         key,
-        exitCode: result.code,
-        durationSeconds: result.durationSeconds,
-        stderrTail: result.stderr.trim().slice(-2_000),
+        ...outcome,
       });
       continue;
     }
