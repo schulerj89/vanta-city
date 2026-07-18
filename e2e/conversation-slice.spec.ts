@@ -222,17 +222,16 @@ test('cancels and repeats Mack dialogue without leaking controls', async ({
   const initial = await snapshot(page);
   expect(['typing', 'ready']).toContain(initial.dialogue.session.state);
   if (initial.dialogue.session.state === 'typing') {
-    const revealButton = page.getByRole('button', {
-      name: 'Reveal full dialogue line',
-    });
     // The first line is intentionally short. Activate the observed reveal
     // control when it still exists. Natural completion may remove it between
     // the state snapshot and this DOM task, which is already the desired state.
-    if (await revealButton.isVisible()) {
-      await revealButton.evaluate((button: HTMLButtonElement) =>
-        button.click(),
-      );
-    }
+    await page.evaluate(() =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="dialogue-continue"][aria-label="Reveal full dialogue line"]',
+        )
+        ?.click(),
+    );
   }
   await expect
     .poll(async () => (await snapshot(page)).dialogue.session.state)

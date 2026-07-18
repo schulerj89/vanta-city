@@ -150,15 +150,14 @@ test.describe('reusable equipment and character actions', () => {
         .toBe('action:roll');
       const admittedRoll = (await snapshot(page)).player;
       await attach(page, testInfo, `${characterId}-roll`);
-      await page.waitForTimeout(250);
-      await attach(page, testInfo, `${characterId}-roll-mid`);
       await expect
         .poll(async () => {
           const player = (await snapshot(page)).player;
-          return player.actionBusy && player.roll.blocked;
+          return player.roll.active && player.roll.blocked;
         })
         .toBe(true);
       const collisionStop = (await snapshot(page)).player;
+      await attach(page, testInfo, `${characterId}-roll-mid`);
       const remainingRollDistance =
         collisionStop.roll.actualDistance - admittedRoll.roll.actualDistance;
       expect(
