@@ -1,11 +1,13 @@
 export type AudioChannel = 'theme' | 'radio';
+export type AudioTrackRole = 'music' | 'station-break';
 
 export interface AudioTrackDefinition {
   readonly id: string;
   readonly title: string;
   readonly channel: AudioChannel;
+  readonly role: AudioTrackRole;
   readonly url: string;
-  readonly mimeType: 'audio/mpeg' | 'audio/wav';
+  readonly mimeType: 'audio/mpeg' | 'audio/mp4' | 'audio/wav';
   readonly loop: boolean;
   readonly license: 'original-project-owned' | 'CC0-1.0' | 'public-domain';
 }
@@ -26,7 +28,14 @@ export class AudioCatalog {
   }
 
   public first(channel: AudioChannel): AudioTrackDefinition | undefined {
-    return [...this.tracks.values()].find((track) => track.channel === channel);
+    return this.all(channel)[0];
+  }
+
+  /** Ordered program entries for a channel. Catalog order is authoritative. */
+  public all(channel: AudioChannel): readonly AudioTrackDefinition[] {
+    return [...this.tracks.values()].filter(
+      (track) => track.channel === channel,
+    );
   }
 
   public ids(): readonly string[] {
@@ -64,18 +73,60 @@ export const audioCatalog = new AudioCatalog([
     id: 'theme.cinder-ledger',
     title: 'The Cinder Ledger',
     channel: 'theme',
+    role: 'music',
     url: '/assets/audio/ashfall-theme/cinder-ledger-theme.mp3',
     mimeType: 'audio/mpeg',
     loop: true,
     license: 'original-project-owned',
   },
   {
-    id: 'radio.cinder-ledger-instrumental',
-    title: 'The Cinder Ledger · instrumental radio rotation',
+    id: 'radio.ashfall-night-service.station-break-001',
+    title: 'Ashfall Night Service · station break 001',
     channel: 'radio',
-    url: '/assets/audio/ashfall-theme/cinder-ledger-theme.mp3',
+    role: 'station-break',
+    url: '/assets/audio/ashfall-night-service/host/station-break-001.mp3',
     mimeType: 'audio/mpeg',
-    loop: true,
+    loop: false,
+    license: 'original-project-owned',
+  },
+  {
+    id: 'radio.ashfall-night-service.bus-stop-sun',
+    title: 'Bus Stop Sun',
+    channel: 'radio',
+    role: 'music',
+    url: '/assets/audio/ashfall-night-service/music/bus-stop-sun.m4a',
+    mimeType: 'audio/mp4',
+    loop: false,
+    license: 'original-project-owned',
+  },
+  {
+    id: 'radio.ashfall-night-service.basement-ciphers',
+    title: 'Basement Ciphers',
+    channel: 'radio',
+    role: 'music',
+    url: '/assets/audio/ashfall-night-service/music/basement-ciphers.m4a',
+    mimeType: 'audio/mp4',
+    loop: false,
+    license: 'original-project-owned',
+  },
+  {
+    id: 'radio.ashfall-night-service.bus-ticket-folds',
+    title: 'Bus Ticket Folds',
+    channel: 'radio',
+    role: 'music',
+    url: '/assets/audio/ashfall-night-service/music/bus-ticket-folds.m4a',
+    mimeType: 'audio/mp4',
+    loop: false,
+    license: 'original-project-owned',
+  },
+  {
+    id: 'radio.ashfall-night-service.sugar-suit',
+    title: 'Sugar Suit',
+    channel: 'radio',
+    role: 'music',
+    url: '/assets/audio/ashfall-night-service/music/sugar-suit.m4a',
+    mimeType: 'audio/mp4',
+    loop: false,
     license: 'original-project-owned',
   },
 ]);

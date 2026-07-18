@@ -1,6 +1,8 @@
 import {
+  classifyAuthenticationStatus,
   sanitizeProviderError,
   validateCandidateNumber,
+  validateTtsRequest,
 } from '../scripts/audio/elevenlabs-audio';
 
 describe('ElevenLabs audio provider tooling', () => {
@@ -19,5 +21,22 @@ describe('ElevenLabs audio provider tooling', () => {
     expect(
       sanitizeProviderError({ detail: { status: 'bad status; secret' } }),
     ).toBeUndefined();
+  });
+
+  it('classifies authentication without reading or exposing the response body', () => {
+    expect(classifyAuthenticationStatus(200)).toBe('authenticated');
+    expect(classifyAuthenticationStatus(401)).toBe('invalid-key');
+    expect(classifyAuthenticationStatus(403)).toBe('restricted');
+    expect(classifyAuthenticationStatus(500)).toBe('blocked');
+  });
+
+  it('enforces the three-candidate and 1500-character TTS bounds', () => {
+    expect(() => validateTtsRequest(1, 'Station break')).not.toThrow();
+    expect(() => validateTtsRequest(4, 'Station break')).toThrow(
+      /between 1 and 3/,
+    );
+    expect(() => validateTtsRequest(1, 'x'.repeat(1501))).toThrow(
+      /1–1500 characters/,
+    );
   });
 });

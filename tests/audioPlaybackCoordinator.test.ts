@@ -14,18 +14,30 @@ const tracks = new AudioCatalog([
     id: 'theme.test',
     title: 'Theme',
     channel: 'theme',
+    role: 'music',
     url: '/assets/audio/theme.mp3',
     mimeType: 'audio/mpeg',
     loop: true,
     license: 'original-project-owned',
   },
   {
+    id: 'radio.break',
+    title: 'Radio Break',
+    channel: 'radio',
+    role: 'station-break',
+    url: '/assets/audio/radio-break.mp3',
+    mimeType: 'audio/mpeg',
+    loop: false,
+    license: 'original-project-owned',
+  },
+  {
     id: 'radio.test',
     title: 'Radio',
     channel: 'radio',
+    role: 'music',
     url: '/assets/audio/radio.mp3',
     mimeType: 'audio/mpeg',
-    loop: true,
+    loop: false,
     license: 'original-project-owned',
   },
 ]);
@@ -162,14 +174,14 @@ describe('AudioPlaybackCoordinator', () => {
     h.context.currentTime = 15;
     h.vehicle('driving');
     await vi.waitFor(() =>
-      expect(h.coordinator.getSnapshot().activeTrackId).toBe('radio.test'),
+      expect(h.coordinator.getSnapshot().activeTrackId).toBe('radio.break'),
     );
     expect(h.coordinator.getSnapshot().pausedOffsets['theme.test']).toBe(5);
     h.transition('playing', 'paused');
     expect(h.coordinator.getSnapshot().liveSources).toBe(0);
     h.transition('paused', 'playing');
     await vi.waitFor(() =>
-      expect(h.coordinator.getSnapshot().activeTrackId).toBe('radio.test'),
+      expect(h.coordinator.getSnapshot().activeTrackId).toBe('radio.break'),
     );
     h.vehicle('on-foot');
     await vi.waitFor(() =>
@@ -180,6 +192,27 @@ describe('AudioPlaybackCoordinator', () => {
       liveSources: 1,
       lastError: undefined,
     });
+  });
+
+  it('advances non-looping radio entries in authoritative catalog order', async () => {
+    const h = harness();
+    h.transition('booting', 'playing');
+    await vi.waitFor(() =>
+      expect(h.coordinator.getSnapshot().activeTrackId).toBe('theme.test'),
+    );
+    h.vehicle('driving');
+    await vi.waitFor(() =>
+      expect(h.coordinator.getSnapshot().activeTrackId).toBe('radio.break'),
+    );
+
+    h.context.sources.at(-1)?.onended?.();
+
+    await vi.waitFor(() =>
+      expect(h.coordinator.getSnapshot().activeTrackId).toBe('radio.test'),
+    );
+    expect(
+      h.coordinator.getSnapshot().pausedOffsets['radio.break'],
+    ).toBeUndefined();
   });
 
   it('does not stack sources through repeated lifecycle cycles and disposes context/buffers/listeners', async () => {

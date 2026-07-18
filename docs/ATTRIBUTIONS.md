@@ -32,3 +32,14 @@ The five Ashfall facade/roof textures are original project assets created with O
   Universal. Individual sources: [Pickup Truck](https://poly.pizza/m/qn4grQgHm8)
   and [Sports Car](https://poly.pizza/m/OyqKvX9xNh). Local hashes and geometry
   details are recorded in the asset folder README.
+
+# Ashfall Night Service audio
+
+The four radio music tracks are project-owner-created Suno outputs accepted for
+Vanta City under the paid-plan creation timeline documented in
+`public/assets/audio/ashfall-night-service/provenance.json`; they are not CC0.
+The local station break is a project-configured ElevenLabs synthesis. Runtime
+derivatives, source/runtime hashes, current terms evidence, technical findings,
+and the non-warranty rights decision are documented beside the assets and in
+`docs/audio/audio-001-downloaded-candidate-audit.json`. No provider credential
+or configured voice identifier is committed.

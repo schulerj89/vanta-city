@@ -208,6 +208,7 @@ export interface BrowserTestApi {
   setVirtualGamepad(fixture?: VirtualGamepadFixture): void;
   audioPlayTheme(): Promise<void>;
   audioPlayRadio(): Promise<void>;
+  audioNextRadio(): Promise<void>;
   audioPause(): void;
   audioResume(): void;
   audioStop(): void;
@@ -329,6 +330,7 @@ export function installBrowserTestBridge(
       dependencies.inputInspector.setVirtualGamepad(fixture),
     audioPlayTheme: () => dependencies.audio.playTheme(),
     audioPlayRadio: () => dependencies.audio.playRadio(),
+    audioNextRadio: () => dependencies.audio.nextRadio(),
     audioPause: () => dependencies.audio.pause(),
     audioResume: () => dependencies.audio.resume(),
     audioStop: () => dependencies.audio.stop(),

@@ -63,6 +63,7 @@ export class AudioPlaybackCoordinator implements GameSystem<GameContext> {
   private operation = 0;
   private sourcesCreated = 0;
   private sourcesStopped = 0;
+  private radioIndex = 0;
   private gameState: GameState = 'booting';
   private input: InputReader | undefined;
   private vehicleState: VehicleSnapshot;
@@ -130,13 +131,28 @@ export class AudioPlaybackCoordinator implements GameSystem<GameContext> {
   }
 
   public async playRadio(): Promise<void> {
-    const track = this.catalog.first('radio');
+    const rotation = this.catalog.all('radio');
+    const track =
+      rotation.length > 0
+        ? rotation[this.radioIndex % rotation.length]
+        : undefined;
     if (!track) {
       this.pause();
       return;
     }
     this.desiredTrackId = track.id;
     await this.start(track.id);
+  }
+
+  public async nextRadio(): Promise<void> {
+    const rotation = this.catalog.all('radio');
+    if (rotation.length === 0) {
+      this.pause();
+      return;
+    }
+    this.stopSource(false);
+    this.radioIndex = (this.radioIndex + 1) % rotation.length;
+    await this.start(rotation[this.radioIndex]!.id);
   }
 
   public pause(): void {
@@ -274,6 +290,14 @@ export class AudioPlaybackCoordinator implements GameSystem<GameContext> {
         this.source = undefined;
         this.activeTrackId = undefined;
         this.activeChannel = undefined;
+        this.offsets.delete(track.id);
+        if (
+          track.channel === 'radio' &&
+          this.gameState === 'playing' &&
+          this.vehicleState.mode === 'driving'
+        ) {
+          void this.nextRadio();
+        }
       };
     } catch (error) {
       if (currentOperation === this.operation) this.fail(error);

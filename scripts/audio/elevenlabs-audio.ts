@@ -6,14 +6,31 @@ import { fileURLToPath } from 'node:url';
 const credentialFile = '/Users/jschuler/Projects/vanta-city/.env';
 const officialApiOrigin = 'https://api.elevenlabs.io';
 const maximumMusicCandidates = 2;
+const maximumTtsCandidates = 3;
+const maximumTtsCharacters = 1500;
 
 export interface SafeProviderResult {
-  readonly status: 'available' | 'blocked' | 'generated';
+  readonly status:
+    | 'authenticated'
+    | 'invalid-key'
+    | 'restricted'
+    | 'available'
+    | 'blocked'
+    | 'generated';
   readonly httpStatus: number;
   readonly providerCode?: string;
   readonly requestId?: string;
   readonly songId?: string;
   readonly characterCost?: string;
+}
+
+export function classifyAuthenticationStatus(
+  httpStatus: number,
+): SafeProviderResult['status'] {
+  if (httpStatus >= 200 && httpStatus < 300) return 'authenticated';
+  if (httpStatus === 401) return 'invalid-key';
+  if (httpStatus === 403) return 'restricted';
+  return 'blocked';
 }
 
 export function validateCandidateNumber(value: number): number {
@@ -23,6 +40,23 @@ export function validateCandidateNumber(value: number): number {
     );
   }
   return value;
+}
+
+export function validateTtsRequest(candidate: number, text: string): void {
+  if (
+    !Number.isInteger(candidate) ||
+    candidate < 1 ||
+    candidate > maximumTtsCandidates
+  ) {
+    throw new Error(
+      `TTS candidate number must be between 1 and ${maximumTtsCandidates}`,
+    );
+  }
+  if (text.length === 0 || text.length > maximumTtsCharacters) {
+    throw new Error(
+      `TTS text must contain 1–${maximumTtsCharacters} characters`,
+    );
+  }
 }
 
 export function sanitizeProviderError(input: unknown): string | undefined {
@@ -58,6 +92,18 @@ export async function checkConfiguredRadioVoice(): Promise<SafeProviderResult> {
   return {
     ...safeHeaders(response, 'blocked'),
     providerCode: sanitizeProviderError(body),
+  };
+}
+
+export async function checkApiAuthentication(): Promise<SafeProviderResult> {
+  const { apiKey } = await credentials();
+  const response = await fetch(`${officialApiOrigin}/v1/user`, {
+    headers: { 'xi-api-key': apiKey },
+  });
+  // The response can include account and key fields. Never read or serialize it.
+  return {
+    status: classifyAuthenticationStatus(response.status),
+    httpStatus: response.status,
   };
 }
 
@@ -137,6 +183,79 @@ export async function generateMusicCandidate(options: {
   return result;
 }
 
+export async function generateRadioHostCandidate(options: {
+  candidate: number;
+  output: string;
+  text: string;
+  contentId: string;
+}): Promise<SafeProviderResult> {
+  validateTtsRequest(options.candidate, options.text);
+  if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(options.contentId)) {
+    throw new Error('Radio content ID must be lowercase dot-separated text');
+  }
+  const voice = await checkConfiguredRadioVoice();
+  if (voice.status !== 'available') {
+    throw new Error(
+      `Configured radio voice is unavailable (${voice.httpStatus}${voice.providerCode ? `, ${voice.providerCode}` : ''})`,
+    );
+  }
+  const { apiKey, voiceId } = await credentials();
+  const endpoint = new URL(
+    `/v1/text-to-speech/${encodeURIComponent(voiceId)}`,
+    officialApiOrigin,
+  );
+  endpoint.searchParams.set('output_format', 'mp3_44100_128');
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'xi-api-key': apiKey },
+    body: JSON.stringify({
+      text: options.text,
+      model_id: 'eleven_v3',
+      language_code: 'en',
+    }),
+  });
+  if (!response.ok) {
+    const body: unknown = await response
+      .json()
+      .catch((): undefined => undefined);
+    throw new Error(
+      `ElevenLabs TTS request failed (${response.status}${sanitizeProviderError(body) ? `, ${sanitizeProviderError(body)}` : ''})`,
+    );
+  }
+  const audio = Buffer.from(await response.arrayBuffer());
+  const absoluteOutput = resolve(options.output);
+  await mkdir(dirname(absoluteOutput), { recursive: true });
+  await writeFile(absoluteOutput, audio);
+  const result = safeHeaders(response, 'generated');
+  await writeFile(
+    `${absoluteOutput}.json`,
+    `${JSON.stringify(
+      {
+        schema: 'vanta-city.audio-generation',
+        version: 1,
+        provider: 'ElevenLabs Text to Speech API',
+        endpoint: '/v1/text-to-speech/{configured-radio-voice}',
+        candidate: options.candidate,
+        contentId: options.contentId,
+        model: 'eleven_v3',
+        outputFormat: 'mp3_44100_128',
+        script: options.text,
+        characters: options.text.length,
+        generatedAt: new Date().toISOString(),
+        sha256: createHash('sha256').update(audio).digest('hex'),
+        bytes: audio.byteLength,
+        purpose: 'AUDIO-001 in-world car radio host station break',
+        requestId: result.requestId,
+        characterCost: result.characterCost,
+        decision: 'pending-review',
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  return result;
+}
+
 function safeHeaders(
   response: Response,
   status: SafeProviderResult['status'],
@@ -177,6 +296,10 @@ async function main(): Promise<void> {
     );
     return;
   }
+  if (command === 'check-auth') {
+    process.stdout.write(`${JSON.stringify(await checkApiAuthentication())}\n`);
+    return;
+  }
   if (command === 'generate-music') {
     const values: Record<string, string> = {};
     for (const argument of args) {
@@ -194,8 +317,25 @@ async function main(): Promise<void> {
     process.stdout.write(`${JSON.stringify(result)}\n`);
     return;
   }
+  if (command === 'generate-radio-host') {
+    const values: Record<string, string> = {};
+    for (const argument of args) {
+      const separator = argument.indexOf('=');
+      if (separator > 0) {
+        values[argument.slice(0, separator)] = argument.slice(separator + 1);
+      }
+    }
+    const result = await generateRadioHostCandidate({
+      candidate: Number(values['--candidate']),
+      output: values['--output'] ?? '',
+      text: values['--text'] ?? '',
+      contentId: values['--content-id'] ?? '',
+    });
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    return;
+  }
   throw new Error(
-    'Usage: check-voice | generate-music --candidate=N --output=PATH --prompt=TEXT --length-ms=N',
+    'Usage: check-auth | check-voice | generate-music --candidate=N --output=PATH --prompt=TEXT --length-ms=N | generate-radio-host --candidate=N --output=PATH --content-id=ID --text=TEXT',
   );
 }
 

@@ -4,6 +4,7 @@ const theme = {
   id: 'theme.ashfall-main',
   title: 'Ashfall Main Theme',
   channel: 'theme',
+  role: 'music',
   url: '/assets/audio/theme.mp3',
   mimeType: 'audio/mpeg',
   loop: true,
@@ -15,6 +16,7 @@ describe('AudioCatalog', () => {
     const catalog = new AudioCatalog([theme]);
     expect(catalog.get(theme.id)).toEqual(theme);
     expect(catalog.first('theme')?.id).toBe(theme.id);
+    expect(catalog.all('theme')).toEqual([theme]);
   });
 
   it('rejects duplicate ids and any runtime network URL', () => {

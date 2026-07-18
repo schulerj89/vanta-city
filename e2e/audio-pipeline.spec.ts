@@ -73,6 +73,20 @@ test('local theme/radio playback, preferences, interruption, and repeated lifecy
       .poll(async () => (await snapshot(page)).audio.activeChannel)
       .toBe('radio');
     expect((await snapshot(page)).audio.liveSources).toBe(1);
+    if (cycle === 0) {
+      for (const expectedTrackId of [
+        'radio.ashfall-night-service.bus-stop-sun',
+        'radio.ashfall-night-service.basement-ciphers',
+        'radio.ashfall-night-service.bus-ticket-folds',
+        'radio.ashfall-night-service.sugar-suit',
+        'radio.ashfall-night-service.station-break-001',
+      ]) {
+        await page.evaluate(() => window.__VANTA_TEST__!.audioNextRadio());
+        await expect
+          .poll(async () => (await snapshot(page)).audio.activeTrackId)
+          .toBe(expectedTrackId);
+      }
+    }
     await page.keyboard.press('p');
     await expect
       .poll(async () => (await snapshot(page)).gameState)

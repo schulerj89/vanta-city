@@ -1,0 +1,56 @@
+{
+  "schema": "vanta-city.audio-provenance",
+  "version": 1,
+  "station": "Ashfall Night Service",
+  "licenseDecision": "original-project-owned",
+  "music": {
+    "provider": "Suno",
+    "ownerRepresentation": "The project owner personally created all four tracks with Suno and supplied the original WAV masters.",
+    "rightsEvidence": "Signed-in account review on 2026-07-18 showed an active Pro plan renewing 2026-07-20; matching tracks were created 2026-07-17. Current plan copy grants commercial use rights for new songs made, subject to current Suno terms.",
+    "terms": "https://suno.com/legal/terms",
+    "termsRevision": "2026-03-26",
+    "conversion": "macOS afconvert, AAC in M4A, target 128000 bits/second; source WAVs unchanged",
+    "tracks": [
+      {
+        "title": "Bus Stop Sun",
+        "createdAt": "2026-07-17T20:52:00-05:00",
+        "sourceSha256": "275f56799a41e9f8e8d0436377d6b35a0c702ddb4e31e1500fe563d4419121d1",
+        "runtimePath": "music/bus-stop-sun.m4a",
+        "runtimeSha256": "c5cd35b8034abb4ff4dd29d4bcd9e4e93b9446661de9279815edcf988aa25f84"
+      },
+      {
+        "title": "Basement Ciphers",
+        "createdAt": "2026-07-17T20:56:00-05:00",
+        "sourceSha256": "5d6a1728b022f1fb7b773516e498bc332bf2b26b84670d5c5dbc60be172d72bd",
+        "runtimePath": "music/basement-ciphers.m4a",
+        "runtimeSha256": "18c20d5b8b94841e9b7e778ede44e813646b5e04218aae5508562363fcd538a0"
+      },
+      {
+        "title": "Bus Ticket Folds",
+        "createdAt": "2026-07-17T20:57:00-05:00",
+        "sourceSha256": "3d99479da8641c348c20d28c1c0bbab06e0745b5e716519ed5f06145b4beb085",
+        "runtimePath": "music/bus-ticket-folds.m4a",
+        "runtimeSha256": "6185f2e55e47a199386b53f4751935777ce5faae7dcd22e84d6fcd8381d3d605"
+      },
+      {
+        "title": "Sugar Suit",
+        "createdAt": "2026-07-17T21:00:00-05:00",
+        "sourceSha256": "4b11364796dd4ca69f2353101cfa581bc055e3a4bb6e1c835efeef8bbbd32587",
+        "runtimePath": "music/sugar-suit.m4a",
+        "runtimeSha256": "5599894a45f282f4b3b61f7cd2bb1fbe07ab1edb0e004fb2787d1970ccbc528e"
+      }
+    ]
+  },
+  "stationBreak": {
+    "provider": "ElevenLabs",
+    "contentId": "radio.ashfall-night-service.station-break-001",
+    "model": "eleven_v3",
+    "outputFormat": "mp3_44100_128",
+    "requestId": "5KyLOqos6hfUdpnb07MY",
+    "characterCost": 127,
+    "script": "You are riding with Ashfall Night Service. Junction lights are holding, the quay road is wet, and the last northbound bus is taking its time. Keep your receipt dry and your headlights low. Here is another one for the long way home.",
+    "runtimePath": "host/station-break-001.mp3",
+    "runtimeSha256": "b5e4b7ca49c6a088e06a687c040cce879e19df8e5d501f8d939bb8cba0e9e81b",
+    "voiceIdentifierStored": false
+  }
+}
