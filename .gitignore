@@ -7,6 +7,9 @@ test-results/
 blob-report/
 .DS_Store
 *.local
+.env
+.env.*
+!.env.example
 
 # The reviewed CC0 runtime subset is committed. Other files extracted from the
 # source archive remain ignored so the playable catalog stays intentionally at
