@@ -33,7 +33,7 @@ These rules apply to the entire repository.
 - Do not merge a worker merely because it compiled independently. Review its history, changed files, public APIs, tests, and overlap with current `main` first.
 - Prefer one authoritative concept over adapters between duplicate unshipped abstractions. Resolve terminology, lifecycle, input, transform, camera, collision, asset, HUD, and debug ownership deliberately.
 - Integrate only completed, committed, clean worker results. Preserve unfinished work in its worktree.
-- After integration, run validation proportional to risk. For gameplay or shared-system changes, run formatting, lint, type-checking, unit tests, character/asset validation, production build and size reporting, plus the full browser suite.
+- After integration, run validation proportional to risk. For gameplay or shared-system changes, run formatting, lint, type-checking, unit tests, relevant character/asset validation, production build and size reporting, affected browser specs, and smoke. Use the bounded integration browser suite after combining independent systems. Reserve the exhaustive release browser suite for major milestones, broad foundational rewrites, or an explicit release request.
 - For visual changes, inspect the live browser, console, and before/after screenshots rather than relying only on state assertions.
 - Commit integration corrections separately when they express a distinct conflict-resolution decision.
 - Push only when the user explicitly asks to push. Do not delete branches during routine worktree cleanup.
@@ -46,7 +46,7 @@ These rules apply to the entire repository.
 - The primary conversation owns dispatch, progress reporting, architectural review, integration, validation, commits, pushes, and reviewed worktree cleanup.
 - Workers must verify their assigned repository root, branch, base commit, and clean status before editing. They work only in their dedicated worktree and return a focused commit plus validation evidence.
 - Do not infer that a worker, integration, cleanup, recorder, or release check is running in the background. Report only processes and worktrees verified during the current request.
-- Use changed-feature tests while iterating and the full validation tier before integrating shared gameplay changes or declaring a substantial milestone complete.
+- Use changed-feature tests while iterating and the bounded integration tier before merging a shared multi-system wave. Use the exhaustive release tier only before a major milestone, broad foundational rewrite, or explicit release—not for every ordinary feature merge.
 
 ## Product constraints
 
@@ -74,11 +74,12 @@ These rules apply to the entire repository.
 ## Efficient validation
 
 - Match validation scope to the change while iterating. Run affected unit tests, targeted lint/format checks, and the relevant browser feature suite instead of repeatedly running every check after each small edit.
-- Use three validation tiers:
+- Use four validation tiers:
   - Quick: affected unit tests plus targeted formatting/linting and type-checking when public TypeScript contracts changed.
   - Smoke: the complete unit suite plus the smallest critical browser path covering picker, gameplay readiness, movement, and interaction.
-  - Full: repository formatting, linting, type-checking, unit tests, character/asset validation, production build and size reporting, and the complete browser suite.
-- Run the full tier before integrating shared gameplay changes, before declaring a worker complete, and after combining branches whose contracts overlap. It is not required after every intermediate commit.
+  - Integration: repository formatting, linting, type-checking, unit tests, relevant asset validation, production build and size reporting, affected browser specs, smoke, and the bounded 23-test multi-system browser lane after independent systems are combined or a change spans several shared contracts.
+  - Release: the integration tier plus the exhaustive browser suite, relevant visual labs, performance capture, and manual console/screenshot review.
+- Run affected browser specs and smoke before declaring a substantial worker complete. Run the bounded integration tier after combining independent branches or when one change spans several shared contracts. Run the release tier only for major milestones, broad foundational rewrites, or explicit release requests.
 - Keep unit, browser, visual, and performance coverage distinct. Do not make fast unit checks launch a browser, and do not run screenshot-heavy visual harnesses unless the change affects rendering, layout, camera composition, animation, or another visual contract.
 - Prefer deterministic readiness/state assertions over fixed sleeps. New browser tests must not add arbitrary `waitForTimeout` delays when a DOM state, test-bridge snapshot, event, animation state, or polling assertion can express readiness.
 - Profile before changing concurrency. Preserve test isolation, and benchmark Playwright worker-count changes under the software-rendered WebGL configuration rather than assuming more workers are faster.

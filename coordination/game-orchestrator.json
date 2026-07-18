@@ -223,9 +223,10 @@
       "unit": "pnpm test runs deterministic state and DOM tests without launching a browser.",
       "smoke": "pnpm test:e2e:smoke runs the smallest tagged cross-system readiness paths.",
       "changedFeature": "pnpm test:e2e:feature requires an explicit spec or grep owned by the changed behavior.",
+      "integration": "pnpm test:e2e:integration runs 23 critical cross-system browser owners and is the default pnpm test:e2e lane.",
       "visual": "pnpm test:e2e:visual runs screenshot-heavy visual and composition owners only when rendering changes.",
       "performance": "pnpm test:e2e:performance runs streaming, memory, and timed frame-pacing evidence in dedicated performance mode.",
-      "release": "pnpm test:e2e:full retains every browser owner and is reserved for final integration or release milestones."
+      "release": "pnpm test:e2e:release retains every browser owner and is reserved for major milestones, broad foundational rewrites, or explicit release requests."
     },
     "integration": [
       "format:check",
@@ -236,11 +237,12 @@
       "build:bundle",
       "bundle-size",
       "changed-feature-browser-tests",
-      "smoke"
+      "smoke",
+      "bounded-integration-browser-when-combining-systems"
     ],
     "releaseMilestone": [
       "integration",
-      "full-e2e",
+      "release-e2e",
       "repeated-critical-flow",
       "manual-browser-console-review",
       "visual-screenshot-review",

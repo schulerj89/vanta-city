@@ -19,7 +19,8 @@ if (!hasExplicitSelection) {
       'Examples:',
       '  pnpm test:e2e:feature e2e/player-money.spec.ts',
       '  pnpm test:e2e:feature -- --grep "player money" e2e/player-money.spec.ts',
-      'Use pnpm test:e2e:full only for the release/integration gate.',
+      'Use pnpm test:e2e:integration for the bounded multi-system gate.',
+      'Use pnpm test:e2e:release only for an explicit release milestone.',
     ].join('\n'),
   );
   process.exit(2);

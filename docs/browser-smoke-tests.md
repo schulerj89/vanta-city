@@ -10,13 +10,14 @@ pnpm test:e2e:install
 pnpm test:e2e:smoke
 ```
 
-The browser suite has five local lanes. They partition by intent without deleting or weakening the full suite:
+The browser suite has six local lanes. They partition by intent without deleting or weakening the release suite:
 
 - `pnpm test:e2e:smoke` runs the tagged cross-system readiness checks. Use it for the fastest broad signal after the unit suite.
 - `pnpm test:e2e:feature e2e/<changed-owner>.spec.ts` requires an explicit spec or `--grep` selection and runs it with one worker. The caller owns selecting every browser spec affected by the patch; the command refuses an accidental all-suite run.
+- `pnpm test:e2e:integration` runs 23 critical tests across collision, conversation, district grounding, equipment, interaction reliability, loading/fallback, vehicles, and weapon damage. It is the default `pnpm test:e2e` lane and must remain below three minutes on the reference host.
 - `pnpm test:e2e:visual` runs screenshot-heavy visual/composition owners. Run it only when rendering, layout, camera composition, animation presentation, or a committed visual oracle changes.
 - `pnpm test:e2e:performance` runs the sector streaming/leak test and the opt-in 20-second warmup/60-second performance capture with `VANTA_PERF=1`. It is a dedicated performance milestone gate, not ordinary changed-feature validation.
-- `pnpm test:e2e:full` (and the compatibility alias `pnpm test:e2e`) retains every behavioral, smoke, visual, and performance-file owner. The timed capture remains skipped unless performance mode is enabled. Reserve this lane for final integration or a release milestone.
+- `pnpm test:e2e:release` retains every behavioral, smoke, visual, and performance-file owner. The timed capture remains skipped unless performance mode is enabled. Reserve this lane for major milestones, broad foundational rewrites, or an explicit release request.
 
 Run `pnpm test:e2e:debug` for Playwright Inspector. Failure traces, screenshots, video, page errors, and the HTML report are written beneath `test-results/` and `playwright-report/`. Open the report with `pnpm exec playwright show-report`.
 
@@ -54,6 +55,8 @@ The former `test:e2e:feature` selected every non-smoke/non-visual test. Under su
 
 After the split, three independent changed-feature runs selecting `player-money.spec.ts` passed in 12.43, 11.97, and 11.91 seconds of external command wall time. A three-repeat smoke stress run passed all 15 attempts in 52.75 seconds. The dedicated performance command passed both sector/leak and full timed-capture owners in 165.12 seconds. All three lanes remain below three minutes on the reference host, but performance stays separate because its fixed-duration measurements would consume nearly the entire ordinary feedback budget.
 
+After VEHICLE-001, NPC-001, and TEST-001 integration, the bounded 23-test integration lane passed in 2.4 minutes on the same class of host. The exhaustive 71-test release lane passed 70 tests with the fixed-duration performance capture intentionally skipped in 5.8 minutes. The new default therefore cuts ordinary combined-system browser feedback by about 59% while retaining every browser owner in `test:e2e:release`.
+
 The fixed-wait audit still finds eight calls totaling 2.46 seconds. They continue to own elapsed behavior—input suppression, paused/dialogue/depleted immobility, held gamepad edge suppression, post-release fire suppression, and a deliberate mid-roll capture—so none were converted into readiness polling merely to improve the timing report. Positive readiness and progress continue to use DOM state or the public browser snapshot.
 
 Use these tiers during development and integration:
@@ -62,7 +65,8 @@ Use these tiers during development and integration:
 2. `pnpm test:e2e:smoke` for the compact cross-system path.
 3. `pnpm test:e2e:feature e2e/<changed-owner>.spec.ts` (plus every overlapping owner) for changed behavior; keep the combined selection below three minutes.
 4. `pnpm test:e2e:visual` only for changed visual contracts and `pnpm test:e2e:performance` only for performance milestones.
-5. `pnpm test:e2e:full` once at final integration/release, on an otherwise idle software-rendering host.
+5. `pnpm test:e2e:integration` after combining independent systems.
+6. `pnpm test:e2e:release` only for a major milestone, broad foundational rewrite, or explicit release request, on an otherwise idle software-rendering host.
 
 After `pnpm typecheck` succeeds without source changes, use `pnpm build:bundle` for production bundling. The standalone `pnpm build` deliberately retains `tsc -b && vite build` for CI and callers that have not already typechecked.
 

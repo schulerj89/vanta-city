@@ -95,9 +95,10 @@ pnpm size
 pnpm test:e2e:install # first time only
 pnpm test:e2e:smoke
 pnpm test:e2e:feature e2e/<changed-owner>.spec.ts
+pnpm test:e2e:integration # bounded 23-test multi-system gate; also the default pnpm test:e2e
 pnpm test:e2e:visual # only when rendering/layout/camera composition changed
 pnpm test:e2e:performance # dedicated performance milestone gate
-pnpm test:e2e:full # final integration/release gate only
+pnpm test:e2e:release # exhaustive 71-test milestone/release gate only
 ```
 
 Use `pnpm preview` for a final manual check of the production build when relevant.
