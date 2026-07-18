@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.vantacity.codex-supervisor</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/bin/node</string>
+      <string>/Users/jschuler/Projects/vanta-city/scripts/automation/supervisor.mjs</string>
+      <string>daemon</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/jschuler/Projects/vanta-city</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/Users/jschuler/Projects/vanta-city/.git/vanta-orchestration/tooling/node_modules/.bin:/Applications/ChatGPT.app/Contents/Resources:/opt/homebrew/bin:/usr/bin:/bin</string>
+      <key>VANTA_PNPM_PATH</key>
+      <string>/Users/jschuler/Projects/vanta-city/.git/vanta-orchestration/tooling/node_modules/.bin/pnpm</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>LowPriorityIO</key>
+    <true/>
+    <key>Umask</key>
+    <integer>63</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/jschuler/Projects/vanta-city/.git/vanta-orchestration/launchd.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jschuler/Projects/vanta-city/.git/vanta-orchestration/launchd.stderr.log</string>
+  </dict>
+</plist>

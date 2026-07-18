@@ -17,20 +17,22 @@
       "minuteOfHour": 5,
       "targetActiveWorkers": {
         "minimum": 4,
-        "maximum": 5
+        "maximum": 4
       },
-      "maxActiveWorkers": 5,
-      "maxNewWorkersPerRun": 5,
+      "maxActiveWorkers": 4,
+      "maxNewWorkersPerRun": 4,
       "workerModel": "gpt-5.6-sol",
       "workerReasoningEffort": "medium",
       "taskControlGuard": {
+        "backend": "local-codex-exec",
         "maxSeconds": 20,
         "attemptsPerRun": 1,
-        "expectedProjectId": "local-6a89a58c813337a56f9c0d5642de0fd5",
-        "requireThreadCatalog": true,
-        "requireExpectedProjectInCatalog": true,
+        "requireCodexExecutable": true,
+        "requireSavedChatGptLogin": true,
+        "requirePinnedPnpm": true,
+        "requireExactGitRoot": true,
         "createGitStateBeforePass": false,
-        "onFailure": "Stop immediately with one concise control-channel blocker report. Do not retry, inspect individual threads, create a probe task, create a branch or worktree, or continue the roadmap audit."
+        "onFailure": "Stop the hourly attempt immediately without retries, branches, worktrees, or roadmap mutation. The next hourly slot may try again."
       },
       "implementationPolicy": "The orchestrator plans, reviews dependencies, and dispatches bounded work. Implementation, asset acquisition, editing, and QA belong to medium-effort workers in dedicated worktrees."
     },
@@ -44,13 +46,41 @@
       "fullE2EEachHour": false
     },
     "worktreeCleaner": {
-      "model": "gpt-5.6-sol",
-      "reasoningEffort": "xhigh",
+      "implementation": "deterministic-local-supervisor",
       "intervalMinutes": 60,
       "minuteOfHour": 58,
       "removeOnlyCleanInactiveIntegratedWorktrees": true,
       "preserveBranches": true,
       "neverRemoveMain": true
+    },
+    "localSupervisor": {
+      "implementation": "launchd-codex-exec",
+      "launchAgentLabel": "com.vantacity.codex-supervisor",
+      "codexPath": "/Applications/ChatGPT.app/Contents/Resources/codex",
+      "pnpmPath": "/Users/jschuler/Projects/vanta-city/.git/vanta-orchestration/tooling/node_modules/.bin/pnpm",
+      "maxConcurrentWorkers": 4,
+      "maximumTotalCodexProcesses": 5,
+      "plannerModel": "gpt-5.6-sol",
+      "plannerReasoningEffort": "xhigh",
+      "workerModel": "gpt-5.6-sol",
+      "workerReasoningEffort": "medium",
+      "integratorModel": "gpt-5.6-sol",
+      "integratorReasoningEffort": "xhigh",
+      "plannerTimeoutMinutes": 5,
+      "workerTimeoutMinutes": 40,
+      "integratorTimeoutMinutes": 40,
+      "staleLockMinutes": 60,
+      "retainedRuns": 40,
+      "nodeModulesStrategy": "apfs-clone-main",
+      "nativeSchedulesPreserved": [
+        "vanta-city-playtest-recorder",
+        "vanta-city-nightly-release-gate"
+      ],
+      "nativeSchedulesSuperseded": [
+        "vanta-city-hourly-orchestrator",
+        "vanta-city-hourly-integrator",
+        "vanta-city-hourly-worktree-cleaner"
+      ]
     },
     "nightlyReleaseGate": {
       "model": "gpt-5.6-sol",
@@ -74,9 +104,9 @@
       "Inspect current Codex task status, Git worktrees, branches, and main before dispatching.",
       "Do not duplicate a task whose task ID appears in an active task title, branch name, worktree path, commit, or completed roadmap entry.",
       "Select only tasks whose dependencies are completed and whose status is ready.",
-      "Fill safe capacity toward four active workers and use a fifth only for an independent task with satisfied dependencies and no shared ownership conflict.",
+      "Fill safe capacity toward four independent workers and never exceed four worker processes.",
       "Balance architecture, gameplay, content, visual/assets, and test-performance work rather than assigning multiple workers to the same foundational contract.",
-      "Do not start more work when five workers are active or more than six worktrees including main are registered."
+      "Do not start more work when four worker worktrees are occupied or more than six worktrees including main and a temporary integration worktree are registered."
     ],
     "workerRules": [
       "Create or reuse one dedicated worker task and worktree per bounded task.",
@@ -85,7 +115,7 @@
       "Begin every worker prompt with an exact cd to its assigned /Users/jschuler/Projects/vanta-city-worktrees/<name> path, then verify git rev-parse --show-toplevel, git branch --show-current, git rev-parse HEAD, and git status --short --branch before any read or edit.",
       "Stop without editing if the verified repository root is not the assigned Vanta City worktree or if the starting state differs from the orchestrator's assignment.",
       "Workers must not merge or push main.",
-      "Workers must commit focused changes, leave worktrees clean, and report checks, screenshots, architectural decisions, provenance, performance measurements, and risks.",
+      "Workers edit and validate only their assigned worktrees and must not stage or commit; the deterministic supervisor validates paths and creates focused worker commits after successful structured completion.",
       "Visual workers must inspect screenshots and the browser console. Runtime changes must use existing public lifecycle, input, camera, collision, asset, game-state, debug, and browser-test contracts.",
       "If a suitable production-intended asset cannot be found with verified usage rights, block the task instead of shipping a placeholder. Synthetic assets remain allowed only in explicit failure-path tests."
     ],
@@ -95,7 +125,7 @@
       "Never merge an active, dirty, uncommitted, failing, or conceptually incompatible worker.",
       "Run formatting, linting, type-checking, unit tests, relevant asset validators, production build, bundle size, targeted browser tests, and smoke tests.",
       "Skip the complete E2E suite during hourly integration. Reserve it for explicit release milestones or a separately approved scheduled gate.",
-      "Commit integration corrections separately, update task status and metrics in this file, push main, and report exactly what changed.",
+      "Perform review and corrections in a dedicated integration worktree. The deterministic supervisor commits corrections, fast-forwards unchanged clean main, verifies and pushes the exact expected SHA, and reports exactly what changed.",
       "Never delete a dirty or active worktree. Preserve worker branches when cleaning completed worktrees."
     ],
     "cleanupRules": [

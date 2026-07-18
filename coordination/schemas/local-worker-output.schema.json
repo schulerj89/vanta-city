@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taskId",
+    "status",
+    "summary",
+    "commit",
+    "checks",
+    "screenshots",
+    "decisions",
+    "risks"
+  ],
+  "properties": {
+    "taskId": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "blocked", "failed"]
+    },
+    "summary": { "type": "string" },
+    "commit": { "type": "null" },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "result", "durationSeconds"],
+        "properties": {
+          "command": { "type": "string" },
+          "result": { "type": "string" },
+          "durationSeconds": { "type": "number" }
+        }
+      }
+    },
+    "screenshots": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "decisions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
