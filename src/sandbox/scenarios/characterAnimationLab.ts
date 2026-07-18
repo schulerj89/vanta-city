@@ -56,10 +56,16 @@ import type { SandboxContext, SandboxScenario } from '../SandboxScenario';
 import { CharacterEquipment } from '../../equipment/CharacterEquipment';
 import { EquipmentPresentation } from '../../equipment/EquipmentPresentation';
 import type { EquipmentPresentationSnapshot } from '../../equipment/EquipmentPresentation';
+import { equipmentById } from '../../equipment/EquipmentDefinition';
 import type { EquipmentId } from '../../equipment/EquipmentDefinition';
 
 type SelectionKind = 'logical' | 'clip';
 type CompletionRelease = 'mixer-finished' | 'duration-fallback' | undefined;
+export interface EquipmentTransform {
+  readonly position: readonly [number, number, number];
+  readonly rotation: readonly [number, number, number];
+  readonly scale: number;
+}
 
 export interface CharacterAnimationLabSnapshot {
   readonly ready: boolean;
@@ -102,6 +108,7 @@ export interface CharacterAnimationLabSnapshot {
     | { readonly min: readonly number[]; readonly max: readonly number[] }
     | undefined;
   readonly socketPosition: readonly number[] | undefined;
+  readonly equipmentTransform: EquipmentTransform | undefined;
 }
 
 export interface CharacterAnimationLabBridge {
@@ -109,6 +116,7 @@ export interface CharacterAnimationLabBridge {
   selectModel(id: string): Promise<void>;
   selectAnimation(selection: string): boolean;
   selectEquipment(itemId: EquipmentId | 'none'): void;
+  setEquipmentTransform(transform: EquipmentTransform): void;
   setView(view: 'front' | 'right' | 'rear' | 'left'): void;
   setPlaying(playing: boolean): void;
   setLoop(loop: boolean): void;
@@ -171,6 +179,8 @@ class CharacterAnimationLabSystem implements GameSystem {
   private readonly animationSelect = document.createElement('select');
   private readonly equipmentSelect = document.createElement('select');
   private readonly viewSelect = document.createElement('select');
+  private readonly transformInputs = new Map<string, HTMLInputElement>();
+  private readonly transformOutput = document.createElement('textarea');
   private readonly playButton = document.createElement('button');
   private readonly scrub = document.createElement('input');
   private readonly speed = document.createElement('input');
@@ -210,6 +220,7 @@ class CharacterAnimationLabSystem implements GameSystem {
   private readonly graph = new CharacterAnimationStateMachine();
   private readonly equipment = new CharacterEquipment('animation-lab');
   private readonly equipmentPresentation: EquipmentPresentation;
+  private equipmentTransform: EquipmentTransform | undefined;
   private currentGraph = this.graph.getState();
   private alignment:
     { readonly height: number; readonly visualOffset: number } | undefined;
@@ -253,6 +264,7 @@ class CharacterAnimationLabSystem implements GameSystem {
     }
     const delta = Math.max(0, time.delta);
     this.equipmentPresentation.update(delta);
+    this.applyEquipmentTransform();
     if (this.mixer && this.action && this.loaded) {
       this.action.paused = !this.playing;
       this.action.setEffectiveTimeScale(this.playbackSpeed);
@@ -363,6 +375,9 @@ class CharacterAnimationLabSystem implements GameSystem {
               max: weaponBounds.max.toArray(),
             },
       socketPosition,
+      equipmentTransform: this.equipmentTransform
+        ? cloneEquipmentTransform(this.equipmentTransform)
+        : undefined,
     };
   }
 
@@ -445,9 +460,22 @@ class CharacterAnimationLabSystem implements GameSystem {
   }
 
   public selectEquipment(itemId: EquipmentId | 'none'): void {
-    if (itemId === 'none') this.equipment.unequip();
-    else this.equipment.equip(itemId);
+    if (itemId === 'none') {
+      this.equipment.unequip();
+      this.equipmentTransform = undefined;
+    } else {
+      this.equipment.equip(itemId);
+      const definition = equipmentById.get(itemId)!;
+      this.equipmentTransform = cloneEquipmentTransform(definition.model);
+    }
     this.equipmentSelect.value = itemId;
+    this.refreshTransformControls();
+  }
+
+  public setEquipmentTransform(transform: EquipmentTransform): void {
+    this.equipmentTransform = cloneEquipmentTransform(transform);
+    this.applyEquipmentTransform();
+    this.refreshTransformControls();
   }
 
   public setView(view: 'front' | 'right' | 'rear' | 'left'): void {
@@ -615,6 +643,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       field('Loop', this.loop),
       field('Cross-fade (s)', this.fade),
     );
+    const transformControls = this.buildTransformControls();
     const overlays = document.createElement('fieldset');
     const legend = document.createElement('legend');
     legend.textContent = 'Visual diagnostics';
@@ -636,7 +665,13 @@ class CharacterAnimationLabSystem implements GameSystem {
       overlays.append(row);
     }
     this.diagnostics.className = 'animation-lab__diagnostics';
-    this.panel.append(header, controls, overlays, this.diagnostics);
+    this.panel.append(
+      header,
+      controls,
+      transformControls,
+      overlays,
+      this.diagnostics,
+    );
   }
 
   private populateAnimations(): void {
@@ -652,6 +687,107 @@ class CharacterAnimationLabSystem implements GameSystem {
       clips.append(new Option(name, `clip:${name}`));
     }
     this.animationSelect.append(logical, clips);
+  }
+
+  private buildTransformControls(): HTMLFieldSetElement {
+    const controls = document.createElement('fieldset');
+    controls.className = 'animation-lab__transform';
+    const legend = document.createElement('legend');
+    legend.textContent = 'Asset transform (local to socket prop)';
+    controls.append(legend);
+    for (const [id, label, step] of [
+      ['px', 'Position X', '0.005'],
+      ['py', 'Position Y', '0.005'],
+      ['pz', 'Position Z', '0.005'],
+      ['rx', 'Rotation X (rad)', '0.05'],
+      ['ry', 'Rotation Y (rad)', '0.05'],
+      ['rz', 'Rotation Z (rad)', '0.05'],
+      ['scale', 'Uniform scale', '0.1'],
+    ] as const) {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = step;
+      input.disabled = true;
+      input.addEventListener('input', () => this.readTransformControls());
+      this.transformInputs.set(id, input);
+      controls.append(field(label, input));
+    }
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.textContent = 'Reset selected asset transform';
+    reset.addEventListener('click', () => {
+      const itemId = this.equipment.equipped?.id;
+      if (itemId) this.selectEquipment(itemId);
+    });
+    this.transformOutput.readOnly = true;
+    this.transformOutput.rows = 5;
+    this.transformOutput.setAttribute(
+      'aria-label',
+      'Transform values to send back',
+    );
+    controls.append(
+      field('Transform values to send back', this.transformOutput),
+      reset,
+    );
+    this.refreshTransformControls();
+    return controls;
+  }
+
+  private readTransformControls(): void {
+    const current = this.equipmentTransform;
+    if (!current) return;
+    const value = (id: string, fallback: number): number => {
+      const candidate = Number(this.transformInputs.get(id)?.value);
+      return Number.isFinite(candidate) ? candidate : fallback;
+    };
+    this.setEquipmentTransform({
+      position: [
+        value('px', current.position[0]),
+        value('py', current.position[1]),
+        value('pz', current.position[2]),
+      ],
+      rotation: [
+        value('rx', current.rotation[0]),
+        value('ry', current.rotation[1]),
+        value('rz', current.rotation[2]),
+      ],
+      scale: Math.max(0.001, value('scale', current.scale)),
+    });
+  }
+
+  private refreshTransformControls(): void {
+    const transform = this.equipmentTransform;
+    const values: Readonly<Record<string, number | undefined>> = {
+      px: transform?.position[0],
+      py: transform?.position[1],
+      pz: transform?.position[2],
+      rx: transform?.rotation[0],
+      ry: transform?.rotation[1],
+      rz: transform?.rotation[2],
+      scale: transform?.scale,
+    };
+    for (const [id, input] of this.transformInputs) {
+      const value = values[id];
+      input.disabled = value === undefined;
+      input.value = value === undefined ? '' : String(value);
+    }
+    this.transformOutput.value = transform
+      ? JSON.stringify(transform, undefined, 2)
+      : 'Select Handgun or Knife to edit its local asset transform.';
+  }
+
+  private applyEquipmentTransform(): void {
+    const transform = this.equipmentTransform;
+    const definition = this.equipment.equipped;
+    const attachment = this.equipmentPresentation.getAttachmentDebugObjects();
+    if (!transform || !definition || !attachment) return;
+    const model = attachment.root.getObjectByName(
+      `${definition.displayName} asset model`,
+    );
+    if (!model) return;
+    model.position.set(...transform.position);
+    model.rotation.set(...transform.rotation);
+    model.scale.setScalar(transform.scale);
   }
 
   private resolveClip(selection: string) {
@@ -895,6 +1031,8 @@ class CharacterAnimationLabSystem implements GameSystem {
       selectModel: (id) => this.selectModel(id),
       selectAnimation: (selection) => this.selectAnimation(selection),
       selectEquipment: (itemId) => this.selectEquipment(itemId),
+      setEquipmentTransform: (transform) =>
+        this.setEquipmentTransform(transform),
       setView: (view) => this.setView(view),
       setPlaying: (playing) => this.setPlaying(playing),
       setLoop: (loop) => this.setLoop(loop),
@@ -1022,4 +1160,22 @@ function isDisposable(value: unknown): value is { dispose(): void } {
     'dispose' in value &&
     typeof value.dispose === 'function'
   );
+}
+
+function cloneEquipmentTransform(
+  transform: EquipmentTransform,
+): EquipmentTransform {
+  return {
+    position: [
+      transform.position[0],
+      transform.position[1],
+      transform.position[2],
+    ],
+    rotation: [
+      transform.rotation[0],
+      transform.rotation[1],
+      transform.rotation[2],
+    ],
+    scale: transform.scale,
+  };
 }

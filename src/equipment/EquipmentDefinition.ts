@@ -48,9 +48,9 @@ export const equipmentDefinitions = [
     model: {
       assetId: 'equipment.handgun.model',
       // Rebase the source-centered pistol so WristR sits inside the grip.
-      position: [0, -0.04, -0.07],
-      rotation: [0, 0, 0],
-      scale: 5.5,
+      position: [0.04, -0.04, -0.215],
+      rotation: [0, 3.15, 1.5],
+      scale: 5,
       muzzlePosition: [0, 0.04, -0.215],
     },
     useAction: 'gunFire',
@@ -76,9 +76,9 @@ export const equipmentDefinitions = [
     prop: 'knife',
     model: {
       assetId: 'equipment.knife.model',
-      // Source blade is +Y and centered; rotate it forward and rebase the grip.
-      position: [0, 0, -0.1],
-      rotation: [-Math.PI / 2, 0, 0],
+      // Rebase and orient the source-centered blade onto the authored grip.
+      position: [0.1, 0.105, 0.105],
+      rotation: [0.25, -0.05, 0],
       scale: 6,
     },
     useAction: 'knifeSlash',

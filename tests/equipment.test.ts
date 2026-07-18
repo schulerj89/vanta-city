@@ -115,7 +115,11 @@ describe('CharacterEquipment', () => {
     );
     expect(instantiateModel).toHaveBeenCalledWith('equipment.handgun.model');
     expect(scene.name).toBe('Handgun asset model');
-    expect(scene.scale.toArray()).toEqual([5.5, 5.5, 5.5]);
+    expect(scene.position.toArray()).toEqual([0.04, -0.04, -0.215]);
+    expect([scene.rotation.x, scene.rotation.y, scene.rotation.z]).toEqual([
+      0, 3.15, 1.5,
+    ]);
+    expect(scene.scale.toArray()).toEqual([5, 5, 5]);
 
     equipment.equip('knife');
     expect(dispose).toHaveBeenCalledOnce();

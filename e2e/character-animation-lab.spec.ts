@@ -160,7 +160,7 @@ test('inspects both real weapons through every playable weapon state', async ({
         const dimensions = snapshot.equipmentBounds!.max.map(
           (value, index) => value - snapshot.equipmentBounds!.min[index],
         );
-        expect(Math.max(...dimensions)).toBeGreaterThan(0.25);
+        expect(Math.max(...dimensions)).toBeGreaterThan(0.18);
         expect(Math.max(...dimensions)).toBeLessThan(0.65);
         await testInfo.attach(`${model}-${item}-${state}-right.png`, {
           body: await page.screenshot(),
@@ -190,6 +190,60 @@ test('inspects both real weapons through every playable weapon state', async ({
       });
     }
   }
+});
+
+test('edits and resets asset-local equipment transforms without moving simulation', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const lab = window.__VANTA_ANIMATION_LAB__!;
+    lab.selectEquipment('handgun');
+    lab.setEquipmentTransform({
+      position: [0.015, -0.025, -0.12],
+      rotation: [0.1, -0.2, 0.3],
+      scale: 5.75,
+    });
+  });
+  await expect
+    .poll(async () => (await labSnapshot(page)).equipment.source)
+    .toBe('asset');
+
+  const edited = await labSnapshot(page);
+  expect(edited.equipmentTransform).toEqual({
+    position: [0.015, -0.025, -0.12],
+    rotation: [0.1, -0.2, 0.3],
+    scale: 5.75,
+  });
+  expect(edited.alignment?.simulationOrigin).toEqual([0, 0, 0]);
+  await expect(page.getByLabel('Transform values to send back')).toHaveValue(
+    /"scale": 5\.75/,
+  );
+
+  await page
+    .getByRole('button', {
+      name: 'Reset selected asset transform',
+    })
+    .click();
+  expect((await labSnapshot(page)).equipmentTransform).toEqual({
+    position: [0.04, -0.04, -0.215],
+    rotation: [0, 3.15, 1.5],
+    scale: 5,
+  });
+  expect((await labSnapshot(page)).alignment?.simulationOrigin).toEqual([
+    0, 0, 0,
+  ]);
+
+  await page.evaluate(() =>
+    window.__VANTA_ANIMATION_LAB__!.selectEquipment('knife'),
+  );
+  expect((await labSnapshot(page)).equipmentTransform).toEqual({
+    position: [0.1, 0.105, 0.105],
+    rotation: [0.25, -0.05, 0],
+    scale: 6,
+  });
+  expect((await labSnapshot(page)).alignment?.simulationOrigin).toEqual([
+    0, 0, 0,
+  ]);
 });
 
 test('renders stable playable and NPC grounding diagnostics @visual', async ({

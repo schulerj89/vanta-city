@@ -21,11 +21,10 @@ pack. The loader cache owns source geometry/materials; each presentation owns an
 disposes only its cloned scene instance. While the model is loading—or if it
 fails—the prior procedural mesh remains visible. Successful load swaps only the
 presentation content, never the socket, character root, or simulation transform.
-Asset-space alignment is explicit: handgun position `(0, -0.04, -0.07)`,
-rotation `(0, 0, 0)`, scale `5.5`; knife position `(0, 0, -0.1)`, rotation
-`(-π/2, 0, 0)`, scale `6`. The source-centered meshes are thereby rebased onto
-their grips, with the handgun barrel and knife blade following the established
-procedural `-Z` direction. Full provenance, hashes, size, bounds, and mesh
+Asset-space alignment is explicit: handgun position `(0.04, -0.04, -0.215)`,
+rotation `(0, 3.15, 1.5)`, scale `5`; knife position `(0.1, 0.105, 0.105)`,
+rotation `(0.25, -0.05, 0)`, scale `6`. The source-centered meshes are thereby
+rebased onto their grips. Full provenance, hashes, size, bounds, and mesh
 metrics are recorded beside the files in
 `public/assets/equipment/kenney-weapon-pack/README.md`.
 
