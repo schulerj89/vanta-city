@@ -24,11 +24,13 @@
       "Ashfall Junction is a 56m by 56m authored intersection with north, east, south, and west approaches, Signal Corner, a signal-controller interaction, a mission point at the center, and fixed straight traffic lanes.",
       "The player economy uses integer money, starts at 500, and exposes authoritative credit and debit events.",
       "The player production composition starts with a knife; the existing test handgun purchase costs 250 and should not be treated as a story shop contract.",
-      "Current civilian traffic is deterministic, pooled, straight-lane traffic using pickup-truck and sports-car catalog IDs; enter-drive-exit does not yet exist.",
+      "Current civilian traffic is deterministic and pooled around pickup-truck and sports-car catalog IDs; one production pickup supports enter-drive-exit, but cinematic passenger staging, doors, and NPC driving performances do not yet exist.",
       "Production startup has no ordinary NPCs. Mack, Nox, and Raze currently spawn only as explicit development fixtures, so story use requires production roster work.",
-      "No mission, persistence, scheduling, pathfinding, production combat AI, cinematic sequence, full-map, or vehicle-control system exists yet."
+      "Mission, cinematic-sequence, full-map, and single-vehicle control foundations exist. General persistence storage, scheduling, pathfinding, production combat AI, cinematic performance ownership, and cross-level cinematic transition remain unimplemented."
     ],
-    "intentionalCorrections": [],
+    "intentionalCorrections": [
+      "CINEMATIC-002 supersedes the static Ashfall Junction opening with the canonical Northbar Coach Depot arrival and motivated wagon transition to the Junction; the lifecycle, camera, subtitle, pause, skip-confirmation, and cleanup foundations from CINEMATIC-001 remain authoritative."
+    ],
     "runtimeBoundary": "This bible is planning data only. It is not imported by runtime startup, does not register entities or listeners, and does not claim unimplemented systems."
   },
   "themes": [
@@ -64,6 +66,17 @@
   ],
   "districts": [
     {
+      "id": "northbar-coach-depot",
+      "name": "Northbar Coach Depot",
+      "history": "The city built Northbar at the northern cut in 1971 to separate intercity coaches from quay freight. Its glazed-brick waiting hall and sawtooth bays survived the channel fire, but Marrow Transit now leases the baggage counter as contract overflow and quietly copies the paper traffic passing through it.",
+      "currentPressures": [
+        "Marrow uses its baggage-counter lease to connect passenger manifests with vehicles and garage accounts.",
+        "The shrinking coach schedule gives an arriving traveler only one early eastbound chance to leave Ashfall the same morning.",
+        "Mack must collect Rook without revealing why Orin summoned an outside courier."
+      ],
+      "runtimeStatus": "Canonical opening location only; requires a separate production level with authored geometry, collision, staging marks, vehicle paths, camera anchors, local assets, and cross-level readiness."
+    },
+    {
       "id": "ashfall-junction",
       "name": "Ashfall Junction",
       "history": "The Junction formed where foundry shifts crossed the channel road. Its street grid survived the 1984 channel fire, but the surrounding workshops became repair yards, storage rooms, and informal offices. The signal cabinet still bears layers of municipal paint from administrations that never replaced its wiring.",
@@ -83,7 +96,7 @@
         "Tidehands crews are split between protecting work and taking private unloading contracts.",
         "Recovery Office inspectors can close the quay by noon if a staged safety failure holds."
       ],
-      "runtimeStatus": "Canon location planned for WORLD-001 or later; no current level geometry, trigger, traffic lane, or cinematic anchor exists."
+      "runtimeStatus": "Canon location planned for a later world milestone; WORLD-001 did not build the canonical quay, and no current level geometry, trigger, traffic lane, or cinematic anchor exists."
     },
     {
       "id": "glasshouse-row",
@@ -381,6 +394,12 @@
   ],
   "locationGlossary": [
     {
+      "id": "northbar-coach-depot",
+      "name": "Northbar Coach Depot level",
+      "description": "Opening-only intercity coach annex at Ashfall's northern cut, physically separate from the playable Junction.",
+      "runtimeStatus": "Canonical definition only; CINEMATIC-002 world, asset, performance, and transition work required."
+    },
+    {
       "id": "test-district",
       "name": "Ashfall Junction level",
       "description": "Authoritative current level and fallback district label.",
@@ -401,7 +420,7 @@
     {
       "id": "landmark.north-approach",
       "name": "North Approach",
-      "description": "Rook's opening approach and default-spawn side of the Junction.",
+      "description": "Rook's destination after the Northbar wagon transition and the default-spawn side of the Junction.",
       "runtimeStatus": "Implemented."
     },
     {
@@ -468,7 +487,7 @@
       "id": "cinder-quay",
       "name": "Cinder Quay",
       "description": "Bonded warehouses and the contested working berth.",
-      "runtimeStatus": "Canon definition only; WORLD-001 or later."
+      "runtimeStatus": "Canon definition only; requires a later world milestone."
     },
     {
       "id": "glasshouse-row",
@@ -510,7 +529,7 @@
     },
     {
       "date": "September 29, 1997",
-      "event": "Mission one begins at Ashfall Junction. Mack's existing introduction lines remain compatible: Rook is late, Orin was meant to meet them, and Mack orders a surveillance-check walk."
+      "event": "Rook arrives on the 5:42 a.m. coach at Northbar. Mack reveals that Orin has missed two nights; Della takes the passenger-manifest carbon; Rook gives up the 6:10 eastbound exit and rides with Mack to Ashfall Junction, where the surveillance-check mission becomes playable."
     },
     {
       "date": "October 6, 1997",
@@ -529,7 +548,17 @@
     {
       "id": "rook-arrived-in-ashfall",
       "initialValue": "false",
-      "meaning": "Set when the opening mission takes control after the player enters the Junction."
+      "meaning": "Set only when the Northbar-to-Junction transition reaches the authoritative destination spawn and mission state."
+    },
+    {
+      "id": "rook-accepted-orin-search",
+      "initialValue": "false",
+      "meaning": "Records Rook folding the unused eastbound ticket and choosing to help Mack find Orin while escape is still available."
+    },
+    {
+      "id": "marrow-has-rook-arrival-time",
+      "initialValue": "false",
+      "meaning": "Records Della taking the Northbar manifest carbon; Marrow can connect the arrival time to Mack's wagon but does not yet know Rook's street identity."
     },
     {
       "id": "orin-status",
@@ -606,36 +635,48 @@
     {
       "id": "ash-001-walk-the-block",
       "title": "Walk the Block",
-      "narrativePurpose": "Introduce Rook through behavior, preserve Mack's existing conversation, establish Orin's absence, and teach that observing a route is more valuable than rushing to a marker.",
-      "characterChange": "Mack moves from dismissive suspicion to conditional employment when Rook returns with a precise observation instead of disappearing again.",
+      "narrativePurpose": "Introduce Rook through a consequential arrival at Northbar: reveal Orin's absence, show Della taking the manifest carbon, make Rook choose the Junction over an available eastbound exit, then teach through gameplay that observing a route is more valuable than rushing to a marker.",
+      "characterChange": "Rook turns a paid pickup into a chosen search while escape remains available; Mack and Rook move from failed transaction to guarded cooperation, then to conditional trust when Rook returns with a precise observation.",
       "prerequisites": { "missionIds": [], "worldStateFacts": [] },
       "initialWorldStateFacts": [
         "orin-status=missing",
         "mack-trust=guarded",
-        "pager-code-compromised=true"
+        "pager-code-compromised=true",
+        "rook-accepted-orin-search=false",
+        "marrow-has-rook-arrival-time=false",
+        "rook-arrived-in-ashfall=false"
       ],
       "startTrigger": {
         "kind": "trigger-volume-enter",
-        "id": "trigger.intersection-center",
-        "locationId": "mission.intersection-center"
+        "id": "trigger.northbar-coach-arrival",
+        "locationId": "northbar-coach-depot"
       },
       "objectives": [
         {
-          "id": "ash-001-enter-junction",
-          "summary": "Enter Ashfall Junction and let the district/location state resolve.",
+          "id": "ash-001-arrive-northbar",
+          "summary": "Arrive at Northbar and let the required story prelude take control.",
           "feasibleMapping": {
             "kind": "trigger",
-            "referenceId": "trigger.intersection-center",
-            "status": "implemented-definition"
+            "referenceId": "trigger.northbar-coach-arrival",
+            "status": "unimplemented-world-and-mission-extension"
           }
         },
         {
-          "id": "ash-001-talk-to-mack",
-          "summary": "Speak with Mack and complete his existing introduction.",
+          "id": "ash-001-choose-junction",
+          "summary": "Learn that Orin is missing and choose Mack's ride to the Junction.",
           "feasibleMapping": {
-            "kind": "conversation-completion-event",
-            "referenceId": "conversation.mack-introduction.completed",
-            "status": "implemented-development-fixture"
+            "kind": "cinematic-story-event",
+            "referenceId": "story.ash-001.rook-chooses-junction",
+            "status": "unimplemented-cinematic-and-mission-extension"
+          }
+        },
+        {
+          "id": "ash-001-enter-junction",
+          "summary": "Complete the Northbar-to-Junction transition at the authoritative north spawn.",
+          "feasibleMapping": {
+            "kind": "transition-completion-event",
+            "referenceId": "transition.ash-001.northbar-to-junction.completed",
+            "status": "unimplemented-cross-level-transition"
           }
         },
         {
@@ -675,19 +716,24 @@
         { "kind": "map", "referenceId": "landmark.south-approach" }
       ],
       "dialogueIds": [
-        "conversation.mack.introduction",
+        "dialogue.ash-001.northbar-arrival",
         "dialogue.ash-001.signal-clue",
         "dialogue.ash-001.report"
       ],
       "cinematicIds": [
-        "cinematic.ash-001.opening",
+        "cinematic.ash-001.northbar-arrival",
         "cinematic.ash-001.mack-return"
       ],
       "gameplayEvents": [
         {
-          "id": "conversation.mack-introduction.completed",
-          "system": "conversation",
-          "status": "implemented"
+          "id": "story.ash-001.rook-chooses-junction",
+          "system": "cinematic-to-mission-event-adapter",
+          "status": "unimplemented"
+        },
+        {
+          "id": "transition.ash-001.northbar-to-junction.completed",
+          "system": "level-transition-and-mission",
+          "status": "unimplemented"
         },
         {
           "id": "mission.objective-completed",
@@ -709,54 +755,66 @@
         {
           "id": "mission-001",
           "status": "roadmap",
-          "reason": "Must own prerequisites, objective state, trigger consumption, highlights, persistence-ready snapshots, retry, cancel, and disposal."
+          "reason": "The implemented foundation must be extended to own the required prelude, cinematic/transition result events, once-only mid-mission fact commits, destination objective state, retry, cancel, and disposal."
         },
         {
           "id": "core-001",
-          "status": "roadmap",
-          "reason": "Must boot directly through the existing casual selection state without deleting the registry."
+          "status": "implemented",
+          "reason": "Boot already selects casual through the existing character-selection authority; the opening must preserve that identity and registry."
         },
         {
           "id": "npc-production-roster",
           "status": "roadmap",
-          "reason": "Mack currently exists only behind npcFixtures=1; story startup must not depend on a development URL flag."
+          "reason": "Mack requires production promotion and verified acting beyond idle/clapping; Della requires an approved production entity/model and cinematic performance mappings."
         },
         {
-          "id": "cinematic-001",
+          "id": "cinematic-002",
           "status": "roadmap",
-          "reason": "Opening and return shot requests remain optional until exact restoration and skip confirmation exist."
+          "reason": "Extend the implemented sequence lifecycle with performance intents, participant-relative coverage, subtitle cue arrays, and destination-aware cross-level restoration from the tracked Northbar brief."
+        },
+        {
+          "id": "world-northbar",
+          "status": "roadmap",
+          "reason": "Build a production Northbar level, collision, marks, camera anchors, vehicle paths, licensed props, and truthful transition readiness; it cannot be represented inside Junction geometry."
+        },
+        {
+          "id": "vehicle-001",
+          "status": "implemented",
+          "reason": "The vehicle foundation supplies ownership concepts and a production pickup, but cinematic passenger entry, NPC driving, doors, seating, and authored transition choreography remain asset/performance blockers."
         }
       ],
       "failure": {
         "conditions": [
           "Player health depletes after combat-capable story pressure exists",
-          "Required Mack entity unloads",
-          "Mission-owned interaction is cancelled by level unload"
+          "A required Northbar participant, performance, prop, vehicle, or level dependency becomes unavailable",
+          "The Northbar-to-Junction load fails or destination readiness cannot be proven",
+          "A mission-owned interaction is cancelled by an unexpected level unload"
         ],
-        "retry": "Restore the mission-start snapshot at the Junction, preserve pre-mission money/equipment, reset objective-local watcher state, and replay no completed reward.",
-        "cancel": "Allowed before the first Mack conversation completes; remove mission highlights/interactions and leave all persistent facts unchanged.",
-        "skip": "A cinematic skip completes only the cinematic request. It never completes Talk, observation, report, or mission objectives."
+        "retry": "Before the level boundary, restore the exact Northbar mission/cinematic snapshot. After the boundary, finish or retry the authoritative Junction readiness path. Preserve pre-mission money/equipment, never duplicate arrival facts, reset objective-local watcher state, and replay no completed reward.",
+        "cancel": "Allowed only before the required opening request acquires control. After Rook's choice commits, cancellation is disabled; pause and confirmed cinematic skip remain separate paths.",
+        "skip": "Confirmed skip waits for the same Junction readiness and commits only the arrival/transition facts and objectives. It never completes Signal Corner, the south-road observation, Mack's report, the reward, or later mission objectives."
       },
       "rewards": {
         "moneyDelta": 75,
         "equipmentChanges": [],
         "factChanges": [
-          "rook-arrived-in-ashfall=true",
           "junction-surveillance-checked=true",
           "mack-trust=conditional"
         ]
       },
       "persistentFacts": [
         "rook-arrived-in-ashfall",
+        "rook-accepted-orin-search",
+        "marrow-has-rook-arrival-time",
         "junction-surveillance-checked",
         "mack-trust"
       ],
-      "postMissionAvailability": "Unlock Nox's check-in and the second mission premise after Mack's report conversation completes.",
+      "postMissionAvailability": "Unlock Nox's check-in and the second mission premise after Northbar has established the new risk and Mack's Junction report conversation completes.",
       "followUpHooks": [
         "A copied towing number is tucked behind the signal cabinet service card.",
         "The circling vehicle model is presentation-only until missions can identify a catalog vehicle by stable traffic ID."
       ],
-      "sceneChange": "Changes an objective, Mack's relationship state, Rook's risk of surveillance, and three persistent world-state facts."
+      "sceneChange": "Rook gives up an available exit, accepts the Orin search, exposes an arrival-time trail to Marrow, reaches the playable Junction, changes Mack's relationship state through gameplay, and commits five persistent world-state facts across the prelude and mission reward."
     },
     {
       "id": "ash-002-carbon-copy",
@@ -1554,35 +1612,35 @@
     "Decide whether the player can accept Della's ash-002 offer as a temporary branch. The canonical spine assumes Rook ultimately gives Nox the clean copy; a branch must reconverge without duplicating canon or rewards.",
     "Decide whether Vera remains in office after the final hearing. Her survival is preferred because institutional pressure should not collapse into defeating one villain.",
     "Choose the exact Atlantic-region voice references only after casting and cultural review; written voice patterns must not be converted into phonetic accents.",
-    "Decide which future district enters WORLD-001. If it is not Cinder Quay, ash-003 and later premises remain blocked rather than being relocated into implausible Junction space.",
+    "Choose which later world milestone builds Cinder Quay. WORLD-001 expanded the Junction eastward but did not implement the canonical quay, so ash-003 and later premises remain blocked rather than being relocated into implausible Junction space.",
     "Set final mission reward amounts during economy balancing. Current values are conservative whole-unit story proposals and must use PlayerMoneyAccount rather than a second balance."
   ],
   "blockedDependencies": [
-    "MISSION-001 authoritative mission/objective/highlight/event/persistence-ready system is required before any premise becomes runtime data.",
-    "CORE-001 must select casual through existing character selection while preserving the registry and debug switching.",
+    "MISSION-001 provides the authoritative mission/objective/highlight/event/persistence-ready foundation; CINEMATIC-002 requires a bounded extension for the required prelude, cross-level results, mid-mission facts, and destination objective state.",
+    "CORE-001 selects casual through existing character selection while preserving the registry and debug switching; Northbar must reuse that authority.",
     "Mack, Nox, and Raze need explicit production roster promotion; their current identities are authoritative but their startup presence is development-only.",
-    "WORLD-001/PERF-001 or later authored sectors are required for Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps. No current map fact supports those locations.",
-    "NPC-001 and later NPC scheduling/awareness work are required for Orin, Vera, Della, quay workers, residents, and timed routes. Static fixture behavior is insufficient.",
-    "VEHICLE-001 is required before any mission objective asks Rook to enter or drive. These six premises deliberately avoid making driving completion-critical until that contract exists.",
-    "CINEMATIC-001 is required for shot requests, subtitle staging, skip confirmation, and exact restoration. Cinematic IDs here are references, not executable definitions.",
-    "MAP-001 is required for full-world route display; current minimap highlights can only reference existing level map facts.",
+    "WORLD-001/PERF-001 provide Junction expansion and streaming foundations, but Northbar, Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps still require their own authored production levels/sectors and map/readiness facts.",
+    "NPC-001 provides a licensed ambient presentation library, but production identity, performance mappings, scheduling/awareness, and authored placement are still required for Orin, Vera, Della, quay workers, residents, and timed routes. Static fixture behavior is insufficient.",
+    "VEHICLE-001 provides an enter-drive-exit ownership foundation, but the Northbar opening requires separate verified passenger entry/exit, NPC driving, door/seat choreography, and cross-level vehicle presentation.",
+    "CINEMATIC-001 provides camera requests, subtitle staging, skip confirmation, pause, and exact captured-state cleanup; CINEMATIC-002 requires performance intents, purposeful relative coverage, and authoritative destination restoration.",
+    "MAP-001 provides full-world route display for implemented level data; future locations remain unavailable until their own map/readiness facts exist.",
     "Dialogue choice UI, scheduled world-state, and persistence are not current runtime capabilities; missions must use linear interaction alternatives or add roadmap-approved systems.",
-    "Audio and voice-over remain locked. Cassette and radio information must work through subtitles/text metadata until rights, budget, credentials, and an approved audio brief exist."
+    "AUDIO-001 provides licensed local theme/radio playback, but character voice-over remains prohibited. Every story clue and performance must work through visible action and subtitles."
   ],
   "productionNeeds": [
     "Original-project-owned or CC0/public-domain production NPC models and reviewed portraits for Orin Bell, Vera Sorn, Della Voss, workers, residents, and clerks, with full source/license/hash/scale/axis/animation provenance.",
     "Reviewed production promotion and placement for existing Mack, Nox, and Raze CC0 models; no duplication of their entity, speaker, character, spawn, portrait, or conversation authority.",
-    "Authored streamed world sectors, collision, triggers, landmarks, mission locations, map references, and cinematic anchors for Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps.",
+    "Authored Northbar opening level plus later streamed world sectors, collision, triggers, landmarks, mission locations, map/readiness references, staging marks, vehicle paths, and cinematic anchors for Northbar, Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps.",
     "Original environmental props for paper records, carbon sheets, pay phones, cassette decks, manifests, filing shelves, garage details, and quay work areas. Placeholder geometry cannot satisfy production acceptance.",
     "Mission system, persistence-ready facts, objective/event mapping, mission interactions, world/map highlights, deterministic retry/cancel, and debug inspection from MISSION-001.",
-    "NPC production roster, deterministic schedules, and explicit trigger-based pressure. Do not imply navigation or awareness until those systems are implemented and tested.",
-    "Cinematic sequence and dialogue presentation using stable IDs, existing game-state/camera ownership, subtitle-safe text, skip confirmation, and exact gameplay restoration.",
+    "NPC production roster and performance owner with verified logical-intent mappings, deterministic schedules where needed, and explicit trigger-based pressure. Clapping cannot substitute for conversation, listening, tension, or held acting, and navigation/awareness must not be implied before implementation.",
+    "Cinematic sequence and dialogue presentation using stable IDs, existing game-state/camera ownership, subtitle-safe cue arrays, skip confirmation, exact captured-state cleanup, and destination-aware cross-level restoration.",
     "Accessibility and localization pass for subtitle length, reading speed, speaker labels, contrast, reduced motion, and non-audio delivery of every required clue.",
     "No visual or audio asset is acquired or generated by STORY-001. Future accepted assets must be CC0-1.0, public-domain, or original-project-owned with complete provenance."
   ],
   "nextSlices": {
-    "mission001": "Implement only ash-001-walk-the-block as the first production mission skeleton: bind trigger.intersection-center, the existing Mack conversation completion event, interaction.signal-controller, landmark.south-approach, Mack return, three persistent facts, deterministic retry/cancel, and 75-unit PlayerMoneyAccount reward. Promote Mack through a production roster without changing his IDs. Keep both cinematics optional requests and do not implement later districts.",
-    "cinematic001": "Stage only cinematic.ash-001.opening after MISSION-001 exists: a brief subtitle-led arrival at the north approach that establishes Rook's lateness, the watched Junction, and Mack's position. Request shots through authored anchors (add narrowly scoped anchors only if needed), use speaker IDs rook and mack, support skip confirmation, and restore the exact game state, movement, interaction, camera, HUD, and input ownership. Do not add voice-over."
+    "mission001": "Extend only ash-001-walk-the-block for the approved Northbar prelude: start from trigger.northbar-coach-arrival, require cinematic.ash-001.northbar-arrival, consume the story choice and destination-transition events, commit arrival facts once, then hand off at spawn.player-default with ash-001-check-signal-corner active. Preserve the 75-unit reward, Junction observation/report objectives, stable Mack/Rook IDs, deterministic retry/cancel, and later mission continuity.",
+    "cinematic001": "Implement the tracked docs/cinematics/cinematic-002-northbar-arrival.md plan as the production replacement for cinematic.ash-001.opening: build nine purposeful shots at Northbar, map verified non-clapping performance intents, transport Rook in Mack's wagon through a truthful loading boundary, and converge normal/skip on the exact authoritative Junction spawn/mission state. Preserve CINEMATIC-001 camera, input, subtitle, pause, skip-confirmation, cleanup, and no-voice-over contracts."
   },
   "provenanceAndOriginality": [
     "The setting, names, factions, characters, plot, mission premises, dialogue intentions, and Cinder Ledger concept are original Vanta City material written for this repository.",
