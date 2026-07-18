@@ -34,3 +34,13 @@ The initial benchmark was collected at moderate system load. A later unrelated P
 ## Remaining costs
 
 Three.js and game-system imports remain real costs even in the Node project. Splitting every subsystem into another Vitest project or adding a custom runner would add configuration and startup overhead for marginal benefit at this suite size. The browser-bound tests remain in jsdom because they own UI, input, accessibility, or browser-global behavior; their coverage must not be moved to Playwright solely to improve unit timing.
+
+## TEST-001 July 18 follow-up
+
+On the same Apple M5 / 10-logical-CPU / 16-GiB host, now running Node 26.5.0, pnpm 11.9.0, and Vitest 4.1.10, three untouched `pnpm test:profile` runs reported 2.81, 2.23, and 2.33 seconds wall (2.33-second median) for 68 files / 339 tests. External command wall was 3.39, 2.42, and 2.52 seconds. The suite remains comfortably below the ten-second budget without changing worker count, isolation, assertions, or project ownership.
+
+The recurring slow execution owner was deterministic story-bible validation/rendering at 166–203 ms. Equipment asset behavior followed at 112–117 ms per file. Neither represents duplicated runner setup, and both retain distinct regression ownership. No unit tests moved to the browser lane.
+
+After the sustained browser profiling sequence, three post-change profiles completed in 5.76, 5.60, and 5.78 seconds of profiler wall time (6.25, 6.16, and 6.19 seconds external command wall). Those samples are not a matched speed comparison with the fresh baseline—the unit runner and test bodies did not change—but they demonstrate that the complete suite remains below ten seconds under heavier host load.
+
+In the same loaded final gate, `pnpm typecheck` took 6.09 seconds, `pnpm build:bundle` took 1.52 seconds, and the standalone checked `pnpm build` took 5.95 seconds. An integration sequence that already typechecked therefore uses 7.61 seconds for typecheck plus bundling instead of 12.04 seconds for typecheck plus a second checked build, avoiding 4.43 seconds of demonstrated duplicate compilation while leaving the standalone CI-safe command unchanged.

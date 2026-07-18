@@ -90,13 +90,14 @@ pnpm typecheck
 pnpm test
 pnpm test:profile # advisory slow-file/test report; not a CI timing gate
 pnpm validate:characters
-pnpm build
+pnpm build:bundle # typecheck already passed above; pnpm build remains the standalone checked build
 pnpm size
 pnpm test:e2e:install # first time only
 pnpm test:e2e:smoke
-pnpm test:e2e:feature
-pnpm test:e2e:visual
-pnpm test:e2e:full
+pnpm test:e2e:feature e2e/<changed-owner>.spec.ts
+pnpm test:e2e:visual # only when rendering/layout/camera composition changed
+pnpm test:e2e:performance # dedicated performance milestone gate
+pnpm test:e2e:full # final integration/release gate only
 ```
 
 Use `pnpm preview` for a final manual check of the production build when relevant.

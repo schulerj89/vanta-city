@@ -219,13 +219,21 @@
       "Run screenshot-heavy labs only for changed visual systems.",
       "Profile before increasing Playwright workers and preserve WebGL isolation."
     ],
+    "lanes": {
+      "unit": "pnpm test runs deterministic state and DOM tests without launching a browser.",
+      "smoke": "pnpm test:e2e:smoke runs the smallest tagged cross-system readiness paths.",
+      "changedFeature": "pnpm test:e2e:feature requires an explicit spec or grep owned by the changed behavior.",
+      "visual": "pnpm test:e2e:visual runs screenshot-heavy visual and composition owners only when rendering changes.",
+      "performance": "pnpm test:e2e:performance runs streaming, memory, and timed frame-pacing evidence in dedicated performance mode.",
+      "release": "pnpm test:e2e:full retains every browser owner and is reserved for final integration or release milestones."
+    },
     "integration": [
       "format:check",
       "lint",
       "typecheck",
       "unit",
       "relevant-asset-validation",
-      "production-build",
+      "build:bundle",
       "bundle-size",
       "changed-feature-browser-tests",
       "smoke"

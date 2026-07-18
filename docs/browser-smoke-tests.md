@@ -10,12 +10,13 @@ pnpm test:e2e:install
 pnpm test:e2e:smoke
 ```
 
-The browser suite has four local lanes. They partition by intent without deleting or weakening the full suite:
+The browser suite has five local lanes. They partition by intent without deleting or weakening the full suite:
 
-- `pnpm test:e2e:smoke` runs four tagged checks: playable readiness, keyboard-only picker confirmation, deterministic interaction selection, and asset-failure fallback. Use it for the fastest cross-system signal.
-- `pnpm test:e2e:feature` runs the untagged feature/integration checks. Together, the disjoint smoke, feature, and visual lanes cover the full suite without running tagged smoke checks again in the feature lane.
-- `pnpm test:e2e:visual` runs the camera-composition and character-animation visual tests, including all committed screenshot oracles.
-- `pnpm test:e2e:full` (and the compatibility alias `pnpm test:e2e`) runs all tests. This is the required pre-merge browser lane.
+- `pnpm test:e2e:smoke` runs the tagged cross-system readiness checks. Use it for the fastest broad signal after the unit suite.
+- `pnpm test:e2e:feature e2e/<changed-owner>.spec.ts` requires an explicit spec or `--grep` selection and runs it with one worker. The caller owns selecting every browser spec affected by the patch; the command refuses an accidental all-suite run.
+- `pnpm test:e2e:visual` runs screenshot-heavy visual/composition owners. Run it only when rendering, layout, camera composition, animation presentation, or a committed visual oracle changes.
+- `pnpm test:e2e:performance` runs the sector streaming/leak test and the opt-in 20-second warmup/60-second performance capture with `VANTA_PERF=1`. It is a dedicated performance milestone gate, not ordinary changed-feature validation.
+- `pnpm test:e2e:full` (and the compatibility alias `pnpm test:e2e`) retains every behavioral, smoke, visual, and performance-file owner. The timed capture remains skipped unless performance mode is enabled. Reserve this lane for final integration or a release milestone.
 
 Run `pnpm test:e2e:debug` for Playwright Inspector. Failure traces, screenshots, video, page errors, and the HTML report are written beneath `test-results/` and `playwright-report/`. Open the report with `pnpm exec playwright show-report`.
 
@@ -23,7 +24,7 @@ Use `pnpm test:e2e:profile` for a one-worker JSON profile and `pnpm test:e2e:pro
 
 Run `pnpm exec playwright test e2e/district-location-hud.spec.ts` for Ashfall Junction alone. It attaches all four approaches, Signal Corner and its coordinate HUD, an overhead collision/spawn/trigger view, and a narrow health/location HUD layout. Its grounding, resolver, signal-interaction, default-NPC-absence, camera-recovery, pause/help, and responsive-layout checks use public snapshot polling rather than fixed delays.
 
-The suite starts Vite on `127.0.0.1:4174`. It deliberately defaults to one Chromium worker. A two-worker profile was faster in one historical full run (269 seconds versus a 339-second one-worker median) but timed out a screenshot-heavy interaction test on repeat (324 seconds), while increasing individual SwiftShader test duration. Two workers therefore remain an opt-in measurement, not a stability gate.
+The suite starts Vite on `127.0.0.1:4174`. It deliberately defaults to one Chromium worker. A July 18 TEST-001 profile on the reference Apple M5 passed the 69-test suite at one worker in 366.87 seconds. The identical SwiftShader suite at two workers took 313.18 seconds but failed four timing-sensitive equipment-action owners and increased many individual durations. Two workers therefore remain an opt-in diagnostic measurement, not a validation gate.
 
 Readiness and positive progress use bridge snapshots or DOM assertions: bridge availability, rendered state, movement distance, camera transition, interaction selection, animation state, and heading changes. Bounded waits remain only when elapsed time is the behavior under test (paused/input/depleted-state immobility, release suppression, or a deliberately timed visual capture). Trace, screenshot, and video retention on failure remain enabled; those artifacts cost some passing-run setup time but are important for diagnosing software-WebGL failures.
 
@@ -40,6 +41,30 @@ On the Apple M5 benchmark host, the clean one-worker baseline passed 47/47 in 25
 A three-repeat one-worker smoke profile passed 12/12 attempts in 52.16 seconds. A two-worker smoke stress profile also passed 12/12 attempts but took 106.85 seconds under simultaneous SwiftShader load from other worktrees. An earlier contended full-suite sample was discarded after GPU starvation inflated wall time to 493.08 seconds and caused a sparring readiness failure; that owner passed on focused rerun. This is why full-suite comparisons require an otherwise idle software-rendering host and why two workers remain opt-in.
 
 Chromium launches with ANGLE SwiftShader (`--use-angle=swiftshader`, `--use-gl=angle`) and `LIBGL_ALWAYS_SOFTWARE=1`, matching CI's software-rendered WebGL configuration. Tests use the generated placeholder character and a deliberately unknown logical asset ID, so no external network asset is required.
+
+## TEST-001 follow-up profile
+
+The July 18, 2026 profile used macOS 26.5.2, Apple M5 (10 logical CPUs), 16 GiB RAM, Node 26.5.0, pnpm 11.9.0, Playwright 1.61.1, and the default SwiftShader launch configuration. The suite had grown to 69 tests in 24 files.
+
+Three unit profile repetitions completed in 2.81, 2.23, and 2.33 seconds of profiler wall time (2.33-second median), with all 68 files / 339 tests retained. `storyBible.test.ts` was the recurring slow execution owner at 166–203 ms; startup/import/environment work remained the larger aggregate cost, but the unit suite was already well below its ten-second budget.
+
+The clean one-worker full browser baseline passed 68 tests with the dedicated performance capture intentionally skipped in 366.87 seconds. Its slowest owners were the full two-character equipment/action flow (22.29 seconds), four-direction rolls (18.88 seconds), conversation-camera restoration (17.86 seconds), keyboard/actions/help (15.10 seconds), and exact interaction range edges (13.31 seconds). These are distinct behavioral owners, not duplicate checks, and remain in the full suite.
+
+The former `test:e2e:feature` selected every non-smoke/non-visual test. Under sustained back-to-back software-rendered runs it selected 47 unrelated tests, took 593.37 seconds, and timed out four equipment-action owners. It was therefore a broad release partition rather than changed-feature validation. TEST-001 replaces that catch-all contract with mandatory explicit spec/grep selection; no test, assertion, reload, browser context, trace, video, screenshot, or failure artifact was removed.
+
+After the split, three independent changed-feature runs selecting `player-money.spec.ts` passed in 12.43, 11.97, and 11.91 seconds of external command wall time. A three-repeat smoke stress run passed all 15 attempts in 52.75 seconds. The dedicated performance command passed both sector/leak and full timed-capture owners in 165.12 seconds. All three lanes remain below three minutes on the reference host, but performance stays separate because its fixed-duration measurements would consume nearly the entire ordinary feedback budget.
+
+The fixed-wait audit still finds eight calls totaling 2.46 seconds. They continue to own elapsed behavior—input suppression, paused/dialogue/depleted immobility, held gamepad edge suppression, post-release fire suppression, and a deliberate mid-roll capture—so none were converted into readiness polling merely to improve the timing report. Positive readiness and progress continue to use DOM state or the public browser snapshot.
+
+Use these tiers during development and integration:
+
+1. `pnpm test` for deterministic state/DOM behavior.
+2. `pnpm test:e2e:smoke` for the compact cross-system path.
+3. `pnpm test:e2e:feature e2e/<changed-owner>.spec.ts` (plus every overlapping owner) for changed behavior; keep the combined selection below three minutes.
+4. `pnpm test:e2e:visual` only for changed visual contracts and `pnpm test:e2e:performance` only for performance milestones.
+5. `pnpm test:e2e:full` once at final integration/release, on an otherwise idle software-rendering host.
+
+After `pnpm typecheck` succeeds without source changes, use `pnpm build:bundle` for production bundling. The standalone `pnpm build` deliberately retains `tsc -b && vite build` for CI and callers that have not already typechecked.
 
 ## Development-only bridge
 
