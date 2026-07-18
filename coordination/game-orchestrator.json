@@ -141,6 +141,59 @@
   "assetPolicy": {
     "runtimeNetworkLoading": false,
     "acceptedLicenses": ["CC0-1.0", "public-domain", "original-project-owned"],
+    "secretPolicy": {
+      "credentialFile": "/Users/jschuler/Projects/vanta-city/.env",
+      "worktreeAccess": "Approved provider workers may read required values from the absolute credential file because ignored files are not copied into Git worktrees.",
+      "prohibitions": [
+        "Do not copy the credential file or its values into a worktree.",
+        "Do not print, log, serialize, stage, commit, screenshot, or include secret values in prompts, reports, URLs, or test artifacts.",
+        "Do not expose provider keys to browser bundles, runtime network requests, client storage, debug snapshots, or error messages."
+      ]
+    },
+    "generationProviders": {
+      "openaiImages": {
+        "status": "ready",
+        "model": "gpt-image-2",
+        "apiKeyEnvironmentVariable": "OPENAI_API_KEY",
+        "maxCandidatesPerWorkerIteration": 4,
+        "maxAcceptedAssetsPerWorkerIteration": 2,
+        "lastAccessCheck": {
+          "date": "2026-07-17",
+          "result": "gpt-image-2-model-access-http-200"
+        },
+        "allowedUses": ["title-art", "loading-art", "original-textures"],
+        "requirements": [
+          "Use only official OpenAI API endpoints from server-side or development scripts.",
+          "Never print, persist, transmit elsewhere, expose to browser code, or commit the API key.",
+          "Store accepted images locally with prompt, model, request metadata, generation date, hash, and asset purpose.",
+          "Inspect every candidate for originality, visual fit, text artifacts, protected characters, brands, and unintended franchise resemblance before acceptance."
+        ]
+      },
+      "elevenLabsAudio": {
+        "status": "ready-theme-and-pipeline-radio-voice-blocked",
+        "apiKeyEnvironmentVariable": "ELEVENLABS_API_KEY",
+        "radioVoiceIdEnvironmentVariable": "ELEVENLABS_RADIOGUY_VOICE_ID",
+        "musicModel": "music_v2",
+        "ttsModel": "eleven_v3",
+        "maxMusicCandidatesPerWorkerIteration": 2,
+        "maxTtsCandidatesPerWorkerIteration": 3,
+        "maxTtsCharactersPerWorkerIteration": 1500,
+        "apiAccessValidated": true,
+        "radioVoiceAccessValidated": false,
+        "lastAccessCheck": {
+          "date": "2026-07-17",
+          "apiResult": "voices-list-http-200",
+          "radioVoiceResult": "voice-not-found-http-400"
+        },
+        "requirements": [
+          "Use only official ElevenLabs API endpoints from development scripts; runtime playback uses accepted local audio files.",
+          "Never print, persist, transmit elsewhere, expose to browser code, or commit either environment value.",
+          "Record character-cost, request ID, model, output format, prompt or script, generation date, hash, and asset purpose for accepted files.",
+          "Generate no character dialogue voice-over. The configured voice is reserved for the in-world car radio host.",
+          "Do not issue radio-host TTS requests until the configured voice returns successfully from the authenticated voice metadata endpoint."
+        ]
+      }
+    },
     "requirements": [
       "Verify the source page and license before downloading.",
       "Store reviewed runtime assets locally with source URL, author, license, retrieval date, hash, scale, forward axis, animation list, and modification notes.",
@@ -165,8 +218,8 @@
     "cinematicPresentation": "Cinematics use the camera system, subtitle dialogue, skip confirmation, exact gameplay restoration, and no voice-over requirement.",
     "vehiclePresentation": "Vehicles use one enter-drive-exit ownership flow with game-state, camera, collision, traffic, and input integration inspired by genre conventions but implemented originally.",
     "fullMapPresentation": "A dedicated map action opens a full-world sector map without replacing the existing minimap.",
-    "titleAndLoadingPresentation": "Create an original 1990s Ashfall title screen and locally stored rotating loading artwork that reflects completed story locations and characters.",
-    "audioPresentation": "Reserve ElevenLabs for an original theme/radio pipeline. Do not generate voice-over dialogue yet and do not call the API until credentials, rights, budget, radio voice ID, and an approved brief are available."
+    "titleAndLoadingPresentation": "Create an original 1990s Ashfall title screen and locally stored rotating loading artwork that reflects completed story locations and characters. GPT Image 2 generation is authorized within assetPolicy request limits.",
+    "audioPresentation": "Use ElevenLabs for an original instrumental theme and radio pipeline within assetPolicy request limits. Reserve the configured voice for the car radio host, generate no character dialogue voice-over, and require voice-access validation before radio-host TTS."
   },
   "testStrategy": {
     "goals": [
@@ -335,6 +388,7 @@
       "owner": "visual-worker",
       "acceptance": [
         "Create an original Ashfall title screen, typography system, and locally stored loading artwork based on shipped characters and locations.",
+        "Use the configured OpenAI API only through bounded development-time GPT Image 2 generation; store accepted art locally with complete prompt/model/hash provenance and never expose the key to browser runtime.",
         "Loading transitions reflect real sector or asset readiness and do not conceal hangs.",
         "No GTA artwork, logo composition, names, or music is copied."
       ]
@@ -342,17 +396,20 @@
     {
       "id": "AUDIO-001",
       "title": "Create the theme and radio audio pipeline",
-      "status": "blocked-user-input",
+      "status": "ready",
       "dependencies": ["STORY-001"],
       "owner": "audio-worker",
-      "blockedOn": [
-        "ElevenLabs API credential availability",
-        "approved spending limit",
-        "radio host voice ID and usage rights",
-        "theme and station brief"
+      "availableEnvironmentVariables": [
+        "ELEVENLABS_API_KEY",
+        "ELEVENLABS_RADIOGUY_VOICE_ID"
+      ],
+      "knownBlockers": [
+        "The configured radio voice ID is well formed but is not currently accessible to the configured ElevenLabs account; authenticated voice lookup returns voice_not_found.",
+        "Radio-host TTS remains blocked until the voice is added to the account library or ELEVENLABS_RADIOGUY_VOICE_ID is replaced with an accessible voice."
       ],
       "acceptance": [
-        "Generate or acquire only original project-owned audio with recorded provenance and API parameters.",
+        "Implement the local audio catalog/playback pipeline and generate at most two original instrumental theme candidates through the official ElevenLabs Music API with recorded provenance and API parameters.",
+        "Validate the configured radio voice through the authenticated metadata endpoint before generating up to three bounded radio-host TTS candidates; block only the radio-host generation subtask if access still fails.",
         "Implement local runtime playback, streaming/disposal rules, volume/accessibility controls, and radio interruption behavior.",
         "Do not generate character dialogue voice-over in this milestone."
       ]

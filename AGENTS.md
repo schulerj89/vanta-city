@@ -51,7 +51,9 @@ These rules apply to the entire repository.
 - A map-expansion milestone grows measured playable area by 20–30% (target 25%). Unrelated feature iterations must not inflate the map merely to satisfy the percentage.
 - Treat 900 MB as a tested hard memory ceiling, not a utilization goal. Performance, disposal, and leak checks block integration when budgets regress.
 - New gameplay acceptance must use production-intended, locally stored assets with verified provenance. Synthetic placeholders remain limited to explicit failure-path tests.
-- Do not call paid audio services or transmit credentials from an unattended run. Audio work remains blocked until credentials, rights, budget, voice ID, and a concrete brief are available.
+- Development-time OpenAI image and ElevenLabs audio generation is authorized only within the provider/request limits in `coordination/game-orchestrator.json`. Read credentials from the ignored `.env`, never print or stage them, use official provider endpoints, keep accepted assets local with provenance, and never expose secrets to browser runtime.
+- Provider workers in Git worktrees must read approved values from `/Users/jschuler/Projects/vanta-city/.env` by absolute path because ignored files are not copied to worktrees. Never copy the file or values into a worktree or task prompt.
+- Radio-host TTS remains blocked until `ELEVENLABS_RADIOGUY_VOICE_ID` is accessible to the configured account. ElevenLabs theme generation and audio-pipeline implementation may proceed; character dialogue voice-over remains prohibited.
 
 ## Efficient validation
 
