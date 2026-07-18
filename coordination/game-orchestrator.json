@@ -15,8 +15,12 @@
       "reasoningEffort": "xhigh",
       "intervalMinutes": 60,
       "minuteOfHour": 5,
-      "maxActiveWorkers": 3,
-      "maxNewWorkersPerRun": 2,
+      "targetActiveWorkers": {
+        "minimum": 4,
+        "maximum": 5
+      },
+      "maxActiveWorkers": 5,
+      "maxNewWorkersPerRun": 5,
       "workerModel": "gpt-5.6-sol",
       "workerReasoningEffort": "medium",
       "implementationPolicy": "The orchestrator plans, reviews dependencies, and dispatches bounded work. Implementation, asset acquisition, editing, and QA belong to medium-effort workers in dedicated worktrees."
@@ -29,6 +33,15 @@
       "mergeOnlyCleanCommittedWorkers": true,
       "pushTarget": "origin/main",
       "fullE2EEachHour": false
+    },
+    "worktreeCleaner": {
+      "model": "gpt-5.6-sol",
+      "reasoningEffort": "xhigh",
+      "intervalMinutes": 60,
+      "minuteOfHour": 58,
+      "removeOnlyCleanInactiveIntegratedWorktrees": true,
+      "preserveBranches": true,
+      "neverRemoveMain": true
     }
   },
   "executionPolicy": {
@@ -37,8 +50,9 @@
       "Inspect current Codex task status, Git worktrees, branches, and main before dispatching.",
       "Do not duplicate a task whose task ID appears in an active task title, branch name, worktree path, commit, or completed roadmap entry.",
       "Select only tasks whose dependencies are completed and whose status is ready.",
-      "Prefer one architecture task and one independent content or visual task per run.",
-      "Do not start more work when three workers are active or more than five worktrees are registered."
+      "Fill safe capacity toward four active workers and use a fifth only for an independent task with satisfied dependencies and no shared ownership conflict.",
+      "Balance architecture, gameplay, content, visual/assets, and test-performance work rather than assigning multiple workers to the same foundational contract.",
+      "Do not start more work when five workers are active or more than six worktrees including main are registered."
     ],
     "workerRules": [
       "Create or reuse one dedicated worker task and worktree per bounded task.",
@@ -59,6 +73,15 @@
       "Skip the complete E2E suite during hourly integration. Reserve it for explicit release milestones or a separately approved scheduled gate.",
       "Commit integration corrections separately, update task status and metrics in this file, push main, and report exactly what changed.",
       "Never delete a dirty or active worktree. Preserve worker branches when cleaning completed worktrees."
+    ],
+    "cleanupRules": [
+      "Run only after the hourly integrator's scheduled window and re-audit task state immediately before deletion.",
+      "Remove only registered worktrees below /Users/jschuler/Projects/vanta-city-worktrees whose Git status is completely clean and whose owning Codex task is inactive or completed.",
+      "Require evidence that the worker result is integrated into origin/main through ancestry, patch equivalence, or a completed roadmap entry with an integration commit before removal.",
+      "Never remove /Users/jschuler/Projects/vanta-city, a worktree used by an active process, a dirty worktree, an uncommitted branch, or a worktree with unresolved validation or integration status.",
+      "Use git worktree remove and git worktree prune; preserve worker branches.",
+      "Do not delete unregistered directories automatically. Report orphan directories, their size, age, and contents for later reviewed cleanup.",
+      "Report registered worktree count, active worker count, reclaimed bytes, remaining disk use, and every skipped path with its reason."
     ]
   },
   "performanceBudgets": {

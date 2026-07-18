@@ -24,7 +24,7 @@ These rules apply to the entire repository.
 
 - After creating, integrating, or cleaning workers, report the number of active Codex workers, registered Git worktrees, and which worktrees remain active.
 - Periodically measure physical worktree usage with `du -sh`, calling out `node_modules`, generated reports, build output, and local asset downloads separately. Codex thread history is not the main repository disk cost; duplicated worktree dependencies usually are.
-- Warn when more than five worktrees are registered, total Vanta City worktree usage exceeds roughly 2 GiB, or a completed inactive worktree exceeds roughly 500 MiB.
+- Warn when more than six worktrees are registered (main plus five workers), total Vanta City worktree usage exceeds roughly 2 GiB, or a completed inactive worktree exceeds roughly 500 MiB.
 - Recommend cleanup after a worker is integrated, but never remove an active or dirty worktree. Preserve its branch unless the user explicitly requests branch deletion.
 - Keep resource reports concise: active/idle session counts, total worktree count, total measured size, the largest consumers, and safe cleanup candidates.
 
@@ -45,6 +45,8 @@ These rules apply to the entire repository.
 - Because the saved Codex project root is `/Users/jschuler/Projects`, every scheduled prompt and worker handoff must explicitly change into `/Users/jschuler/Projects/vanta-city` or the assigned Vanta worktree and verify the Git root, branch, HEAD, and status before reading or editing.
 - The hourly integrator may review, merge, commit, update roadmap execution state, and push `main` because the user explicitly authorized that recurring workflow.
 - Stagger orchestration and integration runs. Never duplicate a roadmap task that already has an active task, worktree, branch, commit, or completed entry.
+- Maintain four active workers when four independent dependency-ready tasks exist; use a fifth only when its ownership does not overlap. Never exceed five active workers.
+- The hourly cleaner runs after integration and may remove only clean, inactive, integrated registered worktrees under the Vanta worktree root. Preserve branches and report, rather than delete, unregistered orphan directories.
 - Hourly integration skips the complete E2E suite. Run changed-feature browser tests and smoke coverage; reserve full E2E for explicit release milestones or a separately approved scheduled gate.
 - A map-expansion milestone grows measured playable area by 20–30% (target 25%). Unrelated feature iterations must not inflate the map merely to satisfy the percentage.
 - Treat 900 MB as a tested hard memory ceiling, not a utilization goal. Performance, disposal, and leak checks block integration when budgets regress.
