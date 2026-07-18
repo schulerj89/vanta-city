@@ -104,6 +104,9 @@ export interface BrowserTestSnapshot {
     readonly fire: ReturnType<
       PlayerControllerSystem['getDebugSnapshot']
     >['fire'];
+    readonly locomotion: ReturnType<
+      PlayerControllerSystem['getDebugSnapshot']
+    >['locomotion'];
   };
   readonly controls: {
     readonly bindings: typeof defaultBindings;
@@ -323,6 +326,7 @@ function createSnapshot(
       equipment: movement.equipment,
       roll: movement.roll,
       fire: movement.fire,
+      locomotion: movement.locomotion,
     },
     controls: {
       bindings: defaultBindings,

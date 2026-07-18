@@ -27,6 +27,43 @@ describe('decideMovementState', () => {
   ] as const)('chooses %s as %s', (input, expected) => {
     expect(decideMovementState(input)).toBe(expected);
   });
+
+  it('uses separate entry and exit thresholds to prevent state chatter', () => {
+    const thresholds = {
+      ...base,
+      movingStopSpeedThreshold: 0.08,
+      runStateSpeedThreshold: 4.4,
+      runStateExitSpeedThreshold: 3.8,
+    };
+    expect(
+      decideMovementState({
+        ...thresholds,
+        horizontalSpeed: 4.45,
+        previousState: 'walking',
+      }),
+    ).toBe('running');
+    expect(
+      decideMovementState({
+        ...thresholds,
+        horizontalSpeed: 4.05,
+        previousState: 'running',
+      }),
+    ).toBe('running');
+    expect(
+      decideMovementState({
+        ...thresholds,
+        horizontalSpeed: 3.75,
+        previousState: 'running',
+      }),
+    ).toBe('walking');
+    expect(
+      decideMovementState({
+        ...thresholds,
+        horizontalSpeed: 0.1,
+        previousState: 'walking',
+      }),
+    ).toBe('walking');
+  });
 });
 
 describe('PlayerMovementSimulation', () => {

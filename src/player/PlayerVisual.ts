@@ -12,6 +12,7 @@ import type {
   CharacterActionRequestState,
 } from '../characters/CharacterActions';
 import type { CharacterEquipment } from '../equipment/CharacterEquipment';
+import type { CharacterLocomotionSnapshot } from '../characters/CharacterLocomotionPolicy';
 
 export interface PlayerVisual extends GameObject {
   /** Rotates presentation without changing the simulation transform. */
@@ -26,6 +27,8 @@ export interface PlayerVisual extends GameObject {
     source?: string,
   ): boolean;
   getCharacterActionState?(): CharacterActionRequestState;
+  cancelCharacterAction?(): void;
+  getLocomotionSnapshot?(): CharacterLocomotionSnapshot;
   setDepleted?(depleted: boolean): void;
   getAlignmentReport(): CharacterAlignmentReport | undefined;
 }

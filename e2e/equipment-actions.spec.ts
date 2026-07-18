@@ -292,6 +292,121 @@ test.describe('reusable equipment and character actions', () => {
     expect((await snapshot(page)).runtimeErrors.count).toBe(0);
   });
 
+  test('keeps both firearm rigs moving and turning through repeated fire', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(60_000);
+    const failures = monitorRuntimeFailures(page);
+    await openReadyApp(page);
+
+    for (const characterId of ['casual', 'punk']) {
+      await executeCommand(page, 'player.select-character', characterId);
+      await expect
+        .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+        .toBe(characterId);
+      await page.keyboard.press('Digit1');
+
+      await page.keyboard.down('KeyW');
+      await expect
+        .poll(async () => (await snapshot(page)).player.locomotion.animation)
+        .toMatchObject({
+          movement: 'walking',
+          baseClip: 'walk',
+          stanceOverlayClip: 'gunIdle',
+          actionLayer: 'none',
+        });
+      const walkStart = await snapshot(page);
+      await page.keyboard.down('KeyU');
+      await expect
+        .poll(async () => (await snapshot(page)).player.locomotion.animation)
+        .toMatchObject({
+          baseClip: 'walk',
+          actionClip: 'gunFire',
+          actionLayer: 'upper-body',
+          transitionSequence:
+            walkStart.player.locomotion.animation!.transitionSequence,
+        });
+      await expect
+        .poll(async () =>
+          horizontalDistance(
+            (await snapshot(page)).player.position,
+            walkStart.player.position,
+          ),
+        )
+        .toBeGreaterThan(0.5);
+      await attach(page, testInfo, `${characterId}-walk-fire-layer`);
+      await page.keyboard.up('KeyU');
+      await expect
+        .poll(async () => (await snapshot(page)).player.actionBusy)
+        .toBe(false);
+      await expect
+        .poll(async () => (await snapshot(page)).player.fire.holding)
+        .toBe(false);
+      await page.keyboard.press('KeyT');
+      await expect
+        .poll(
+          async () =>
+            (await snapshot(page)).player.equipment.ammunition.handgun?.current,
+        )
+        .toBe(8);
+
+      await page.keyboard.press('KeyR');
+      await expect
+        .poll(async () => (await snapshot(page)).player.locomotion.animation)
+        .toMatchObject({ movement: 'running', baseClip: 'gunRun' });
+      const runStart = await snapshot(page);
+      await page.keyboard.down('KeyU');
+      await page.keyboard.down('KeyQ');
+      await expect
+        .poll(
+          async () => (await snapshot(page)).player.fire.acceptedShotCount,
+          { timeout: 5_000 },
+        )
+        .toBeGreaterThanOrEqual(runStart.player.fire.acceptedShotCount + 2);
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await snapshot(page)).player.facingYaw - runStart.player.facingYaw,
+          ),
+        )
+        .toBeGreaterThan(0.35);
+      await expect
+        .poll(
+          async () =>
+            (await snapshot(page)).player.locomotion.animation?.actionLayer,
+        )
+        .toBe('upper-body');
+      const turning = await snapshot(page);
+      expect(turning.player.locomotion.animation).toMatchObject({
+        movement: 'running',
+        baseClip: 'gunRun',
+        actionLayer: 'upper-body',
+        transitionSequence:
+          runStart.player.locomotion.animation!.transitionSequence,
+      });
+      expect(turning.player.grounded).toBe(true);
+      expect(
+        Math.abs(turning.character.bounds!.min.y - turning.player.position.y),
+      ).toBeLessThanOrEqual(0.2);
+      await attach(page, testInfo, `${characterId}-circular-run-fire-layer`);
+
+      await page.keyboard.up('KeyQ');
+      await page.keyboard.up('KeyU');
+      await page.keyboard.up('KeyW');
+      await page.keyboard.press('KeyR');
+      await expect
+        .poll(async () => (await snapshot(page)).player.actionBusy)
+        .toBe(false);
+      await expect
+        .poll(async () => (await snapshot(page)).character.animationState)
+        .toBe('gunIdle');
+      await page.keyboard.press('Digit1');
+    }
+
+    expect(failures).toEqual([]);
+    expect((await snapshot(page)).runtimeErrors.count).toBe(0);
+  });
+
   test('rolls both playable rigs in four locked camera-relative directions', async ({
     page,
   }) => {

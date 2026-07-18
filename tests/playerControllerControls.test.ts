@@ -38,6 +38,7 @@ class ActionVisual implements PlayerVisual {
   public readonly loadedModelRoot = new Group();
   public readonly actions: CharacterActionName[] = [];
   public depleted = false;
+  public cancellationCount = 0;
   private actionState: CharacterActionRequestState = {
     active: undefined,
     busy: false,
@@ -79,6 +80,16 @@ class ActionVisual implements PlayerVisual {
   }
   public getCharacterActionState(): CharacterActionRequestState {
     return this.actionState;
+  }
+  public cancelCharacterAction(): void {
+    if (!this.actionState.active) return;
+    this.cancellationCount += 1;
+    this.actionState = {
+      ...this.actionState,
+      active: undefined,
+      busy: false,
+      activeNormalizedTime: 0,
+    };
   }
   public complete(action: CharacterActionName): void {
     this.actionState = {
@@ -170,6 +181,20 @@ describe('PlayerControllerSystem controls', () => {
     expect(player.getDebugSnapshot().runMode).toBe(false);
   });
 
+  it('releases transient action locks on modal entry', async () => {
+    const { player, state, visual } = await harness();
+    expect(player.triggerCharacterAction('gunFire', 'unit-test')).toBe(true);
+    expect(player.getLocomotionSnapshot()).toMatchObject({
+      firearm: 'holstered',
+      actionLocked: true,
+    });
+
+    state.transition('dialogue');
+
+    expect(visual.cancellationCount).toBe(1);
+    expect(player.getLocomotionSnapshot().actionLocked).toBe(false);
+  });
+
   it('publishes each presentation completion exactly once', async () => {
     const { player, visual } = await harness();
     const completed = vi.fn();
@@ -247,6 +272,23 @@ describe('PlayerControllerSystem controls', () => {
     expect(visual.actions).toContain('roll');
     expect(player.movement.velocity.x).toBeCloseTo(0);
     expect(player.movement.velocity.z).toBeCloseTo(0);
+  });
+
+  it('rejects equipment changes while an action owns the lock', async () => {
+    const { player, visual } = await harness();
+    expect(player.toggleQuickbarSlot(1)).toBe(true);
+    expect(player.useEquippedItem('unit-test')).toBe(true);
+    expect(player.getLocomotionSnapshot()).toMatchObject({
+      equippedItem: 'handgun',
+      firearm: 'firing',
+      actionLocked: true,
+    });
+
+    expect(player.toggleQuickbarSlot(1)).toBe(false);
+    expect(player.equipment.getSnapshot().equippedId).toBe('handgun');
+    visual.complete('gunFire');
+    player.update(frame);
+    expect(player.toggleQuickbarSlot(1)).toBe(true);
   });
 
   it.each([30, 60, 120])(

@@ -16,7 +16,9 @@ export interface PlayerMovementConfig extends CharacterShape {
   readonly terminalVelocity: number;
   readonly landingDuration: number;
   readonly movingSpeedThreshold: number;
+  readonly movingStopSpeedThreshold: number;
   readonly runStateSpeedThreshold: number;
+  readonly runStateExitSpeedThreshold: number;
   /** Time constant for the critically damped simulation/action heading. */
   readonly facingSmoothTime: number;
 }
@@ -37,7 +39,9 @@ export const defaultPlayerMovementConfig: PlayerMovementConfig = {
   terminalVelocity: 30,
   landingDuration: 0.12,
   movingSpeedThreshold: 0.15,
-  runStateSpeedThreshold: 4.2,
+  movingStopSpeedThreshold: 0.08,
+  runStateSpeedThreshold: 4.4,
+  runStateExitSpeedThreshold: 3.8,
   facingSmoothTime: 0.24,
 };
 
@@ -100,7 +104,10 @@ export interface MovementStateInput {
   readonly landingTimeRemaining: number;
   readonly horizontalSpeed: number;
   readonly movingSpeedThreshold: number;
+  readonly movingStopSpeedThreshold?: number;
   readonly runStateSpeedThreshold: number;
+  readonly runStateExitSpeedThreshold?: number;
+  readonly previousState?: PlayerMovementState;
 }
 
 export function decideMovementState(
@@ -108,10 +115,16 @@ export function decideMovementState(
 ): PlayerMovementState {
   if (!input.grounded) return 'airborne';
   if (input.justLanded || input.landingTimeRemaining > 0) return 'landing';
-  if (input.horizontalSpeed < input.movingSpeedThreshold) return 'idle';
-  return input.horizontalSpeed >= input.runStateSpeedThreshold
-    ? 'running'
-    : 'walking';
+  const movingThreshold =
+    input.previousState === 'walking' || input.previousState === 'running'
+      ? (input.movingStopSpeedThreshold ?? input.movingSpeedThreshold)
+      : input.movingSpeedThreshold;
+  if (input.horizontalSpeed < movingThreshold) return 'idle';
+  const runThreshold =
+    input.previousState === 'running'
+      ? (input.runStateExitSpeedThreshold ?? input.runStateSpeedThreshold)
+      : input.runStateSpeedThreshold;
+  return input.horizontalSpeed >= runThreshold ? 'running' : 'walking';
 }
 
 export class PlayerMovementSimulation {
@@ -224,7 +237,10 @@ export class PlayerMovementSimulation {
       landingTimeRemaining: this.landingTimeRemaining,
       horizontalSpeed: Math.hypot(this.velocity.x, this.velocity.z),
       movingSpeedThreshold: this.config.movingSpeedThreshold,
+      movingStopSpeedThreshold: this.config.movingStopSpeedThreshold,
       runStateSpeedThreshold: this.config.runStateSpeedThreshold,
+      runStateExitSpeedThreshold: this.config.runStateExitSpeedThreshold,
+      previousState: this.state,
     });
   }
 

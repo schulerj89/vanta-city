@@ -48,5 +48,6 @@ Health depletion cancels the active action, halts horizontal player velocity, ga
 
 - `CharacterEquipment.equip`, `unequip`, `toggleQuickbarSlot`, `use`, `useWithTrigger`, `canUse`, `consume`, `getAmmunition`, `reload`, `resetAmmunition`, `getSnapshot`, and typed change/use/ammunition/reload/dry-fire events are owner-agnostic.
 - `PlayerControllerSystem.useEquippedItem`, `reloadEquippedItem`, `toggleQuickbarSlot`, and `triggerCharacterAction` enforce health/state/action gates.
+- `PlayerControllerSystem.getLocomotionSnapshot()` exposes the stable movement, facing, firearm readiness/firing state, action lock, and visual base/overlay projection used by weapon integration.
 - `NpcSystem.equip` and `useEquipment` validate shared ownership without adding navigation, combat AI, or inventory AI.
 - Browser/debug snapshots expose locked roll direction/distance/blocking, fire hold/cadence/shot count/rejection, ammunition/reload/dry-fire state, equipped label/icon, prop compatibility/socket/lifecycle, muzzle flash, animation graph, depleted state, native/fallback death materials, and quickbar state through existing registries.

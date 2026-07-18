@@ -34,6 +34,16 @@ import type { EquipmentPresentationSnapshot } from '../equipment/EquipmentPresen
 import type { GameAssetLoader } from '../assets/AssetLoader';
 import { CharacterDeathPresentation } from '../characters/CharacterDeathPresentation';
 import type { CharacterDeathPresentationSnapshot } from '../characters/CharacterDeathPresentation';
+import {
+  createUpperBodyAnimationClip,
+  createLowerBodyAnimationClip,
+  resolveCharacterLocomotionPolicy,
+} from '../characters/CharacterLocomotionPolicy';
+import type {
+  CharacterActionLayer,
+  CharacterLocomotionPolicy,
+  CharacterLocomotionSnapshot,
+} from '../characters/CharacterLocomotionPolicy';
 
 export interface CharacterInstanceLoader {
   instantiate(definition: CharacterDefinition): Promise<LoadedCharacter>;
@@ -68,6 +78,7 @@ export interface CharacterPlayerVisualDebugSnapshot {
   readonly animationState: string;
   readonly animationGraph: CharacterAnimationGraphState;
   readonly characterAction: CharacterActionRequestState;
+  readonly locomotion: CharacterLocomotionSnapshot;
   readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
   readonly equipmentPresentation: EquipmentPresentationSnapshot;
   readonly death: CharacterDeathPresentationSnapshot;
@@ -116,7 +127,23 @@ export class CharacterPlayerVisual
   private loadVersion = 0;
   private loadStatus: CharacterVisualLoadStatus = 'idle';
   private mixer: AnimationMixer | undefined;
+  private locomotionAction: AnimationAction | undefined;
   private action: AnimationAction | undefined;
+  private upperBodyAction: AnimationAction | undefined;
+  private locomotionClip: string | undefined;
+  private locomotionLayer: 'full-body' | 'lower-body' = 'full-body';
+  private stanceOverlayClip: string | undefined;
+  private actionLayer: CharacterActionLayer = 'none';
+  private locomotionTransitionSequence = 0;
+  private horizontalSpeed = 0;
+  private readonly upperBodyClips = new Map<
+    string,
+    ReturnType<typeof createUpperBodyAnimationClip>
+  >();
+  private readonly lowerBodyClips = new Map<
+    string,
+    ReturnType<typeof createLowerBodyAnimationClip>
+  >();
   private animationState = 'static';
   private activeActionRemaining = 0;
   private characterAction: CharacterActionRequestState = {
@@ -174,6 +201,9 @@ export class CharacterPlayerVisual
   public sync(movement: PlayerMovementSimulation, delta = 0): void {
     this.object3d.position.copy(movement.position);
     this.visualRoot.rotation.y = movement.facingYaw;
+    this.horizontalSpeed = movement.velocity
+      ? Math.hypot(movement.velocity.x, movement.velocity.z)
+      : 0;
     this.updateAnimation(movement.state, delta);
   }
 
@@ -212,6 +242,7 @@ export class CharacterPlayerVisual
       animationState: this.animationState,
       animationGraph: this.animationGraph.getState(),
       characterAction: this.getCharacterActionState(),
+      locomotion: this.getLocomotionSnapshot(),
       equipment: this.equipment.getSnapshot(),
       equipmentPresentation: this.equipmentPresentation.getSnapshot(),
       death: this.deathPresentation.getSnapshot(),
@@ -282,6 +313,25 @@ export class CharacterPlayerVisual
 
   public getCharacterActionState(): CharacterActionRequestState {
     return { ...this.characterAction };
+  }
+
+  public getLocomotionSnapshot(): CharacterLocomotionSnapshot {
+    return {
+      movement: this.movementState,
+      horizontalSpeed: this.horizontalSpeed,
+      baseClip: this.locomotionClip,
+      baseLayer: this.locomotionLayer,
+      stanceOverlayClip: this.stanceOverlayClip,
+      actionClip: this.characterAction.active,
+      actionLayer: this.actionLayer,
+      transitionSequence: this.locomotionTransitionSequence,
+    };
+  }
+
+  public cancelCharacterAction(): void {
+    if (!this.characterAction.active) return;
+    this.cancelActiveAction();
+    this.applyGraphTransition();
   }
 
   public setDepleted(depleted: boolean): void {
@@ -385,7 +435,15 @@ export class CharacterPlayerVisual
       this.mixer.uncacheRoot(this.loaded.root);
     }
     this.mixer = undefined;
+    this.locomotionAction = undefined;
     this.action = undefined;
+    this.upperBodyAction = undefined;
+    this.locomotionClip = undefined;
+    this.locomotionLayer = 'full-body';
+    this.stanceOverlayClip = undefined;
+    this.actionLayer = 'none';
+    this.upperBodyClips.clear();
+    this.lowerBodyClips.clear();
     this.animationState = 'static';
     this.activeActionRemaining = 0;
     this.activeActionElapsed = 0;
@@ -409,7 +467,11 @@ export class CharacterPlayerVisual
   private readonly onMixerFinished = (event: {
     readonly action: AnimationAction;
   }): void => {
-    if (event.action !== this.action || !this.characterAction.active) return;
+    if (
+      (event.action !== this.action && event.action !== this.upperBodyAction) ||
+      !this.characterAction.active
+    )
+      return;
     this.finishActiveAction('mixer-finished');
   };
 
@@ -419,7 +481,9 @@ export class CharacterPlayerVisual
     const completed = this.characterAction.active;
     if (!completed) return;
     this.action?.fadeOut(0.1);
+    this.upperBodyAction?.fadeOut(0.1);
     this.action = undefined;
+    this.upperBodyAction = undefined;
     this.activeActionRemaining = 0;
     this.activeActionElapsed = 0;
     this.activeActionDuration = 0;
@@ -487,31 +551,180 @@ export class CharacterPlayerVisual
       (logicalName) => loaded.animationClips.has(logicalName),
     );
     this.animationState = transition.state.label;
-    if (!transition.changed) return;
+    const policy = resolveCharacterLocomotionPolicy({
+      movement: this.movementState,
+      action: this.characterAction.active,
+      equipment: this.equipment.equipped,
+      depleted: this.depleted,
+    });
+    const actionLayerChanged = this.actionLayer !== policy.actionLayer;
+    this.actionLayer = policy.actionLayer;
+    this.reconcileLocomotion(policy, loaded, mixer);
+    if (!transition.changed && !actionLayerChanged) return;
 
-    this.action?.fadeOut(0.12);
-    const clip = transition.state.resolvedClip
-      ? loaded.animationClips.get(transition.state.resolvedClip)
-      : undefined;
-    this.action = clip ? mixer.clipAction(clip) : undefined;
-    if (!this.action) return;
-    this.action.reset().setEffectiveTimeScale(1).fadeIn(0.12);
-    if (
-      transition.state.phase === 'action' ||
-      transition.state.phase === 'death'
-    ) {
-      this.action.setLoop(LoopOnce, 1);
-      this.action.clampWhenFinished = true;
-    } else {
-      this.action.setLoop(LoopRepeat, Infinity);
-      this.action.clampWhenFinished = false;
+    if (transition.state.phase === 'death') {
+      this.stopUpperBodyAction();
+      this.suspendLocomotion(0.12);
+      this.playFullBodyAction(transition.state.resolvedClip, loaded, mixer);
+      return;
     }
-    this.action.play();
+    if (transition.state.phase === 'action') {
+      if (policy.actionLayer === 'upper-body') {
+        this.action?.fadeOut(0.1);
+        this.action = undefined;
+        this.playUpperBodyAction(transition.state.resolvedClip, loaded, mixer);
+      } else {
+        this.stopUpperBodyAction();
+        this.suspendLocomotion(0.1);
+        this.playFullBodyAction(transition.state.resolvedClip, loaded, mixer);
+      }
+      return;
+    }
+    this.action?.fadeOut(0.12);
+    this.action = undefined;
+  }
+
+  private reconcileLocomotion(
+    policy: CharacterLocomotionPolicy,
+    loaded: LoadedCharacter,
+    mixer: AnimationMixer,
+  ): void {
+    const clipName = resolveAvailableLocomotionClip(policy.baseClip, loaded);
+    if (
+      clipName !== this.locomotionClip ||
+      policy.baseLayer !== this.locomotionLayer
+    ) {
+      const previous = this.locomotionAction;
+      const previousDuration = previous?.getClip().duration ?? 0;
+      const phase =
+        previous && previousDuration > 0 ? previous.time / previousDuration : 0;
+      previous?.fadeOut(0.2);
+      const source = clipName ? loaded.animationClips.get(clipName) : undefined;
+      const clip =
+        source && policy.baseLayer === 'lower-body'
+          ? this.getLowerBodyClip(clipName!, source)
+          : source;
+      const next = clip ? mixer.clipAction(clip) : undefined;
+      if (next) {
+        next
+          .reset()
+          .setLoop(LoopRepeat, Infinity)
+          .setEffectiveTimeScale(1)
+          .fadeIn(0.2);
+        next.clampWhenFinished = false;
+        if (previous && clip && clip.duration > 0)
+          next.time = phase * clip.duration;
+        next.play();
+      }
+      this.locomotionAction = next;
+      this.locomotionClip = clipName;
+      this.locomotionLayer = policy.baseLayer;
+      this.locomotionTransitionSequence += 1;
+    }
+
+    if (policy.actionLayer === 'full-body') return;
+    if (policy.actionLayer === 'upper-body') return;
+    if (policy.stanceOverlayClip !== this.stanceOverlayClip) {
+      this.stopUpperBodyAction();
+      this.stanceOverlayClip = policy.stanceOverlayClip;
+      if (policy.stanceOverlayClip) {
+        this.upperBodyAction = this.createUpperBodyAction(
+          policy.stanceOverlayClip,
+          loaded,
+          mixer,
+        );
+        this.upperBodyAction
+          ?.reset()
+          .setLoop(LoopRepeat, Infinity)
+          .fadeIn(0.2)
+          .play();
+      }
+    }
+  }
+
+  private playFullBodyAction(
+    clipName: string | undefined,
+    loaded: LoadedCharacter,
+    mixer: AnimationMixer,
+  ): void {
+    this.action?.fadeOut(0.1);
+    const clip = clipName ? loaded.animationClips.get(clipName) : undefined;
+    this.action = clip ? mixer.clipAction(clip) : undefined;
+    this.action
+      ?.reset()
+      .setLoop(LoopOnce, 1)
+      .setEffectiveTimeScale(1)
+      .fadeIn(0.08);
+    if (this.action) {
+      this.action.clampWhenFinished = true;
+      this.action.play();
+    }
+  }
+
+  private playUpperBodyAction(
+    clipName: string | undefined,
+    loaded: LoadedCharacter,
+    mixer: AnimationMixer,
+  ): void {
+    this.stopUpperBodyAction();
+    if (!clipName) return;
+    this.upperBodyAction = this.createUpperBodyAction(clipName, loaded, mixer);
+    this.upperBodyAction
+      ?.reset()
+      .setLoop(LoopOnce, 1)
+      .setEffectiveTimeScale(1)
+      .fadeIn(0.06);
+    if (this.upperBodyAction) {
+      this.upperBodyAction.clampWhenFinished = true;
+      this.upperBodyAction.play();
+    }
+  }
+
+  private createUpperBodyAction(
+    clipName: string,
+    loaded: LoadedCharacter,
+    mixer: AnimationMixer,
+  ): AnimationAction | undefined {
+    const source = loaded.animationClips.get(clipName);
+    if (!source) return undefined;
+    let clip = this.upperBodyClips.get(clipName);
+    if (!clip) {
+      clip = createUpperBodyAnimationClip(source);
+      this.upperBodyClips.set(clipName, clip);
+    }
+    return mixer.clipAction(clip);
+  }
+
+  private getLowerBodyClip(
+    clipName: string,
+    source: ReturnType<AnimationAction['getClip']>,
+  ): ReturnType<typeof createLowerBodyAnimationClip> {
+    let clip = this.lowerBodyClips.get(clipName);
+    if (!clip) {
+      clip = createLowerBodyAnimationClip(source);
+      this.lowerBodyClips.set(clipName, clip);
+    }
+    return clip;
+  }
+
+  private stopUpperBodyAction(): void {
+    this.upperBodyAction?.fadeOut(0.1);
+    this.upperBodyAction = undefined;
+    this.stanceOverlayClip = undefined;
+  }
+
+  private suspendLocomotion(fadeSeconds: number): void {
+    this.locomotionAction?.fadeOut(fadeSeconds);
+    this.locomotionAction = undefined;
+    this.locomotionClip = undefined;
   }
 
   private cancelActiveAction(): void {
     this.action?.stop();
+    this.upperBodyAction?.stop();
     this.action = undefined;
+    this.upperBodyAction = undefined;
+    this.stanceOverlayClip = undefined;
     this.activeActionRemaining = 0;
     this.activeActionElapsed = 0;
     this.activeActionDuration = 0;
@@ -524,4 +737,14 @@ export class CharacterPlayerVisual
       activeNormalizedTime: 0,
     };
   }
+}
+
+function resolveAvailableLocomotionClip(
+  requested: string | undefined,
+  loaded: LoadedCharacter,
+): string | undefined {
+  if (requested && loaded.animationClips.has(requested)) return requested;
+  if (requested === 'gunRun' && loaded.animationClips.has('run')) return 'run';
+  if (loaded.animationClips.has('idle')) return 'idle';
+  return undefined;
 }

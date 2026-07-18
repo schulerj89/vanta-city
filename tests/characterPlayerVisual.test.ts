@@ -4,6 +4,7 @@ import {
   Group,
   Mesh,
   MeshBasicMaterial,
+  QuaternionKeyframeTrack,
   Vector3,
   VectorKeyframeTrack,
 } from 'three';
@@ -459,6 +460,60 @@ describe('CharacterPlayerVisual', () => {
     expect(visual.getDebugSnapshot()).toMatchObject({
       animationState: 'gunIdle',
       characterAction: { active: undefined, lastCompleted: 'roll' },
+    });
+    visual.dispose();
+    equipment.dispose();
+  });
+
+  it('keeps firearm locomotion running while gun fire uses an upper-body layer', async () => {
+    const selection = new CharacterSelectionStore(definitions, 'first');
+    const equipment = new CharacterEquipment('player');
+    equipment.equip('handgun');
+    const instance = loadedCharacter(
+      definitions[0],
+      'asset',
+      new Map([
+        ['gunRun', new AnimationClip('Gun run', 0.8, [])],
+        [
+          'gunFire',
+          new AnimationClip('Gun fire', 0.6, [
+            new QuaternionKeyframeTrack(
+              'UpperArmR.quaternion',
+              [0, 0.6],
+              [0, 0, 0, 1, 0, 0, 0, 1],
+            ),
+            new QuaternionKeyframeTrack(
+              'UpperLegR.quaternion',
+              [0, 0.6],
+              [0, 0, 0, 1, 0, 0, 0, 1],
+            ),
+          ]),
+        ],
+      ]),
+    );
+    const visual = new CharacterPlayerVisual(
+      selection,
+      { instantiate: vi.fn(async () => instance) },
+      equipment,
+    );
+    await visual.init();
+    visual.sync(movement('running'), 0.2);
+    const before = visual.getLocomotionSnapshot();
+
+    expect(visual.triggerCharacterAction('gunFire', 'unit-test')).toBe(true);
+    visual.sync(movement('running', 0.8), 0.2);
+    expect(visual.getLocomotionSnapshot()).toMatchObject({
+      baseClip: 'gunRun',
+      actionClip: 'gunFire',
+      actionLayer: 'upper-body',
+      transitionSequence: before.transitionSequence,
+    });
+    visual.sync(movement('running', 1.6), 0.5);
+    expect(visual.getLocomotionSnapshot()).toMatchObject({
+      baseClip: 'gunRun',
+      actionClip: undefined,
+      actionLayer: 'none',
+      transitionSequence: before.transitionSequence,
     });
     visual.dispose();
     equipment.dispose();

@@ -29,6 +29,8 @@ import type {
 } from '../characters/CharacterActions';
 import { HealthComponent } from '../health/Health';
 import { CharacterEquipment } from '../equipment/CharacterEquipment';
+import type { CharacterLocomotionSnapshot } from '../characters/CharacterLocomotionPolicy';
+import type { EquipmentId } from '../equipment/EquipmentDefinition';
 
 const idleCharacterActionState: CharacterActionRequestState = {
   active: undefined,
@@ -97,6 +99,7 @@ export interface PlayerDebugSnapshot {
   readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
   readonly roll: RollDebugSnapshot;
   readonly fire: FireDebugSnapshot;
+  readonly locomotion: PlayerLocomotionSnapshot;
 }
 
 export const playerRollConfig = {
@@ -122,6 +125,19 @@ export interface FireDebugSnapshot {
   readonly acceptedShotCount: number;
   readonly reloadCount: number;
   readonly latestRejection: string | undefined;
+}
+
+export interface PlayerLocomotionSnapshot {
+  readonly animation: CharacterLocomotionSnapshot | undefined;
+  readonly movement: PlayerMovementState;
+  readonly horizontalSpeed: number;
+  readonly desiredFacingYaw: number;
+  readonly facingYaw: number;
+  readonly turning: boolean;
+  readonly runMode: boolean;
+  readonly equippedItem: EquipmentId | undefined;
+  readonly firearm: 'holstered' | 'ready' | 'firing';
+  readonly actionLocked: boolean;
 }
 
 interface ActiveRoll {
@@ -243,10 +259,10 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       this.startRoll(intent, 'keyboard:roll');
     }
     if (acceptsInput && this.input?.wasPressed('quickbar1')) {
-      this.equipment.toggleQuickbarSlot(1);
+      this.toggleQuickbarSlot(1);
     }
     if (acceptsInput && this.input?.wasPressed('quickbar2')) {
-      this.equipment.toggleQuickbarSlot(2);
+      this.toggleQuickbarSlot(2);
     }
     this.updateEquipmentInput(acceptsInput, time.delta);
     const actionBeforeMovement = this.getCharacterActionState().active;
@@ -364,12 +380,43 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   }
 
   public toggleQuickbarSlot(slot: number): boolean {
-    if (!this.health.alive) return false;
+    if (
+      !this.health.alive ||
+      this.getCharacterActionState().busy ||
+      this.fireHolding
+    )
+      return false;
     return this.equipment.toggleQuickbarSlot(slot);
   }
 
   public getCharacterActionState(): CharacterActionRequestState {
     return this.visual.getCharacterActionState?.() ?? idleCharacterActionState;
+  }
+
+  /** Stable public projection for weapon presentation/integration consumers. */
+  public getLocomotionSnapshot(): PlayerLocomotionSnapshot {
+    const action = this.getCharacterActionState();
+    const equippedItem = this.equipment.equipped?.id;
+    return {
+      animation: this.visual.getLocomotionSnapshot?.(),
+      movement: this.movement.state,
+      horizontalSpeed: Math.hypot(
+        this.movement.velocity.x,
+        this.movement.velocity.z,
+      ),
+      desiredFacingYaw: this.movement.desiredFacingYaw,
+      facingYaw: this.movement.facingYaw,
+      turning: this.movement.facingSmoothingActive,
+      runMode: this.runMode,
+      equippedItem,
+      firearm:
+        equippedItem !== 'handgun'
+          ? 'holstered'
+          : action.active === 'gunFire' || this.fireHolding
+            ? 'firing'
+            : 'ready',
+      actionLocked: action.busy,
+    };
   }
 
   public getPlayerPosition(): WorldPosition {
@@ -420,6 +467,7 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
       equipment: this.equipment.getSnapshot(),
       roll: this.rollSnapshot(),
       fire: this.fireSnapshot(),
+      locomotion: this.getLocomotionSnapshot(),
     };
   }
 
@@ -594,6 +642,8 @@ export class PlayerControllerSystem implements GameSystem, WorldPoseSource {
   }
 
   private cancelTransientActions(reason: string): void {
+    this.visual.cancelCharacterAction?.();
+    this.finishRoll();
     this.fireHolding = false;
     this.fireCooldownRemaining = 0;
     this.lastFireRejection = reason;
