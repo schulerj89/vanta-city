@@ -18,6 +18,7 @@ import type { SpawnPointDefinition } from '../world/LevelDefinition';
 import type { NpcDefinition } from './NpcDefinition';
 import { CharacterEquipment } from '../equipment/CharacterEquipment';
 import { EquipmentPresentation } from '../equipment/EquipmentPresentation';
+import type { GameAssetLoader } from '../assets/AssetLoader';
 import type { EquipmentId } from '../equipment/EquipmentDefinition';
 
 export interface NpcCharacterLoader {
@@ -109,10 +110,14 @@ export class NpcEntity implements GameObject {
     private readonly loader: NpcCharacterLoader,
     private readonly conversations: ConversationCoordinator,
     private readonly player: WorldPoseSource,
+    assets?: Pick<GameAssetLoader, 'instantiateModel'>,
   ) {
     this.id = `npc.${definition.id}`;
     this.equipment = new CharacterEquipment(this.id);
-    this.equipmentPresentation = new EquipmentPresentation(this.equipment);
+    this.equipmentPresentation = new EquipmentPresentation(
+      this.equipment,
+      assets,
+    );
     this.idleYaw = definition.idleYaw ?? spawn.rotation?.[1] ?? 0;
     this.object3d.name = `${definition.displayName} NPC`;
     this.object3d.position.set(...spawn.position);

@@ -85,6 +85,72 @@ describe('CharacterEquipment', () => {
     equipment.dispose();
   });
 
+  it('replaces the immediate procedural fallback with a cached model instance', async () => {
+    const equipment = new CharacterEquipment('owner');
+    const scene = new Group();
+    const dispose = vi.fn(() => scene.removeFromParent());
+    const instantiateModel = vi.fn(async () => ({
+      assetId: 'equipment.handgun.model',
+      scene,
+      animations: [],
+      dispose,
+    }));
+    const presentation = new EquipmentPresentation(equipment, {
+      instantiateModel,
+    });
+    const root = new Group();
+    const wrist = new Group();
+    wrist.name = 'WristR';
+    root.add(wrist);
+    presentation.bind(root, 'ultimate-men');
+    equipment.equip('handgun');
+
+    expect(presentation.getSnapshot()).toMatchObject({
+      source: 'procedural',
+      assetId: 'equipment.handgun.model',
+      loadError: undefined,
+    });
+    await vi.waitFor(() =>
+      expect(presentation.getSnapshot().source).toBe('asset'),
+    );
+    expect(instantiateModel).toHaveBeenCalledWith('equipment.handgun.model');
+    expect(scene.name).toBe('Handgun asset model');
+    expect(scene.scale.toArray()).toEqual([5.5, 5.5, 5.5]);
+
+    equipment.equip('knife');
+    expect(dispose).toHaveBeenCalledOnce();
+    presentation.dispose();
+    equipment.dispose();
+  });
+
+  it('keeps the procedural weapon visible when the model load fails', async () => {
+    const equipment = new CharacterEquipment('owner');
+    const presentation = new EquipmentPresentation(equipment, {
+      instantiateModel: vi.fn(async () => {
+        throw new Error('fixture unavailable');
+      }),
+    });
+    const root = new Group();
+    const wrist = new Group();
+    wrist.name = 'WristR';
+    root.add(wrist);
+    presentation.bind(root, 'ultimate-men');
+    equipment.equip('handgun');
+
+    await vi.waitFor(() =>
+      expect(presentation.getSnapshot().loadError).toContain(
+        'fixture unavailable',
+      ),
+    );
+    expect(presentation.getSnapshot()).toMatchObject({
+      attached: true,
+      compatible: true,
+      source: 'procedural',
+    });
+    presentation.dispose();
+    equipment.dispose();
+  });
+
   it('owns persistent clamped ammunition, typed dry-fire, reload, and reset state', () => {
     const equipment = new CharacterEquipment('owner');
     const ammoChanges = vi.fn();

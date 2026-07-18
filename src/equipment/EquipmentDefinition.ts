@@ -18,6 +18,13 @@ export interface EquipmentDefinition {
   readonly slot: EquipmentSlot;
   readonly quickbarSlot: 1 | 2;
   readonly prop: 'handgun' | 'knife';
+  readonly model: {
+    readonly assetId: string;
+    readonly position: readonly [number, number, number];
+    readonly rotation: readonly [number, number, number];
+    readonly scale: number;
+    readonly muzzlePosition?: readonly [number, number, number];
+  };
   readonly useAction: CharacterActionName;
   readonly ammunition?: {
     readonly capacity: number;
@@ -38,6 +45,14 @@ export const equipmentDefinitions = [
     slot: 'sidearm',
     quickbarSlot: 1,
     prop: 'handgun',
+    model: {
+      assetId: 'equipment.handgun.model',
+      // Rebase the source-centered pistol so WristR sits inside the grip.
+      position: [0, -0.04, -0.07],
+      rotation: [0, 0, 0],
+      scale: 5.5,
+      muzzlePosition: [0, 0.04, -0.215],
+    },
     useAction: 'gunFire',
     ammunition: { capacity: 8, repeatCadenceSeconds: 0.72 },
     idleAnimation: 'gunIdle',
@@ -59,6 +74,13 @@ export const equipmentDefinitions = [
     slot: 'melee',
     quickbarSlot: 2,
     prop: 'knife',
+    model: {
+      assetId: 'equipment.knife.model',
+      // Source blade is +Y and centered; rotate it forward and rebase the grip.
+      position: [0, 0, -0.1],
+      rotation: [-Math.PI / 2, 0, 0],
+      scale: 6,
+    },
     useAction: 'knifeSlash',
     idleAnimation: 'knifeIdle',
     presentations: {

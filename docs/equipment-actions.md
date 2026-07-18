@@ -1,12 +1,12 @@
 # Equipment, quickbar, roll, and death
 
-`CharacterEquipment` is a composition-owned loadout component. It stores an owner ID, authoritative item entitlements, and the currently equipped definition; emits typed ownership, `changed`, and `used` events; and accepts a `CharacterActionSink` or typed trigger callback. Catalog membership alone no longer means ownership, and equip/quickbar requests reject unowned items. The player starts with the knife while generic/NPC fixtures retain the prior full-catalog default. The fixed two-slot player quickbar renders unowned items as locked. Player and NPC owners use the same component; visual GLTF nodes never own inventory state. `EquipmentDefinition` separately owns item identity, label/icon, quickbar slot, generated-prop type, compatible action/locomotion names, and per-rig socket presentation. `EquipmentPresentation` is disposable and may be rebound when the owner's visual changes. See [player money and equipment acquisition](./player-money.md) for the test handgun purchase policy.
+`CharacterEquipment` is a composition-owned loadout component. It stores an owner ID, authoritative item entitlements, and the currently equipped definition; emits typed ownership, `changed`, and `used` events; and accepts a `CharacterActionSink` or typed trigger callback. Catalog membership alone no longer means ownership, and equip/quickbar requests reject unowned items. The player starts with the knife while generic/NPC fixtures retain the prior full-catalog default. The fixed two-slot player quickbar renders unowned items as locked. Player and NPC owners use the same component; visual GLTF nodes never own inventory state. `EquipmentDefinition` separately owns item identity, label/icon, quickbar slot, fallback-prop type, local model transform, compatible action/locomotion names, and per-rig socket presentation. `EquipmentPresentation` is disposable and may be rebound when the owner's visual changes. See [player money and equipment acquisition](./player-money.md) for the test handgun purchase policy.
 
 The player quickbar is a player-only projection of that shared loadout. It has exactly two non-blocking square slots: `1` Handgun and `2` Knife. Pressing a slot's number equips it; pressing the selected number again unequips it. `U` / gamepad RT uses the equipped item, and holding it repeats only Handgun shots. `T` / D-pad down reloads without stealing the `R` run toggle. `B` / gamepad LB requests Roll. These inputs are centralized named actions, so gameplay does not react while a text field or Help, picker, dialogue, cinematic, or pause owns input. The quickbar renders local CSS weapon silhouettes, exposes accessible item/ammunition labels, and shrinks below `560px` width or `500px` height.
 
 ## Definitions and presentation
 
-The props use local Three.js low-poly geometry and materials. No model, texture, or runtime network request is involved.
+The primary props are self-contained local low-poly GLBs with no textures or runtime network requests. Project-authored Three.js geometry and materials remain as the load-failure fallback and handgun muzzle flash.
 
 | Item    | Slot | Use          | Equipped idle/run        | Rig socket and transform                                                                           |
 | ------- | ---: | ------------ | ------------------------ | -------------------------------------------------------------------------------------------------- |
@@ -14,7 +14,20 @@ The props use local Three.js low-poly geometry and materials. No model, texture,
 | Knife   |    2 | `knifeSlash` | `knifeIdle` / normal run | Ultimate Men `WristR`; position `(0.0001, 0.0003, -0.0012)`, rotation `(0, 0, π/2)`, scale `0.009` |
 | Knife   |    2 | `knifeSlash` | NPC idle                 | Animated Men `PalmR`; position `(0, 0.0005, -0.0025)`, rotation `(0, 0, π/2)`, scale `0.024`       |
 
-Both source armatures give their hand bones an inherited scale of approximately `100`; these explicit local transforms compensate for that convention without changing the authoritative character/world transform. Handgun is intentionally incompatible with the current Animated Men NPC rig until it receives a reviewed presentation and compatible native firearm clips. Incompatible or absent sockets report a visible debug fallback and create no prop. Every equip, unequip, character replacement, NPC removal, and disposal releases generated geometry and materials. A successful handgun use consumes one of 8 owner-persistent rounds and emits an 80 ms presentation-only muzzle flash. The `0.72s` repeat cadence is longer than the preferred native `0.6667s` shot clip, so every accepted animation completes before another begins. Release or modal entry disarms the hold instead of buffering it. Empty use emits one bounded typed dry-fire event without consuming below zero or playing a fake shot. Reload is rejected while a shot/hold is active and restores the equipped handgun to capacity. There are no pickups, projectiles, ballistics, recoil simulation, or enemy AI.
+Both source armatures give their hand bones an inherited scale of approximately `100`; these explicit local transforms compensate for that convention without changing the authoritative character/world transform. Handgun is intentionally incompatible with the current Animated Men NPC rig until it receives a reviewed presentation and compatible native firearm clips. Incompatible or absent sockets report a visible debug fallback and create no prop. Every equip, unequip, character replacement, NPC removal, and disposal releases the model instance plus any generated fallback geometry and materials. A successful handgun use consumes one of 8 owner-persistent rounds and emits an 80 ms presentation-only muzzle flash. The `0.72s` repeat cadence is longer than the preferred native `0.6667s` shot clip, so every accepted animation completes before another begins. Release or modal entry disarms the hold instead of buffering it. Empty use emits one bounded typed dry-fire event without consuming below zero or playing a fake shot. Reload is rejected while a shot/hold is active and restores the equipped handgun to capacity. There are no pickups, projectiles, ballistics, recoil simulation, or enemy AI.
+
+The visible handgun and knife are local GLB instances from Kenney's CC0 Weapon
+pack. The loader cache owns source geometry/materials; each presentation owns and
+disposes only its cloned scene instance. While the model is loading—or if it
+fails—the prior procedural mesh remains visible. Successful load swaps only the
+presentation content, never the socket, character root, or simulation transform.
+Asset-space alignment is explicit: handgun position `(0, -0.04, -0.07)`,
+rotation `(0, 0, 0)`, scale `5.5`; knife position `(0, 0, -0.1)`, rotation
+`(-π/2, 0, 0)`, scale `6`. The source-centered meshes are thereby rebased onto
+their grips, with the handgun barrel and knife blade following the established
+procedural `-Z` direction. Full provenance, hashes, size, bounds, and mesh
+metrics are recorded beside the files in
+`public/assets/equipment/kenney-weapon-pack/README.md`.
 
 ## Native animation mappings and fallback
 

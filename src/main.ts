@@ -198,6 +198,7 @@ async function bootstrap(): Promise<void> {
     characterSelection,
     new CharacterLoader(assets),
     playerEquipment,
+    assets,
   );
   const characterPicker = new CharacterPickerSystem(
     mount,
@@ -330,6 +331,7 @@ async function bootstrap(): Promise<void> {
     player,
     levelSystem,
     worldEvents,
+    assets,
   );
   let sparringTarget: SparringTargetSystem | undefined;
   if (development) {

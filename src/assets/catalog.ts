@@ -98,6 +98,40 @@ export const assetManifest = {
     },
     metadata: { intendedUse: 'npc-raze', embeddedAnimations: 11 },
   },
+  'equipment.handgun.model': {
+    type: 'model',
+    url: '/assets/equipment/kenney-weapon-pack/handgun.glb',
+    attribution: {
+      title: 'Pistol — Weapon pack',
+      creator: 'Kenney Vleugels and Casper Jorissen (Kenney.nl)',
+      sourceUrl: 'https://opengameart.org/content/weapon-pack',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: {
+      intendedUse: 'equipped-handgun',
+      triangles: 350,
+      materials: 3,
+      textures: 0,
+    },
+  },
+  'equipment.knife.model': {
+    type: 'model',
+    url: '/assets/equipment/kenney-weapon-pack/knife.glb',
+    attribution: {
+      title: 'Knife Sharp — Weapon pack',
+      creator: 'Kenney Vleugels and Casper Jorissen (Kenney.nl)',
+      sourceUrl: 'https://opengameart.org/content/weapon-pack',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: {
+      intendedUse: 'equipped-knife',
+      triangles: 98,
+      materials: 4,
+      textures: 0,
+    },
+  },
   'portrait.npc-mack': {
     type: 'texture',
     url: '/assets/portraits/npcs/mack.webp',

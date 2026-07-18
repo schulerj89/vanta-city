@@ -7,6 +7,7 @@ import {
   MeshStandardMaterial,
 } from 'three';
 import type { BufferGeometry, Material, Object3D } from 'three';
+import type { GameAssetLoader, ModelInstance } from '../assets/AssetLoader';
 import type { CharacterEquipment } from './CharacterEquipment';
 import type {
   EquipmentDefinition,
@@ -22,22 +23,38 @@ export interface EquipmentPresentationSnapshot {
   readonly createdCount: number;
   readonly disposedCount: number;
   readonly useFlashActive: boolean;
+  readonly source: 'asset' | 'procedural' | undefined;
+  readonly assetId: string | undefined;
+  readonly loadError: string | undefined;
 }
 
-/** Disposable generated-prop presentation bound to a game-owned loadout. */
+export interface EquipmentAttachmentDebugObjects {
+  readonly root: Object3D;
+  readonly socket: Object3D;
+}
+
+/** Disposable local-model presentation with a generated load-failure fallback. */
 export class EquipmentPresentation {
   private modelRoot: Object3D | undefined;
   private rigId: EquipmentRigId | undefined;
   private prop: Group | undefined;
+  private assetInstance: ModelInstance | undefined;
   private flash: Object3D | undefined;
   private socketName: string | undefined;
   private compatible = false;
   private flashRemaining = 0;
   private createdCount = 0;
   private disposedCount = 0;
+  private loadVersion = 0;
+  private source: EquipmentPresentationSnapshot['source'];
+  private assetId: string | undefined;
+  private loadError: string | undefined;
   private readonly unsubscribe: (() => void)[];
 
-  public constructor(private readonly equipment: CharacterEquipment) {
+  public constructor(
+    private readonly equipment: CharacterEquipment,
+    private readonly assets?: Pick<GameAssetLoader, 'instantiateModel'>,
+  ) {
     this.unsubscribe = [
       equipment.events.on('changed', () => this.refresh()),
       equipment.events.on('used', ({ itemId }) => {
@@ -78,7 +95,16 @@ export class EquipmentPresentation {
       createdCount: this.createdCount,
       disposedCount: this.disposedCount,
       useFlashActive: this.flash?.visible ?? false,
+      source: this.source,
+      assetId: this.assetId,
+      loadError: this.loadError,
     };
+  }
+
+  public getAttachmentDebugObjects():
+    EquipmentAttachmentDebugObjects | undefined {
+    const socket = this.prop?.parent;
+    return this.prop && socket ? { root: this.prop, socket } : undefined;
   }
 
   public dispose(): void {
@@ -110,12 +136,54 @@ export class EquipmentPresentation {
     socket.add(generated.root);
     this.prop = generated.root;
     this.flash = generated.flash;
+    this.source = 'procedural';
+    this.assetId = definition.model.assetId;
+    this.loadError = undefined;
     this.socketName = presentation.boneName;
     this.createdCount += 1;
+    if (this.assets) {
+      const version = ++this.loadVersion;
+      void this.loadAsset(definition, generated.root, version);
+    }
+  }
+
+  private async loadAsset(
+    definition: EquipmentDefinition,
+    root: Group,
+    version: number,
+  ): Promise<void> {
+    try {
+      const instance = await this.assets!.instantiateModel(
+        definition.model.assetId,
+      );
+      if (version !== this.loadVersion || this.prop !== root) {
+        instance.dispose();
+        return;
+      }
+      const fallback = root.getObjectByName('Procedural fallback');
+      if (fallback) {
+        fallback.removeFromParent();
+        disposeGeneratedProp(fallback);
+      }
+      instance.scene.name = `${definition.displayName} asset model`;
+      instance.scene.position.set(...definition.model.position);
+      instance.scene.rotation.set(...definition.model.rotation);
+      instance.scene.scale.setScalar(definition.model.scale);
+      root.add(instance.scene);
+      this.assetInstance = instance;
+      this.source = 'asset';
+    } catch (error) {
+      if (version !== this.loadVersion || this.prop !== root) return;
+      this.loadError = error instanceof Error ? error.message : String(error);
+      this.source = 'procedural';
+    }
   }
 
   private clearProp(): void {
+    this.loadVersion += 1;
     if (this.prop) {
+      this.assetInstance?.dispose();
+      this.assetInstance = undefined;
       this.prop.removeFromParent();
       disposeGeneratedProp(this.prop);
       this.disposedCount += 1;
@@ -125,6 +193,9 @@ export class EquipmentPresentation {
     this.socketName = undefined;
     this.compatible = false;
     this.flashRemaining = 0;
+    this.source = undefined;
+    this.assetId = undefined;
+    this.loadError = undefined;
   }
 }
 
@@ -132,7 +203,17 @@ function createEquipmentProp(definition: EquipmentDefinition): {
   readonly root: Group;
   readonly flash?: Object3D;
 } {
-  return definition.prop === 'handgun' ? createHandgun() : createKnife();
+  const generated: { readonly root: Group; readonly flash?: Object3D } =
+    definition.prop === 'handgun' ? createHandgun() : createKnife();
+  const root = new Group();
+  generated.flash?.removeFromParent();
+  root.add(generated.root);
+  generated.root.name = 'Procedural fallback';
+  if (definition.model.muzzlePosition && generated.flash) {
+    generated.flash.position.set(...definition.model.muzzlePosition);
+    root.add(generated.flash);
+  }
+  return { root, ...(generated.flash ? { flash: generated.flash } : {}) };
 }
 
 function createHandgun(): { readonly root: Group; readonly flash: Object3D } {

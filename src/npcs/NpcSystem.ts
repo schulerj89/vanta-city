@@ -12,6 +12,7 @@ import { NpcEntity } from './NpcEntity';
 import type { NpcCharacterLoader } from './NpcEntity';
 import type { NpcDefinition } from './NpcDefinition';
 import type { EquipmentId } from '../equipment/EquipmentDefinition';
+import type { GameAssetLoader } from '../assets/AssetLoader';
 
 export interface NpcInteractionRegistry {
   register(interactable: Interactable): () => void;
@@ -43,6 +44,7 @@ export class NpcSystem implements GameSystem {
     private readonly player: WorldPoseSource,
     private readonly levels: ActiveLevelSource,
     private readonly worldEvents: EventBus<WorldEvents>,
+    private readonly assets?: Pick<GameAssetLoader, 'instantiateModel'>,
   ) {
     this.characters = new Map(
       characterDefinitions.map((definition) => [definition.id, definition]),
@@ -129,6 +131,7 @@ export class NpcSystem implements GameSystem {
             this.loader,
             this.conversations,
             this.player,
+            this.assets,
           );
           constructing.push(entity);
           await entity.init();

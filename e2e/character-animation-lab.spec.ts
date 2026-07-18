@@ -109,6 +109,89 @@ test('supports deterministic action lock, impact, scrub, speed, and mixer releas
   ]);
 });
 
+test('inspects both real weapons through every playable weapon state', async ({
+  page,
+}, testInfo) => {
+  test.slow();
+  const cases = [
+    { item: 'handgun' as const, states: ['gunIdle', 'gunFire', 'gunRun'] },
+    { item: 'knife' as const, states: ['knifeIdle', 'knifeSlash'] },
+  ];
+  for (const model of ['casual', 'punk']) {
+    await page.evaluate(
+      (id) => window.__VANTA_ANIMATION_LAB__!.selectModel(id),
+      model,
+    );
+    await waitForModel(page, model);
+    for (const { item, states } of cases) {
+      await page.evaluate((equipment) => {
+        const lab = window.__VANTA_ANIMATION_LAB__!;
+        lab.setLoop(true);
+        lab.selectEquipment(equipment);
+      }, item);
+      await expect
+        .poll(async () => (await labSnapshot(page)).equipment.source)
+        .toBe('asset');
+      for (const state of states) {
+        expect(
+          await page.evaluate(
+            (selection) =>
+              window.__VANTA_ANIMATION_LAB__!.selectAnimation(
+                `logical:${selection}`,
+              ),
+            state,
+          ),
+        ).toBe(true);
+        await page.evaluate(() => {
+          window.__VANTA_ANIMATION_LAB__!.setNormalizedTime(0.5);
+          window.__VANTA_ANIMATION_LAB__!.setView('right');
+        });
+        const snapshot = await labSnapshot(page);
+        expect(snapshot.equipment).toMatchObject({
+          itemId: item,
+          attached: true,
+          compatible: true,
+          socketName: 'WristR',
+          source: 'asset',
+          loadError: undefined,
+        });
+        expect(snapshot.alignment?.simulationOrigin).toEqual([0, 0, 0]);
+        expect(snapshot.socketPosition).toHaveLength(3);
+        const dimensions = snapshot.equipmentBounds!.max.map(
+          (value, index) => value - snapshot.equipmentBounds!.min[index],
+        );
+        expect(Math.max(...dimensions)).toBeGreaterThan(0.25);
+        expect(Math.max(...dimensions)).toBeLessThan(0.65);
+        await testInfo.attach(`${model}-${item}-${state}-right.png`, {
+          body: await page.screenshot(),
+          contentType: 'image/png',
+        });
+      }
+      await page.evaluate(() =>
+        window.__VANTA_ANIMATION_LAB__!.setView('left'),
+      );
+      await testInfo.attach(`${model}-${item}-left.png`, {
+        body: await page.screenshot(),
+        contentType: 'image/png',
+      });
+      await page.evaluate(() =>
+        window.__VANTA_ANIMATION_LAB__!.setView('front'),
+      );
+      await testInfo.attach(`${model}-${item}-front.png`, {
+        body: await page.screenshot(),
+        contentType: 'image/png',
+      });
+      await page.evaluate(() =>
+        window.__VANTA_ANIMATION_LAB__!.setView('rear'),
+      );
+      await testInfo.attach(`${model}-${item}-rear.png`, {
+        body: await page.screenshot(),
+        contentType: 'image/png',
+      });
+    }
+  }
+});
+
 test('renders stable playable and NPC grounding diagnostics @visual', async ({
   page,
 }, testInfo) => {

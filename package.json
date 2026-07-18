@@ -27,6 +27,7 @@
     "lab:characters": "vite --open '/?sandbox=character-animation-lab&debug=1'",
     "size": "node scripts/report-bundle-size.mjs",
     "validate:characters": "tsx scripts/validate-characters.ts",
+    "validate:equipment": "tsx scripts/validate-equipment-assets.ts",
     "validate:intersection": "tsx scripts/validate-intersection-assets.ts",
     "validate:traffic": "tsx scripts/validate-traffic-assets.ts"
   },

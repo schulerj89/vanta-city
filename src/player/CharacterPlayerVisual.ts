@@ -31,6 +31,7 @@ import type { CharacterAlignmentReport } from '../characters/CharacterVisualAlig
 import { CharacterEquipment } from '../equipment/CharacterEquipment';
 import { EquipmentPresentation } from '../equipment/EquipmentPresentation';
 import type { EquipmentPresentationSnapshot } from '../equipment/EquipmentPresentation';
+import type { GameAssetLoader } from '../assets/AssetLoader';
 import { CharacterDeathPresentation } from '../characters/CharacterDeathPresentation';
 import type { CharacterDeathPresentationSnapshot } from '../characters/CharacterDeathPresentation';
 
@@ -153,13 +154,14 @@ export class CharacterPlayerVisual
     private readonly selection: CharacterSelectionReader,
     private readonly loader: CharacterInstanceLoader,
     public readonly equipment = new CharacterEquipment('player'),
+    assets?: Pick<GameAssetLoader, 'instantiateModel'>,
   ) {
     this.object3d.name = 'Player simulation transform';
     this.visualRoot.name = 'Player visual root';
     this.loadedModelRoot.name = 'Loaded character alignment root';
     this.visualRoot.add(this.loadedModelRoot);
     this.object3d.add(this.visualRoot);
-    this.equipmentPresentation = new EquipmentPresentation(equipment);
+    this.equipmentPresentation = new EquipmentPresentation(equipment, assets);
   }
 
   public async init(): Promise<void> {

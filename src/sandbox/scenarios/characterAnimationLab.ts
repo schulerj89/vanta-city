@@ -53,6 +53,10 @@ import { npcCharacterDefinitions } from '../../npcs/npcs';
 import { defaultPlayerMovementConfig } from '../../player/PlayerMovement';
 import type { PlayerMovementState } from '../../player/PlayerMovement';
 import type { SandboxContext, SandboxScenario } from '../SandboxScenario';
+import { CharacterEquipment } from '../../equipment/CharacterEquipment';
+import { EquipmentPresentation } from '../../equipment/EquipmentPresentation';
+import type { EquipmentPresentationSnapshot } from '../../equipment/EquipmentPresentation';
+import type { EquipmentId } from '../../equipment/EquipmentDefinition';
 
 type SelectionKind = 'logical' | 'clip';
 type CompletionRelease = 'mixer-finished' | 'duration-fallback' | undefined;
@@ -93,18 +97,25 @@ export interface CharacterAnimationLabSnapshot {
     | undefined;
   readonly disposalCount: number;
   readonly error: string | undefined;
+  readonly equipment: EquipmentPresentationSnapshot;
+  readonly equipmentBounds:
+    | { readonly min: readonly number[]; readonly max: readonly number[] }
+    | undefined;
+  readonly socketPosition: readonly number[] | undefined;
 }
 
 export interface CharacterAnimationLabBridge {
   snapshot(): CharacterAnimationLabSnapshot;
   selectModel(id: string): Promise<void>;
   selectAnimation(selection: string): boolean;
+  selectEquipment(itemId: EquipmentId | 'none'): void;
+  setView(view: 'front' | 'right' | 'rear' | 'left'): void;
   setPlaying(playing: boolean): void;
   setLoop(loop: boolean): void;
   setSpeed(speed: number): void;
   setNormalizedTime(time: number): void;
   setOverlay(
-    overlay: 'skeleton' | 'bounds' | 'alignment' | 'rootMotion',
+    overlay: 'skeleton' | 'bounds' | 'alignment' | 'rootMotion' | 'equipment',
     visible: boolean,
   ): void;
 }
@@ -132,6 +143,12 @@ class CharacterAnimationLabSystem implements GameSystem {
   private readonly overlayRoot = new Group();
   private readonly bounds = new Box3();
   private readonly boundsHelper = new Box3Helper(this.bounds, 0x70f0c5);
+  private readonly equipmentBounds = new Box3();
+  private readonly equipmentBoundsHelper = new Box3Helper(
+    this.equipmentBounds,
+    0xffb347,
+  );
+  private readonly socketAxes = new AxesHelper(0.24);
   private readonly simulationAxes = new AxesHelper(0.45);
   private readonly visualAxes = new AxesHelper(0.32);
   private readonly footPlane = new Mesh(
@@ -152,6 +169,8 @@ class CharacterAnimationLabSystem implements GameSystem {
   private readonly status = document.createElement('output');
   private readonly modelSelect = document.createElement('select');
   private readonly animationSelect = document.createElement('select');
+  private readonly equipmentSelect = document.createElement('select');
+  private readonly viewSelect = document.createElement('select');
   private readonly playButton = document.createElement('button');
   private readonly scrub = document.createElement('input');
   private readonly speed = document.createElement('input');
@@ -189,12 +208,18 @@ class CharacterAnimationLabSystem implements GameSystem {
   private error: string | undefined;
   private unregister: DebugUnregister[] = [];
   private readonly graph = new CharacterAnimationStateMachine();
+  private readonly equipment = new CharacterEquipment('animation-lab');
+  private readonly equipmentPresentation: EquipmentPresentation;
   private currentGraph = this.graph.getState();
   private alignment:
     { readonly height: number; readonly visualOffset: number } | undefined;
 
   public constructor(private readonly context: SandboxContext) {
     this.loader = new CharacterLoader(context.assets);
+    this.equipmentPresentation = new EquipmentPresentation(
+      this.equipment,
+      context.assets,
+    );
     this.stage.name = 'Character and Animation Lab stage';
     this.simulationRoot.name = 'Authoritative simulation origin';
     this.visualRoot.name = 'Presentation-only visual alignment root';
@@ -224,11 +249,10 @@ class CharacterAnimationLabSystem implements GameSystem {
     if (!this.cameraConfigured) {
       // RenderSystem initializes after sandbox systems in the shared harness.
       // Apply the lab composition on the first frame, after that initialization.
-      this.context.camera.position.set(2.8, 1.85, 3.45);
-      this.context.camera.lookAt(0, 0.95, 0);
-      this.cameraConfigured = true;
+      this.setView('right');
     }
     const delta = Math.max(0, time.delta);
+    this.equipmentPresentation.update(delta);
     if (this.mixer && this.action && this.loaded) {
       this.action.paused = !this.playing;
       this.action.setEffectiveTimeScale(this.playbackSpeed);
@@ -266,10 +290,14 @@ class CharacterAnimationLabSystem implements GameSystem {
     for (const unregister of this.unregister) unregister();
     this.unregister = [];
     this.disposeLoaded();
+    this.equipmentPresentation.dispose();
+    this.equipment.dispose();
     this.context.scene.remove(this.stage);
     this.context.mount.classList.remove('character-animation-lab-active');
     this.panel.remove();
     this.boundsHelper.dispose();
+    this.equipmentBoundsHelper.dispose();
+    this.socketAxes.dispose();
     disposeObject(this.stage);
     this.stage.clear();
   }
@@ -279,6 +307,13 @@ class CharacterAnimationLabSystem implements GameSystem {
       ? new Box3().setFromObject(this.loaded.root)
       : undefined;
     const [selectionKind] = parseSelection(this.selected);
+    const attachment = this.equipmentPresentation.getAttachmentDebugObjects();
+    const weaponBounds = attachment
+      ? new Box3().setFromObject(attachment.root)
+      : undefined;
+    const socketPosition = attachment
+      ? attachment.socket.getWorldPosition(new Vector3()).toArray()
+      : undefined;
     return {
       ready: this.ready,
       modelId: this.loaded?.definition.id,
@@ -319,6 +354,15 @@ class CharacterAnimationLabSystem implements GameSystem {
         : undefined,
       disposalCount: this.disposalCount,
       error: this.error,
+      equipment: this.equipmentPresentation.getSnapshot(),
+      equipmentBounds:
+        !weaponBounds || weaponBounds.isEmpty()
+          ? undefined
+          : {
+              min: weaponBounds.min.toArray(),
+              max: weaponBounds.max.toArray(),
+            },
+      socketPosition,
     };
   }
 
@@ -348,6 +392,7 @@ class CharacterAnimationLabSystem implements GameSystem {
     };
     this.visualRoot.position.set(0, alignment.appliedVisualOffset, 0);
     this.visualRoot.add(next.root);
+    this.equipmentPresentation.bind(next.root, definition.equipmentRigId);
     this.mixer = new AnimationMixer(next.root);
     this.mixer.addEventListener('finished', this.onMixerFinished);
     this.buildSkeleton(next.root);
@@ -397,6 +442,25 @@ class CharacterAnimationLabSystem implements GameSystem {
     this.updateRootTrail(selection);
     this.animationSelect.value = selection;
     return true;
+  }
+
+  public selectEquipment(itemId: EquipmentId | 'none'): void {
+    if (itemId === 'none') this.equipment.unequip();
+    else this.equipment.equip(itemId);
+    this.equipmentSelect.value = itemId;
+  }
+
+  public setView(view: 'front' | 'right' | 'rear' | 'left'): void {
+    const positions = {
+      front: [0, 1.45, 3.2],
+      right: [3.2, 1.45, 0],
+      rear: [0, 1.45, -3.2],
+      left: [-3.2, 1.45, 0],
+    } as const;
+    const position = positions[view];
+    this.context.camera.position.set(position[0], position[1], position[2]);
+    this.context.camera.lookAt(0, 1.05, 0);
+    this.cameraConfigured = true;
   }
 
   public setPlaying(playing: boolean): void {
@@ -452,6 +516,8 @@ class CharacterAnimationLabSystem implements GameSystem {
     this.simulationRoot.add(this.visualRoot);
     this.overlayRoot.add(
       this.boundsHelper,
+      this.equipmentBoundsHelper,
+      this.socketAxes,
       this.simulationAxes,
       this.footPlane,
       this.impactMarker,
@@ -487,6 +553,22 @@ class CharacterAnimationLabSystem implements GameSystem {
     });
     this.animationSelect.addEventListener('change', () => {
       this.selectAnimation(this.animationSelect.value);
+    });
+    this.equipmentSelect.add(new Option('None', 'none'));
+    this.equipmentSelect.add(new Option('Handgun', 'handgun'));
+    this.equipmentSelect.add(new Option('Knife', 'knife'));
+    this.equipmentSelect.value = 'none';
+    this.equipmentSelect.addEventListener('change', () => {
+      this.selectEquipment(this.equipmentSelect.value as EquipmentId | 'none');
+    });
+    for (const view of ['front', 'right', 'rear', 'left'] as const) {
+      this.viewSelect.add(new Option(view, view));
+    }
+    this.viewSelect.value = 'right';
+    this.viewSelect.addEventListener('change', () => {
+      this.setView(
+        this.viewSelect.value as 'front' | 'right' | 'rear' | 'left',
+      );
     });
 
     this.playButton.type = 'button';
@@ -525,6 +607,8 @@ class CharacterAnimationLabSystem implements GameSystem {
     controls.append(
       field('Model', this.modelSelect),
       field('Clip / logical state', this.animationSelect),
+      field('Equipment', this.equipmentSelect),
+      field('View', this.viewSelect),
       field('Playback', this.playButton),
       field('Normalized time', this.scrub),
       field('Speed', this.speed),
@@ -540,6 +624,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       ['bounds', 'Transformed bounds', true],
       ['alignment', 'Origin, visual root, capsule + foot plane', true],
       ['rootMotion', 'Authored root-motion trail', true],
+      ['equipment', 'Weapon bounds + socket axes', true],
     ] as const) {
       const input = document.createElement('input');
       input.type = 'checkbox';
@@ -669,6 +754,20 @@ class CharacterAnimationLabSystem implements GameSystem {
       bone.getWorldQuaternion(axes.quaternion);
       axes.scale.setScalar(1);
     }
+    const attachment = this.equipmentPresentation.getAttachmentDebugObjects();
+    const equipmentOverlay =
+      this.overlayInputs.get('equipment')?.checked ?? false;
+    if (attachment) {
+      this.equipmentBounds.setFromObject(attachment.root);
+      attachment.socket.getWorldPosition(this.socketAxes.position);
+      attachment.socket.getWorldQuaternion(this.socketAxes.quaternion);
+    } else {
+      this.equipmentBounds.makeEmpty();
+    }
+    this.equipmentBoundsHelper.visible =
+      Boolean(attachment) && equipmentOverlay;
+    this.socketAxes.visible = Boolean(attachment) && equipmentOverlay;
+    this.equipmentBoundsHelper.updateMatrixWorld(true);
   }
 
   private refreshPanel(): void {
@@ -705,6 +804,22 @@ class CharacterAnimationLabSystem implements GameSystem {
           : 'pending',
       ],
       ['Disposed instances', String(snapshot.disposalCount)],
+      [
+        'Equipment',
+        snapshot.equipment.itemId
+          ? `${snapshot.equipment.itemId} · ${snapshot.equipment.source ?? 'loading'} · ${snapshot.equipment.socketName ?? 'no socket'}`
+          : 'none',
+      ],
+      [
+        'Weapon bounds',
+        snapshot.equipmentBounds
+          ? snapshot.equipmentBounds.max
+              .map((value, index) =>
+                (value - snapshot.equipmentBounds!.min[index]!).toFixed(3),
+              )
+              .join(' × ')
+          : 'none',
+      ],
     ];
     this.diagnostics.replaceChildren(
       ...rows.flatMap(([label, value]) => {
@@ -733,6 +848,10 @@ class CharacterAnimationLabSystem implements GameSystem {
       this.rootTrail.visible =
         this.overlayInputs.get('rootMotion')?.checked ?? false;
     }
+    const equipment = this.overlayInputs.get('equipment')?.checked ?? false;
+    const attachment = this.equipmentPresentation.getAttachmentDebugObjects();
+    this.equipmentBoundsHelper.visible = equipment && Boolean(attachment);
+    this.socketAxes.visible = equipment && Boolean(attachment);
   }
 
   private registerDebug(): void {
@@ -775,6 +894,8 @@ class CharacterAnimationLabSystem implements GameSystem {
       snapshot: () => this.getSnapshot(),
       selectModel: (id) => this.selectModel(id),
       selectAnimation: (selection) => this.selectAnimation(selection),
+      selectEquipment: (itemId) => this.selectEquipment(itemId),
+      setView: (view) => this.setView(view),
       setPlaying: (playing) => this.setPlaying(playing),
       setLoop: (loop) => this.setLoop(loop),
       setSpeed: (speed) => this.setSpeed(speed),
@@ -784,6 +905,7 @@ class CharacterAnimationLabSystem implements GameSystem {
   }
 
   private disposeLoaded(): void {
+    this.equipmentPresentation.unbind();
     this.disposeRootTrail();
     if (this.mixer && this.loaded) {
       this.mixer.removeEventListener('finished', this.onMixerFinished);
