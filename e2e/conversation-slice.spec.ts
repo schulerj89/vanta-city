@@ -14,6 +14,7 @@ test('character picker through repeatable Mack conversation', async ({
   await page.goto('/?e2e=1&debug=1&dialogueTypewriter=0&npcFixtures=1');
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
 
+  await command(page, 'ui.open-character-picker');
   await expect.poll(async () => (await snapshot(page)).picker.open).toBe(true);
   await expect
     .poll(async () => {

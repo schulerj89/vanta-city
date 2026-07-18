@@ -9,6 +9,43 @@ import { CameraPreferenceStore } from '../src/camera/CameraPreferences';
 const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1&sparringFixture=1';
 
 test.describe('playable debug district', () => {
+  test('boots directly into gameplay as Casual without recreating the player simulation @smoke', async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ key, value }) => window.localStorage.setItem(key, value),
+      {
+        key: 'vanta-city:character-preference',
+        value: JSON.stringify({
+          version: 1,
+          selectedCharacterId: 'punk',
+        }),
+      },
+    );
+    await page.goto('/?e2e=1&debug=1');
+    await waitForReadyState(page);
+    await expect
+      .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+      .toBe('casual');
+
+    const booted = await snapshot(page);
+    expect(booted.gameState).toBe('playing');
+    expect(booted.selectedCharacterId).toBe('casual');
+    expect(booted.character.source).toBe('asset');
+    expect(booted.picker.open).toBe(false);
+    expect(booted.picker.registeredCharacterIds).toEqual(['casual', 'punk']);
+
+    await executeCommand(page, 'player.select-character', 'punk');
+    await expect
+      .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
+      .toBe('punk');
+    const switched = await snapshot(page);
+    expect(switched.player.simulationRootUuid).toBe(
+      booted.player.simulationRootUuid,
+    );
+    expect(switched.player.position).toEqual(booted.player.position);
+  });
+
   test('starts ready with a grounded player, valid visual, world, and camera @smoke', async ({
     page,
   }, testInfo) => {

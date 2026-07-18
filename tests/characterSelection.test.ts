@@ -70,6 +70,30 @@ describe('CharacterSelectionStore', () => {
     );
   });
 
+  it('allows boot to explicitly replace a stored preference through the same selection state', () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      CharacterSelectionStore.storageKey,
+      storedPreference('hero'),
+    );
+    const selection = new CharacterSelectionStore(
+      definitions,
+      'placeholder',
+      storage,
+    );
+    const changed = vi.fn();
+    selection.onSelectionChanged(changed);
+
+    selection.select('placeholder');
+
+    expect(selection.getSelectedId()).toBe('placeholder');
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed).toHaveBeenCalledWith(definitions[0]);
+    expect(storage.getItem(CharacterSelectionStore.storageKey)).toBe(
+      storedPreference('placeholder'),
+    );
+  });
+
   it('rejects unknown selections and repairs unknown stored ids', () => {
     const storage = memoryStorage();
     storage.setItem(

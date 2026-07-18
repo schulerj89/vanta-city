@@ -17,6 +17,10 @@ test('standard gamepad owns picker, gameplay, dialogue, restore, and narrow help
   await installGamepadStub(page);
   await page.goto('/?e2e=1&dialogueTypewriter=0&npcFixtures=1');
   await page.waitForFunction(() => window.__VANTA_TEST__ !== undefined);
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
+  await pressButton(page, 3);
   await expect.poll(async () => (await snapshot(page)).picker.open).toBe(true);
   await expect
     .poll(async () => {

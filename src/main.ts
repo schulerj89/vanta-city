@@ -214,6 +214,10 @@ async function bootstrap(): Promise<void> {
     'casual',
     window.localStorage,
   );
+  // Product boot always starts from the registered Casual definition. The
+  // selection store remains authoritative so picker and debug changes continue
+  // to replace only the visual attached to the existing player simulation.
+  characterSelection.select('casual');
   const playerEquipment = new CharacterEquipment('player', ['knife']);
   const playerAccount = new PlayerMoneyAccount('player');
   const characterVisual = new CharacterPlayerVisual(
@@ -694,10 +698,7 @@ async function bootstrap(): Promise<void> {
         })
       : undefined;
 
-  // Install opt-in browser observability before opening the initial picker so
-  // tests cannot observe the dialog one microtask before the bridge exists.
   loading.complete();
-  if (pageParameters.get('skipPicker') !== '1') characterPicker.open();
 
   installHotDisposal(runtime, assets, development, () => {
     unsubscribeAccessibility();

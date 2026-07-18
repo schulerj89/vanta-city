@@ -71,6 +71,8 @@ export interface BrowserTestSnapshot {
   };
   readonly player: {
     readonly exists: boolean;
+    /** Stable root owned by the one player simulation, not the loaded model. */
+    readonly simulationRootUuid: string;
     readonly position: {
       readonly x: number;
       readonly y: number;
@@ -408,6 +410,7 @@ function createSnapshot(
     },
     player: {
       exists: dependencies.player.visual.object3d.parent !== null,
+      simulationRootUuid: dependencies.player.visual.object3d.uuid,
       position,
       velocity: movement.velocity,
       grounded: movement.grounded,
