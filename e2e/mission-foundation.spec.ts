@@ -50,6 +50,18 @@ test('Walk the Block advances through canonical world hooks and rewards once @vi
       referenceId: 'interaction.signal-controller',
     },
   });
+  await page.keyboard.press('m');
+  await expect.poll(async () => (await snapshot(page)).gameState).toBe('map');
+  await expect
+    .poll(async () => (await snapshot(page)).fullWorldMap.highlightCount)
+    .toBe(1);
+  await expect(
+    page.locator('[data-highlight-id="highlight.ash-001.signal-corner"]'),
+  ).toBeVisible();
+  await page.keyboard.press('m');
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
 
   await command(page, 'player.teleport-position', '10.2,0.22,9.5,3.141593');
   await expect

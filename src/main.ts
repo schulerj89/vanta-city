@@ -474,13 +474,6 @@ async function bootstrap(): Promise<void> {
     player,
     levelSystem,
   );
-  const fullWorldMap = new FullWorldMapSystem(
-    uiLayout.zone('modal'),
-    runtime,
-    input,
-    player,
-    levelSystem,
-  );
   const unregisterCombatVolumes =
     development && sparringTarget
       ? development.visualHelpers.register('combatVolumes', {
@@ -544,6 +537,14 @@ async function bootstrap(): Promise<void> {
           isEquipmentId(itemId) && playerEquipment.acquire(itemId),
       },
     },
+  );
+  const fullWorldMap = new FullWorldMapSystem(
+    uiLayout.zone('modal'),
+    runtime,
+    input,
+    player,
+    levelSystem,
+    missions,
   );
   const missionHud = new MissionHudSystem(
     uiLayout,

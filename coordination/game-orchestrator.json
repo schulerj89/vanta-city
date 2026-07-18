@@ -351,7 +351,7 @@
     {
       "id": "MISSION-001",
       "title": "Create the authoritative mission and objective system",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["STORY-001", "CORE-001"],
       "owner": "gameplay-worker",
       "acceptance": [
@@ -375,7 +375,7 @@
     {
       "id": "MAP-001",
       "title": "Add a full-world map screen",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["WORLD-001"],
       "owner": "ui-worker",
       "acceptance": [
@@ -492,7 +492,7 @@
     {
       "id": "QA-PLAYBOT-001",
       "title": "Build the local recorded playtest bot",
-      "status": "ready",
+      "status": "completed",
       "priority": "high",
       "source": "explicit-user-request",
       "duplicateKey": "qa-local-recorded-playtest-bot",
@@ -521,7 +521,7 @@
     }
   ],
   "executionState": {
-    "lastIntegratedTaskIds": ["NPC-001", "VEHICLE-001", "TEST-001"],
+    "lastIntegratedTaskIds": ["MISSION-001", "MAP-001", "QA-PLAYBOT-001"],
     "lastMapExpansion": {
       "taskId": "WORLD-001",
       "previousPlayableAreaSquareMetres": 3136,
