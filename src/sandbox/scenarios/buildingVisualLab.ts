@@ -4,6 +4,7 @@ import {
   Box3,
   Box3Helper,
   BoxGeometry,
+  Color,
   DirectionalLight,
   EdgesGeometry,
   GridHelper,
@@ -166,6 +167,9 @@ class BuildingVisualLabSystem implements GameSystem {
   }
 
   private configureScene(): void {
+    // Sandboxes own their preview environment; gameplay lighting is provided
+    // separately by TimeOfDayLightingSystem.
+    this.context.scene.background = new Color(0x92a8b8);
     const ambient = new AmbientLight(0xaec8d0, 1.45);
     ambient.name = 'building-lab:ambient';
     const sun = new DirectionalLight(0xffdfb4, 2.4);
