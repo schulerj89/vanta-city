@@ -29,7 +29,8 @@ describe('WorldCollisionSystem', () => {
     const system = new WorldCollisionSystem(collision, events);
     system.init();
 
-    events.emit('level:loaded', { level: testDistrict.definition });
+    const legacyLevel = { ...testDistrict.definition, streaming: undefined };
+    events.emit('level:loaded', { level: legacyLevel });
     expect(
       collision.castCamera(
         new Vector3(8.25, 1, 6),
@@ -39,7 +40,7 @@ describe('WorldCollisionSystem', () => {
     ).toBe(true);
 
     // Reloading rebuilds rather than accumulating duplicate runtime shapes.
-    events.emit('level:loaded', { level: testDistrict.definition });
+    events.emit('level:loaded', { level: legacyLevel });
     events.emit('level:unloaded', { levelId: testDistrict.definition.id });
     expect(
       collision.castCamera(
@@ -48,6 +49,31 @@ describe('WorldCollisionSystem', () => {
         0.1,
       ).obstructed,
     ).toBe(false);
+
+    system.dispose();
+  });
+
+  it('leaves streamed collision ownership to sector lifecycle events', () => {
+    const events = new EventBus<WorldEvents>();
+    const collision = new StaticCollisionWorld();
+    const system = new WorldCollisionSystem(collision, events);
+    system.init();
+
+    events.emit('level:loaded', { level: testDistrict.definition });
+    expect(collision.getColliderCount()).toBe(0);
+
+    const collider = testDistrict.definition.staticCollision[0];
+    events.emit('sector:loaded', {
+      levelId: testDistrict.definition.id,
+      sectorId: 'sector.fixture',
+      colliders: [collider],
+    });
+    expect(collision.getColliderCount()).toBe(1);
+    events.emit('sector:unloaded', {
+      levelId: testDistrict.definition.id,
+      sectorId: 'sector.fixture',
+    });
+    expect(collision.getColliderCount()).toBe(0);
 
     system.dispose();
   });

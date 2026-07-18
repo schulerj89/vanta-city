@@ -129,10 +129,12 @@ describe('LevelSystem', () => {
     expect(attempts.filter((id) => id.endsWith('trash-bags'))).toEqual(
       failureAttempts,
     );
+    expect(system.getStreamingSnapshot().active).toEqual(failed.active);
     await system.refreshStreaming({ x: 0, y: 0, z: 21 });
-    expect(system.getStreamingSnapshot().states['sector.southeast']).toBe(
-      'inactive',
-    );
+    expect(system.getStreamingSnapshot()).toMatchObject({
+      states: { 'sector.southeast': 'inactive' },
+      lastError: undefined,
+    });
     system.dispose();
   });
 });

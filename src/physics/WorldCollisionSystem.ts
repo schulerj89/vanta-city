@@ -17,7 +17,7 @@ export class WorldCollisionSystem implements GameSystem {
   public init(): void {
     this.unsubscribe.push(
       this.events.on('level:loaded', ({ level }) => {
-        if (level.streaming && this.sectorColliderIds.size > 0) return;
+        if (level.streaming) return;
         this.world.clear();
         this.sectorColliderIds.clear();
         this.world.addDefinitions(level.staticCollision);

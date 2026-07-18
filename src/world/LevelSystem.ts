@@ -154,6 +154,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
   public async load(levelId: string): Promise<void> {
     const definition = this.registry.get(levelId);
     validateLevelDefinition(definition);
+    this.lastError = undefined;
     const next = this.createLevel(definition);
     this.unload();
     this.loaded = next;
@@ -452,7 +453,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
       )
         loaded.states.set(sector.id, 'requested');
     }
-    let loadFailed = false;
+    let loadFailed = desired.some(
+      ({ id }) => loaded.states.get(id) === 'failed',
+    );
     for (const sector of desired) {
       if (
         loaded.sectors.has(sector.id) ||
@@ -488,6 +491,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
       }
     }
     if (loadFailed) return;
+    this.lastError = undefined;
     for (const sectorId of [...loaded.sectors.keys()].sort()) {
       if (!desiredIds.has(sectorId)) this.unloadSector(loaded, sectorId);
     }
