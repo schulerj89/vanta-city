@@ -1,4 +1,5 @@
 import './styles.css';
+import './cinematics/cinematics.css';
 import { MathUtils, Vector3 } from 'three';
 import { AssetCatalog } from './assets/AssetCatalog';
 import { ThreeAssetLoader } from './assets/AssetLoader';
@@ -93,6 +94,10 @@ import { MissionHudSystem } from './ui/MissionHudSystem';
 import { audioCatalog } from './audio/AudioCatalog';
 import { AudioPreferenceStore } from './audio/AudioPreferences';
 import { AudioPlaybackCoordinator } from './audio/AudioPlaybackCoordinator';
+import { CinematicCatalog } from './cinematics/CinematicDefinition';
+import { cinematicDefinitions } from './cinematics/cinematics';
+import { CinematicCoordinator } from './cinematics/CinematicCoordinator';
+import { CinematicPresentationSystem } from './cinematics/CinematicPresentationSystem';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -614,6 +619,43 @@ async function bootstrap(): Promise<void> {
     dialogue,
     dialoguePortraits,
   );
+  const cinematicUnavailableParticipants = new Set<string>();
+  const cinematics = new CinematicCoordinator(
+    new CinematicCatalog(cinematicDefinitions),
+    runtime.state,
+    runtime.events,
+    input,
+    input,
+    camera,
+    levelSystem,
+    {
+      hasParticipant: (id) =>
+        !cinematicUnavailableParticipants.has(id) &&
+        (id === 'casual' || npcs.getWorldPoseSource(id) !== undefined),
+    },
+    player,
+  );
+  const cinematicPresentation = new CinematicPresentationSystem(
+    uiLayout.zone('presentation'),
+    uiLayout.zone('modal'),
+    cinematics,
+    (speakerId) => dialoguePortraits.getSpeakerName(speakerId),
+  );
+  const unsubscribeMissionCinematics = missions.events.on(
+    'mission:content-requested',
+    (request) => {
+      if (request.kind !== 'cinematic') return;
+      const started = cinematics.start(request.referenceId);
+      if (!started && !request.optional) {
+        development?.errors.report(
+          'required cinematic request',
+          new Error(
+            `Unable to start required cinematic "${request.referenceId}"`,
+          ),
+        );
+      }
+    },
+  );
   interactions.register({
     id: 'interaction.signal-controller',
     prompt: 'Inspect signal controller',
@@ -736,6 +778,8 @@ async function bootstrap(): Promise<void> {
     .register(conversations)
     .register(npcs)
     .register(missions)
+    .register(cinematics)
+    .register(cinematicPresentation)
     .register(missionHud)
     .register(weaponCombat);
   if (interactionScenario) runtime.register(interactionScenario);
@@ -822,6 +866,11 @@ async function bootstrap(): Promise<void> {
           missionHud,
           timeOfDay,
           playerDeath,
+          cinematics,
+          setCinematicParticipantAvailable: (id, available) => {
+            if (available) cinematicUnavailableParticipants.delete(id);
+            else cinematicUnavailableParticipants.add(id);
+          },
         })
       : undefined;
 
@@ -829,6 +878,7 @@ async function bootstrap(): Promise<void> {
 
   installHotDisposal(runtime, assets, development, () => {
     unsubscribeAccessibility();
+    unsubscribeMissionCinematics();
     cashPickup?.dispose();
     playerAccount.dispose();
     disposeBrowserTestBridge?.();

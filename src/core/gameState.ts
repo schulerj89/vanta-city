@@ -16,7 +16,7 @@ export interface StateEvents {
 const allowedTransitions: Readonly<Record<GameState, readonly GameState[]>> = {
   booting: ['playing'],
   playing: ['paused', 'map', 'dialogue', 'cinematic', 'character-select'],
-  paused: ['playing', 'map', 'character-select'],
+  paused: ['playing', 'map', 'cinematic', 'character-select'],
   map: ['playing', 'paused'],
   dialogue: ['playing', 'paused', 'cinematic', 'character-select'],
   cinematic: ['playing', 'paused', 'dialogue', 'character-select'],

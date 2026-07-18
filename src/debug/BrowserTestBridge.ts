@@ -49,6 +49,7 @@ import type {
   AudioPreferences,
   AudioPreferenceStore,
 } from '../audio/AudioPreferences';
+import type { CinematicCoordinator } from '../cinematics/CinematicCoordinator';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -196,12 +197,20 @@ export interface BrowserTestSnapshot {
     readonly persistence: ReturnType<MissionSystem['getPersistenceSnapshot']>;
     readonly hud: ReturnType<MissionHudSystem['getSnapshot']>;
   };
+  readonly cinematic: ReturnType<CinematicCoordinator['getSnapshot']>;
   readonly lighting: ReturnType<TimeOfDayLightingSystem['getSnapshot']>;
   readonly playerDeath: ReturnType<PlayerDeathSystem['getSnapshot']>;
 }
 
 export interface BrowserTestApi {
   snapshot(): BrowserTestSnapshot;
+  startCinematic(id: string): boolean;
+  requestCinematicSkip(): boolean;
+  confirmCinematicSkip(): boolean;
+  cancelCinematicSkip(): boolean;
+  cancelCinematic(): boolean;
+  advanceCinematic(seconds: number): void;
+  setCinematicParticipantAvailable(id: string, available: boolean): void;
   executeDebugCommand(id: string, argument?: string): Promise<void>;
   setDebugToggle(id: string, enabled: boolean): void;
   setDebugNumber(id: string, value: number): Promise<void>;
@@ -288,6 +297,11 @@ export interface BrowserTestBridgeDependencies {
   readonly missionHud: MissionHudSystem;
   readonly timeOfDay: TimeOfDayLightingSystem;
   readonly playerDeath: PlayerDeathSystem;
+  readonly cinematics: CinematicCoordinator;
+  readonly setCinematicParticipantAvailable: (
+    id: string,
+    available: boolean,
+  ) => void;
 }
 
 /** Installs the opt-in development bridge used by Playwright smoke tests. */
@@ -322,6 +336,19 @@ export function installBrowserTestBridge(
         completedConversationIds,
         cancelledConversationIds,
       ),
+    startCinematic: (id) => dependencies.cinematics.start(id),
+    requestCinematicSkip: () => dependencies.cinematics.requestSkip(),
+    confirmCinematicSkip: () => dependencies.cinematics.confirmSkip(),
+    cancelCinematicSkip: () => dependencies.cinematics.cancelSkip(),
+    cancelCinematic: () => dependencies.cinematics.cancel(),
+    advanceCinematic: (seconds) =>
+      dependencies.cinematics.update({
+        delta: seconds,
+        elapsed: seconds,
+        frame: 0,
+      }),
+    setCinematicParticipantAvailable: (id, available) =>
+      dependencies.setCinematicParticipantAvailable(id, available),
     executeDebugCommand: (id, argument) =>
       dependencies.debug.executeCommand(id, argument),
     setDebugToggle: (id, enabled) => dependencies.debug.setToggle(id, enabled),
@@ -536,6 +563,7 @@ function createSnapshot(
       persistence: dependencies.missions.getPersistenceSnapshot(),
       hud: dependencies.missionHud.getSnapshot(),
     },
+    cinematic: dependencies.cinematics.getSnapshot(),
     lighting: dependencies.timeOfDay.getSnapshot(),
     playerDeath: dependencies.playerDeath.getSnapshot(),
     performance: {

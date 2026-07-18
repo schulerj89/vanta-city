@@ -55,6 +55,8 @@ export class GameRuntime {
   private running = false;
   private diagnostics: RuntimePerformanceDiagnostics | undefined;
   private previousFrameTimestamp: number | undefined;
+  private pauseReturnState: Extract<GameState, 'playing' | 'cinematic'> =
+    'playing';
 
   public constructor(private readonly input: InputReader) {}
 
@@ -92,7 +94,9 @@ export class GameRuntime {
   }
 
   public pause(): void {
-    if (this.state.current !== 'playing') return;
+    if (this.state.current !== 'playing' && this.state.current !== 'cinematic')
+      return;
+    this.pauseReturnState = this.state.current;
     this.state.transition('paused');
     this.systems.pause();
   }
@@ -100,7 +104,9 @@ export class GameRuntime {
   public resume(): void {
     if (this.state.current !== 'paused') return;
     this.input.consumeTransientActions?.();
-    this.state.transition('playing');
+    const returnState = this.pauseReturnState;
+    this.pauseReturnState = 'playing';
+    this.state.transition(returnState);
     this.clock.resetFrameDelta();
     this.systems.resume();
   }
@@ -144,7 +150,11 @@ export class GameRuntime {
     this.input.prepareFrame?.();
     if (this.input.wasPressed('pause')) {
       if (this.state.current === 'paused') this.resume();
-      else if (this.state.current === 'playing') this.pause();
+      else if (
+        this.state.current === 'playing' ||
+        this.state.current === 'cinematic'
+      )
+        this.pause();
     }
 
     const started = this.diagnostics?.now();

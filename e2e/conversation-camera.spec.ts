@@ -11,7 +11,9 @@ const cases = [
     interactionId: 'interaction.npc.mack',
     conversationId: 'conversation.mack.introduction',
     profileId: 'close',
-    npc: { x: -9, y: 0.22, z: 10 },
+    // Keep this expectation aligned with the authoritative production spawn;
+    // the previous -9/10 fixture predated MISSION-001's reviewed Mack move.
+    npc: { x: -12, y: 0.22, z: 9.5 },
   },
   {
     id: 'nox',

@@ -498,6 +498,27 @@ export const testDistrict = {
     ],
     cinematicAnchors: [
       {
+        id: 'camera.ash-001.north-arrival',
+        position: [7.5, 3.4, 24.5],
+        lookAt: [0, 1.15, 20],
+        fieldOfView: 46,
+        tags: ['cinematic', 'ash-001', 'north-approach'],
+      },
+      {
+        id: 'camera.ash-001.junction-watch',
+        position: [-7.5, 4.2, 16.5],
+        lookAt: [0, 1.4, 3],
+        fieldOfView: 50,
+        tags: ['cinematic', 'ash-001', 'junction'],
+      },
+      {
+        id: 'camera.ash-001.mack-position',
+        position: [-4, 3.5, 16],
+        lookAt: [-12, 1.45, 9.5],
+        fieldOfView: 46,
+        tags: ['cinematic', 'ash-001', 'mack'],
+      },
+      {
         id: 'camera.intersection-overhead',
         position: [0, 62, 0],
         // Keep the directed camera sweep clear of the floor at the origin.

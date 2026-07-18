@@ -396,6 +396,11 @@ export class InputSystem
         action.startsWith('map')
       );
     }
+    if (modal.classList.contains('cinematic-skip-confirmation')) {
+      return (
+        action === 'confirmCinematicSkip' || action === 'cancelCinematicSkip'
+      );
+    }
     return false;
   }
 

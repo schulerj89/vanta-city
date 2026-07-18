@@ -29,7 +29,14 @@ export type InputControlOwner =
   | 'focused-ui';
 
 export type InputActionFamily =
-  'gameplay' | 'interface' | 'map' | 'help' | 'picker' | 'dialogue' | 'debug';
+  | 'gameplay'
+  | 'interface'
+  | 'map'
+  | 'help'
+  | 'picker'
+  | 'dialogue'
+  | 'cinematic'
+  | 'debug';
 
 export interface OwnedDeviceActions extends InputDeviceActionSnapshot {
   readonly accepted: readonly ActionName[];
@@ -458,6 +465,7 @@ export class InputOwnershipInspector implements GameSystem {
 }
 
 function actionFamilyFor(action: ActionName): InputActionFamily {
+  if (action.toLowerCase().includes('cinematic')) return 'cinematic';
   if (
     action === 'toggleMap' ||
     action === 'closeMap' ||
@@ -493,6 +501,11 @@ function actionAcceptedBy(
   if (owner === 'picker') return family === 'picker';
   if (owner === 'dialogue') return family === 'dialogue';
   if (owner === 'map') return family === 'map';
+  if (owner === 'cinematic') {
+    return (
+      family === 'cinematic' || action === 'pause' || action === 'toggleDebug'
+    );
+  }
   if (owner === 'paused') {
     return [
       'pause',

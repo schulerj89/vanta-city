@@ -38,6 +38,18 @@ test('Walk the Block advances through canonical world hooks and rewards once @vi
   });
   await attachScreenshot(page, testInfo, 'mission-active-desktop');
 
+  await expect
+    .poll(async () => (await snapshot(page)).cinematic.cinematicId)
+    .toBe('cinematic.ash-001.opening');
+  await page.evaluate(() => window.__VANTA_TEST__!.requestCinematicSkip());
+  await page.evaluate(() => window.__VANTA_TEST__!.confirmCinematicSkip());
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
+  expect(activeMission(await snapshot(page))?.currentObjectiveId).toBe(
+    'ash-001-talk-to-mack',
+  );
+
   await completeMackConversation(page);
   await expect
     .poll(async () => activeMission(await snapshot(page))?.currentObjectiveId)
