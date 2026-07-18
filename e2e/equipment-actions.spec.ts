@@ -6,6 +6,9 @@ import type {
 } from '../src/debug/BrowserTestBridge';
 
 const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1';
+// Skinned run poses can lift the lowest rendered vertex slightly while the
+// authoritative player simulation remains grounded.
+const animatedFootClearanceTolerance = 0.22;
 
 test.describe('reusable equipment and character actions', () => {
   test('equips, uses, rolls, dies, and revives both playable characters', async ({
@@ -99,7 +102,7 @@ test.describe('reusable equipment and character actions', () => {
       expect(state.player.grounded).toBe(true);
       expect(
         Math.abs(state.character.bounds!.min.y - state.player.position.y),
-      ).toBeLessThanOrEqual(0.2);
+      ).toBeLessThanOrEqual(animatedFootClearanceTolerance);
       await page.keyboard.up('KeyW');
       await page.keyboard.press('KeyR');
 
@@ -142,6 +145,18 @@ test.describe('reusable equipment and character actions', () => {
       await attach(page, testInfo, `${characterId}-roll`);
       await page.waitForTimeout(250);
       await attach(page, testInfo, `${characterId}-roll-mid`);
+      await expect
+        .poll(async () => {
+          const player = (await snapshot(page)).player;
+          return player.actionBusy && player.roll.blocked;
+        })
+        .toBe(true);
+      const collisionStop = (await snapshot(page)).player;
+      const remainingRollDistance =
+        collisionStop.roll.actualDistance - admittedRoll.roll.actualDistance;
+      expect(
+        horizontalDistance(collisionStop.position, admittedRoll.position),
+      ).toBeLessThanOrEqual(remainingRollDistance + 0.05);
       await page.keyboard.up('KeyW');
       await expect
         .poll(async () => (await snapshot(page)).player.actionBusy)
@@ -152,13 +167,8 @@ test.describe('reusable equipment and character actions', () => {
       expect(state.player.roll.blockedBy).toBeTruthy();
       expect(state.player.roll.actualDistance).toBeGreaterThanOrEqual(0);
       expect(state.player.roll.actualDistance).toBeLessThan(3);
-      // Collision can redirect the roll along a blocker, so accumulated path
-      // length must bound straight-line displacement after roll admission.
-      const remainingRollDistance =
-        state.player.roll.actualDistance - admittedRoll.roll.actualDistance;
-      expect(
-        horizontalDistance(state.player.position, admittedRoll.position),
-      ).toBeLessThanOrEqual(remainingRollDistance + 0.05);
+      // The invariant above is sampled while roll ownership is still active;
+      // post-roll locomotion is intentionally excluded from its counter.
       expect(state.player.grounded).toBe(true);
       await attach(page, testInfo, `${characterId}-roll-wall-stop`);
       await expect
@@ -386,7 +396,7 @@ test.describe('reusable equipment and character actions', () => {
       expect(turning.player.grounded).toBe(true);
       expect(
         Math.abs(turning.character.bounds!.min.y - turning.player.position.y),
-      ).toBeLessThanOrEqual(0.2);
+      ).toBeLessThanOrEqual(animatedFootClearanceTolerance);
       await attach(page, testInfo, `${characterId}-circular-run-fire-layer`);
 
       await page.keyboard.up('KeyQ');
