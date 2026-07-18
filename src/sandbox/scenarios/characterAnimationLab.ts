@@ -61,6 +61,14 @@ import type { EquipmentId } from '../../equipment/EquipmentDefinition';
 
 type SelectionKind = 'logical' | 'clip';
 type CompletionRelease = 'mixer-finished' | 'duration-fallback' | undefined;
+export type CharacterAnimationLabView =
+  | 'front'
+  | 'right'
+  | 'rear'
+  | 'left'
+  | 'close-up-front'
+  | 'close-up-three-quarter'
+  | 'close-up-rear-three-quarter';
 export interface EquipmentTransform {
   readonly position: readonly [number, number, number];
   readonly rotation: readonly [number, number, number];
@@ -74,6 +82,7 @@ export interface CharacterAnimationLabSnapshot {
   readonly selection: string;
   readonly selectionKind: SelectionKind;
   readonly playing: boolean;
+  readonly view: CharacterAnimationLabView;
   readonly speed: number;
   readonly loop: boolean;
   readonly normalizedTime: number;
@@ -119,10 +128,11 @@ export interface CharacterAnimationLabBridge {
   selectEquipment(itemId: EquipmentId | 'none'): void;
   setEquipmentTransform(transform: EquipmentTransform): void;
   setMuzzleTransform(transform: EquipmentTransform): void;
-  setView(view: 'front' | 'right' | 'rear' | 'left'): void;
+  setView(view: CharacterAnimationLabView): void;
   setPlaying(playing: boolean): void;
   setLoop(loop: boolean): void;
   setSpeed(speed: number): void;
+  setCrossFade(seconds: number): void;
   setNormalizedTime(time: number): void;
   setOverlay(
     overlay: 'skeleton' | 'bounds' | 'alignment' | 'rootMotion' | 'equipment',
@@ -201,6 +211,7 @@ class CharacterAnimationLabSystem implements GameSystem {
   private rootTrail: Line | undefined;
   private selected = 'logical:idle';
   private playing = true;
+  private currentView: CharacterAnimationLabView = 'right';
   private loopEnabled = true;
   private playbackSpeed = 1;
   private crossFade = 0.2;
@@ -340,6 +351,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       selection: parseSelection(this.selected)[1],
       selectionKind,
       playing: this.playing,
+      view: this.currentView,
       speed: this.playbackSpeed,
       loop: this.loopEnabled,
       normalizedTime: this.normalizedTime,
@@ -502,17 +514,21 @@ class CharacterAnimationLabSystem implements GameSystem {
     this.refreshMuzzleControls();
   }
 
-  public setView(view: 'front' | 'right' | 'rear' | 'left'): void {
+  public setView(view: CharacterAnimationLabView): void {
     const positions = {
       front: [0, 1.45, 3.2],
       right: [3.2, 1.45, 0],
       rear: [0, 1.45, -3.2],
       left: [-3.2, 1.45, 0],
+      'close-up-front': [0, 1.53, 1.05],
+      'close-up-three-quarter': [0.82, 1.58, 1.1],
+      'close-up-rear-three-quarter': [-0.82, 1.58, -1.1],
     } as const;
     const position = positions[view];
     this.context.camera.position.set(position[0], position[1], position[2]);
-    this.context.camera.lookAt(0, 1.05, 0);
+    this.context.camera.lookAt(0, view.startsWith('close-up') ? 1.5 : 1.05, 0);
     this.viewSelect.value = view;
+    this.currentView = view;
     this.cameraConfigured = true;
   }
 
@@ -535,6 +551,11 @@ class CharacterAnimationLabSystem implements GameSystem {
   public setSpeed(speed: number): void {
     this.playbackSpeed = Math.min(2, Math.max(0.1, speed));
     this.speed.value = String(this.playbackSpeed);
+  }
+
+  public setCrossFade(seconds: number): void {
+    this.crossFade = Math.min(1, Math.max(0, seconds));
+    this.fade.value = String(this.crossFade);
   }
 
   public setNormalizedTime(value: number): void {
@@ -615,14 +636,20 @@ class CharacterAnimationLabSystem implements GameSystem {
     this.equipmentSelect.addEventListener('change', () => {
       this.selectEquipment(this.equipmentSelect.value as EquipmentId | 'none');
     });
-    for (const view of ['front', 'right', 'rear', 'left'] as const) {
+    for (const view of [
+      'front',
+      'right',
+      'rear',
+      'left',
+      'close-up-front',
+      'close-up-three-quarter',
+      'close-up-rear-three-quarter',
+    ] as const) {
       this.viewSelect.add(new Option(view, view));
     }
     this.viewSelect.value = 'right';
     this.viewSelect.addEventListener('change', () => {
-      this.setView(
-        this.viewSelect.value as 'front' | 'right' | 'rear' | 'left',
-      );
+      this.setView(this.viewSelect.value as CharacterAnimationLabView);
     });
 
     this.playButton.type = 'button';
@@ -1155,6 +1182,7 @@ class CharacterAnimationLabSystem implements GameSystem {
       setPlaying: (playing) => this.setPlaying(playing),
       setLoop: (loop) => this.setLoop(loop),
       setSpeed: (speed) => this.setSpeed(speed),
+      setCrossFade: (seconds) => this.setCrossFade(seconds),
       setNormalizedTime: (time) => this.setNormalizedTime(time),
       setOverlay: (overlay, visible) => this.setOverlay(overlay, visible),
     };

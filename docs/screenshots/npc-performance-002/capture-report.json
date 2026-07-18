@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "auditId": "npc-performance-002",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "renderer": "Chromium ANGLE SwiftShader",
+  "baseUrl": "http://127.0.0.1:4174",
+  "captures": [
+    {
+      "path": "docs/screenshots/npc-performance-002/casual-idle-full-body.png",
+      "sha256": "6f1bfda6d4ae03e7da86a425ae4f5b9b497ef16736c4eb6f9f70a4659f7e1690",
+      "snapshot": {
+        "modelId": "casual",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "front",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/casual-idle-close-up.png",
+      "sha256": "b8bc68b42c9331f2c71c24c76f3a7e9a5d387380943489898038a2c45f66edb4",
+      "snapshot": {
+        "modelId": "casual",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-idle-full-body.png",
+      "sha256": "884c0e229a3fffd99df3f10f07521f607249178ea7cf39ea6f954fa315d02f8b",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-idle-close-up.png",
+      "sha256": "7f72e869773ebea57d922983b21c883bfb77e8a09a26d6cf7a446e45a233a208",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-rear-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-hoodie-idle-full-body.png",
+      "sha256": "97d42c90e9b971882f06d92e804857c1eb017c8643b4aeb5cb9609029a9570c9",
+      "snapshot": {
+        "modelId": "npc-hoodie",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-hoodie-idle-close-up.png",
+      "sha256": "144b06bd519d7fd120a1c936a49f0cb95e89805b0cf68a16f2f6f8cf35197517",
+      "snapshot": {
+        "modelId": "npc-hoodie",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-rear-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-punk-idle-full-body.png",
+      "sha256": "a8734a7fadab25e8a4fab30ad817298b82f3ca9bc332994d40b8431d64e5ac50",
+      "snapshot": {
+        "modelId": "npc-punk",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-punk-idle-close-up.png",
+      "sha256": "64d0c21b2e01dd53c6e4510b11e2c5d6061e28bc83da2e7df193710c03516cb0",
+      "snapshot": {
+        "modelId": "npc-punk",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-rear-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-casual-idle-full-body.png",
+      "sha256": "baaa84ac860ce6bac28b6f1fa4b44c3cc56079052f65601cda67023de44394c8",
+      "snapshot": {
+        "modelId": "pedestrian-casual",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-casual-idle-close-up.png",
+      "sha256": "778a2d96058897165950dcc3b92ff46a814ee9bbc77e1b64ed77a3d417ebb4a3",
+      "snapshot": {
+        "modelId": "pedestrian-casual",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-rear-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-street-idle-full-body.png",
+      "sha256": "f1d46a0190ab60df5ba1e0a498a393be59d84282a28780805d6c2d2c527b0393",
+      "snapshot": {
+        "modelId": "pedestrian-street",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-street-idle-close-up.png",
+      "sha256": "3d40b882248468747440b59aae535c1bd1ba8eeeddf032fbb8b8f1912955226d",
+      "snapshot": {
+        "modelId": "pedestrian-street",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-rear-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-tank-top-idle-full-body.png",
+      "sha256": "1bed4b15d7600ef3417f0838eb6c3806fe9ee0000f3260d9e2846db52217dbbc",
+      "snapshot": {
+        "modelId": "pedestrian-tank-top",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-tank-top-idle-close-up.png",
+      "sha256": "52785aaab387688ca35e1d7bef87f532a274aae26f96ae191867677b02210c73",
+      "snapshot": {
+        "modelId": "pedestrian-tank-top",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-rear-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-dress-idle-full-body.png",
+      "sha256": "54cefc9ed427223f7c0062e179199ce7caa2588292dc2657b51a714e8e7ad6df",
+      "snapshot": {
+        "modelId": "pedestrian-dress",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-dress-idle-close-up.png",
+      "sha256": "8b5d9222353095a278fa4724a0d2fa34080645dea4cb7ed4e70f7e39e94f2af9",
+      "snapshot": {
+        "modelId": "pedestrian-dress",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "close-up-rear-three-quarter",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-positive-z-authored-view.png",
+      "sha256": "032e80860deafa420ee98c1b6ff8630f988cc517d0169544204518671b66e66b",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "idle",
+        "selectionKind": "logical",
+        "view": "front",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.35,
+        "duration": 4.166667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/casual-interact-0.55.png",
+      "sha256": "0de88424d2ae6d7090b65d297e720b8581d4872c96cb956edd38b6bdfcf79321",
+      "snapshot": {
+        "modelId": "casual",
+        "modelSource": "asset",
+        "selection": "interact",
+        "selectionKind": "logical",
+        "view": "front",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.55,
+        "duration": 1.25,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/casual-wave-0.50.png",
+      "sha256": "4f590d1810f8e1978714d11d89977213d4242d1f2b009be65a6820d694716b80",
+      "snapshot": {
+        "modelId": "casual",
+        "modelSource": "asset",
+        "selection": "wave",
+        "selectionKind": "logical",
+        "view": "front",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.5,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-clapping-0.10.png",
+      "sha256": "4c61b2a890f1e4807e6ef7690e03299e18def5f83d3f36748b717cf4476dc516",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Clapping",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.1,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-clapping-0.25.png",
+      "sha256": "538aa46651890569ef431d414cfa71806a06040b75c38dc066825e002c624d18",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Clapping",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.25,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-clapping-0.40.png",
+      "sha256": "7614083f966ac8a01873df64eefcc486b54e3c16d45741e92c70edc8f242dc9a",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Clapping",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.4,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-clapping-0.55.png",
+      "sha256": "1691b6e75d45f3d0a42f69d824660ebd5c2bdd3740919addf95b2b5255b29cab",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Clapping",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.55,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-clapping-0.70.png",
+      "sha256": "a64001deff35bd61ece32524ceb41f316762b57cc2f333a68fb607db1cf83f0b",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Clapping",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.7,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-clapping-0.85.png",
+      "sha256": "76b1cf26f9966663bb9e4c0b56bcdb8161547a5071344c600b4ab62bac2acfe4",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Clapping",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.85,
+        "duration": 1.666667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-walk-0.40.png",
+      "sha256": "66f247d780021dc9aa196d5969221feb9411100a417a01e41bd3e3007ecce375",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Walk",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.4,
+        "duration": 1.041667,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-sitting-0.10.png",
+      "sha256": "9c58afdaf63b5eaee0a53a7fd1181cb3c03317bbcd7be46b2bfaaec3c4ce375d",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Sitting",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.1,
+        "duration": 8.333333,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-sitting-0.25.png",
+      "sha256": "b1b898f37dafb08b2740a903f6ce479f67866a06a180451a5b441255f8bee66d",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Sitting",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.25,
+        "duration": 8.333333,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-sitting-0.40.png",
+      "sha256": "e7c19ee02f5b80fe341890a5b61c8a3a85f056eec066d5c0429cc3a9a75134b0",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Sitting",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.4,
+        "duration": 8.333333,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-sitting-0.55.png",
+      "sha256": "8d7495e476e7eaa77826b8c82a3f0d82a28eaa51af4656f1736e4a12368228b5",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Sitting",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.55,
+        "duration": 8.333333,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-sitting-0.70.png",
+      "sha256": "f5658e55bde36a097de76a1f9cfd75d2aedda9621ff706db57ffa912664506f4",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Sitting",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.7,
+        "duration": 8.333333,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-sitting-0.85.png",
+      "sha256": "287dc30cb917f3c98ebad01e3ccdcb66dd35a544a36cf1b4b4fe270db5693c31",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Sitting",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.85,
+        "duration": 8.333333,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/npc-worker-man-standing-0.50.png",
+      "sha256": "7ad5cae12b11a2c6b9d379a2426ee0a70cef93a1efb4cc519ed759ae26a94182",
+      "snapshot": {
+        "modelId": "npc-worker",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Man_Standing",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.5,
+        "duration": 0.833333,
+        "error": null
+      }
+    },
+    {
+      "path": "docs/screenshots/npc-performance-002/pedestrian-casual-female-clapping-0.40.png",
+      "sha256": "14c04ff685a20a67403dafbb9c6adad7a9d0bab1e5eb7564df39d4ae237beac7",
+      "snapshot": {
+        "modelId": "pedestrian-casual",
+        "modelSource": "asset",
+        "selection": "HumanArmature|Female_Clapping",
+        "selectionKind": "clip",
+        "view": "rear",
+        "playing": false,
+        "loop": true,
+        "normalizedTime": 0.4,
+        "duration": 1.666667,
+        "error": null
+      }
+    }
+  ],
+  "reentry": {
+    "disposalBeforeReentry": 26,
+    "disposalAfterReentry": 29,
+    "finalModelId": "casual",
+    "finalModelSource": "asset",
+    "finalError": null
+  },
+  "diagnostics": {
+    "consoleErrors": [],
+    "pageErrors": [],
+    "failedRequests": [
+      "HEAD http://127.0.0.1:4174/assets/characters/ultimate-modular-men/casual-character.glb",
+      "HEAD http://127.0.0.1:4174/assets/characters/animated-men/mack-long-sleeves.glb",
+      "HEAD http://127.0.0.1:4174/assets/characters/animated-men/nox-layered-shirt.glb",
+      "HEAD http://127.0.0.1:4174/assets/characters/animated-men/raze-suit.glb",
+      "HEAD http://127.0.0.1:4174/assets/characters/animated-women/casual.glb",
+      "HEAD http://127.0.0.1:4174/assets/characters/animated-women/street.glb",
+      "HEAD http://127.0.0.1:4174/assets/characters/animated-women/tank-top.glb",
+      "HEAD http://127.0.0.1:4174/assets/characters/animated-women/dress.glb"
+    ],
+    "failedRuntimeRequests": [],
+    "externalRequests": []
+  }
+}
