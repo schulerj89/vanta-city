@@ -1,0 +1,149 @@
+import { Box3, Texture } from 'three';
+import type { BufferGeometry, Material } from 'three';
+import type { GameAssetLoader } from '../../src/assets/AssetLoader';
+import {
+  AshfallBuildingRenderer,
+  ashfallBuildingAssets,
+  ashfallBuildingVariants,
+  getAshfallBuildingVariant,
+  validateAshfallBuildingKit,
+} from '../../src/world/buildings/AshfallBuildingKit';
+import { ashfallBuildingPlacements } from '../../src/world/levels/testDistrict';
+import { ashfallTrafficLanes } from '../../src/traffic/TrafficSimulation';
+import {
+  fixturePlayerSpawns,
+  fixtureSpawns,
+  intersectionApproachSpawns,
+  intersectionCornerSpawns,
+  intersectionLayout,
+  sparringTargetArea,
+} from '../../src/world/levels/intersectionLayout';
+
+describe('Ashfall building kit', () => {
+  it('provides 18 reusable, bounded variants across useful sizes', () => {
+    expect(validateAshfallBuildingKit()).toEqual([]);
+    expect(ashfallBuildingVariants).toHaveLength(18);
+    expect(new Set(ashfallBuildingVariants.map(({ id }) => id)).size).toBe(18);
+    expect(
+      Math.min(...ashfallBuildingVariants.map(({ height }) => height)),
+    ).toBeLessThanOrEqual(5);
+    expect(
+      Math.max(...ashfallBuildingVariants.map(({ height }) => height)),
+    ).toBeGreaterThanOrEqual(18);
+    expect(
+      new Set(ashfallBuildingVariants.map(({ profile }) => profile)).size,
+    ).toBe(4);
+  });
+
+  it('uses only the controlled local generated texture palette', () => {
+    expect(Object.keys(ashfallBuildingAssets)).toHaveLength(5);
+    for (const descriptor of Object.values(ashfallBuildingAssets)) {
+      expect(descriptor.type).toBe('texture');
+      expect(descriptor.url).toMatch(
+        /^\/assets\/environment\/ashfall-buildings\/[^/]+\.generated\.jpg$/,
+      );
+      expect(descriptor.attribution.license).toBe('Project-generated original');
+      expect(descriptor.metadata.runtimeNetwork).toBe(false);
+    }
+  });
+
+  it('pairs each placed shell with an equivalent authored collision footprint', () => {
+    for (const placement of ashfallBuildingPlacements) {
+      const definition = getAshfallBuildingVariant(placement.visual.variantId);
+      expect(placement.collider.size).toEqual([
+        definition.footprint[0],
+        definition.height,
+        definition.footprint[1],
+      ]);
+      expect(placement.collider.tags).toEqual(
+        expect.arrayContaining(['obstacle', 'camera', 'building']),
+      );
+    }
+  });
+
+  it('keeps every building footprint clear of the four traffic lanes', () => {
+    for (const placement of ashfallBuildingPlacements) {
+      const [width, , depth] = placement.collider.size;
+      const minX = placement.collider.position[0] - width / 2;
+      const maxX = placement.collider.position[0] + width / 2;
+      const minZ = placement.collider.position[2] - depth / 2;
+      const maxZ = placement.collider.position[2] + depth / 2;
+      for (const lane of ashfallTrafficLanes) {
+        const laneX = lane.startX;
+        const laneZ = lane.startZ;
+        if (lane.axis === 'north-south') {
+          expect(laneX < minX || laneX > maxX, placement.visual.id).toBe(true);
+        } else {
+          expect(laneZ < minZ || laneZ > maxZ, placement.visual.id).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('preserves street-edge sidewalk corridors, spawns, signal, and sparring area', () => {
+    const protectedPoints = [
+      intersectionLayout.defaultSpawn,
+      intersectionLayout.signalController,
+      sparringTargetArea.player,
+      sparringTargetArea.target,
+      ...intersectionApproachSpawns.map(({ position }) => position),
+      ...intersectionCornerSpawns.map(({ position }) => position),
+      ...fixturePlayerSpawns.map(({ position }) => position),
+      ...fixtureSpawns.map(({ position }) => position),
+    ];
+    for (const placement of ashfallBuildingPlacements) {
+      const [width, , depth] = placement.collider.size;
+      const [x, , z] = placement.collider.position;
+      expect(
+        Math.abs(x) - width / 2,
+        `${placement.visual.id} X corridor`,
+      ).toBeGreaterThanOrEqual(5);
+      expect(
+        Math.abs(z) - depth / 2,
+        `${placement.visual.id} Z corridor`,
+      ).toBeGreaterThanOrEqual(5);
+      for (const point of protectedPoints) {
+        const inside =
+          Math.abs(point[0] - x) < width / 2 + 0.8 &&
+          Math.abs(point[2] - z) < depth / 2 + 0.8;
+        expect(
+          inside,
+          `${placement.visual.id} overlaps [${point.join(',')}]`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('builds all variants through one cached five-texture renderer', async () => {
+    const loadTexture = vi.fn(() => Promise.resolve(new Texture()));
+    const assets: GameAssetLoader = {
+      loadTexture,
+      loadGltf: () => Promise.reject(new Error('Unexpected model load')),
+      instantiateModel: () =>
+        Promise.reject(new Error('Unexpected model instance')),
+      getStatus: (id) => ({ id, phase: 'idle', progress: 0 }),
+      onStatus: () => () => undefined,
+      dispose: () => undefined,
+    };
+    const resources = new Set<BufferGeometry | Material>();
+    const renderer = new AshfallBuildingRenderer(assets, resources);
+    const groups = await Promise.all(
+      ashfallBuildingVariants.map((definition) =>
+        renderer.create({
+          id: `test.${definition.id}`,
+          kind: 'building',
+          variantId: definition.id,
+          position: [0, 0, 0],
+        }),
+      ),
+    );
+    expect(loadTexture).toHaveBeenCalledTimes(5);
+    for (const [index, group] of groups.entries()) {
+      expect(group.userData.buildingVariantId).toBe(
+        ashfallBuildingVariants[index]!.id,
+      );
+      expect(new Box3().setFromObject(group).isEmpty()).toBe(false);
+    }
+    for (const resource of resources) resource.dispose();
+  });
+});

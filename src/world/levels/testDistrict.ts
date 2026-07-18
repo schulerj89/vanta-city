@@ -1,5 +1,6 @@
 import type {
   BoxVisualDefinition,
+  BuildingVisualDefinition,
   EnvironmentVisualDefinition,
   LevelModule,
   Vector3Tuple,
@@ -14,16 +15,16 @@ import {
   intersectionLandmarks,
   intersectionLayout,
 } from './intersectionLayout';
+import {
+  ashfallBuildingAssets,
+  getAshfallBuildingVariant,
+} from '../buildings/AshfallBuildingKit';
 
 const colors = {
   asphalt: 0x24282b,
   sidewalk: 0x858783,
   curb: 0xb9b4a7,
   marking: 0xe7d9a1,
-  brick: 0x74483f,
-  concrete: 0x666e70,
-  metal: 0x38494d,
-  boarded: 0x8c673f,
   boundary: 0x59666a,
   signalBox: 0x31585a,
 } as const;
@@ -58,28 +59,17 @@ for (const [id, x, z] of [
   surface(`sidewalk-${id}`, [x, 0.1, z], [22, 0.2, 22], colors.sidewalk);
 }
 
-// Four readable corner silhouettes create camera obstructions without blocking sidewalks.
-surface('ruin-northwest', [-19, 2.6, 19], [14, 5.2, 12], colors.brick, [
-  'obstacle',
-]);
-surface('ruin-northeast', [19, 3.1, 19], [13, 6.2, 12], colors.concrete, [
-  'obstacle',
-]);
-surface('ruin-southwest', [-19, 2.1, -19], [13, 4.2, 12], colors.metal, [
-  'obstacle',
-]);
-surface('ruin-southeast', [19, 2.6, -19], [14, 5.2, 12], colors.brick, [
-  'obstacle',
-]);
+export const ashfallBuildingPlacements = [
+  buildingPlacement('northwest', 'seawall-court', [-19, 0.2, 19]),
+  buildingPlacement('northeast', 'breaker-block', [20, 0.2, 21]),
+  buildingPlacement('southwest', 'freight-annex', [-19.5, 0.2, -22]),
+  buildingPlacement('southeast', 'drydock-office', [20.5, 0.2, -22]),
+] as const;
 
-// Boarded panels and stepped parapets break up the primitive silhouettes.
-for (const [id, position, size, color] of [
-  ['board-northwest', [-12, 1.7, 18], [0.35, 2.4, 5], colors.boarded],
-  ['board-northeast', [12.5, 2, 18], [0.35, 2.8, 4], colors.boarded],
-  ['parapet-southwest', [-19, 4.6, -19], [8, 0.8, 8], colors.concrete],
-  ['parapet-southeast', [19, 5.6, -19], [7, 0.8, 7], colors.metal],
-] as const)
-  surface(id, position, size, color, ['obstacle']);
+const buildings = ashfallBuildingPlacements.map(({ visual }) => visual);
+const buildingCollision = ashfallBuildingPlacements.map(
+  ({ collider: definition }) => definition,
+);
 
 // Visible, collidable termination at every road end and around the outer corners.
 for (const [id, position, size] of [
@@ -195,6 +185,7 @@ const asset = (
 
 export const testDistrict = {
   assets: {
+    ...ashfallBuildingAssets,
     [intersectionAssetIds.crosswalk]: asset(
       'crosswalk.glb',
       'Cross walk',
@@ -244,11 +235,13 @@ export const testDistrict = {
     environment: [
       ...paired.map(({ visual }) => visual),
       ...markings,
+      ...buildings,
       ...props,
       signalControllerVisual,
     ],
     staticCollision: [
       ...paired.map(({ collider: definition }) => definition),
+      ...buildingCollision,
       signalControllerCollider,
       collider(
         'c.traffic-light-pole',
@@ -387,10 +380,10 @@ export const testDistrict = {
       geometry: [
         { entryId: 'v.road-east-west', layer: 'roads' },
         { entryId: 'v.road-north-south', layer: 'roads' },
-        { entryId: 'v.ruin-northwest', layer: 'structures' },
-        { entryId: 'v.ruin-northeast', layer: 'structures' },
-        { entryId: 'v.ruin-southwest', layer: 'structures' },
-        { entryId: 'v.ruin-southeast', layer: 'structures' },
+        { entryId: 'v.building-northwest', layer: 'structures' },
+        { entryId: 'v.building-northeast', layer: 'structures' },
+        { entryId: 'v.building-southwest', layer: 'structures' },
+        { entryId: 'v.building-southeast', layer: 'structures' },
       ],
       markers: [
         ...intersectionLandmarks.map(({ id }) => ({
@@ -439,4 +432,31 @@ function collider(
   tags: readonly string[],
 ): StaticColliderDefinition {
   return { id, position, size, tags };
+}
+
+function buildingPlacement(
+  corner: 'northwest' | 'northeast' | 'southwest' | 'southeast',
+  variantId: string,
+  position: Vector3Tuple,
+): {
+  readonly visual: BuildingVisualDefinition;
+  readonly collider: StaticColliderDefinition;
+} {
+  const definition = getAshfallBuildingVariant(variantId);
+  const [width, depth] = definition.footprint;
+  return {
+    visual: {
+      id: `v.building-${corner}`,
+      kind: 'building',
+      variantId,
+      position,
+    },
+    collider: {
+      // Retain stable collision IDs used by camera diagnostics and browser tests.
+      id: `c.ruin-${corner}`,
+      position: [position[0], position[1] + definition.height / 2, position[2]],
+      size: [width, definition.height, depth],
+      tags: ['obstacle', 'camera', 'building'],
+    },
+  };
 }

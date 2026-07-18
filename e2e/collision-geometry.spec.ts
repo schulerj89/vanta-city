@@ -30,10 +30,14 @@ test.describe('authoritative intersection collision', () => {
     await command(page, 'player.teleport', 'spawn.approach-north');
     const start = await snapshot(page);
     await page.keyboard.down('w');
-    await expect
-      .poll(() => moved(page, start.player.position))
-      .toBeGreaterThan(1);
-    await page.keyboard.up('w');
+    try {
+      await page.waitForFunction((origin) => {
+        const position = window.__VANTA_TEST__!.snapshot().player.position;
+        return Math.hypot(position.x - origin.x, position.z - origin.z) > 1;
+      }, start.player.position);
+    } finally {
+      await page.keyboard.up('w');
+    }
     const traversed = await snapshot(page);
     expect(traversed.player.grounded).toBe(true);
     expect(traversed.player.groundColliderId).toBe('c.road-north-south');
@@ -51,9 +55,9 @@ test.describe('authoritative intersection collision', () => {
     await command(page, 'helpers.toggle', 'collision');
     for (let run = 0; run < 3; run += 1) {
       await command(page, 'player.teleport-position', '-15,0.22,10,3.141593');
-      await expect
-        .poll(async () => (await snapshot(page)).camera.obstructed)
-        .toBe(true);
+      await page.waitForFunction(
+        () => window.__VANTA_TEST__!.snapshot().camera.obstructed,
+      );
       const obstructed = await snapshot(page);
       expect(obstructed.world.collision.lastCameraHitId).toBe(
         'c.ruin-northwest',
@@ -109,14 +113,6 @@ async function command(
       window.__VANTA_TEST__!.executeDebugCommand(commandId, commandArgument),
     { commandId: id, commandArgument: argument },
   );
-}
-
-async function moved(
-  page: Page,
-  origin: BrowserTestSnapshot['player']['position'],
-): Promise<number> {
-  const position = (await snapshot(page)).player.position;
-  return Math.hypot(position.x - origin.x, position.z - origin.z);
 }
 
 async function attachScreenshot(page: Page, testInfo: TestInfo, name: string) {

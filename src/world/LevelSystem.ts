@@ -38,6 +38,7 @@ import type { LevelRegistry } from './LevelRegistry';
 import type { WorldEvents } from './WorldEvents';
 import type { WorldPosition } from './Spatial';
 import type { ResolvedLevelLocation } from './LocationResolver';
+import { AshfallBuildingRenderer } from './buildings/AshfallBuildingKit';
 
 interface LoadedLevel {
   readonly definition: LevelDefinition;
@@ -182,9 +183,15 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
     try {
       addLighting(visuals);
+      const buildingRenderer = new AshfallBuildingRenderer(
+        this.assets,
+        resources,
+      );
       const objects = await Promise.all(
         definition.environment.map((visual) =>
-          this.createVisual(visual, resources),
+          visual.kind === 'building'
+            ? buildingRenderer.create(visual)
+            : this.createVisual(visual, resources),
         ),
       );
       visuals.add(...objects);
@@ -213,6 +220,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
       clone.name = `visual:${visual.id}`;
       applyTransform(clone, visual);
       return clone;
+    }
+    if (visual.kind === 'building') {
+      throw new Error('Building visuals require the shared building renderer');
     }
     const geometry = own(resources, new BoxGeometry(...visual.size));
     const material = own(

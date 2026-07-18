@@ -21,6 +21,10 @@ counts, and runtime hashes.
 
 The primitive fallback character is generated entirely from Three.js geometry and project-authored material settings. It is not selectable and exists only to keep startup and model-load failures safe. NPC portrait IDs remain optional project paths with no committed third-party images.
 
+# Ashfall building materials
+
+The five Ashfall facade/roof textures are original project assets created with OpenAI image generation for this repository. They are not externally sourced and carry no third-party attribution requirement. The committed local files, generation date, source output filenames, intent, prompt constraints, conversion, dimensions, hashes, and runtime-network policy are documented in `public/assets/environment/ashfall-buildings/README.md`. Runtime code loads only the local 512×512 derivatives.
+
 # Civilian traffic vehicles
 
 - **Pickup Truck** and **Sports Car** by Quaternius, from the

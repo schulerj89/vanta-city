@@ -32,7 +32,7 @@ describe('Ashfall Junction intersection', () => {
     }
   });
 
-  it('pairs structural primitive visuals with equivalent collision geometry', () => {
+  it('pairs road, sidewalk, and boundary primitives with collision geometry', () => {
     const visuals = new Map(
       testDistrict.definition.environment.map((entry) => [entry.id, entry]),
     );
@@ -40,10 +40,9 @@ describe('Ashfall Junction intersection', () => {
       ({ id }) =>
         id.startsWith('c.road-') ||
         id.startsWith('c.sidewalk-') ||
-        id.startsWith('c.ruin-') ||
         id.startsWith('c.boundary-'),
     );
-    expect(structural).toHaveLength(14);
+    expect(structural).toHaveLength(10);
     for (const definition of structural) {
       const visual = visuals.get(definition.id.replace(/^c\./, 'v.'));
       expect(visual, definition.id).toBeDefined();
@@ -110,8 +109,9 @@ describe('Ashfall Junction intersection', () => {
     ).toBeGreaterThan(5.5);
   });
 
-  it('registers only local, documented CC0 environment assets', () => {
+  it('registers imported models as local documented CC0 assets', () => {
     for (const descriptor of Object.values(testDistrict.assets)) {
+      if (descriptor.type !== 'model') continue;
       expect(descriptor.attribution?.license).toBe('CC0 1.0');
       expect(descriptor.attribution?.sourceUrl).toMatch(
         /^https:\/\/poly\.pizza\/m\//,

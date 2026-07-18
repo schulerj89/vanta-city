@@ -1,4 +1,4 @@
-import { Group, Scene } from 'three';
+import { Group, Scene, Texture } from 'three';
 import type { GameAssetLoader } from '../../src/assets/AssetLoader';
 import { EventBus } from '../../src/core/events';
 import { LevelRegistry } from '../../src/world/LevelRegistry';
@@ -7,7 +7,7 @@ import type { WorldEvents } from '../../src/world/WorldEvents';
 import { testDistrict } from '../../src/world/levels/testDistrict';
 
 const unusedAssets: GameAssetLoader = {
-  loadTexture: () => Promise.reject(new Error('Unexpected texture load')),
+  loadTexture: () => Promise.resolve(new Texture()),
   loadGltf: () =>
     Promise.resolve({ scene: new Group(), animations: [] } as never),
   instantiateModel: () =>

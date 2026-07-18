@@ -1,6 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { testDistrict } from '../src/world/levels/testDistrict';
+import {
+  ashfallBuildingPlacements,
+  testDistrict,
+} from '../src/world/levels/testDistrict';
+import { getAshfallBuildingVariant } from '../src/world/buildings/AshfallBuildingKit';
 import {
   fixtureSpawns,
   intersectionApproachSpawns,
@@ -46,6 +50,18 @@ const light = point(intersectionLayout.trafficLight);
 const interaction = point(intersectionLayout.signalController);
 const roadHorizontal = rect(0, 0, 56, 12);
 const roadVertical = rect(0, 0, 12, 56);
+const buildingRects = ashfallBuildingPlacements
+  .map(({ visual }) => {
+    const definition = getAshfallBuildingVariant(visual.variantId);
+    const bounds = rect(
+      visual.position[0],
+      visual.position[2],
+      definition.footprint[0],
+      definition.footprint[1],
+    );
+    return `<rect data-variant="${definition.id}" x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}"/>`;
+  })
+  .join('\n    ');
 
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="720" viewBox="0 0 760 720" role="img" aria-labelledby="title desc">
@@ -72,10 +88,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <rect class="road" x="${roadVertical.x}" y="${roadVertical.y}" width="${roadVertical.width}" height="${roadVertical.height}"/>
   <rect x="${rect(0, 0, 8, 8).x}" y="${rect(0, 0, 8, 8).y}" width="80" height="80" fill="none" stroke="#f1e5bc" stroke-width="8" stroke-dasharray="12 7"/>
   <g class="building">
-    <rect x="${rect(-19, 19, 14, 12).x}" y="${rect(-19, 19, 14, 12).y}" width="140" height="120"/>
-    <rect x="${rect(19, 19, 13, 12).x}" y="${rect(19, 19, 13, 12).y}" width="130" height="120"/>
-    <rect x="${rect(-19, -19, 13, 12).x}" y="${rect(-19, -19, 13, 12).y}" width="130" height="120"/>
-    <rect x="${rect(19, -19, 14, 12).x}" y="${rect(19, -19, 14, 12).y}" width="140" height="120"/>
+    ${buildingRects}
   </g>
   <rect class="boundary" x="${margin + 5}" y="${margin + 5}" width="${plot - 10}" height="${plot - 10}"/>
   <rect class="collision" x="${rect(0, 0, 12, 12).x}" y="${rect(0, 0, 12, 12).y}" width="120" height="120"/>
@@ -99,13 +112,13 @@ Generated from src/world/levels/intersectionLayout.ts and testDistrict.ts.
 
                          NORTH (+Z)
              +---------------B---------------+
-             | NW RUIN       |       NE RUIN |
+             | NW BUILDING   |   NE BUILDING |
              |      o NW     | N spawn o     |
              |               |       T! S[]  |
  WEST (-X) ==B===============+===============B== EAST (+X)
              |      CROSSWALK / ORIGIN       |
              |               |               |
-             | SW RUIN       |       SE RUIN |
+             | SW BUILDING   |   SE BUILDING |
              |      o SW     | SE o          |
              +---------------B---------------+
                          SOUTH (-Z)
@@ -119,7 +132,14 @@ CONSTRUCTION RECIPE
 - Roads: two 56m x ${intersectionLayout.roadWidth}m asphalt slabs, top Y=0; ${intersectionLayout.laneWidth}m nominal lane width.
 - Sidewalk corners: four 22m squares, top Y=${intersectionLayout.curbHeight}m; the ${intersectionLayout.curbHeight}m curb step is authoritative collision.
 - Crosswalk: ${intersectionLayout.crosswalkSize}m x ${intersectionLayout.crosswalkSize}m imported visual at origin; no duplicate collider because the road is authoritative.
-- Corner silhouettes: NW (-19,2.6,19) 14x5.2x12; NE (19,3.1,19) 13x6.2x12; SW (-19,2.1,-19) 13x4.2x12; SE (19,2.6,-19) 14x5.2x12. All are obstacle/camera collision.
+- Corner buildings: ${ashfallBuildingPlacements
+  .map(({ visual }) => {
+    const definition = getAshfallBuildingVariant(visual.variantId);
+    return `${visual.id} ${definition.id} at [${visual.position.join(',')}] ${definition.footprint[0]}x${definition.height}x${definition.footprint[1]}`;
+  })
+  .join(
+    '; ',
+  )}. All use conservative obstacle/camera collision with stable c.ruin-* diagnostic IDs.
 - Traffic light: ${intersectionLayout.trafficLight.join(', ')}, rotation Y=PI; collision pole [0.55,4.7,0.55] centered at [8.25,2.55,8.25].
 - Signal controller: ${intersectionLayout.signalController.join(', ')}, visual/collider size [0.8,1.3,0.8], location interaction.signal-controller.
 - Asset logical IDs: ${Object.keys(testDistrict.assets).join(', ')}.
@@ -134,7 +154,7 @@ CONSTRUCTION RECIPE
 - Location zone: zone.ashfall-junction, center [0,3,0], size [56,10,56]. Landmark radius resolves before the zone; priority then distance then logical ID break ties.
 - Triggers: center [0,1.5,0] size [12,3,12]; signal corner [9,1.5,9] size [6,3,6].
 - Boundary: four 1m-thick, 1.3m-high visible guard walls centered at X/Z ±27.5.
-- Replace a corner asset by changing that corner's environment visual in testDistrict.ts while retaining or deliberately revising its paired c.ruin-* authored collision. Add its GLB to the level asset manifest by logical ID; do not put URLs in runtime systems.
+- Replace a corner shell by choosing another validated Ashfall variant in testDistrict.ts while retaining or deliberately revising its paired c.ruin-* authored collision and minimap reference. Keep runtime texture URLs in the level asset manifest, not runtime systems.
 `;
 
 await Promise.all([

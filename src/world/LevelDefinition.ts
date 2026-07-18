@@ -26,8 +26,14 @@ export interface BoxVisualDefinition extends WorldEntry {
   readonly color: number;
 }
 
+export interface BuildingVisualDefinition extends WorldEntry {
+  readonly kind: 'building';
+  /** ID from the reusable Ashfall building catalog. */
+  readonly variantId: string;
+}
+
 export type EnvironmentVisualDefinition =
-  GltfVisualDefinition | BoxVisualDefinition;
+  GltfVisualDefinition | BoxVisualDefinition | BuildingVisualDefinition;
 
 export type SpawnKind = 'player' | 'npc';
 
@@ -168,6 +174,9 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
     if (visual.kind === 'gltf' && visual.assetId.trim().length === 0) {
       issues.push(`${visual.id}.assetId is empty`);
     }
+    if (visual.kind === 'building' && visual.variantId.trim().length === 0) {
+      issues.push(`${visual.id}.variantId is empty`);
+    }
   }
   for (const zone of definition.zones) {
     if (zone.name.trim().length === 0) issues.push(`${zone.id}.name is empty`);
@@ -239,9 +248,9 @@ function validateMapPresentation(
   } else if (minX >= maxX || minZ >= maxZ) {
     issues.push('mapPresentation.bounds minimums must be less than maximums');
   }
-  const boxes = new Set(
+  const geometryEntries = new Set(
     definition.environment
-      .filter((entry): entry is BoxVisualDefinition => entry.kind === 'box')
+      .filter((entry) => entry.kind === 'box' || entry.kind === 'building')
       .map(({ id }) => id),
   );
   const landmarks = new Set(definition.landmarks.map(({ id }) => id));
@@ -259,9 +268,9 @@ function validateMapPresentation(
     referenced.add(reference.entryId);
   }
   for (const reference of map.geometry) {
-    if (!boxes.has(reference.entryId)) {
+    if (!geometryEntries.has(reference.entryId)) {
       issues.push(
-        `mapPresentation geometry "${reference.entryId}" must reference a box environment entry`,
+        `mapPresentation geometry "${reference.entryId}" must reference a box or building environment entry`,
       );
     }
   }

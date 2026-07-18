@@ -4,11 +4,13 @@ import type { FrameTime } from '../core/time';
 import type { GameContext } from '../game/GameRuntime';
 import type {
   BoxVisualDefinition,
+  BuildingVisualDefinition,
   LevelDefinition,
   LevelMapBoundsDefinition,
   LevelMapLayer,
   TransformDefinition,
 } from '../world/LevelDefinition';
+import { getAshfallBuildingVariant } from '../world/buildings/AshfallBuildingKit';
 import type { ResolvedLevelLocation } from '../world/LocationResolver';
 import type { WorldPoseSource, WorldPosition } from '../world/Spatial';
 
@@ -186,13 +188,16 @@ export class MinimapHudSystem implements GameSystem<GameContext> {
     const map = level.mapPresentation;
     if (!map) return;
     for (const group of this.groups.values()) group.replaceChildren();
-    const boxes = new Map(
+    const geometry = new Map(
       level.environment
-        .filter((entry): entry is BoxVisualDefinition => entry.kind === 'box')
-        .map((entry) => [entry.id, entry]),
+        .filter(
+          (entry): entry is BoxVisualDefinition | BuildingVisualDefinition =>
+            entry.kind === 'box' || entry.kind === 'building',
+        )
+        .map((entry) => [entry.id, mapGeometry(entry)]),
     );
     for (const reference of map.geometry) {
-      const entry = boxes.get(reference.entryId);
+      const entry = geometry.get(reference.entryId);
       if (!entry) continue;
       const topLeft = projectWorldToMap(
         {
@@ -241,6 +246,20 @@ export class MinimapHudSystem implements GameSystem<GameContext> {
     this.title.textContent = level.name;
     this.renderedLevel = level;
   }
+}
+
+function mapGeometry(
+  entry: BoxVisualDefinition | BuildingVisualDefinition,
+): TransformDefinition & {
+  readonly id: string;
+  readonly size: readonly [number, number, number];
+} {
+  if (entry.kind === 'box') return entry;
+  const variant = getAshfallBuildingVariant(entry.variantId);
+  return {
+    ...entry,
+    size: [variant.footprint[0], variant.height, variant.footprint[1]],
+  };
 }
 
 export function projectWorldToMap(

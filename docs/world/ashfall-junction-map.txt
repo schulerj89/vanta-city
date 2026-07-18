@@ -3,13 +3,13 @@ Generated from src/world/levels/intersectionLayout.ts and testDistrict.ts.
 
                          NORTH (+Z)
              +---------------B---------------+
-             | NW RUIN       |       NE RUIN |
+             | NW BUILDING   |   NE BUILDING |
              |      o NW     | N spawn o     |
              |               |       T! S[]  |
  WEST (-X) ==B===============+===============B== EAST (+X)
              |      CROSSWALK / ORIGIN       |
              |               |               |
-             | SW RUIN       |       SE RUIN |
+             | SW BUILDING   |   SE BUILDING |
              |      o SW     | SE o          |
              +---------------B---------------+
                          SOUTH (-Z)
@@ -23,13 +23,13 @@ CONSTRUCTION RECIPE
 - Roads: two 56m x 12m asphalt slabs, top Y=0; 3m nominal lane width.
 - Sidewalk corners: four 22m squares, top Y=0.2m; the 0.2m curb step is authoritative collision.
 - Crosswalk: 8m x 8m imported visual at origin; no duplicate collider because the road is authoritative.
-- Corner silhouettes: NW (-19,2.6,19) 14x5.2x12; NE (19,3.1,19) 13x6.2x12; SW (-19,2.1,-19) 13x4.2x12; SE (19,2.6,-19) 14x5.2x12. All are obstacle/camera collision.
+- Corner buildings: v.building-northwest seawall-court at [-19,0.2,19] 14x13x12; v.building-northeast breaker-block at [20,0.2,21] 14x14x12; v.building-southwest freight-annex at [-19.5,0.2,-22] 17x11x9; v.building-southeast drydock-office at [20.5,0.2,-22] 13x16x9. All use conservative obstacle/camera collision with stable c.ruin-* diagnostic IDs.
 - Traffic light: 8.2, 0.2, 8.2, rotation Y=PI; collision pole [0.55,4.7,0.55] centered at [8.25,2.55,8.25].
 - Signal controller: 10.2, 0.65, 8.5, visual/collider size [0.8,1.3,0.8], location interaction.signal-controller.
-- Asset logical IDs: environment.intersection.crosswalk, environment.intersection.traffic-light, environment.intersection.street-light, environment.intersection.fire-hydrant, environment.intersection.plastic-barrier, environment.intersection.broken-pallet, environment.intersection.trash-bags.
-- Player spawns: spawn.player-default=[0,0.02,19], yaw=3.141592653589793; spawn.approach-north=[0,0.02,21], yaw=3.141592653589793; spawn.approach-east=[21,0.02,0], yaw=-1.5707963267948966; spawn.approach-south=[0,0.02,-21], yaw=0; spawn.approach-west=[-21,0.02,0], yaw=1.5707963267948966; spawn.corner-northwest=[-9,0.22,9], yaw=-0.7853981633974483; spawn.corner-northeast=[9,0.22,9], yaw=0.7853981633974483; spawn.corner-southwest=[-9,0.22,-9], yaw=-2.356194490192345; spawn.corner-southeast=[9,0.22,-9], yaw=2.356194490192345; spawn.player-talk-mack=[-9,0.22,11.45], yaw=3.141592653589793; spawn.player-talk-nox=[-9,0.22,-8.55], yaw=3.141592653589793; spawn.player-talk-raze=[9,0.22,-8.55], yaw=3.141592653589793; spawn.player-sparring=[3.5,0,14], yaw=3.141592653589793; spawn.debug-interactions=[0,0.02,-10.8], yaw=0.
-- Development-only NPC fixture markers: spawn.npc-mechanic=[-9,0.22,10], yaw=2.356194490192345; spawn.npc-alley=[-9,0.22,-10], yaw=3.141592653589793; spawn.npc-deck=[9,0.22,-10], yaw=-1.5707963267948966; spawn.debug-sparring-target=[3.5,0,11.8], yaw=0. Runtime NPC creation requires ?npcFixtures=1; sparring requires ?sparringFixture=1.
+- Asset logical IDs: environment.ashfall-building.concrete-deco, environment.ashfall-building.brick-stucco, environment.ashfall-building.corrugated-teal, environment.ashfall-building.window-deco, environment.ashfall-building.roof-membrane, environment.intersection.crosswalk, environment.intersection.traffic-light, environment.intersection.street-light, environment.intersection.fire-hydrant, environment.intersection.plastic-barrier, environment.intersection.broken-pallet, environment.intersection.trash-bags.
+- Player spawns: spawn.player-default=[0,0.02,19], yaw=3.141592653589793; spawn.approach-north=[0,0.02,21], yaw=3.141592653589793; spawn.approach-east=[21,0.02,0], yaw=-1.5707963267948966; spawn.approach-south=[0,0.02,-21], yaw=0; spawn.approach-west=[-21,0.02,0], yaw=1.5707963267948966; spawn.corner-northwest=[-9,0.22,9], yaw=-0.7853981633974483; spawn.corner-northeast=[9,0.22,9], yaw=0.7853981633974483; spawn.corner-southwest=[-9,0.22,-9], yaw=-2.356194490192345; spawn.corner-southeast=[9,0.22,-9], yaw=2.356194490192345; spawn.player-talk-mack=[-9,0.22,11.45], yaw=3.141592653589793; spawn.player-talk-nox=[-9,0.22,-8.55], yaw=3.141592653589793; spawn.player-talk-raze=[9,0.22,-8.55], yaw=3.141592653589793; spawn.player-sparring=[16,0.22,8.6], yaw=0; spawn.debug-interactions=[0,0.02,-10.8], yaw=0.
+- Development-only NPC fixture markers: spawn.npc-mechanic=[-9,0.22,10], yaw=2.356194490192345; spawn.npc-alley=[-9,0.22,-10], yaw=3.141592653589793; spawn.npc-deck=[9,0.22,-10], yaw=-1.5707963267948966; spawn.debug-sparring-target=[16,0.2,9.5], yaw=3.141592653589793. Runtime NPC creation requires ?npcFixtures=1; sparring requires ?sparringFixture=1.
 - Location zone: zone.ashfall-junction, center [0,3,0], size [56,10,56]. Landmark radius resolves before the zone; priority then distance then logical ID break ties.
 - Triggers: center [0,1.5,0] size [12,3,12]; signal corner [9,1.5,9] size [6,3,6].
 - Boundary: four 1m-thick, 1.3m-high visible guard walls centered at X/Z ±27.5.
-- Replace a corner asset by changing that corner's environment visual in testDistrict.ts while retaining or deliberately revising its paired c.ruin-* authored collision. Add its GLB to the level asset manifest by logical ID; do not put URLs in runtime systems.
+- Replace a corner shell by choosing another validated Ashfall variant in testDistrict.ts while retaining or deliberately revising its paired c.ruin-* authored collision and minimap reference. Keep runtime texture URLs in the level asset manifest, not runtime systems.
