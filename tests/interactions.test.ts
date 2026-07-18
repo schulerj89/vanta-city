@@ -271,6 +271,23 @@ describe('InteractionSystem', () => {
     prompt.dispose();
   });
 
+  it('projects a target that was selected before the prompt mounts', () => {
+    const harness = createHarness();
+    harness.system.register(target('vehicle', { range: 1.5 }));
+    harness.system.update();
+    const mount = document.createElement('div');
+    const prompt = new InteractionPromptSystem(mount, harness.system);
+
+    prompt.init();
+
+    expect(mount.textContent).toBe('[G / X] Use vehicle');
+    expect(mount.querySelector('.interaction-prompt')).not.toHaveProperty(
+      'hidden',
+      true,
+    );
+    prompt.dispose();
+  });
+
   it('keeps prompt visibility coherent across occlusion and removal', () => {
     const harness = createHarness();
     harness.system.register(

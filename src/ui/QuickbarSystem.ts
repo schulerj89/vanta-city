@@ -96,6 +96,10 @@ export class QuickbarSystem implements GameSystem {
     };
   }
 
+  public setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
+  }
+
   public dispose(): void {
     for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
     this.root.remove();

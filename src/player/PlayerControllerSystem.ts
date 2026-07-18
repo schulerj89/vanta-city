@@ -322,6 +322,15 @@ export class PlayerControllerSystem
     return this.controlEnabled;
   }
 
+  /** Presentation handoff for seated/cinematic ownership; simulation persists. */
+  public setPresentationVisible(visible: boolean): void {
+    this.visual.object3d.visible = visible;
+  }
+
+  public isPresentationVisible(): boolean {
+    return this.visual.object3d.visible;
+  }
+
   /** Authoritative entry point for short, presentation-only character actions. */
   public triggerCharacterAction(
     action: CharacterActionName,

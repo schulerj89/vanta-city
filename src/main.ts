@@ -74,6 +74,8 @@ import type { DebugCashPickup } from './economy/DebugCashPickup';
 import { ProximityPickupSystem } from './pickups/ProximityPickupSystem';
 import { TrafficSystem } from './traffic/TrafficSystem';
 import { defaultTrafficConfig } from './traffic/TrafficSimulation';
+import { VehicleControllerSystem } from './vehicles/VehicleControllerSystem';
+import { VehicleHudSystem } from './ui/VehicleHudSystem';
 import { WeaponAimSystem } from './combat/WeaponAimSystem';
 import { WeaponCombatSystem } from './combat/WeaponCombatSystem';
 
@@ -336,6 +338,20 @@ async function bootstrap(): Promise<void> {
     runtime.state,
     player,
     collision,
+  );
+  const vehicle = new VehicleControllerSystem(
+    render.scene,
+    assets,
+    collision,
+    player,
+    interactions,
+    traffic,
+    camera,
+  );
+  const vehicleHud = new VehicleHudSystem(
+    uiLayout.zone('loadout'),
+    vehicle,
+    quickbar,
   );
   const proximityPickups = new ProximityPickupSystem(player);
   render.scene.add(proximityPickups.getVisualization());
@@ -628,7 +644,8 @@ async function bootstrap(): Promise<void> {
     .register(weaponAim)
     .register(playerDeath)
     .register(proximityPickups)
-    .register(traffic);
+    .register(traffic)
+    .register(vehicle);
   if (sparringTarget) runtime.register(sparringTarget);
   runtime
     .register(camera)
@@ -636,6 +653,7 @@ async function bootstrap(): Promise<void> {
     .register(moneyHud)
     .register(healthHud)
     .register(quickbar)
+    .register(vehicleHud)
     .register(minimapHud)
     .register(locationHud)
     .register(interactions)
@@ -717,6 +735,8 @@ async function bootstrap(): Promise<void> {
           inputInspector,
           diagnostics: diagnosticRecorder,
           traffic,
+          vehicle,
+          vehicleHud,
           timeOfDay,
           playerDeath,
         })

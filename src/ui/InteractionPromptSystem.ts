@@ -22,18 +22,22 @@ export class InteractionPromptSystem implements GameSystem {
     this.mount.append(this.element);
     this.unsubscribe = this.interactions.events.on(
       'interaction:target-changed',
-      ({ target }) => {
-        this.element.hidden = target === undefined;
-        this.element.textContent = target
-          ? `[${bindingLabel('interact')}] ${target.prompt}`
-          : '';
-      },
+      ({ target }) => this.sync(target),
     );
+    // A target may already be selected before this late UI projection mounts.
+    this.sync(this.interactions.getActiveTarget());
   }
 
   public dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.element.remove();
+  }
+
+  private sync(target: ReturnType<InteractionSystem['getActiveTarget']>): void {
+    this.element.hidden = target === undefined;
+    this.element.textContent = target
+      ? `[${bindingLabel('interact')}] ${target.prompt}`
+      : '';
   }
 }

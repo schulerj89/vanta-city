@@ -76,6 +76,14 @@ export const controlActions = {
     [5],
   ),
   interact: control(['KeyG'], ['G'], 'Interact / talk', 'Actions', ['X'], [2]),
+  recoverVehicle: control(
+    ['KeyX'],
+    ['X'],
+    'Recover seated vehicle',
+    'Actions',
+    ['D-pad up'],
+    [12],
+  ),
   punch: control(
     ['KeyJ'],
     ['J'],
