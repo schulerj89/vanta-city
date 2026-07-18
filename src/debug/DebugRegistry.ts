@@ -12,6 +12,7 @@ export const debugSections = {
   combat: 'Combat',
   interactions: 'Interactions',
   dialogue: 'Dialogue / Conversation',
+  missions: 'Mission / Objectives',
   assets: 'Assets',
   /** @deprecated Register controls in their owning subsystem section. */
   characters: 'Assets',

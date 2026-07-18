@@ -10,6 +10,7 @@ import {
   npcDefinitions,
   npcFixtureCharacterDefinitions,
   pedestrianCharacterDefinitions,
+  productionNpcDefinitions,
 } from '../src/npcs/npcs';
 
 const characters = [
@@ -39,6 +40,13 @@ const npc: NpcDefinition = {
 };
 
 describe('NPC definition validation', () => {
+  it('promotes Mack through the production roster without changing IDs', () => {
+    expect(productionNpcDefinitions.map(({ id }) => id)).toEqual(['mack']);
+    expect(productionNpcDefinitions[0]).toBe(
+      npcDefinitions.find(({ id }) => id === 'mack'),
+    );
+  });
+
   it('accepts a complete data-driven NPC definition', () => {
     expect(validateNpcDefinitions([npc], characters, conversations)).toEqual([
       npc,

@@ -169,6 +169,32 @@ class UiCompositionLabSystem implements GameSystem<GameContext> {
       ),
     );
 
+    if (this.current.state === 'mission-update') {
+      this.add(
+        'objectives',
+        html(`<section class="mission-objective-hud" role="region" aria-label="Current mission objective">
+          <p class="mission-objective-hud__kicker">MISSION · 3 / 5</p>
+          <strong class="mission-objective-hud__title">Walk the Block</strong>
+          <p class="mission-objective-hud__objective">Cross the south approach to test whether the same vehicle circles back.</p>
+        </section>`),
+      );
+      this.add(
+        'notifications',
+        html(`<section class="mission-notification" role="status" aria-live="polite" data-kind="objective-completed">
+          <strong class="mission-notification__kicker">OBJECTIVE UPDATED</strong>
+          <span class="mission-notification__text">Cross the south approach to test whether the same vehicle circles back.</span>
+        </section>`),
+      );
+      const indicator =
+        html(`<div class="mission-world-indicator" aria-hidden="true">
+        <span class="mission-world-indicator__marker"></span>
+        <span class="mission-world-indicator__label">Inspect Signal Corner</span>
+      </div>`);
+      indicator.style.transform =
+        'translate3d(62vw, 52vh, 0) translate(-50%, -100%)';
+      this.add('world-indicator', indicator);
+    }
+
     if (this.current.state === 'combat') {
       this.add(
         'notifications',

@@ -2087,6 +2087,130 @@ canvas {
   font: 700 0.58rem/1.3 var(--ash-font-data);
 }
 
+.ui-zone .mission-objective-hud {
+  display: grid;
+  max-width: 25rem;
+  gap: 0.22rem;
+  padding: 0.7rem 0.9rem 0.78rem 1.05rem;
+  overflow: hidden;
+  border: 1px solid var(--ash-rule);
+  border-radius: var(--ash-chamfer);
+  background:
+    linear-gradient(90deg, var(--ash-copper) 0 0.22rem, transparent 0),
+    var(--ash-panel);
+  box-shadow: var(--ash-shadow);
+  backdrop-filter: blur(7px) saturate(0.8);
+}
+
+.mission-objective-hud__kicker,
+.mission-objective-hud__objective {
+  margin: 0;
+}
+
+.mission-objective-hud__kicker {
+  color: var(--ash-copper);
+  font: 800 0.62rem/1.1 var(--ash-font-data);
+  letter-spacing: 0.1em;
+}
+
+.mission-objective-hud__title {
+  overflow: hidden;
+  color: var(--ash-amber);
+  font: 800 0.86rem/1.15 var(--ash-font-display);
+  letter-spacing: 0.09em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mission-objective-hud__objective {
+  color: var(--ash-ink);
+  font: 700 0.73rem/1.3 var(--ash-font-interface);
+}
+
+.ui-layout:has(.mission-objective-hud:not([hidden])) .ui-zone--notifications {
+  top: calc(var(--ash-safe-top) + 6.5rem);
+}
+
+.ui-zone .mission-notification {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--ash-copper);
+  border-radius: 0.15rem 0.75rem;
+  color: var(--ash-ink);
+  background: var(--ash-panel-solid);
+  box-shadow: var(--ash-shadow);
+  animation: ash-mission-notification-in var(--ash-motion-fast) ease-out;
+}
+
+.mission-notification[data-kind='failed'] {
+  border-color: var(--ash-danger);
+}
+
+.mission-notification__kicker {
+  color: var(--ash-copper);
+  font: 800 0.62rem/1.1 var(--ash-font-data);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.mission-notification[data-kind='failed'] .mission-notification__kicker {
+  color: var(--ash-danger);
+}
+
+.mission-notification__text {
+  overflow: hidden;
+  font: 700 0.72rem/1.25 var(--ash-font-interface);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mission-world-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  max-width: 14rem;
+  gap: 0.25rem;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 80%));
+}
+
+.mission-world-indicator__marker {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px solid var(--ash-amber);
+  background: var(--ash-night);
+  transform: rotate(45deg);
+}
+
+.mission-world-indicator__label {
+  padding: 0.28rem 0.48rem;
+  border: 1px solid var(--ash-rule);
+  color: var(--ash-ink);
+  background: var(--ash-panel-solid);
+  font: 800 0.6rem/1.15 var(--ash-font-data);
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@keyframes ash-mission-notification-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .ui-zone .interaction-prompt {
   padding: 0.72rem 1rem;
   border: 1px solid var(--ash-amber);
@@ -2150,6 +2274,43 @@ canvas {
     right: var(--ash-safe-right);
     left: var(--ash-safe-left);
     width: auto;
+  }
+
+  .ui-layout:has(.mission-objective-hud:not([hidden])) .ui-zone--player-status {
+    top: calc(var(--ash-safe-top) + 9rem);
+  }
+
+  .ui-layout:has(.mission-notification:not([hidden])) .ui-zone--player-status {
+    top: calc(var(--ash-safe-top) + 13.5rem);
+  }
+
+  .ui-zone .mission-objective-hud {
+    width: 100%;
+    padding: 0.58rem 0.7rem 0.62rem 0.9rem;
+  }
+
+  .ui-zone--objectives {
+    top: calc(var(--ash-safe-top) + 3.5rem);
+    right: var(--ash-safe-right);
+    left: var(--ash-safe-left);
+    width: auto;
+  }
+
+  .ui-layout:has(.mission-objective-hud:not([hidden])) .ui-zone--notifications {
+    top: calc(var(--ash-safe-top) + 9rem);
+    right: var(--ash-safe-right);
+    left: var(--ash-safe-left);
+    width: auto;
+    transform: none;
+  }
+
+  .ui-zone .mission-notification {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .mission-notification__text {
+    white-space: normal;
   }
 
   .ui-zone--navigation {

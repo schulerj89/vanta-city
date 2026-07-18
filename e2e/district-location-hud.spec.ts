@@ -56,12 +56,19 @@ test.describe('Ashfall Junction and location HUD', () => {
       .toContain('interaction.signal-controller');
   });
 
-  test('has no default NPCs or sparring target and recovers camera obstruction', async ({
+  test('loads story-critical Mack without a sparring target and recovers camera obstruction', async ({
     page,
   }) => {
     await openReadyApp(page);
     const initial = await snapshot(page);
-    expect(initial.npcs).toEqual({ count: 0, snapshots: [] });
+    expect(initial.npcs.count).toBe(1);
+    expect(initial.npcs.snapshots).toEqual([
+      expect.objectContaining({
+        definitionId: 'mack',
+        modelSource: 'asset',
+        spawnId: 'spawn.npc-mechanic',
+      }),
+    ]);
     expect(initial.sparringTarget.loaded).toBe(false);
     expect(initial.interaction.activeTargetId).toBeUndefined();
 

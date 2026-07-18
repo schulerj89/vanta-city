@@ -31,7 +31,11 @@ import {
 } from './input/defaultBindings';
 import { InteractionSystem } from './interactions/InteractionSystem';
 import { NpcSystem } from './npcs/NpcSystem';
-import { npcCharacterDefinitions, npcDefinitions } from './npcs/npcs';
+import {
+  npcCharacterDefinitions,
+  npcDefinitions,
+  productionNpcDefinitions,
+} from './npcs/npcs';
 import { StaticCollisionWorld } from './physics/CollisionWorld';
 import { WorldCollisionSystem } from './physics/WorldCollisionSystem';
 import { CharacterPlayerVisual } from './player/CharacterPlayerVisual';
@@ -78,6 +82,13 @@ import { VehicleControllerSystem } from './vehicles/VehicleControllerSystem';
 import { VehicleHudSystem } from './ui/VehicleHudSystem';
 import { WeaponAimSystem } from './combat/WeaponAimSystem';
 import { WeaponCombatSystem } from './combat/WeaponCombatSystem';
+import { MissionSystem } from './missions/MissionSystem';
+import {
+  ashfallInitialMissionFacts,
+  missionDefinitions,
+} from './missions/missions';
+import { registerMissionDebug } from './missions/MissionDebug';
+import { MissionHudSystem } from './ui/MissionHudSystem';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -386,7 +397,9 @@ async function bootstrap(): Promise<void> {
   );
   const npcFixturesEnabled =
     import.meta.env.DEV && developmentParameters?.get('npcFixtures') === '1';
-  const activeNpcDefinitions = npcFixturesEnabled ? npcDefinitions : [];
+  const activeNpcDefinitions = npcFixturesEnabled
+    ? npcDefinitions
+    : productionNpcDefinitions;
   const npcs = new NpcSystem(
     activeNpcDefinitions,
     npcCharacterDefinitions,
@@ -506,6 +519,31 @@ async function bootstrap(): Promise<void> {
       },
     },
   });
+  const missions = new MissionSystem(
+    missionDefinitions,
+    ashfallInitialMissionFacts,
+    {
+      state: runtime.state,
+      player,
+      level: levelSystem,
+      interactions: interactions.events,
+      dialogue: dialogue.events,
+      health: player.health.events,
+      money: playerAccount,
+      equipment: {
+        owns: (itemId) => isEquipmentId(itemId) && playerEquipment.owns(itemId),
+        acquire: (itemId) =>
+          isEquipmentId(itemId) && playerEquipment.acquire(itemId),
+      },
+    },
+  );
+  const missionHud = new MissionHudSystem(
+    uiLayout,
+    missions,
+    levelSystem,
+    render.camera,
+    collision,
+  );
   const unsubscribeAccessibility = accessibility.subscribe((preferences) => {
     dialogue.setTypewriterEnabled(preferences.dialogueTypewriter);
   });
@@ -612,6 +650,9 @@ async function bootstrap(): Promise<void> {
           playerDeath,
         )
       : [];
+  const missionDebugUnregister = development
+    ? registerMissionDebug(development.debug, missions)
+    : [];
 
   let diagnosticRecorder: DiagnosticRecorder | undefined;
   if (development) {
@@ -659,6 +700,8 @@ async function bootstrap(): Promise<void> {
     .register(interactions)
     .register(conversations)
     .register(npcs)
+    .register(missions)
+    .register(missionHud)
     .register(weaponCombat);
   if (interactionScenario) runtime.register(interactionScenario);
   runtime
@@ -737,6 +780,8 @@ async function bootstrap(): Promise<void> {
           traffic,
           vehicle,
           vehicleHud,
+          missions,
+          missionHud,
           timeOfDay,
           playerDeath,
         })
@@ -750,6 +795,7 @@ async function bootstrap(): Promise<void> {
     playerAccount.dispose();
     disposeBrowserTestBridge?.();
     for (const unregister of debugUnregister) unregister();
+    for (const unregister of missionDebugUnregister) unregister();
     unregisterCombatVolumes?.();
     unregisterPickupVolumes?.();
     unregisterTrafficVisualization?.();

@@ -25,9 +25,7 @@ export const uiCompositionPresentationFixtures: Readonly<
   restoration: { label: 'Restoration', supported: true },
   'mission-update': {
     label: 'Mission update',
-    supported: false,
-    unavailableReason:
-      'MISSION-001 will provide authoritative objective state.',
+    supported: true,
   },
   driving: {
     label: 'Driving',

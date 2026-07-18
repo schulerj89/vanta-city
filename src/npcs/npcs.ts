@@ -155,3 +155,8 @@ export const npcDefinitions = validateNpcDefinitions(
   npcCharacterDefinitions,
   conversationCatalog,
 );
+
+/** Story-critical NPCs available in production without development flags. */
+export const productionNpcDefinitions = Object.freeze(
+  npcDefinitions.filter(({ id }) => id === 'mack'),
+);

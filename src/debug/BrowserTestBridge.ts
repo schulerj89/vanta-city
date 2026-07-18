@@ -41,6 +41,8 @@ import type { WeaponCombatSystem } from '../combat/WeaponCombatSystem';
 import type { PlayerDeathSystem } from '../ui/PlayerDeathSystem';
 import type { VehicleControllerSystem } from '../vehicles/VehicleControllerSystem';
 import type { VehicleHudSystem } from '../ui/VehicleHudSystem';
+import type { MissionSystem } from '../missions/MissionSystem';
+import type { MissionHudSystem } from '../ui/MissionHudSystem';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -181,6 +183,11 @@ export interface BrowserTestSnapshot {
     readonly controller: ReturnType<VehicleControllerSystem['getSnapshot']>;
     readonly hud: ReturnType<VehicleHudSystem['getSnapshot']>;
   };
+  readonly missions: {
+    readonly runtime: ReturnType<MissionSystem['getSnapshot']>;
+    readonly persistence: ReturnType<MissionSystem['getPersistenceSnapshot']>;
+    readonly hud: ReturnType<MissionHudSystem['getSnapshot']>;
+  };
   readonly lighting: ReturnType<TimeOfDayLightingSystem['getSnapshot']>;
   readonly playerDeath: ReturnType<PlayerDeathSystem['getSnapshot']>;
 }
@@ -259,6 +266,8 @@ export interface BrowserTestBridgeDependencies {
   readonly traffic: TrafficSystem;
   readonly vehicle: VehicleControllerSystem;
   readonly vehicleHud: VehicleHudSystem;
+  readonly missions: MissionSystem;
+  readonly missionHud: MissionHudSystem;
   readonly timeOfDay: TimeOfDayLightingSystem;
   readonly playerDeath: PlayerDeathSystem;
 }
@@ -493,6 +502,11 @@ function createSnapshot(
     vehicle: {
       controller: dependencies.vehicle.getSnapshot(),
       hud: dependencies.vehicleHud.getSnapshot(),
+    },
+    missions: {
+      runtime: dependencies.missions.getSnapshot(),
+      persistence: dependencies.missions.getPersistenceSnapshot(),
+      hud: dependencies.missionHud.getSnapshot(),
     },
     lighting: dependencies.timeOfDay.getSnapshot(),
     playerDeath: dependencies.playerDeath.getSnapshot(),

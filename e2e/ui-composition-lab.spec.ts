@@ -29,8 +29,7 @@ test.describe('Ashfall UI composition lab', () => {
   }) => {
     expect(uiCompositionPresentationFixtures.exploration.supported).toBe(true);
     expect(uiCompositionPresentationFixtures['mission-update']).toMatchObject({
-      supported: false,
-      unavailableReason: expect.stringContaining('MISSION-001'),
+      supported: true,
     });
     await openLab(page, { state: 'exploration', background: 'bright' });
     await expect(page.locator('[data-ui-zone]')).toHaveCount(10);
@@ -43,14 +42,13 @@ test.describe('Ashfall UI composition lab', () => {
     await page.evaluate(() =>
       window.__VANTA_UI_LAB__?.apply({ state: 'mission-update' }),
     );
-    await expect(
-      page.getByText('Dependency pending · unavailable'),
-    ).toBeVisible();
-    await expect(page.getByText(/MISSION-001/)).toBeVisible();
+    await expect(page.getByLabel('Current mission objective')).toBeVisible();
+    await expect(page.getByText('Walk the Block')).toBeVisible();
+    await expect(page.getByText('OBJECTIVE UPDATED')).toBeVisible();
     const snapshot = await page.evaluate(() =>
       window.__VANTA_UI_LAB__?.snapshot(),
     );
-    expect(snapshot?.unavailableReason).toContain('MISSION-001');
+    expect(snapshot?.unavailableReason).toBeUndefined();
   });
 
   for (const sample of [
@@ -75,9 +73,22 @@ test.describe('Ashfall UI composition lab', () => {
       extra: '&uiText=large&uiSafeArea=1&uiMotion=reduced',
     },
     {
-      name: 'mission-unavailable',
+      name: 'mission-update-dark-desktop',
       state: 'mission-update',
       background: 'dark',
+    },
+    {
+      name: 'mission-update-narrow-large-safe',
+      state: 'mission-update',
+      background: 'noisy',
+      viewport: { width: 390, height: 844 },
+      extra: '&uiText=large&uiSafeArea=1&uiMotion=reduced',
+    },
+    {
+      name: 'mission-update-ultrawide',
+      state: 'mission-update',
+      background: 'bright',
+      viewport: { width: 1920, height: 800 },
     },
   ] as const) {
     test(`${sample.name} @visual`, async ({ page }) => {
