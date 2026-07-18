@@ -66,6 +66,18 @@ test('open HUD stays legible through live state and viewport changes @visual', a
   await command(page, 'player.health-reset');
   await command(page, 'time.day');
   await expectLighting(page, 'day', 0);
+  if ((await snapshot(page)).cinematic.state !== 'idle') {
+    await page.evaluate(() => {
+      window.__VANTA_TEST__!.requestCinematicSkip();
+      window.__VANTA_TEST__!.confirmCinematicSkip();
+    });
+    await expect
+      .poll(async () => (await snapshot(page)).cinematic.state)
+      .toBe('idle');
+    await expect
+      .poll(async () => (await snapshot(page)).gameState)
+      .toBe('playing');
+  }
   await page.keyboard.press('m');
   await expect.poll(async () => (await snapshot(page)).gameState).toBe('map');
   await page.keyboard.press('m');

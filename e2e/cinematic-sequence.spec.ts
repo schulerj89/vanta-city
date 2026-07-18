@@ -25,10 +25,12 @@ test('opening progression, pause, skip cancellation/confirmation, and exact rest
       speakerId: 'mack',
       playbackSequence: 1,
     });
-  expect((await snapshot(page)).controls.ownership).toMatchObject({
-    owner: 'cinematic',
-    acceptedActions: expect.arrayContaining(['pause', 'skipCinematic']),
-  });
+  await expect
+    .poll(async () => (await snapshot(page)).controls.ownership.owner)
+    .toBe('cinematic');
+  expect((await snapshot(page)).controls.ownership.acceptedActions).toEqual(
+    expect.arrayContaining(['pause', 'skipCinematic']),
+  );
   await attach(page, testInfo, 'opening-arrival-desktop');
 
   await page.keyboard.press('p');

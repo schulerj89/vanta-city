@@ -564,6 +564,17 @@ async function openReadyApp(page: Page): Promise<void> {
   await expect
     .poll(async () => (await snapshot(page)).character.source)
     .not.toBe('loading');
+  await executeCommand(page, 'mission.start', 'ash-001-walk-the-block');
+  await expect
+    .poll(async () => (await snapshot(page)).cinematic.cinematicId)
+    .toBe('cinematic.ash-001.opening');
+  await page.evaluate(() => {
+    window.__VANTA_TEST__!.requestCinematicSkip();
+    window.__VANTA_TEST__!.confirmCinematicSkip();
+  });
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
   await executeCommand(page, 'player.handgun-purchase');
   await executeCommand(page, 'player.equip-item', 'none');
 }
