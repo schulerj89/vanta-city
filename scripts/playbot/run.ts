@@ -53,6 +53,9 @@ interface PublicGameState {
   }[];
   readonly vehicle: string | undefined;
   readonly interactionPrompt: string | undefined;
+  readonly dialogue: string | undefined;
+  readonly missionObjective: string | undefined;
+  readonly fullMap: string | undefined;
   readonly dialogs: readonly string[];
   readonly minimap: string | undefined;
   readonly helpControls: readonly string[];
@@ -163,6 +166,10 @@ interface SessionEvidence {
   restored: boolean;
   vehicleEntered: boolean;
   vehicleExited: boolean;
+  dialogueObserved: boolean;
+  missionObserved: boolean;
+  mapOpened: boolean;
+  mapRestored: boolean;
   prompts: Set<string>;
   dialogs: Set<string>;
   helpControls: Set<string>;
@@ -426,6 +433,9 @@ async function runSession(options: {
     });
     if (state.interactionPrompt)
       options.evidence.prompts.add(state.interactionPrompt);
+    if (state.dialogue) options.evidence.dialogueObserved = true;
+    if (state.missionObjective) options.evidence.missionObserved = true;
+    if (state.fullMap) options.evidence.mapOpened = true;
     for (const dialog of state.dialogs) options.evidence.dialogs.add(dialog);
     for (const control of state.helpControls)
       options.evidence.helpControls.add(control);
@@ -622,6 +632,9 @@ async function runCriticalPath(
     );
   }
 
+  await exerciseMap(page, evidence, record, screenshot);
+  await exerciseMissionAndDialogue(page, evidence, record, screenshot);
+
   await page.keyboard.press('Digit2');
   await nextFrames(page, 2);
   await page.keyboard.press('KeyU');
@@ -658,6 +671,103 @@ async function runCriticalPath(
       'Dragged the production canvas with public mouse input',
     );
   }
+}
+
+async function exerciseMap(
+  page: Page,
+  evidence: SessionEvidence,
+  record: (action: string, detail: string) => Promise<PublicGameState>,
+  screenshot: (name: string) => Promise<void>,
+): Promise<void> {
+  const map = page.locator('.full-world-map');
+  await page.keyboard.press('KeyM');
+  await map.waitFor({ state: 'visible' });
+  await record('map-open', 'Opened the district map through the M binding');
+  await screenshot('map-open');
+  await page.keyboard.press('KeyM');
+  await map.waitFor({ state: 'hidden' });
+  evidence.mapRestored = true;
+  await record(
+    'map-close',
+    'Closed the district map and restored the production HUD',
+  );
+}
+
+async function exerciseMissionAndDialogue(
+  page: Page,
+  evidence: SessionEvidence,
+  record: (action: string, detail: string) => Promise<PublicGameState>,
+  screenshot: (name: string) => Promise<void>,
+): Promise<void> {
+  await page.keyboard.press('KeyR');
+  for (let step = 0; step < 8; step += 1) {
+    if (await visibleText(page, '.mission-objective-hud')) break;
+    await holdKey(page, 'KeyW', 400);
+    await record(
+      'approach-mission-trigger',
+      `Ran toward Ashfall Crossing (step ${step + 1})`,
+    );
+  }
+  await page.keyboard.press('KeyR');
+  const mission = await record(
+    'mission-check',
+    'Checked the public objective presentation after entering the crossing',
+  );
+  if (!mission.missionObjective) return;
+  evidence.missionObserved = true;
+  await screenshot('mission-started');
+
+  for (let step = 0; step < 5; step += 1) {
+    const position = parsePosition((await capturePublicState(page)).location);
+    if (position && Math.abs(position.z - 10) < 1.4) break;
+    await holdKey(page, position && position.z > 10 ? 'KeyW' : 'KeyS', 350);
+  }
+
+  const beforeCalibration = parsePosition(
+    (await capturePublicState(page)).location,
+  );
+  await holdKey(page, 'KeyD', 300);
+  const afterCalibration = parsePosition(
+    (await capturePublicState(page)).location,
+  );
+  let towardMack = 'KeyA';
+  if (
+    beforeCalibration &&
+    afterCalibration &&
+    afterCalibration.x < beforeCalibration.x
+  ) {
+    towardMack = 'KeyD';
+  } else {
+    await holdKey(page, 'KeyA', 300);
+  }
+
+  for (let step = 0; step < 14; step += 1) {
+    const prompt = await visibleText(page, '.interaction-prompt');
+    if (prompt?.includes('Talk')) break;
+    await holdKey(page, towardMack, 350);
+    await record('approach-mack', `Walked toward Mack (step ${step + 1})`);
+  }
+  const prompt = await visibleText(page, '.interaction-prompt');
+  if (!prompt?.includes('Talk')) return;
+  evidence.prompts.add(prompt);
+  await page.keyboard.press('KeyG');
+  const dialogue = page.locator('.dialogue-box');
+  await dialogue.waitFor({ state: 'visible' });
+  evidence.dialogueObserved = true;
+  await record('dialogue-start', `Activated public prompt: ${prompt}`);
+  await screenshot('dialogue-start');
+
+  const continueButton = page.locator('[data-testid="dialogue-continue"]');
+  for (let step = 0; step < 16 && (await dialogue.isVisible()); step += 1) {
+    await continueButton.click();
+    await nextFrames(page, 2);
+  }
+  await dialogue.waitFor({ state: 'hidden' });
+  evidence.restored = true;
+  await record(
+    'dialogue-complete',
+    'Advanced every Mack line and restored gameplay controls',
+  );
 }
 
 async function runSeededExploration(
@@ -792,6 +902,9 @@ async function capturePublicState(page: Page): Promise<PublicGameState> {
         .querySelector('.vehicle-hud:not([hidden])')
         ?.getAttribute('aria-label') ?? undefined,
       interactionPrompt: visibleText('.interaction-prompt'),
+      dialogue: visibleText('.dialogue-box'),
+      missionObjective: visibleText('.mission-objective-hud'),
+      fullMap: visibleText('.full-world-map'),
       dialogs: [...document.querySelectorAll('[role="dialog"]')]
         .filter((element) => !element.hidden)
         .map((element) =>
@@ -900,7 +1013,6 @@ function observeFaults(page: Page, baseUrl: string): BrowserFaults {
 }
 
 function buildCapabilities(evidence: SessionEvidence): CapabilityResult[] {
-  const controls = evidence.helpControls;
   const capability = (
     id: string,
     status: CapabilityStatus,
@@ -928,10 +1040,10 @@ function buildCapabilities(evidence: SessionEvidence): CapabilityResult[] {
     ),
     capability(
       'dialogue',
-      [...evidence.dialogs].some((dialog) => /dialogue/i.test(dialog))
-        ? 'exercised'
-        : 'unavailable',
-      'No production dialogue target or Dialogue surface was observed on this base.',
+      evidence.dialogueObserved ? 'exercised' : 'unavailable',
+      evidence.dialogueObserved
+        ? 'Reached Mack and advanced the production conversation through its visible controls.'
+        : 'No production dialogue target or Dialogue surface was reached.',
     ),
     capability(
       'combat',
@@ -954,10 +1066,10 @@ function buildCapabilities(evidence: SessionEvidence): CapabilityResult[] {
     ),
     capability(
       'mission',
-      'unavailable',
-      controls.has('Open mission')
-        ? 'A mission control label appeared but no mission state was observed.'
-        : 'No mission action, objective panel, or production mission state is registered.',
+      evidence.missionObserved ? 'exercised' : 'unavailable',
+      evidence.missionObserved
+        ? 'Entered the authored crossing trigger and observed the production objective HUD.'
+        : 'No mission objective presentation was reached through the bounded route.',
     ),
     capability(
       'vehicle',
@@ -968,8 +1080,10 @@ function buildCapabilities(evidence: SessionEvidence): CapabilityResult[] {
     ),
     capability(
       'map',
-      'unavailable',
-      'The north-up minimap is visible, but no full-map action or modal is registered.',
+      evidence.mapOpened ? 'exercised' : 'unavailable',
+      evidence.mapOpened
+        ? `Opened the full district map and ${evidence.mapRestored ? 'restored gameplay on close.' : 'did not confirm restoration.'}`
+        : 'No full-map action or modal was reached.',
     ),
     capability(
       'pause',
@@ -982,8 +1096,8 @@ function buildCapabilities(evidence: SessionEvidence): CapabilityResult[] {
       'restoration',
       evidence.restored ? 'exercised' : 'partial',
       evidence.restored
-        ? 'Picker/help and vehicle transitions restored the production HUD and on-foot state.'
-        : 'Picker/help closure was exercised; vehicle restoration was not reached.',
+        ? 'Picker/help, vehicle, full-map, and dialogue transitions restored the production HUD and on-foot state.'
+        : 'Picker/help closure was exercised; complete gameplay restoration was not reached.',
     ),
   ];
 }
@@ -1037,6 +1151,10 @@ function emptyEvidence(): SessionEvidence {
     restored: false,
     vehicleEntered: false,
     vehicleExited: false,
+    dialogueObserved: false,
+    missionObserved: false,
+    mapOpened: false,
+    mapRestored: false,
     prompts: new Set(),
     dialogs: new Set(),
     helpControls: new Set(),
@@ -1259,13 +1377,15 @@ async function visibleText(
   page: Page,
   selector: string,
 ): Promise<string | undefined> {
-  return page
-    .locator(`${selector}:not([hidden])`)
-    .textContent()
-    .then(
-      (value) => value?.trim() || undefined,
-      () => undefined,
-    );
+  return page.evaluate((publicSelector) => {
+    const element = document.querySelector<HTMLElement>(publicSelector);
+    if (!element || element.hidden) return undefined;
+    const style = getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+      return undefined;
+    }
+    return element.textContent?.trim() || undefined;
+  }, selector);
 }
 
 function parsePosition(
@@ -1290,6 +1410,9 @@ function signature(state: PublicGameState): string {
   return JSON.stringify({
     prompt: state.interactionPrompt,
     dialogs: state.dialogs,
+    dialogue: state.dialogue,
+    missionObjective: state.missionObjective,
+    fullMap: state.fullMap,
     vehicle: state.vehicle,
     quickbar: state.quickbar.map(({ selected }) => selected),
     health: state.health.current,
