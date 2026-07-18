@@ -53,12 +53,22 @@ describe('ThreeAssetLoader', () => {
     });
     expect(loader.getPerformanceSnapshot()).toMatchObject({
       cacheEntries: 1,
+      sourceReferences: 1,
+      instanceReferences: 2,
+      instancesCreated: 2,
+      instancesDisposed: 0,
       loaded: 1,
       inFlight: 0,
       failures: 0,
     });
     first.dispose();
     second.dispose();
+    expect(loader.getPerformanceSnapshot()).toMatchObject({
+      sourceReferences: 1,
+      instanceReferences: 0,
+      instancesCreated: 2,
+      instancesDisposed: 2,
+    });
     loader.dispose();
   });
 

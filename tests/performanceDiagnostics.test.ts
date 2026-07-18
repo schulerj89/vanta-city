@@ -36,10 +36,15 @@ describe('performance diagnostics', () => {
     await registry.init(undefined);
     registry.setTimingSink(diagnostics);
     registry.update({ delta: 0.1, elapsed: 0.1, frame: 1 }, true);
+    diagnostics.recordFrameInterval(16.7);
 
     expect(diagnostics.getSnapshot().systems).toMatchObject({
       simulation: { update: { samples: 1, averageMs: 2 } },
       renderer: { lateUpdate: { samples: 1, averageMs: 3 } },
+    });
+    expect(diagnostics.getSnapshot().frameInterval).toMatchObject({
+      samples: 1,
+      averageMs: 16.7,
     });
     registry.dispose();
   });

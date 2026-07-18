@@ -28,6 +28,7 @@ export type RuntimePerformanceSnapshot =
       readonly enabled: true;
       readonly windowSize: number;
       readonly frame: PerformanceTimingSummary;
+      readonly frameInterval: PerformanceTimingSummary;
       readonly systems: Readonly<
         Record<
           string,
@@ -38,6 +39,7 @@ export type RuntimePerformanceSnapshot =
 
 export interface RuntimePerformanceDiagnostics extends SystemTimingSink {
   recordFrame(durationMs: number): void;
+  recordFrameInterval(durationMs: number): void;
   getSnapshot(): RuntimePerformanceSnapshot;
   reset(): void;
 }
@@ -51,6 +53,7 @@ export class GameRuntime {
   private animationFrame: number | undefined;
   private running = false;
   private diagnostics: RuntimePerformanceDiagnostics | undefined;
+  private previousFrameTimestamp: number | undefined;
 
   public constructor(private readonly input: InputReader) {}
 
@@ -83,6 +86,7 @@ export class GameRuntime {
     this.running = true;
     this.state.transition('playing');
     this.clock.resetFrameDelta();
+    this.previousFrameTimestamp = undefined;
     this.animationFrame = requestAnimationFrame(this.frame);
   }
 
@@ -112,6 +116,12 @@ export class GameRuntime {
   private readonly frame = (timestamp: number): void => {
     if (!this.running) return;
     const time = this.clock.tick(timestamp);
+    if (this.previousFrameTimestamp !== undefined) {
+      this.diagnostics?.recordFrameInterval(
+        timestamp - this.previousFrameTimestamp,
+      );
+    }
+    this.previousFrameTimestamp = timestamp;
 
     this.input.prepareFrame?.();
     if (this.input.wasPressed('pause')) {

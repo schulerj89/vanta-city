@@ -252,6 +252,57 @@ const signalControllerCollider = collider(
   ['obstacle', 'interaction'],
 );
 
+const environment = [
+  ...paired.map(({ visual }) => visual),
+  ...markings,
+  ...curbs,
+  ...buildings,
+  ...props,
+  signalControllerVisual,
+] as const;
+
+const staticCollision = [
+  ...paired.map(({ collider: definition }) => definition),
+  ...buildingCollision,
+  signalControllerCollider,
+  collider(
+    'c.traffic-light-pole',
+    [8.25, 2.55, 8.25],
+    [0.55, 4.7, 0.55],
+    ['obstacle', 'camera'],
+  ),
+  collider(
+    'c.street-light-nw',
+    [-8.5, 3.5, 8.5],
+    [0.5, 6.6, 0.5],
+    ['obstacle', 'camera'],
+  ),
+  collider(
+    'c.street-light-se',
+    [8.5, 3.5, -8.5],
+    [0.5, 6.6, 0.5],
+    ['obstacle', 'camera'],
+  ),
+  collider('c.barrier-west', [-20, 0.4, -4.6], [0.5, 0.8, 2.1], ['obstacle']),
+  collider('c.barrier-east', [20, 0.4, 4.6], [0.5, 0.8, 2.1], ['obstacle']),
+] as const;
+
+const streamableEntries = [...environment, ...staticCollision];
+const coreEntryIds = streamableEntries
+  .filter(({ id }) =>
+    /road-|marking-|crosswalk|traffic-light|signal-controller/.test(id),
+  )
+  .map(({ id }) => id);
+const quadrantEntries = streamableEntries.filter(
+  ({ id }) => !coreEntryIds.includes(id),
+);
+const quadrantIds = (east: boolean, north: boolean): string[] =>
+  quadrantEntries
+    .filter(
+      ({ position }) => position[0] >= 0 === east && position[2] >= 0 === north,
+    )
+    .map(({ id }) => id);
+
 const cc0 = {
   creator: 'Quaternius',
   license: 'CC0 1.0',
@@ -322,44 +373,8 @@ export const testDistrict = {
   definition: {
     id: 'test-district',
     name: 'Ashfall Junction',
-    environment: [
-      ...paired.map(({ visual }) => visual),
-      ...markings,
-      ...curbs,
-      ...buildings,
-      ...props,
-      signalControllerVisual,
-    ],
-    staticCollision: [
-      ...paired.map(({ collider: definition }) => definition),
-      ...buildingCollision,
-      signalControllerCollider,
-      collider(
-        'c.traffic-light-pole',
-        [8.25, 2.55, 8.25],
-        [0.55, 4.7, 0.55],
-        ['obstacle', 'camera'],
-      ),
-      collider(
-        'c.street-light-nw',
-        [-8.5, 3.5, 8.5],
-        [0.5, 6.6, 0.5],
-        ['obstacle', 'camera'],
-      ),
-      collider(
-        'c.street-light-se',
-        [8.5, 3.5, -8.5],
-        [0.5, 6.6, 0.5],
-        ['obstacle', 'camera'],
-      ),
-      collider(
-        'c.barrier-west',
-        [-20, 0.4, -4.6],
-        [0.5, 0.8, 2.1],
-        ['obstacle'],
-      ),
-      collider('c.barrier-east', [20, 0.4, 4.6], [0.5, 0.8, 2.1], ['obstacle']),
-    ],
+    environment,
+    staticCollision,
     spawns: [
       {
         id: 'spawn.player-default',
@@ -508,6 +523,32 @@ export const testDistrict = {
         ...intersectionCornerSpawns.map(({ id }) => ({
           entryId: id,
           layer: 'spawns' as const,
+        })),
+      ],
+    },
+    streaming: {
+      sectors: [
+        {
+          id: 'sector.core',
+          center: [0, 0],
+          loadDistance: 1,
+          unloadDistance: 2,
+          alwaysLoaded: true,
+          entryIds: coreEntryIds,
+        },
+        ...(
+          [
+            ['sector.northwest', false, true, -14, 14],
+            ['sector.northeast', true, true, 14, 14],
+            ['sector.southwest', false, false, -14, -14],
+            ['sector.southeast', true, false, 14, -14],
+          ] as const
+        ).map(([id, east, north, x, z]) => ({
+          id,
+          center: [x, z] as const,
+          loadDistance: 26,
+          unloadDistance: 32,
+          entryIds: quadrantIds(east, north),
         })),
       ],
     },

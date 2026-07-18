@@ -35,7 +35,7 @@ test.describe('playable debug district', () => {
     expect(state.world.defaultSpawnId).toBe('spawn.player-default');
     expect(state.world.declaredColliderCount).toBeGreaterThan(0);
     expect(state.world.initializedColliderCount).toBe(
-      state.world.declaredColliderCount + 1,
+      state.world.activeDeclaredColliderCount + 1,
     );
     expect(state.sparringTarget).toMatchObject({
       enabled: true,

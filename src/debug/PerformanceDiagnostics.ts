@@ -10,6 +10,7 @@ import type { ThreeAssetLoader } from '../assets/AssetLoader';
 import type { LoadingScreen } from '../ui/LoadingScreen';
 import type { DebugRegistry, DebugUnregister } from './DebugRegistry';
 import type { DevelopmentAssetFaults } from './DevelopmentAssetFaults';
+import type { LevelSystem } from '../world/LevelSystem';
 
 export type TimingSummary = PerformanceTimingSummary;
 
@@ -17,9 +18,42 @@ export interface RuntimePerformanceSnapshot {
   readonly enabled: true;
   readonly windowSize: number;
   readonly frame: TimingSummary;
+  readonly frameInterval: TimingSummary;
   readonly systems: Readonly<
     Record<string, Partial<Record<SystemUpdatePhase, TimingSummary>>>
   >;
+}
+
+export function registerSectorStreamingDiagnostics(
+  debug: DebugRegistry,
+  level: LevelSystem,
+): DebugUnregister[] {
+  return [
+    debug.registerValue({
+      id: 'performance.sectors',
+      label: 'Sectors authored / active / pending',
+      read: () => {
+        const value = level.getStreamingSnapshot();
+        return `${value.authored} / ${value.active.length} / ${value.pending.length}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'performance.sector-ownership',
+      label: 'Sector scene objects / resources / instances',
+      read: () => {
+        const value = level.getStreamingSnapshot();
+        return `${value.sceneObjects} / ${value.ownedResources} / ${value.modelInstances}`;
+      },
+    }),
+    debug.registerValue({
+      id: 'performance.sector-transitions',
+      label: 'Sector loads / unloads / LOD hidden',
+      read: () => {
+        const value = level.getStreamingSnapshot();
+        return `${value.loadCount} / ${value.unloadCount} / ${value.lodHiddenObjects}`;
+      },
+    }),
+  ];
 }
 
 export class RollingTimingWindow {
@@ -63,6 +97,7 @@ export class RollingTimingWindow {
 
 export class DevelopmentRuntimeDiagnostics implements RuntimePerformanceDiagnostics {
   private readonly frame: RollingTimingWindow;
+  private readonly frameInterval: RollingTimingWindow;
   private readonly systems = new Map<
     string,
     Partial<Record<SystemUpdatePhase, RollingTimingWindow>>
@@ -73,6 +108,7 @@ export class DevelopmentRuntimeDiagnostics implements RuntimePerformanceDiagnost
     private readonly clock: () => number = () => performance.now(),
   ) {
     this.frame = new RollingTimingWindow(windowSize);
+    this.frameInterval = new RollingTimingWindow(windowSize);
   }
 
   public now(): number {
@@ -95,11 +131,16 @@ export class DevelopmentRuntimeDiagnostics implements RuntimePerformanceDiagnost
     this.frame.add(durationMs);
   }
 
+  public recordFrameInterval(durationMs: number): void {
+    this.frameInterval.add(durationMs);
+  }
+
   public getSnapshot(): RuntimePerformanceSnapshot {
     return {
       enabled: true,
       windowSize: this.windowSize,
       frame: this.frame.snapshot(),
+      frameInterval: this.frameInterval.snapshot(),
       systems: Object.fromEntries(
         [...this.systems].map(([id, phases]) => [
           id,
@@ -116,6 +157,7 @@ export class DevelopmentRuntimeDiagnostics implements RuntimePerformanceDiagnost
 
   public reset(): void {
     this.frame.reset();
+    this.frameInterval.reset();
     this.systems.clear();
   }
 }
@@ -189,6 +231,15 @@ export function registerPerformanceDiagnostics(
       read: () => summary(dependencies.runtimeTiming.getSnapshot().frame),
     }),
     debug.registerValue({
+      id: 'performance.frame-interval',
+      label: 'Frame interval / FPS proxy',
+      read: () => {
+        const value = dependencies.runtimeTiming.getSnapshot().frameInterval;
+        const fps = value.averageMs > 0 ? 1000 / value.averageMs : 0;
+        return `${summary(value)} · ${fps.toFixed(1)} FPS`;
+      },
+    }),
+    debug.registerValue({
       id: 'performance.slowest-system',
       label: 'Slowest system p95',
       read: () => {
@@ -210,7 +261,7 @@ export function registerPerformanceDiagnostics(
       label: 'Asset cache / active / failed',
       read: () => {
         const value = dependencies.assets.getPerformanceSnapshot();
-        return `${value.cacheEntries} / ${value.inFlight} / ${value.failures}`;
+        return `${value.sourceReferences} source / ${value.instanceReferences} instances / ${value.inFlight} active / ${value.failures} failed`;
       },
     }),
     debug.registerValue({

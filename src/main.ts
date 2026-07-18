@@ -184,6 +184,9 @@ async function bootstrap(): Promise<void> {
     levels,
     'test-district',
     worldEvents,
+    undefined,
+    false,
+    developmentParameters?.get('streaming') !== '0',
   );
   const requestedHour = Number(pageParameters.get('time'));
   const timeOfDay = new TimeOfDayLightingSystem(
@@ -236,6 +239,14 @@ async function bootstrap(): Promise<void> {
     spawn.rotation?.[1] ?? 0,
     playerEquipment,
   );
+  levelSystem.setStreamingPositionSource(() => player.getPlayerPosition());
+  if (development) {
+    const { registerSectorStreamingDiagnostics } =
+      await import('./debug/PerformanceDiagnostics');
+    performanceUnregister.push(
+      ...registerSectorStreamingDiagnostics(development.debug, levelSystem),
+    );
+  }
   const playerHudCluster = new PlayerHudClusterSystem(mount);
   const trafficSeed = Number(pageParameters.get('trafficSeed'));
   const trafficCadence = Number(pageParameters.get('trafficCadence'));
@@ -1273,7 +1284,14 @@ function registerVerticalSliceDebug(
         const y = Number(rawY);
         const z = Number(rawZ);
         const yaw = Number(rawYaw);
-        if (![x, y, z].every(Number.isFinite)) {
+        if (
+          x === undefined ||
+          y === undefined ||
+          z === undefined ||
+          !Number.isFinite(x) ||
+          !Number.isFinite(y) ||
+          !Number.isFinite(z)
+        ) {
           throw new Error('Expected x,y,z and optional yaw');
         }
         sparringTarget.teleport(
@@ -1973,8 +1991,13 @@ function registerVerticalSliceDebug(
       label: 'Teleport to spawn',
       group: sections.player,
       argumentLabel: 'spawn id',
-      run: (id) => {
+      run: async (id) => {
         const spawn = level.getSpawn(id || undefined);
+        await level.refreshStreaming({
+          x: spawn.position[0],
+          y: spawn.position[1],
+          z: spawn.position[2],
+        });
         player.teleport(new Vector3(...spawn.position), spawn.rotation?.[1]);
       },
     }),
@@ -1983,13 +2006,22 @@ function registerVerticalSliceDebug(
       label: 'Teleport to position',
       group: sections.player,
       argumentLabel: 'x,y,z,yaw',
-      run: (value) => {
-        const [x, y, z, yaw] = (value ?? '').split(',').map(Number);
-        if (![x, y, z].every(Number.isFinite)) {
+      run: async (value) => {
+        const [rawX, rawY, rawZ, yaw] = (value ?? '').split(',').map(Number);
+        if (
+          rawX === undefined ||
+          rawY === undefined ||
+          rawZ === undefined ||
+          !Number.isFinite(rawX) ||
+          !Number.isFinite(rawY) ||
+          !Number.isFinite(rawZ)
+        ) {
           throw new Error('Expected x,y,z and optional yaw');
         }
+        const destination = { x: rawX, y: rawY, z: rawZ };
+        await level.refreshStreaming(destination);
         player.teleport(
-          new Vector3(x, y, z),
+          new Vector3(destination.x, destination.y, destination.z),
           Number.isFinite(yaw) ? yaw : undefined,
         );
       },

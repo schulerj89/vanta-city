@@ -63,9 +63,11 @@ export interface BrowserTestSnapshot {
     readonly levelId: string | undefined;
     readonly defaultSpawnId: string | undefined;
     readonly declaredColliderCount: number;
+    readonly activeDeclaredColliderCount: number;
     readonly initializedColliderCount: number;
     readonly floorHeight: number;
     readonly collision: ReturnType<StaticCollisionWorld['getDebugSnapshot']>;
+    readonly sectors: ReturnType<LevelSystem['getStreamingSnapshot']>;
   };
   readonly player: {
     readonly exists: boolean;
@@ -163,6 +165,12 @@ export interface BrowserTestSnapshot {
     readonly loading: ReturnType<LoadingScreen['getSnapshot']>;
     readonly assetFaults:
       ReturnType<DevelopmentAssetFaults['getSnapshot']> | undefined;
+    readonly browserMemory: {
+      readonly supported: boolean;
+      readonly usedJsHeapSize: number | undefined;
+      readonly totalJsHeapSize: number | undefined;
+      readonly jsHeapSizeLimit: number | undefined;
+    };
   };
   readonly traffic: ReturnType<TrafficSystem['getSnapshot']>;
   readonly lighting: ReturnType<TimeOfDayLightingSystem['getSnapshot']>;
@@ -177,6 +185,26 @@ export interface BrowserTestApi {
   setVirtualGamepad(fixture?: VirtualGamepadFixture): void;
   exportDiagnosticTrace(): string;
   readbackDiagnosticTrace(input: string): DiagnosticTraceSummary;
+  capturePerformance(
+    warmupMs: number,
+    measurementMs: number,
+  ): Promise<BrowserPerformanceCapture>;
+}
+
+export interface BrowserPerformanceCapture {
+  readonly warmupMs: number;
+  readonly measurementMs: number;
+  readonly frames: number;
+  readonly averageFps: number;
+  readonly onePercentLowFps: number;
+  readonly frameTimeP95Ms: number;
+  readonly frameTimeMaxMs: number;
+  readonly renderer: ReturnType<RenderSystem['getPerformanceSnapshot']>;
+  readonly sectors: ReturnType<LevelSystem['getStreamingSnapshot']>;
+  readonly assets: ReturnType<ThreeAssetLoader['getPerformanceSnapshot']>;
+  readonly browserMemory: BrowserTestSnapshot['performance']['browserMemory'] & {
+    readonly peakUsedJsHeapSize: number | undefined;
+  };
 }
 
 declare global {
@@ -266,6 +294,8 @@ export function installBrowserTestBridge(
     exportDiagnosticTrace: () => dependencies.diagnostics.serialize(),
     readbackDiagnosticTrace: (input) =>
       dependencies.diagnostics.readback(input),
+    capturePerformance: (warmupMs, measurementMs) =>
+      capturePerformance(dependencies, target, warmupMs, measurementMs),
   };
   target.__VANTA_TEST__ = api;
   return () => {
@@ -274,6 +304,68 @@ export function installBrowserTestBridge(
     unsubscribeCancelled();
     if (target.__VANTA_TEST__ === api) delete target.__VANTA_TEST__;
   };
+}
+
+function capturePerformance(
+  dependencies: BrowserTestBridgeDependencies,
+  target: Window,
+  warmupMs: number,
+  measurementMs: number,
+): Promise<BrowserPerformanceCapture> {
+  if (warmupMs < 0 || measurementMs <= 0 || measurementMs > 120_000) {
+    throw new Error('Performance capture requires 0–120000 ms durations');
+  }
+  return new Promise((resolve) => {
+    let started: number | undefined;
+    let measurementStarted: number | undefined;
+    let previous: number | undefined;
+    const intervals: number[] = [];
+    let peakUsedJsHeapSize: number | undefined;
+    const sample = (timestamp: number): void => {
+      started ??= timestamp;
+      if (timestamp - started < warmupMs) {
+        target.requestAnimationFrame(sample);
+        return;
+      }
+      measurementStarted ??= timestamp;
+      if (previous !== undefined) intervals.push(timestamp - previous);
+      previous = timestamp;
+      const used = readBrowserMemory().usedJsHeapSize;
+      if (used !== undefined)
+        peakUsedJsHeapSize = Math.max(peakUsedJsHeapSize ?? 0, used);
+      if (timestamp - measurementStarted < measurementMs) {
+        target.requestAnimationFrame(sample);
+        return;
+      }
+      const sorted = [...intervals].sort((left, right) => left - right);
+      const average =
+        intervals.reduce((sum, value) => sum + value, 0) /
+        Math.max(1, intervals.length);
+      const percentile = (ratio: number): number =>
+        sorted[
+          Math.min(
+            sorted.length - 1,
+            Math.max(0, Math.ceil(sorted.length * ratio) - 1),
+          )
+        ] ?? 0;
+      const p95 = percentile(0.95);
+      const p99 = percentile(0.99);
+      resolve({
+        warmupMs,
+        measurementMs,
+        frames: intervals.length,
+        averageFps: average > 0 ? 1000 / average : 0,
+        onePercentLowFps: p99 > 0 ? 1000 / p99 : 0,
+        frameTimeP95Ms: p95,
+        frameTimeMaxMs: sorted.at(-1) ?? 0,
+        renderer: dependencies.render.getPerformanceSnapshot(),
+        sectors: dependencies.level.getStreamingSnapshot(),
+        assets: dependencies.assets.getPerformanceSnapshot(),
+        browserMemory: { ...readBrowserMemory(), peakUsedJsHeapSize },
+      });
+    };
+    target.requestAnimationFrame(sample);
+  });
 }
 
 function createSnapshot(
@@ -307,9 +399,12 @@ function createSnapshot(
       levelId: activeLevel?.id,
       defaultSpawnId,
       declaredColliderCount: activeLevel?.staticCollision.length ?? 0,
+      activeDeclaredColliderCount:
+        dependencies.level.getStreamingSnapshot().colliders,
       initializedColliderCount: dependencies.collision.getColliderCount(),
       floorHeight: 0,
       collision: dependencies.collision.getDebugSnapshot(),
+      sectors: dependencies.level.getStreamingSnapshot(),
     },
     player: {
       exists: dependencies.player.visual.object3d.parent !== null,
@@ -392,6 +487,25 @@ function createSnapshot(
       assets: dependencies.assets.getPerformanceSnapshot(),
       loading: dependencies.loading.getSnapshot(),
       assetFaults: dependencies.assetFaults?.getSnapshot(),
+      browserMemory: readBrowserMemory(),
     },
+  };
+}
+
+function readBrowserMemory(): BrowserTestSnapshot['performance']['browserMemory'] {
+  const memory = (
+    performance as Performance & {
+      readonly memory?: {
+        readonly usedJSHeapSize: number;
+        readonly totalJSHeapSize: number;
+        readonly jsHeapSizeLimit: number;
+      };
+    }
+  ).memory;
+  return {
+    supported: memory !== undefined,
+    usedJsHeapSize: memory?.usedJSHeapSize,
+    totalJsHeapSize: memory?.totalJSHeapSize,
+    jsHeapSizeLimit: memory?.jsHeapSizeLimit,
   };
 }

@@ -17,7 +17,7 @@ import {
   Vector3,
 } from 'three';
 import type { Material, Scene, Texture } from 'three';
-import type { GameAssetLoader } from '../assets/AssetLoader';
+import type { GameAssetLoader, ModelInstance } from '../assets/AssetLoader';
 import type { EventBus } from '../core/events';
 import type { GameSystem } from '../core/lifecycle';
 import type { InputReader } from '../input/InputSystem';
@@ -32,6 +32,7 @@ import type {
   TransformDefinition,
   TriggerVolumeDefinition,
   Vector3Tuple,
+  WorldSectorDefinition,
 } from './LevelDefinition';
 import { validateLevelDefinition } from './LevelDefinition';
 import { DefinitionLevelLocations, type LevelLocations } from './LevelQueries';
@@ -44,9 +45,37 @@ import { AshfallBuildingRenderer } from './buildings/AshfallBuildingKit';
 interface LoadedLevel {
   readonly definition: LevelDefinition;
   readonly root: Group;
+  readonly locations: DefinitionLevelLocations;
+  readonly sectors: Map<string, LoadedSector>;
+  readonly states: Map<string, SectorLifecycleState>;
+}
+
+interface LoadedSector {
+  readonly definition: WorldSectorDefinition;
+  readonly root: Group;
   readonly debug: Group;
   readonly ownedResources: Set<BufferGeometry | Material>;
-  readonly locations: DefinitionLevelLocations;
+  readonly modelInstances: Set<ModelInstance>;
+}
+
+export type SectorLifecycleState =
+  'inactive' | 'requested' | 'loading' | 'active' | 'unloading' | 'failed';
+
+export interface SectorStreamingSnapshot {
+  readonly levelId: string | undefined;
+  readonly authored: number;
+  readonly active: readonly string[];
+  readonly pending: readonly string[];
+  readonly states: Readonly<Record<string, SectorLifecycleState>>;
+  readonly loadCount: number;
+  readonly unloadCount: number;
+  readonly sceneObjects: number;
+  readonly ownedResources: number;
+  readonly modelInstances: number;
+  readonly colliders: number;
+  readonly lodHiddenObjects: number;
+  readonly transitionsPending: boolean;
+  readonly lastError: string | undefined;
 }
 
 export type LevelDebugGroup =
@@ -66,6 +95,11 @@ export class LevelSystem implements GameSystem, LevelLocations {
   private loaded: LoadedLevel | undefined;
   private debugVisible: boolean;
   private readonly debugGroups = new Map<LevelDebugGroup, boolean>();
+  private positionSource: (() => WorldPosition) | undefined;
+  private transition: Promise<void> | undefined;
+  private loadCount = 0;
+  private unloadCount = 0;
+  private lastError: string | undefined;
 
   public constructor(
     private readonly scene: Scene,
@@ -75,6 +109,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
     private readonly events: EventBus<WorldEvents>,
     private readonly input?: InputReader,
     initiallyDebugVisible = false,
+    private readonly streamingEnabled = true,
   ) {
     this.debugVisible = initiallyDebugVisible;
     for (const group of Object.keys(debugGroupNames) as LevelDebugGroup[]) {
@@ -90,25 +125,61 @@ export class LevelSystem implements GameSystem, LevelLocations {
     if (this.input?.wasPressed('toggleDebug')) {
       this.setDebugVisible(!this.debugVisible);
     }
+    if (this.loaded && this.positionSource)
+      this.applyDistanceLod(this.positionSource());
+    if (!this.transition && this.loaded && this.positionSource) {
+      void this.refreshStreaming().catch((error: unknown) => {
+        this.lastError = error instanceof Error ? error.message : String(error);
+      });
+    }
+  }
+
+  public setStreamingPositionSource(source?: () => WorldPosition): void {
+    this.positionSource = source;
+  }
+
+  public async refreshStreaming(position?: WorldPosition): Promise<void> {
+    if (this.transition) await this.transition;
+    const focus = position ?? this.positionSource?.();
+    if (!focus || !this.loaded) return;
+    const pending = this.reconcile(focus);
+    this.transition = pending;
+    try {
+      await pending;
+    } finally {
+      if (this.transition === pending) this.transition = undefined;
+    }
   }
 
   public async load(levelId: string): Promise<void> {
     const definition = this.registry.get(levelId);
     validateLevelDefinition(definition);
-    const next = await this.build(definition);
+    const next = this.createLevel(definition);
     this.unload();
     this.loaded = next;
-    this.applyDebugVisibility();
     this.scene.add(next.root);
+    try {
+      await this.reconcile(
+        this.positionSource?.() ??
+          toWorldPosition(findDefaultSpawn(definition)),
+        true,
+      );
+    } catch (error) {
+      this.unload();
+      throw error;
+    }
+    this.applyDebugVisibility();
     this.events.emit('level:loaded', { level: definition });
   }
 
   public unload(): void {
     const current = this.loaded;
     if (!current) return;
+    for (const sectorId of [...current.sectors.keys()].sort()) {
+      this.unloadSector(current, sectorId);
+    }
     this.scene.remove(current.root);
     current.root.clear();
-    for (const resource of current.ownedResources) resource.dispose();
     this.loaded = undefined;
     this.events.emit('level:unloaded', { levelId: current.definition.id });
   }
@@ -133,6 +204,54 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   public get activeLevel(): LevelDefinition | undefined {
     return this.loaded?.definition;
+  }
+
+  public getStreamingSnapshot(): SectorStreamingSnapshot {
+    const loaded = this.loaded;
+    const sectors = loaded ? [...loaded.sectors.values()] : [];
+    return {
+      levelId: loaded?.definition.id,
+      authored: loaded?.states.size ?? 0,
+      active: sectors.map(({ definition }) => definition.id).sort(),
+      pending: loaded
+        ? [...loaded.states]
+            .filter(([, state]) => state !== 'inactive' && state !== 'active')
+            .map(([id]) => id)
+            .sort()
+        : [],
+      states: loaded ? Object.fromEntries([...loaded.states].sort()) : {},
+      loadCount: this.loadCount,
+      unloadCount: this.unloadCount,
+      sceneObjects: sectors.reduce(
+        (sum, sector) => sum + countObjects(sector.root),
+        0,
+      ),
+      ownedResources: sectors.reduce(
+        (sum, sector) => sum + sector.ownedResources.size,
+        0,
+      ),
+      modelInstances: sectors.reduce(
+        (sum, sector) => sum + sector.modelInstances.size,
+        0,
+      ),
+      colliders: loaded
+        ? sectors.reduce((sum, sector) => {
+            const entryIds = new Set(sector.definition.entryIds);
+            return (
+              sum +
+              loaded.definition.staticCollision.filter(({ id }) =>
+                entryIds.has(id),
+              ).length
+            );
+          }, 0)
+        : 0,
+      lodHiddenObjects: sectors.reduce(
+        (sum, sector) => sum + countHiddenLodObjects(sector.root),
+        0,
+      ),
+      transitionsPending: this.transition !== undefined,
+      lastError: this.lastError,
+    };
   }
 
   public getSpawn(id?: string): SpawnPointDefinition {
@@ -166,21 +285,44 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   private applyDebugVisibility(): void {
     if (!this.loaded) return;
-    for (const [group, visible] of this.debugGroups) {
-      const object = this.loaded.debug.getObjectByName(debugGroupNames[group]);
-      if (object) object.visible = visible;
+    for (const sector of this.loaded.sectors.values()) {
+      for (const [group, visible] of this.debugGroups) {
+        const object = sector.debug.getObjectByName(debugGroupNames[group]);
+        if (object) object.visible = visible;
+      }
+      sector.debug.visible = this.debugVisible;
     }
-    this.loaded.debug.visible = this.debugVisible;
   }
 
-  private async build(definition: LevelDefinition): Promise<LoadedLevel> {
+  private createLevel(definition: LevelDefinition): LoadedLevel {
     const root = namedGroup(`level:${definition.id}`);
-    const visuals = namedGroup('rendered-geometry');
     const semanticMarkers = namedGroup('semantic-markers');
     semanticMarkers.visible = false;
+    root.add(semanticMarkers);
+    const definitions = sectorsFor(definition, this.streamingEnabled);
+    return {
+      definition,
+      root,
+      locations: new DefinitionLevelLocations(definition),
+      sectors: new Map(),
+      states: new Map<string, SectorLifecycleState>(
+        definitions.map((sector) => [sector.id, 'inactive']),
+      ),
+    };
+  }
+
+  private async buildSector(
+    definition: LevelDefinition,
+    sector: WorldSectorDefinition,
+  ): Promise<LoadedSector> {
+    const root = namedGroup(`sector:${sector.id}`);
+    const visuals = namedGroup('rendered-geometry');
     const debug = namedGroup('debug-helpers');
     const resources = new Set<BufferGeometry | Material>();
-    root.add(visuals, semanticMarkers, debug);
+    const modelInstances = new Set<ModelInstance>();
+    root.add(visuals, debug);
+    const entries = new Set(sector.entryIds);
+    const sectorDefinition = filterDefinition(definition, entries);
 
     try {
       const buildingRenderer = new AshfallBuildingRenderer(
@@ -189,22 +331,28 @@ export class LevelSystem implements GameSystem, LevelLocations {
       );
       const surfaceMaterials = new Map<string, Promise<MeshStandardMaterial>>();
       const objects = await Promise.all(
-        definition.environment.map((visual) =>
+        sectorDefinition.environment.map((visual) =>
           visual.kind === 'building'
             ? buildingRenderer.create(visual)
-            : this.createVisual(visual, resources, surfaceMaterials),
+            : this.createVisual(
+                visual,
+                resources,
+                surfaceMaterials,
+                modelInstances,
+              ),
         ),
       );
       visuals.add(...objects);
-      buildDebug(definition, debug, resources);
+      buildDebug(sectorDefinition, debug, resources);
       return {
-        definition,
+        definition: sector,
         root,
         debug,
         ownedResources: resources,
-        locations: new DefinitionLevelLocations(definition),
+        modelInstances,
       };
     } catch (error) {
+      for (const instance of modelInstances) instance.dispose();
       for (const resource of resources) resource.dispose();
       root.clear();
       throw error;
@@ -215,10 +363,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
     visual: EnvironmentVisualDefinition,
     resources: Set<BufferGeometry | Material>,
     surfaceMaterials: Map<string, Promise<MeshStandardMaterial>>,
+    modelInstances: Set<ModelInstance>,
   ): Promise<Object3D> {
     if (visual.kind === 'gltf') {
-      const gltf = await this.assets.loadGltf(visual.assetId);
-      const clone = gltf.scene.clone(true);
+      const instance = await this.assets.instantiateModel(visual.assetId);
+      modelInstances.add(instance);
+      const clone = instance.scene;
       clone.name = `visual:${visual.id}`;
       applyTransform(clone, visual);
       return clone;
@@ -271,6 +421,103 @@ export class LevelSystem implements GameSystem, LevelLocations {
       surfaceMaterials.set(assetId, pending);
     }
     return pending;
+  }
+
+  private async reconcile(
+    position: WorldPosition,
+    initial = false,
+  ): Promise<void> {
+    const loaded = this.loaded;
+    if (!loaded) return;
+    const definitions = sectorsFor(loaded.definition, this.streamingEnabled);
+    const desired = definitions.filter((sector) => {
+      if (sector.alwaysLoaded) return true;
+      const active = loaded.sectors.has(sector.id);
+      const distance = Math.hypot(
+        position.x - sector.center[0],
+        position.z - sector.center[1],
+      );
+      return distance <= (active ? sector.unloadDistance : sector.loadDistance);
+    });
+    const desiredIds = new Set(desired.map(({ id }) => id));
+    for (const [sectorId, state] of loaded.states) {
+      if (state === 'failed' && !desiredIds.has(sectorId)) {
+        loaded.states.set(sectorId, 'inactive');
+      }
+    }
+    for (const sector of desired) {
+      if (
+        !loaded.sectors.has(sector.id) &&
+        loaded.states.get(sector.id) !== 'failed'
+      )
+        loaded.states.set(sector.id, 'requested');
+    }
+    let loadFailed = false;
+    for (const sector of desired) {
+      if (
+        loaded.sectors.has(sector.id) ||
+        loaded.states.get(sector.id) === 'failed'
+      )
+        continue;
+      loaded.states.set(sector.id, 'loading');
+      try {
+        const built = await this.buildSector(loaded.definition, sector);
+        if (this.loaded !== loaded) {
+          disposeSector(built);
+          return;
+        }
+        loaded.sectors.set(sector.id, built);
+        loaded.root.add(built.root);
+        this.applyDistanceLod(position);
+        loaded.states.set(sector.id, 'active');
+        this.loadCount += 1;
+        this.applyDebugVisibility();
+        this.events.emit('sector:loaded', {
+          levelId: loaded.definition.id,
+          sectorId: sector.id,
+          colliders: filterDefinition(
+            loaded.definition,
+            new Set(sector.entryIds),
+          ).staticCollision,
+        });
+      } catch (error) {
+        loadFailed = true;
+        loaded.states.set(sector.id, 'failed');
+        this.lastError = error instanceof Error ? error.message : String(error);
+        if (initial) throw error;
+      }
+    }
+    if (loadFailed) return;
+    for (const sectorId of [...loaded.sectors.keys()].sort()) {
+      if (!desiredIds.has(sectorId)) this.unloadSector(loaded, sectorId);
+    }
+  }
+
+  private unloadSector(loaded: LoadedLevel, sectorId: string): void {
+    const sector = loaded.sectors.get(sectorId);
+    if (!sector) return;
+    loaded.states.set(sectorId, 'unloading');
+    this.events.emit('sector:unloaded', {
+      levelId: loaded.definition.id,
+      sectorId,
+    });
+    loaded.root.remove(sector.root);
+    disposeSector(sector);
+    loaded.sectors.delete(sectorId);
+    loaded.states.set(sectorId, 'inactive');
+    this.unloadCount += 1;
+  }
+
+  private applyDistanceLod(position: WorldPosition): void {
+    if (!this.loaded) return;
+    for (const sector of this.loaded.sectors.values()) {
+      sector.root.traverse((object) => {
+        if (!isDistanceLodDetail(object)) return;
+        const world = object.getWorldPosition(new Vector3());
+        object.visible =
+          Math.hypot(position.x - world.x, position.z - world.z) <= 24;
+      });
+    }
   }
 }
 
@@ -428,4 +675,87 @@ function own<T extends BufferGeometry | Material>(
 ): T {
   resources.add(resource);
   return resource;
+}
+
+function sectorsFor(
+  definition: LevelDefinition,
+  streamingEnabled = true,
+): readonly WorldSectorDefinition[] {
+  return (
+    (streamingEnabled ? definition.streaming?.sectors : undefined) ?? [
+      {
+        id: 'legacy-full-level',
+        center: [0, 0],
+        loadDistance: 1,
+        unloadDistance: 2,
+        alwaysLoaded: true,
+        entryIds: [
+          ...definition.environment.map(({ id }) => id),
+          ...definition.staticCollision.map(({ id }) => id),
+        ],
+      },
+    ]
+  );
+}
+
+function filterDefinition(
+  definition: LevelDefinition,
+  entryIds: ReadonlySet<string>,
+): LevelDefinition {
+  return {
+    ...definition,
+    environment: definition.environment.filter(({ id }) => entryIds.has(id)),
+    staticCollision: definition.staticCollision.filter(({ id }) =>
+      entryIds.has(id),
+    ),
+    spawns: [],
+    locations: [],
+    zones: [],
+    landmarks: [],
+    triggers: [],
+    cinematicAnchors: [],
+    lighting: undefined,
+    mapPresentation: undefined,
+    streaming: undefined,
+  };
+}
+
+function findDefaultSpawn(definition: LevelDefinition): Vector3Tuple {
+  return (
+    definition.spawns.find((spawn) => spawn.kind === 'player' && spawn.default)
+      ?.position ?? [0, 0, 0]
+  );
+}
+
+function toWorldPosition(position: Vector3Tuple): WorldPosition {
+  return { x: position[0], y: position[1], z: position[2] };
+}
+
+function disposeSector(sector: LoadedSector): void {
+  sector.root.removeFromParent();
+  for (const instance of sector.modelInstances) instance.dispose();
+  sector.modelInstances.clear();
+  sector.root.clear();
+  for (const resource of sector.ownedResources) resource.dispose();
+  sector.ownedResources.clear();
+}
+
+function countObjects(root: Object3D): number {
+  let count = 0;
+  root.traverse(() => {
+    count += 1;
+  });
+  return count;
+}
+
+function isDistanceLodDetail(object: Object3D): boolean {
+  return object.name.endsWith(':roof') || object.name.endsWith(':cornice');
+}
+
+function countHiddenLodObjects(root: Object3D): number {
+  let count = 0;
+  root.traverse((object) => {
+    if (isDistanceLodDetail(object) && !object.visible) count += 1;
+  });
+  return count;
 }

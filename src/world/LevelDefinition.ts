@@ -130,6 +130,24 @@ export interface LevelLightingDefinition {
   readonly lamps: readonly LampFixtureDefinition[];
 }
 
+export interface WorldSectorDefinition {
+  readonly id: string;
+  /** Authored streaming focus in world X/Z metres. */
+  readonly center: readonly [x: number, z: number];
+  /** Entries become requested at or inside this distance. */
+  readonly loadDistance: number;
+  /** Active entries remain loaded until this larger distance is exceeded. */
+  readonly unloadDistance: number;
+  /** Infrastructure which must be ready before the level-loaded event. */
+  readonly alwaysLoaded?: boolean;
+  /** References authoritative environment or static-collision entry IDs. */
+  readonly entryIds: readonly string[];
+}
+
+export interface LevelStreamingDefinition {
+  readonly sectors: readonly WorldSectorDefinition[];
+}
+
 export interface LevelDefinition {
   readonly id: string;
   readonly name: string;
@@ -143,6 +161,7 @@ export interface LevelDefinition {
   readonly cinematicAnchors: readonly CinematicAnchorDefinition[];
   readonly lighting?: LevelLightingDefinition;
   readonly mapPresentation?: LevelMapPresentationDefinition;
+  readonly streaming?: LevelStreamingDefinition;
 }
 
 export interface LevelModule {
@@ -280,6 +299,7 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
   }
 
   validateMapPresentation(definition, issues);
+  validateStreaming(definition, issues);
 
   const defaultPlayers = definition.spawns.filter(
     (spawn) => spawn.kind === 'player' && spawn.default,
@@ -291,6 +311,62 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
   }
 
   if (issues.length > 0) throw new LevelDefinitionError(issues);
+}
+
+function validateStreaming(
+  definition: LevelDefinition,
+  issues: string[],
+): void {
+  const streaming = definition.streaming;
+  if (!streaming) return;
+  if (streaming.sectors.length === 0) {
+    issues.push('streaming must define at least one sector');
+    return;
+  }
+  const streamableIds = new Set([
+    ...definition.environment.map(({ id }) => id),
+    ...definition.staticCollision.map(({ id }) => id),
+  ]);
+  const owners = new Map<string, string>();
+  const sectorIds = new Set<string>();
+  for (const sector of streaming.sectors) {
+    validateId(sector.id, 'sector', issues);
+    if (sectorIds.has(sector.id))
+      issues.push(`duplicate sector id "${sector.id}"`);
+    sectorIds.add(sector.id);
+    if (sector.center.some((component) => !Number.isFinite(component))) {
+      issues.push(`${sector.id}.center must contain finite numbers`);
+    }
+    if (!Number.isFinite(sector.loadDistance) || sector.loadDistance <= 0) {
+      issues.push(`${sector.id}.loadDistance must be positive`);
+    }
+    if (
+      !Number.isFinite(sector.unloadDistance) ||
+      sector.unloadDistance <= sector.loadDistance
+    ) {
+      issues.push(`${sector.id}.unloadDistance must exceed loadDistance`);
+    }
+    if (sector.entryIds.length === 0) {
+      issues.push(`${sector.id}.entryIds must not be empty`);
+    }
+    for (const entryId of sector.entryIds) {
+      if (!streamableIds.has(entryId)) {
+        issues.push(
+          `${sector.id} references missing streamable entry "${entryId}"`,
+        );
+      }
+      const owner = owners.get(entryId);
+      if (owner)
+        issues.push(
+          `streaming entry "${entryId}" is owned by both "${owner}" and "${sector.id}"`,
+        );
+      else owners.set(entryId, sector.id);
+    }
+  }
+  for (const entryId of streamableIds) {
+    if (!owners.has(entryId))
+      issues.push(`streaming entry "${entryId}" has no sector owner`);
+  }
 }
 
 function validateMapPresentation(

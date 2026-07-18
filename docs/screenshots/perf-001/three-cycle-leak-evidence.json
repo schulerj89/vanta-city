@@ -1,0 +1,83 @@
+{
+  "baseline": {
+    "active": ["sector.core", "sector.northeast", "sector.northwest"],
+    "sceneObjects": 98,
+    "ownedResources": 106,
+    "sectorModelInstances": 5,
+    "assetSourceReferences": 15,
+    "assetInstanceReferences": 6
+  },
+  "cycles": [
+    {
+      "active": ["sector.core", "sector.northeast", "sector.northwest"],
+      "sceneObjects": 98,
+      "ownedResources": 106,
+      "sectorModelInstances": 5,
+      "assetSourceReferences": 15,
+      "assetInstanceReferences": 6
+    },
+    {
+      "active": ["sector.core", "sector.northeast", "sector.northwest"],
+      "sceneObjects": 98,
+      "ownedResources": 106,
+      "sectorModelInstances": 5,
+      "assetSourceReferences": 15,
+      "assetInstanceReferences": 6
+    },
+    {
+      "active": ["sector.core", "sector.northeast", "sector.northwest"],
+      "sceneObjects": 98,
+      "ownedResources": 106,
+      "sectorModelInstances": 5,
+      "assetSourceReferences": 15,
+      "assetInstanceReferences": 6
+    }
+  ],
+  "rendererCycles": [
+    {
+      "geometries": 52,
+      "textures": 25,
+      "drawCalls": 27,
+      "triangles": 5980
+    },
+    {
+      "geometries": 52,
+      "textures": 25,
+      "drawCalls": 35,
+      "triangles": 6576
+    },
+    {
+      "geometries": 52,
+      "textures": 25,
+      "drawCalls": 32,
+      "triangles": 6040
+    }
+  ],
+  "network": {
+    "consoleErrors": [],
+    "failedRequests": [],
+    "externalRequests": [],
+    "expectedHeadAbortCount": 10
+  },
+  "finalTransitions": {
+    "levelId": "test-district",
+    "authored": 5,
+    "active": ["sector.core", "sector.northeast", "sector.northwest"],
+    "pending": [],
+    "states": {
+      "sector.core": "active",
+      "sector.northeast": "active",
+      "sector.northwest": "active",
+      "sector.southeast": "inactive",
+      "sector.southwest": "inactive"
+    },
+    "loadCount": 29,
+    "unloadCount": 26,
+    "sceneObjects": 98,
+    "ownedResources": 106,
+    "modelInstances": 5,
+    "colliders": 15,
+    "lodHiddenObjects": 4,
+    "transitionsPending": false
+  }
+}

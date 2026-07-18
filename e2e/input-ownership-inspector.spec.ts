@@ -15,6 +15,10 @@ test('inspects gameplay, help, picker, and dialogue ownership', async ({
   await expect
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('playing');
+  await command(page, 'player.handgun-purchase');
+  await expect
+    .poll(async () => (await snapshot(page)).player.equipment.equippedId)
+    .toBe('handgun');
 
   await setVirtualGamepad(page, gamepad);
   await page.keyboard.down('w');

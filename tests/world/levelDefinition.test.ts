@@ -142,4 +142,32 @@ describe('validateLevelDefinition', () => {
       /emissiveMaterialName is empty/,
     );
   });
+
+  it('requires one deterministic sector owner and valid hysteresis', () => {
+    const sectors = testDistrict.definition.streaming.sectors;
+    const core = sectors[0];
+    const northwest = sectors[1];
+    if (!core || !northwest) throw new Error('Missing sector fixtures');
+    const invalid: LevelDefinition = {
+      ...testDistrict.definition,
+      streaming: {
+        sectors: [
+          {
+            ...core,
+            unloadDistance: core.loadDistance,
+          },
+          {
+            ...northwest,
+            entryIds: [...northwest.entryIds, core.entryIds[0]!],
+          },
+          ...sectors.slice(2),
+        ],
+      },
+    };
+
+    expect(() => validateLevelDefinition(invalid)).toThrow(
+      /unloadDistance must exceed loadDistance/,
+    );
+    expect(() => validateLevelDefinition(invalid)).toThrow(/owned by both/);
+  });
 });

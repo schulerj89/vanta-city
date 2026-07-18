@@ -44,6 +44,12 @@ export interface GameAssetLoader {
 
 export interface AssetLoaderPerformanceSnapshot {
   readonly cacheEntries: number;
+  /** Loader-owned source assets retained until loader disposal. */
+  readonly sourceReferences: number;
+  /** Live cloned model instances owned by gameplay systems. */
+  readonly instanceReferences: number;
+  readonly instancesCreated: number;
+  readonly instancesDisposed: number;
   readonly loaded: number;
   readonly inFlight: number;
   readonly failures: number;
@@ -161,6 +167,9 @@ export class ThreeAssetLoader implements GameAssetLoader {
   private readonly statuses = new Map<string, AssetLoadStatus>();
   private readonly listeners = new Set<AssetStatusListener>();
   private disposed = false;
+  private activeInstances = 0;
+  private instancesCreated = 0;
+  private instancesDisposed = 0;
 
   public constructor(
     catalog: AssetCatalog | AssetManifest,
@@ -190,6 +199,8 @@ export class ThreeAssetLoader implements GameAssetLoader {
     const source = await this.loadGltf(id);
     const scene = cloneSkeleton(source.scene);
     let instanceDisposed = false;
+    this.activeInstances += 1;
+    this.instancesCreated += 1;
     return {
       assetId: id,
       scene,
@@ -199,6 +210,8 @@ export class ThreeAssetLoader implements GameAssetLoader {
         scene.removeFromParent();
         scene.clear();
         instanceDisposed = true;
+        this.activeInstances -= 1;
+        this.instancesDisposed += 1;
       },
     };
   }
@@ -219,6 +232,10 @@ export class ThreeAssetLoader implements GameAssetLoader {
     const statuses = [...this.statuses.values()];
     return {
       cacheEntries: this.cache.size,
+      sourceReferences: this.cache.size,
+      instanceReferences: this.activeInstances,
+      instancesCreated: this.instancesCreated,
+      instancesDisposed: this.instancesDisposed,
       loaded: statuses.filter(({ phase }) => phase === 'loaded').length,
       inFlight: statuses.filter(({ phase }) => phase === 'loading').length,
       failures: statuses.filter(({ phase }) => phase === 'error').length,

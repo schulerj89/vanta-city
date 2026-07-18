@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.VANTA_E2E_PORT ?? 4174);
+const performanceMode = process.env.VANTA_PERF === '1';
 
 export default defineConfig({
   testDir: './e2e',
@@ -23,8 +24,15 @@ export default defineConfig({
       args: [
         '--enable-webgl',
         '--ignore-gpu-blocklist',
-        '--use-angle=swiftshader',
         '--use-gl=angle',
+        ...(performanceMode
+          ? [
+              '--enable-gpu',
+              '--use-angle=metal',
+              '--disable-frame-rate-limit',
+              '--disable-gpu-vsync',
+            ]
+          : ['--use-angle=swiftshader']),
       ],
     },
   },
