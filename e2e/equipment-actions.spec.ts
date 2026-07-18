@@ -4,6 +4,7 @@ import type {
   BrowserTestApi,
   BrowserTestSnapshot,
 } from '../src/debug/BrowserTestBridge';
+import { movementKeysToward } from './cameraRelativeMovement';
 
 const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1';
 // Skinned run poses can lift the lowest rendered vertex slightly while the
@@ -132,11 +133,17 @@ test.describe('reusable equipment and character actions', () => {
 
       // Put the roll on the north side of Ashfall Junction's authored signal
       // controller so camera-forward movement has a deterministic blocker.
-      await executeCommand(page, 'player.teleport-position', '8.8,0.22,9.9,0');
+      await executeCommand(page, 'player.teleport-position', '9.1,0.22,9.6,0');
       await expect
         .poll(async () => (await snapshot(page)).player.grounded)
         .toBe(true);
-      await page.keyboard.down('KeyW');
+      const rollSetup = await snapshot(page);
+      const rollMovementKeys = movementKeysToward(
+        rollSetup.camera.yaw,
+        rollSetup.player.position,
+        { x: 10.2, z: 8.5 },
+      );
+      for (const key of rollMovementKeys) await page.keyboard.down(key);
       await page.keyboard.press('KeyB');
       await expect
         .poll(async () => (await snapshot(page)).character.animationState)
@@ -157,7 +164,7 @@ test.describe('reusable equipment and character actions', () => {
       expect(
         horizontalDistance(collisionStop.position, admittedRoll.position),
       ).toBeLessThanOrEqual(remainingRollDistance + 0.05);
-      await page.keyboard.up('KeyW');
+      for (const key of rollMovementKeys) await page.keyboard.up(key);
       await expect
         .poll(async () => (await snapshot(page)).player.actionBusy)
         .toBe(false);

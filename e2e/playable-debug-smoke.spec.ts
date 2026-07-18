@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
+import { movementKeysToward } from './cameraRelativeMovement';
 import type {
   BrowserTestApi,
   BrowserTestSnapshot,
@@ -1251,14 +1252,23 @@ test.describe('playable debug district', () => {
       .toBe('idle');
 
     await executeCommand(page, 'player.teleport-position', '16,0.22,9,0');
-    await page.keyboard.down('w');
+    const collisionApproach = await snapshot(page);
+    if (!collisionApproach.sparringTarget.position) {
+      throw new Error('Sparring target position unavailable');
+    }
+    const collisionMovementKeys = movementKeysToward(
+      collisionApproach.camera.yaw,
+      collisionApproach.player.position,
+      collisionApproach.sparringTarget.position,
+    );
+    for (const key of collisionMovementKeys) await page.keyboard.down(key);
     await expect
       .poll(
         async () =>
           (await snapshot(page)).world.collision.lastCharacterBlockIds,
       )
       .toEqual(expect.arrayContaining(['c.debug-sparring-target']));
-    await page.keyboard.up('w');
+    for (const key of collisionMovementKeys) await page.keyboard.up(key);
     await executeCommand(page, 'sparring-target.teleport-player');
 
     await executeCommand(page, 'sparring-target.health-deplete');

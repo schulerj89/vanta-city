@@ -133,11 +133,15 @@ test('hostile debug opponent fights, gates, downs, and revives cleanly @visual',
   await expect
     .poll(async () => (await snapshot(page)).sparringTarget.listenerCount)
     .toBe(0);
+  const inactiveDynamicCapsuleCount = (await snapshot(page)).world.collision
+    .dynamicCapsuleCount;
   await toggle(page, 'sparring-target.active', true);
   await expect
     .poll(async () => (await snapshot(page)).sparringTarget.listenerCount)
     .toBe(3);
-  expect((await snapshot(page)).world.collision.dynamicCapsuleCount).toBe(1);
+  expect((await snapshot(page)).world.collision.dynamicCapsuleCount).toBe(
+    inactiveDynamicCapsuleCount,
+  );
   expect(runtimeFailures).toEqual([]);
   expect((await snapshot(page)).runtimeErrors.count).toBe(0);
 });
