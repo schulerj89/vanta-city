@@ -428,10 +428,10 @@ test.describe('reusable equipment and character actions', () => {
     const failures = monitorRuntimeFailures(page);
     await openReadyApp(page);
     const directions = [
-      ['KeyW', { x: 0, z: -1 }],
-      ['KeyS', { x: 0, z: 1 }],
-      ['KeyA', { x: -1, z: 0 }],
-      ['KeyD', { x: 1, z: 0 }],
+      ['KeyW', 'forward'],
+      ['KeyS', 'backward'],
+      ['KeyA', 'left'],
+      ['KeyD', 'right'],
     ] as const;
 
     for (const characterId of ['casual', 'punk']) {
@@ -439,9 +439,15 @@ test.describe('reusable equipment and character actions', () => {
       await expect
         .poll(async () => (await snapshot(page)).character.loadedDefinitionId)
         .toBe(characterId);
-      for (const [key, expectedDirection] of directions) {
+      for (const [key, axis] of directions) {
         await executeCommand(page, 'player.teleport-position', '0,0.2,7,0');
-        const start = (await snapshot(page)).player.position;
+        await waitForStableCameraYaw(page);
+        const beforeRoll = await snapshot(page);
+        const start = beforeRoll.player.position;
+        const expectedDirection = cameraRelativeAxis(
+          beforeRoll.camera.yaw,
+          axis,
+        );
         await page.keyboard.down(key);
         await page.keyboard.press('KeyB');
         await expect
@@ -566,6 +572,40 @@ async function openReadyApp(page: Page): Promise<void> {
     .not.toBe('loading');
   await executeCommand(page, 'player.handgun-purchase');
   await executeCommand(page, 'player.equip-item', 'none');
+}
+
+async function waitForStableCameraYaw(page: Page): Promise<void> {
+  let previous: number | undefined;
+  let stableSamples = 0;
+  await expect
+    .poll(async () => {
+      const yaw = (await snapshot(page)).camera.yaw;
+      stableSamples =
+        previous !== undefined && Math.abs(yaw - previous) < 0.001
+          ? stableSamples + 1
+          : 0;
+      previous = yaw;
+      return stableSamples;
+    })
+    .toBeGreaterThanOrEqual(2);
+}
+
+function cameraRelativeAxis(
+  yaw: number,
+  axis: 'forward' | 'backward' | 'left' | 'right',
+): { readonly x: number; readonly z: number } {
+  const forward = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
+  const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+  switch (axis) {
+    case 'forward':
+      return forward;
+    case 'backward':
+      return { x: -forward.x, z: -forward.z };
+    case 'left':
+      return { x: -right.x, z: -right.z };
+    case 'right':
+      return right;
+  }
 }
 
 async function snapshot(page: Page): Promise<BrowserTestSnapshot> {
