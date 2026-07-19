@@ -19,11 +19,11 @@ test.describe('pause-safe full world map', () => {
       open: true,
       priorState: 'playing',
       levelId: 'test-district',
-      geometryCount: 13,
-      roadCount: 3,
-      structureCount: 10,
-      sectorCount: 6,
-      placeCount: 7,
+      geometryCount: 28,
+      roadCount: 6,
+      structureCount: 22,
+      sectorCount: 14,
+      placeCount: 8,
       highlightCount: 0,
       focusedTestId: 'map-close',
     });
@@ -37,9 +37,9 @@ test.describe('pause-safe full world map', () => {
         .getByTestId('full-world-map')
         .locator('[data-entry-id="v.road-east-quay-curve"]'),
     ).toHaveCount(1);
-    await expect(page.locator('[data-sector-id]')).toHaveCount(6);
+    await expect(page.locator('[data-sector-id]')).toHaveCount(14);
     await expect(page.locator('.full-world-map__structures rect')).toHaveCount(
-      10,
+      22,
     );
 
     await page.getByTestId('map-zoom-in').click();

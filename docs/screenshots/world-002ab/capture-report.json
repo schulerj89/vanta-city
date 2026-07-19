@@ -1,0 +1,83 @@
+{
+  "viewport": {
+    "desktop": "1280x720",
+    "narrow": "390x844"
+  },
+  "selectedVisibilityProfile": "baseline-26-32-24",
+  "levelId": "test-district",
+  "bounds": {
+    "minX": -36.75,
+    "maxX": 50.75,
+    "minZ": -35,
+    "maxZ": 35
+  },
+  "sectors": {
+    "levelId": "test-district",
+    "authored": 1,
+    "active": ["legacy-full-level"],
+    "pending": [],
+    "states": {
+      "legacy-full-level": "active"
+    },
+    "loadCount": 1,
+    "unloadCount": 0,
+    "sceneObjects": 289,
+    "ownedResources": 372,
+    "modelInstances": 9,
+    "colliders": 59,
+    "lodHiddenObjects": 82,
+    "transitionsPending": false
+  },
+  "renderer": {
+    "frameTime": {
+      "enabled": true,
+      "samples": 89,
+      "minMs": 0.09999999403953552,
+      "averageMs": 1.0528089879603868,
+      "maxMs": 51.599999994039536,
+      "p95Ms": 0.9000000059604645
+    },
+    "drawCalls": 8,
+    "triangles": 96,
+    "geometries": 116,
+    "textures": 31,
+    "pixelRatio": 1,
+    "viewport": {
+      "cssWidth": 390,
+      "cssHeight": 844,
+      "bufferWidth": 390,
+      "bufferHeight": 844
+    }
+  },
+  "assets": {
+    "cacheEntries": 17,
+    "sourceReferences": 17,
+    "instanceReferences": 12,
+    "instancesCreated": 12,
+    "instancesDisposed": 0,
+    "loaded": 17,
+    "inFlight": 0,
+    "failures": 0,
+    "disposed": false
+  },
+  "runtimeErrors": {
+    "count": 0,
+    "last": "none"
+  },
+  "faults": {
+    "consoleErrors": [],
+    "pageErrors": [],
+    "failedRequests": [],
+    "externalRequests": []
+  },
+  "screenshots": [
+    "west-rim-day.png",
+    "east-rim-curve-day.png",
+    "south-rim-day.png",
+    "north-contact-entrance-day.png",
+    "overhead-final-bounds-day.png",
+    "north-contact-entrance-night.png",
+    "full-map-final.png",
+    "north-contact-narrow-night.png"
+  ]
+}

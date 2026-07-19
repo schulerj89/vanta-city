@@ -149,9 +149,14 @@ describe('LevelSystem', () => {
     expect(scene.getObjectByName('collision-geometry')?.visible).toBe(false);
     expect(loaded).toHaveBeenCalledOnce();
     expect(system.getStreamingSnapshot()).toMatchObject({
-      authored: 6,
-      active: ['sector.core', 'sector.northeast', 'sector.northwest'],
-      loadCount: 3,
+      authored: 14,
+      active: [
+        'sector.core',
+        'sector.north-rim-west',
+        'sector.northeast',
+        'sector.northwest',
+      ],
+      loadCount: 4,
       unloadCount: 0,
       transitionsPending: false,
     });
