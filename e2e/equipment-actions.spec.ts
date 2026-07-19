@@ -571,6 +571,7 @@ async function openReadyApp(page: Page): Promise<void> {
     .poll(async () => (await snapshot(page)).character.source)
     .not.toBe('loading');
   await executeCommand(page, 'player.handgun-purchase');
+  await executeCommand(page, 'player.acquire-item', 'knife');
   await executeCommand(page, 'player.equip-item', 'none');
 }
 

@@ -103,6 +103,18 @@ export class PlayerMoneyAccount {
     return this.commit(kind, Math.abs(balance - this.value), metadata);
   }
 
+  /** Persistence-only import. It intentionally emits no transaction. */
+  public restoreBalance(balance: number): void {
+    this.assertAvailable();
+    assertCurrency(balance, 'Restored balance', true);
+    if (balance > this.maximumBalance) {
+      throw new Error('Restored balance cannot exceed maximum balance');
+    }
+    this.value = balance;
+    this.transactionSequence = 0;
+    this.lastTransaction = undefined;
+  }
+
   public getSnapshot(): MoneyAccountSnapshot {
     return Object.freeze({
       ownerId: this.ownerId,

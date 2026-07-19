@@ -1,6 +1,6 @@
 import type { AudioPreferenceStore } from '../audio/AudioPreferences';
 
-const startedStorageKey = 'vanta-city:title-started';
+export const TITLE_STARTED_STORAGE_KEY = 'vanta-city:title-started';
 
 /** Typed cancellation emitted only when a pending title gate is disposed. */
 export class TitleScreenDisposedError extends Error {
@@ -149,7 +149,7 @@ export class TitleScreen {
     if (this.started) return;
     this.started = true;
     try {
-      this.storage?.setItem(startedStorageKey, '1');
+      this.storage?.setItem(TITLE_STARTED_STORAGE_KEY, '1');
     } catch {
       // A private or full storage area cannot prevent starting the game.
     }
@@ -180,7 +180,7 @@ export class TitleScreen {
 
   private readStarted(): boolean {
     try {
-      return this.storage?.getItem(startedStorageKey) === '1';
+      return this.storage?.getItem(TITLE_STARTED_STORAGE_KEY) === '1';
     } catch {
       return false;
     }

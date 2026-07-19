@@ -4,6 +4,27 @@ import { CharacterEquipment } from '../src/equipment/CharacterEquipment';
 import { EquipmentPresentation } from '../src/equipment/EquipmentPresentation';
 
 describe('CharacterEquipment', () => {
+  it('starts a new campaign empty and imports owned, equipped, and ammo atomically', () => {
+    const equipment = new CharacterEquipment('player', []);
+    expect(equipment.getSnapshot().ownedIds).toEqual([]);
+    equipment.restore({
+      ownedIds: ['handgun'],
+      equippedId: 'handgun',
+      ammunition: { handgun: 3 },
+    });
+    expect(equipment.getSnapshot()).toMatchObject({
+      ownedIds: ['handgun'],
+      equippedId: 'handgun',
+      ammunition: { handgun: { current: 3, max: 8 } },
+    });
+    expect(() =>
+      equipment.restore({
+        ownedIds: [],
+        equippedId: 'handgun',
+        ammunition: { handgun: 8 },
+      }),
+    ).toThrow('Invalid equipment persistence snapshot');
+  });
   it('enforces explicit ownership for equip and quickbar acquisition', () => {
     const equipment = new CharacterEquipment('player', ['knife']);
     const ownership = vi.fn();

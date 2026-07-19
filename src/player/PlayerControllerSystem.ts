@@ -190,6 +190,7 @@ export class PlayerControllerSystem
   private acceptedShotCount = 0;
   private reloadCount = 0;
   private lastFireRejection: string | undefined;
+  private restoredHealthBeforeInit: number | undefined;
   public readonly equipment: CharacterEquipment;
 
   public constructor(
@@ -230,7 +231,14 @@ export class PlayerControllerSystem
     );
     this.objects.add(this.visual);
     this.visualAdded = true;
-    this.reset();
+    if (this.restoredHealthBeforeInit === undefined) {
+      this.reset();
+    } else {
+      this.teleport(this.spawnPosition, this.spawnFacingYaw);
+      this.health.set(this.restoredHealthBeforeInit, 'campaign:restore');
+      this.cancelTransientActions('campaign:restore');
+      this.restoredHealthBeforeInit = undefined;
+    }
     this.unregisterQueryCapsule = this.collision.registerDynamicCapsule?.({
       id: 'dynamic.player',
       radius: this.movement.config.radius,
@@ -511,6 +519,25 @@ export class PlayerControllerSystem
     this.health.reset('player:reset');
     this.finishRoll();
     this.cancelTransientActions('reset');
+  }
+
+  /** Campaign respawn preserves owned state while clearing transient actions. */
+  public respawnAt(position: Readonly<Vector3>, facingYaw?: number): void {
+    this.teleport(position, facingYaw);
+    this.health.reset('player:respawn');
+    this.finishRoll();
+    this.cancelTransientActions('respawn');
+  }
+
+  public restoreCampaignHealthBeforeInit(current: number): void {
+    if (
+      !Number.isFinite(current) ||
+      current <= 0 ||
+      current > this.health.maximum
+    ) {
+      throw new Error('Invalid restored player health');
+    }
+    this.restoredHealthBeforeInit = current;
   }
 
   public dispose(): void {

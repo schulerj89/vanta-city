@@ -26,6 +26,12 @@ export interface EquipmentAmmunitionSnapshot {
   readonly empty: boolean;
 }
 
+export interface EquipmentPersistenceSnapshot {
+  readonly ownedIds: readonly EquipmentId[];
+  readonly equippedId: EquipmentId | undefined;
+  readonly ammunition: Readonly<Partial<Record<EquipmentId, number>>>;
+}
+
 export type EquipmentUseRejection =
   | 'no-equipment'
   | 'empty'
@@ -252,6 +258,47 @@ export class CharacterEquipment {
         this.publishAmmunition(definition.id, 'reset');
       }
     }
+  }
+
+  /** Persistence-only atomic import. It emits no acquisition or use events. */
+  public restore(snapshot: EquipmentPersistenceSnapshot): void {
+    this.assertAvailable();
+    const owned = new Set(snapshot.ownedIds);
+    if (
+      owned.size !== snapshot.ownedIds.length ||
+      snapshot.ownedIds.some((id) => !equipmentById.has(id)) ||
+      (snapshot.equippedId !== undefined && !owned.has(snapshot.equippedId))
+    ) {
+      throw new Error('Invalid equipment persistence snapshot');
+    }
+    const ammunition = new Map<EquipmentId, number>();
+    for (const definition of equipmentById.values()) {
+      if (!definition.ammunition) continue;
+      const current = snapshot.ammunition[definition.id];
+      if (
+        current === undefined ||
+        !Number.isSafeInteger(current) ||
+        current < 0 ||
+        current > definition.ammunition.capacity
+      ) {
+        throw new Error(`Invalid persisted ammunition for "${definition.id}"`);
+      }
+      ammunition.set(definition.id, current);
+    }
+    this.ownedIds.clear();
+    for (const itemId of owned) this.ownedIds.add(itemId);
+    this.equippedId = snapshot.equippedId;
+    this.ammunition.clear();
+    for (const [itemId, current] of ammunition) {
+      this.ammunition.set(itemId, current);
+    }
+    this.changeSequence = 0;
+    this.useSequence = 0;
+    this.reloadSequence = 0;
+    this.dryFireSequence = 0;
+    this.lastUseAccepted = false;
+    this.lastUseSource = undefined;
+    this.lastRejection = undefined;
   }
 
   public getSnapshot(): EquipmentSnapshot {

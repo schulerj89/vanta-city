@@ -22,7 +22,7 @@ test('player money, pickup, and handgun purchase remain authoritative', async ({
     formattedBalance: '$500',
     delta: undefined,
   });
-  expect(state.player.equipment.ownedIds).toEqual(['knife']);
+  expect(state.player.equipment.ownedIds).toEqual([]);
   expect(state.quickbar.slots[0]).toMatchObject({ owned: false });
   await assertPlayerHudLayout(page, 1280);
   await attach(page, testInfo, 'money-desktop-before');

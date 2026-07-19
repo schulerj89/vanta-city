@@ -38,7 +38,11 @@ import type {
   WorldSectorDefinition,
 } from './LevelDefinition';
 import { validateLevelDefinition } from './LevelDefinition';
-import { DefinitionLevelLocations, type LevelLocations } from './LevelQueries';
+import {
+  DefinitionLevelLocations,
+  findSafePlayerSpawn,
+  type LevelLocations,
+} from './LevelQueries';
 import type { LevelRegistry } from './LevelRegistry';
 import type { WorldEvents } from './WorldEvents';
 import type { WorldPosition } from './Spatial';
@@ -461,6 +465,14 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   public getSpawn(id?: string): SpawnPointDefinition {
     return this.requireLocations().getSpawn(id);
+  }
+
+  public resolveSafePlayerSpawn(
+    candidateIds: readonly string[],
+  ): SpawnPointDefinition {
+    const level = this.loaded?.definition;
+    if (!level) throw new Error('No level is loaded');
+    return findSafePlayerSpawn(level, candidateIds);
   }
 
   public getLocation(id: string): NamedLocationDefinition {

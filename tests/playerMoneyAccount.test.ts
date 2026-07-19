@@ -5,6 +5,19 @@ import {
 } from '../src/economy/PlayerMoneyAccount';
 
 describe('PlayerMoneyAccount', () => {
+  it('restores a validated balance without fabricating a transaction', () => {
+    const account = new PlayerMoneyAccount('player');
+    const transaction = vi.fn();
+    account.events.on('transaction', transaction);
+    account.restoreBalance(742);
+    expect(account.getSnapshot()).toMatchObject({
+      balance: 742,
+      transactionSequence: 0,
+      lastTransaction: undefined,
+    });
+    expect(transaction).not.toHaveBeenCalled();
+    expect(() => account.restoreBalance(-1)).toThrow();
+  });
   it('credits and debits integer currency with typed metadata and events', () => {
     const account = new PlayerMoneyAccount('player');
     const transactions = vi.fn();

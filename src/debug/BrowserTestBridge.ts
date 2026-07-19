@@ -58,6 +58,7 @@ import type {
   AudioPreferenceStore,
 } from '../audio/AudioPreferences';
 import type { CinematicCoordinator } from '../cinematics/CinematicCoordinator';
+import type { CampaignSaveSystem } from '../save/CampaignSaveSystem';
 import type {
   CinematicPerformancePreflight,
   CinematicPerformanceRequest,
@@ -215,6 +216,10 @@ export interface BrowserTestSnapshot {
   readonly cinematic: ReturnType<CinematicCoordinator['getSnapshot']>;
   readonly lighting: ReturnType<TimeOfDayLightingSystem['getSnapshot']>;
   readonly playerDeath: ReturnType<PlayerDeathSystem['getSnapshot']>;
+  readonly campaignSave: {
+    readonly status: ReturnType<CampaignSaveSystem['getStatus']>;
+    readonly snapshot: ReturnType<CampaignSaveSystem['getSnapshot']>;
+  };
 }
 
 export interface BrowserTestApi {
@@ -265,6 +270,8 @@ export interface BrowserTestApi {
     warmupMs: number,
     measurementMs: number,
   ): Promise<BrowserPerformanceCapture>;
+  campaignSaveNow(): boolean;
+  campaignReset(): boolean;
 }
 
 export interface PedestrianBoundaryFixtureSnapshot {
@@ -357,6 +364,7 @@ export interface BrowserTestBridgeDependencies {
   readonly timeOfDay: TimeOfDayLightingSystem;
   readonly playerDeath: PlayerDeathSystem;
   readonly cinematics: CinematicCoordinator;
+  readonly campaignSave: CampaignSaveSystem;
   readonly setCinematicParticipantAvailable: (
     id: string,
     available: boolean,
@@ -445,6 +453,8 @@ export function installBrowserTestBridge(
       dependencies.diagnostics.readback(input),
     capturePerformance: (warmupMs, measurementMs) =>
       capturePerformance(dependencies, target, warmupMs, measurementMs),
+    campaignSaveNow: () => dependencies.campaignSave.saveNow(),
+    campaignReset: () => dependencies.campaignSave.reset(),
   };
   target.__VANTA_TEST__ = api;
   return () => {
@@ -754,6 +764,10 @@ function createSnapshot(
     cinematic: dependencies.cinematics.getSnapshot(),
     lighting: dependencies.timeOfDay.getSnapshot(),
     playerDeath: dependencies.playerDeath.getSnapshot(),
+    campaignSave: {
+      status: dependencies.campaignSave.getStatus(),
+      snapshot: dependencies.campaignSave.getSnapshot(),
+    },
     performance: {
       renderer: dependencies.render.getPerformanceSnapshot(),
       runtime: dependencies.runtime.getPerformanceSnapshot(),

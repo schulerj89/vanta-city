@@ -29,6 +29,48 @@ export function findSpawn(
   return spawn;
 }
 
+/** Resolves the first authored spawn whose player capsule does not overlap a wall. */
+export function findSafePlayerSpawn(
+  level: LevelDefinition,
+  candidateIds: readonly string[],
+): SpawnPointDefinition {
+  const candidates = [
+    ...candidateIds.flatMap((id) =>
+      level.spawns.filter(
+        (spawn) => spawn.id === id && spawn.kind === 'player',
+      ),
+    ),
+    ...level.spawns.filter((spawn) => spawn.kind === 'player' && spawn.default),
+  ];
+  const visited = new Set<string>();
+  for (const spawn of candidates) {
+    if (visited.has(spawn.id)) continue;
+    visited.add(spawn.id);
+    if (isSafePlayerSpawn(spawn, level.staticCollision)) return spawn;
+  }
+  throw new Error(`Level "${level.id}" has no collision-safe player spawn`);
+}
+
+function isSafePlayerSpawn(
+  spawn: SpawnPointDefinition,
+  colliders: readonly StaticColliderDefinition[],
+): boolean {
+  const [x, y, z] = spawn.position;
+  const radius = 0.38;
+  const height = 1.75;
+  return colliders.every((collider) => {
+    const [cx, cy, cz] = collider.position;
+    const [width, colliderHeight, depth] = collider.size;
+    const horizontalOverlap =
+      Math.abs(x - cx) < width / 2 + radius &&
+      Math.abs(z - cz) < depth / 2 + radius;
+    if (!horizontalOverlap) return true;
+    const colliderBottom = cy - colliderHeight / 2;
+    const colliderTop = cy + colliderHeight / 2;
+    return colliderTop <= y + 0.05 || colliderBottom >= y + height;
+  });
+}
+
 export interface LevelLocations {
   getSpawn(id?: string): SpawnPointDefinition;
   getLocation(id: string): NamedLocationDefinition;

@@ -76,7 +76,10 @@ import type { DiagnosticRecorder } from './debug/DiagnosticRecorder';
 import { CharacterEquipment } from './equipment/CharacterEquipment';
 import { isEquipmentId } from './equipment/EquipmentDefinition';
 import { QuickbarSystem } from './ui/QuickbarSystem';
-import { PlayerMoneyAccount } from './economy/PlayerMoneyAccount';
+import {
+  PLAYER_MAX_BALANCE,
+  PlayerMoneyAccount,
+} from './economy/PlayerMoneyAccount';
 import { MoneyHudSystem } from './ui/MoneyHudSystem';
 import { PlayerHudClusterSystem } from './ui/PlayerHudClusterSystem';
 import { ScreenSpaceLayoutSystem } from './ui/ScreenSpaceLayoutSystem';
@@ -106,6 +109,7 @@ import { CinematicCoordinator } from './cinematics/CinematicCoordinator';
 import { CinematicPresentationSystem } from './cinematics/CinematicPresentationSystem';
 import { createCinematicRuntimeAdapters } from './cinematics/CinematicRuntimeIntegration';
 import { TitleScreen } from './ui/TitleScreen';
+import { CampaignSaveSystem } from './save/CampaignSaveSystem';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 let activePresentationMount: HTMLElement | undefined;
@@ -117,6 +121,13 @@ async function bootstrap(): Promise<void> {
   const uiLayout = new ScreenSpaceLayoutSystem(mount);
   activePresentationMount = uiLayout.zone('presentation');
   const pageParameters = new URLSearchParams(window.location.search);
+  const levels = new LevelRegistry([testDistrict, northbarCoachDepot]);
+  const campaignSave = new CampaignSaveSystem(window.localStorage, {
+    missions: missionDefinitions,
+    hasLevel: (id) => levels.has(id),
+    maximumMoney: PLAYER_MAX_BALANCE,
+    maximumHealth: 100,
+  });
   const audioPreferences = new AudioPreferenceStore(window.localStorage);
   const title = new TitleScreen(
     activePresentationMount,
@@ -142,14 +153,14 @@ async function bootstrap(): Promise<void> {
       await import('./debug/DevelopmentAssetFaults');
     assetFaults = DevelopmentAssetFaults.from(pageParameters);
   }
-  const levels = new LevelRegistry([testDistrict, northbarCoachDepot]);
   const authoredOpening =
+    !campaignSave.hasSave() &&
     (pageParameters.get('e2e') !== '1' ||
       pageParameters.get('opening') === '1') &&
     !pageParameters.has('sandbox');
-  const initialLevelId = authoredOpening
-    ? 'northbar-coach-depot'
-    : 'test-district';
+  const initialLevelId =
+    campaignSave.getSnapshot()?.world.levelId ??
+    (authoredOpening ? 'northbar-coach-depot' : 'test-district');
   const initialLevel = levels.get(initialLevelId);
   const assetCatalog = new AssetCatalog({
     ...assetManifest,
@@ -296,7 +307,7 @@ async function bootstrap(): Promise<void> {
   // selection store remains authoritative so picker and debug changes continue
   // to replace only the visual attached to the existing player simulation.
   characterSelection.select('casual');
-  const playerEquipment = new CharacterEquipment('player', ['knife']);
+  const playerEquipment = new CharacterEquipment('player', []);
   const playerAccount = new PlayerMoneyAccount('player');
   const characterVisual = new CharacterPlayerVisual(
     characterSelection,
@@ -314,11 +325,13 @@ async function bootstrap(): Promise<void> {
   const player = new PlayerControllerSystem(
     objects,
     collision,
-    new Vector3(...spawn.position),
+    new Vector3(
+      ...(campaignSave.getSnapshot()?.player.position ?? spawn.position),
+    ),
     undefined,
     () => cameraReference.current?.getYaw() ?? 0,
     characterVisual,
-    spawn.rotation?.[1] ?? 0,
+    campaignSave.getSnapshot()?.player.facingYaw ?? spawn.rotation?.[1] ?? 0,
     playerEquipment,
   );
   levelSystem.setStreamingPositionSource(() => player.getPlayerPosition());
@@ -542,6 +555,8 @@ async function bootstrap(): Promise<void> {
     camera,
     prefersReducedMotion,
     () => sparringTarget?.reset(),
+    () => campaignSave.resolveRespawn(levelSystem),
+    ({ id }) => campaignSave.recordRespawn(id),
   );
   const healthHud = new HealthHudSystem(
     uiLayout.zone('world-indicator'),
@@ -628,6 +643,13 @@ async function bootstrap(): Promise<void> {
       },
     },
   );
+  campaignSave.restoreBeforeInit({
+    missions,
+    money: playerAccount,
+    equipment: playerEquipment,
+    health: player.health,
+    player,
+  });
   levelSystem.setStreamingInterestSource(() => {
     const level = levelSystem.activeLevel;
     if (!level) return [];
@@ -891,6 +913,16 @@ async function bootstrap(): Promise<void> {
         }
       },
     });
+    campaignSave.attach({
+      missions,
+      money: playerAccount,
+      equipment: playerEquipment,
+      health: player.health,
+      player,
+      levels: levelSystem,
+      worldEvents,
+    });
+    if (!campaignSave.hasSave()) campaignSave.saveNow();
   } catch (error) {
     development?.errors.report('runtime initialization', error);
     loading.fail(error);
@@ -950,6 +982,7 @@ async function bootstrap(): Promise<void> {
           timeOfDay,
           playerDeath,
           cinematics,
+          campaignSave,
           setCinematicParticipantAvailable: (id, available) => {
             if (available) cinematicUnavailableParticipants.delete(id);
             else cinematicUnavailableParticipants.add(id);
@@ -974,6 +1007,7 @@ async function bootstrap(): Promise<void> {
   installHotDisposal(runtime, assets, development, () => {
     unsubscribeAccessibility();
     unsubscribeMissionCinematics();
+    campaignSave.dispose();
     cashPickup?.dispose();
     playerAccount.dispose();
     disposeBrowserTestBridge?.();
@@ -2129,6 +2163,16 @@ function registerVerticalSliceDebug(
             `Character action "${action}" was rejected: ${reason ?? 'unavailable'}`,
           );
         }
+      },
+    }),
+    debug.registerCommand({
+      id: 'player.acquire-item',
+      label: 'Acquire player item (development fixture)',
+      group: sections.player,
+      argumentLabel: 'handgun or knife',
+      run: (value) => {
+        if (!isEquipmentId(value)) throw new Error('Expected handgun or knife');
+        player.equipment.acquire(value);
       },
     }),
     debug.registerCommand({

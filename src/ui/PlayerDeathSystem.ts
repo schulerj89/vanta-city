@@ -10,6 +10,7 @@ export interface PlayerDeathSnapshot {
   readonly depletionSequence: number;
   readonly reviveSequence: number;
   readonly cameraOwned: boolean;
+  readonly lastRespawnId: string | undefined;
 }
 
 export interface DeathPlayerSurface {
@@ -17,6 +18,13 @@ export interface DeathPlayerSurface {
   isControlEnabled(): boolean;
   setControlEnabled(enabled: boolean): void;
   reset(): void;
+  respawnAt?(position: WorldPosition, facingYaw?: number): void;
+}
+
+export interface DeathRespawnResolution {
+  readonly id: string;
+  readonly position: WorldPosition;
+  readonly facingYaw: number | undefined;
 }
 
 export interface DeathCameraSurface {
@@ -49,6 +57,7 @@ export class PlayerDeathSystem implements GameSystem {
   private visible = false;
   private depletionSequence = 0;
   private reviveSequence = 0;
+  private lastRespawnId: string | undefined;
 
   public constructor(
     mount: HTMLElement,
@@ -56,6 +65,8 @@ export class PlayerDeathSystem implements GameSystem {
     private readonly camera: DeathCameraSurface,
     private readonly reducedMotion: boolean,
     private readonly resetOpponent?: () => void,
+    private readonly resolveRespawn?: () => DeathRespawnResolution,
+    private readonly onRespawn?: (resolution: DeathRespawnResolution) => void,
   ) {
     this.element = document.createElement('section');
     this.element.className = 'death-overlay';
@@ -94,6 +105,7 @@ export class PlayerDeathSystem implements GameSystem {
       depletionSequence: this.depletionSequence,
       reviveSequence: this.reviveSequence,
       cameraOwned: this.cameraHandle?.active ?? false,
+      lastRespawnId: this.lastRespawnId,
     };
   }
 
@@ -101,7 +113,14 @@ export class PlayerDeathSystem implements GameSystem {
     if (!this.visible) return;
     this.reviveSequence += 1;
     this.resetOpponent?.();
-    this.player.reset();
+    const respawn = this.resolveRespawn?.();
+    if (respawn && this.player.respawnAt) {
+      this.lastRespawnId = respawn.id;
+      this.player.respawnAt(respawn.position, respawn.facingYaw);
+      this.onRespawn?.(respawn);
+    } else {
+      this.player.reset();
+    }
     this.releaseCamera();
     this.camera.snapToPlayer();
   }
