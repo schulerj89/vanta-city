@@ -2,7 +2,7 @@
 
 ## Startup contract
 
-The DOM-native loading screen is installed before runtime initialization. It is not timer-driven: the progress element is indeterminate until `ThreeAssetLoader` publishes a real request, then reflects the mean progress of requested assets. Copy names the currently loading logical asset. Ordered lifecycle observation marks the district ready after `LevelSystem` initializes and the character ready after `PlayerControllerSystem` initializes its visual.
+The DOM-native loading screen is installed before runtime initialization. Completion is not timer-driven: the progress element is indeterminate until `ThreeAssetLoader` publishes a real request, then reflects the mean progress of requested assets. Copy names the currently loading logical asset. Ordered lifecycle observation marks the district ready after `LevelSystem` initializes and the character ready after `PlayerControllerSystem` initializes its visual. A display-only elapsed label appears after three seconds so a slow local startup is visible; its one-second clock cannot change readiness or create a minimum display time and is cleared on every terminal/disposal path.
 
 Successful startup removes the screen before the initial character picker opens. If a startup asset fails but its owner supplies the existing primitive fallback, a dismissible status remains while gameplay and the picker continue. A non-recoverable initialization error leaves an alert with the underlying error and a reload action. Disposal unsubscribes from asset status and removes all loading DOM.
 
@@ -46,7 +46,7 @@ Development builds expose rolling 120-sample diagnostics through the debug panel
 - Asset ownership: loader-retained source-reference proxy plus live/created/disposed model-instance proxies. Source entries are intentionally cached until loader disposal.
 - Loading: measured `preparingWorld`, `preparingCharacter`, `finalizing`, and total durations. These are lifecycle timestamps, not simulated estimates.
 
-`performance.reset-windows` clears the renderer/runtime rolling windows. In production the dynamically imported collectors and their `performance.now()` calls are absent. The untimed runtime path retains its original loops and pays one disabled diagnostics branch per frame; renderer timing also uses one disabled branch. Asset/renderer counts are calculated only when a public snapshot is requested. Loading adds four startup clock reads.
+`performance.reset-windows` clears the renderer/runtime rolling windows. In production the dynamically imported collectors and their `performance.now()` calls are absent. The untimed runtime path retains its original loops and pays one disabled diagnostics branch per frame; renderer timing also uses one disabled branch. Asset/renderer counts are calculated only when a public snapshot is requested. Loading retains its four lifecycle clock reads and adds one bounded one-second elapsed-display interval that is cleared at completion, failure, or disposal.
 
 ## PERF-001 reference measurement
 

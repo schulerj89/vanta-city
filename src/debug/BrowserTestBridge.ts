@@ -7,6 +7,13 @@ import type { InteractionSystem } from '../interactions/InteractionSystem';
 import type { ConversationCoordinator } from '../conversations/ConversationCoordinator';
 import type { NpcSystem } from '../npcs/NpcSystem';
 import type { PedestrianSystem } from '../pedestrians/PedestrianSystem';
+import {
+  PedestrianBoundaryLifecyclePolicy,
+  getPedestrianRouteDistance,
+  type PedestrianBoundaryEdge,
+  type PedestrianBoundaryLifecycleDecision,
+} from '../pedestrians/PedestrianBoundaryLifecyclePolicy';
+import type { PedestrianBoundaryExitRouteDefinition } from '../pedestrians/PedestrianRouteDefinition';
 import type { npcDefinitions } from '../npcs/npcs';
 import type { StaticCollisionWorld } from '../physics/CollisionWorld';
 import type { CharacterPlayerVisual } from '../player/CharacterPlayerVisual';
@@ -212,6 +219,7 @@ export interface BrowserTestSnapshot {
 
 export interface BrowserTestApi {
   snapshot(): BrowserTestSnapshot;
+  pedestrianBoundaryFixture(): PedestrianBoundaryFixtureSnapshot;
   startCinematic(id: string): boolean;
   requestCinematicSkip(): boolean;
   confirmCinematicSkip(): boolean;
@@ -257,6 +265,27 @@ export interface BrowserTestApi {
     warmupMs: number,
     measurementMs: number,
   ): Promise<BrowserPerformanceCapture>;
+}
+
+export interface PedestrianBoundaryFixtureSnapshot {
+  readonly bounds: {
+    readonly minX: number;
+    readonly maxX: number;
+    readonly minZ: number;
+    readonly maxZ: number;
+  };
+  readonly routeDistance: number;
+  readonly minimumTraversalDistance: number;
+  readonly clearance: number;
+  readonly repopulation: 'sector-reload';
+  readonly samples: readonly {
+    readonly id: string;
+    readonly position: readonly [number, number, number];
+    readonly decision: PedestrianBoundaryLifecycleDecision;
+  }[];
+  readonly edgeChecks: Readonly<
+    Record<PedestrianBoundaryEdge, PedestrianBoundaryLifecycleDecision>
+  >;
 }
 
 export interface BrowserPerformanceCapture {
@@ -366,6 +395,7 @@ export function installBrowserTestBridge(
         completedConversationIds,
         cancelledConversationIds,
       ),
+    pedestrianBoundaryFixture: () => createPedestrianBoundaryFixture(),
     startCinematic: (id) => dependencies.cinematics.start(id),
     requestCinematicSkip: () => dependencies.cinematics.requestSkip(),
     confirmCinematicSkip: () => dependencies.cinematics.confirmSkip(),
@@ -422,6 +452,103 @@ export function installBrowserTestBridge(
     unsubscribeCompleted();
     unsubscribeCancelled();
     if (target.__VANTA_TEST__ === api) delete target.__VANTA_TEST__;
+  };
+}
+
+function createPedestrianBoundaryFixture(): PedestrianBoundaryFixtureSnapshot {
+  const bounds = { minX: -10, maxX: 10, minZ: -10, maxZ: 10 } as const;
+  const policy = new PedestrianBoundaryLifecyclePolicy(bounds);
+  const east = boundaryFixtureRoute('east');
+  const samples = [
+    { id: 'resident', position: [0, 0.2, 0], targetNodeIndex: 1 },
+    { id: 'approach', position: [9, 0.2, 0], targetNodeIndex: 2 },
+    { id: 'edge-crossed', position: [10.1, 0.2, 0], targetNodeIndex: 2 },
+    { id: 'cleared', position: [10.35, 0.2, 0], targetNodeIndex: 2 },
+    { id: 'inward-teleport', position: [-40, 0.2, 0], targetNodeIndex: 2 },
+    { id: 'outward-teleport', position: [40, 0.2, 0], targetNodeIndex: 1 },
+  ] as const;
+  const exitPositions: Record<
+    PedestrianBoundaryEdge,
+    readonly [number, number, number]
+  > = {
+    north: [0, 0.2, 10.35],
+    east: [10.35, 0.2, 0],
+    south: [0, 0.2, -10.35],
+    west: [-10.35, 0.2, 0],
+  };
+  return {
+    bounds,
+    routeDistance: getPedestrianRouteDistance(east),
+    minimumTraversalDistance: east.exit.minimumTraversalDistance,
+    clearance: east.exit.clearance,
+    repopulation: east.exit.repopulation,
+    samples: samples.map(({ id, position, targetNodeIndex }) => ({
+      id,
+      position,
+      decision: policy.evaluate(
+        east,
+        { x: position[0], y: position[1], z: position[2] },
+        targetNodeIndex,
+      ),
+    })),
+    edgeChecks: Object.fromEntries(
+      (['north', 'east', 'south', 'west'] as const).map((edge) => {
+        const position = exitPositions[edge];
+        return [
+          edge,
+          policy.evaluate(
+            boundaryFixtureRoute(edge),
+            { x: position[0], y: position[1], z: position[2] },
+            2,
+          ),
+        ];
+      }),
+    ) as Record<PedestrianBoundaryEdge, PedestrianBoundaryLifecycleDecision>,
+  };
+}
+
+function boundaryFixtureRoute(
+  edge: PedestrianBoundaryEdge,
+): PedestrianBoundaryExitRouteDefinition {
+  const axisPositions = {
+    north: [
+      [0, 0.2, -8],
+      [0, 0.2, 0],
+      [0, 0.2, 10.4],
+    ],
+    east: [
+      [-8, 0.2, 0],
+      [0, 0.2, 0],
+      [10.4, 0.2, 0],
+    ],
+    south: [
+      [0, 0.2, 8],
+      [0, 0.2, 0],
+      [0, 0.2, -10.4],
+    ],
+    west: [
+      [8, 0.2, 0],
+      [0, 0.2, 0],
+      [-10.4, 0.2, 0],
+    ],
+  } as const;
+  return {
+    id: `route.browser-fixture-${edge}`,
+    sectorId: 'sector.browser-fixture',
+    loop: false,
+    exit: {
+      edge,
+      clearance: 0.35,
+      minimumTraversalDistance: 18,
+      repopulation: 'sector-reload',
+    },
+    population: 1,
+    speed: [2, 2],
+    nodes: axisPositions[edge].map((position, index) => ({
+      id: `route.browser-fixture-${edge}.node-${index + 1}`,
+      position,
+      surfaceColliderId: 'c.sidewalk-browser-fixture',
+    })),
   };
 }
 

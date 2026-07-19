@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-18",
+  "generator": {
+    "provider": "OpenAI",
+    "model": "gpt-image-2",
+    "interface": "official Image API via explicit local CLI",
+    "script": "${CODEX_HOME}/skills/.system/imagegen/scripts/image_gen.py",
+    "request": {
+      "command": "generate",
+      "size": "2048x1152",
+      "quality": "low",
+      "outputFormat": "png",
+      "augmentation": false,
+      "responseRequestId": "not exposed by the bundled CLI output"
+    }
+  },
+  "candidatePolicy": {
+    "maximumCandidates": 4,
+    "generatedCandidates": 4,
+    "maximumAccepted": 2,
+    "acceptedCandidates": 2,
+    "rejectedAssetsCommitted": false
+  },
+  "candidates": [
+    {
+      "id": "title-01",
+      "decision": "rejected",
+      "reason": "The harbor view was strong, but extra midground figures weakened the requested single-traveler focus and the depot geometry was less useful for the narrow crop."
+    },
+    {
+      "id": "title-02",
+      "decision": "accepted",
+      "purpose": "Decorative Vanta City title hero behind semantic HTML",
+      "prompt": "Use case: stylized-concept. Asset type: cinematic game title-screen background, one continuous wide composition. Primary request: an arriving traveler crosses a rain-darkened platform at Northbar Coach Depot before sunrise in fictional 1997 Ashfall City. Scene: bounded Atlantic coastal-industrial bus annex with sawtooth bay roof, glazed brick, oxidized metal ribs, wet concrete, mist and distant harbor infrastructure; a small traveler with duffel near the right third, a mechanic held under a pillar farther back, a dispatcher only as a soft silhouette behind glass. Style: original restrained low-poly screenprint with rotogravure texture, broad shapes, subtle registration offsets, sophisticated game key art without baked interface. Composition: low architectural horizon and diagonal canopy lead toward the center-right; leave the full left 44 percent quiet, dark, and low-detail for separate HTML; preserve useful upper crop for narrow portrait layout and deliberate center-right crop on ultrawide. Lighting and palette: deep harbor navy and charcoal, oxidized teal, sodium amber pools, cream glints, rain reflections; tense but human, no melodrama. Constraints: exactly one scene, no montage, no text, letters, numbers, glyphs, timetable marks, signage, logo, brand, watermark, frame, UI, protected character, recognizable person, weapons, police spectacle, palms, pink-purple synthwave, sunset, postcard skyline, or recognizable franchise composition. Avoid accidental pseudo-writing and high-detail clutter behind HTML space.",
+      "negativeConstraints": [
+        "no montage or split panels",
+        "no text, letters, numbers, glyphs, signage, logos, brands, watermarks, or UI",
+        "no protected or recognizable characters or people",
+        "no weapons or police spectacle",
+        "no palm, pink-purple synthwave, sunset, postcard, or recognizable franchise composition"
+      ],
+      "source": {
+        "file": "sources/northbar-title-source.png",
+        "dimensions": "2048x1152",
+        "sha256": "3bcd8d91ef907c77b422e0d9a8a1bb073d1b8f54f645e009db8116f62a36607b"
+      },
+      "runtime": {
+        "file": "northbar-title-hero.jpg",
+        "dimensions": "1920x1080",
+        "sha256": "6c52885675acc6436adee47cb082f3a2c7ab4e1cf93af30f791ba80f99bf05f5",
+        "transform": "sips resize to 1920x1080 and JPEG quality 86"
+      },
+      "originalityReview": "Accepted as an original painterly screenprint/rotogravure coastal-industrial composition. No readable text, glyph artifacts, logo, brand, protected character, recognizable person, or recognizable franchise composition was found. The generic traveler is decorative atmosphere and is not represented as a face-accurate Rook portrait."
+    },
+    {
+      "id": "loading-03",
+      "decision": "rejected",
+      "reason": "The broad daylight harbor and central windshield framing left less calm text space and read less clearly as the pre-dawn Northbar-to-Junction transition."
+    },
+    {
+      "id": "loading-04",
+      "decision": "accepted",
+      "purpose": "Decorative loading and startup-state background behind truthful DOM status",
+      "prompt": "Use case: stylized-concept. Asset type: cinematic game loading-screen background, one single landscape composition. Primary request: quiet pre-dawn drive from Northbar into fictional Ashfall Junction as viewed through a rain-streaked 1997 service-wagon windshield. Scene: the depot sodium lamp recedes as a small glow at the left edge; wet Atlantic port access road curves toward an original municipal signal at right, with dark coastal-industrial warehouses, deco concrete piers, overhead utility silhouettes, harbor mist, and reflected amber/teal light. Style: restrained original screenprint and rotogravure key art with low-poly geometry, visible paper grain, simplified forms, atmospheric rather than photorealistic. Composition: continuous driver-eye view, windshield and one resting wiper subtly frame the scene; empty lower-left and center-left negative space for HTML readiness copy, signal and road perspective concentrated on right; crop-safe for ultrawide and portrait top art band. Lighting: harbor navy and black-green, oxidized teal, sodium amber, cream rain haze. Constraints: no montage, split screen, text, letters, numbers, glyphs, signage, logo, brand, watermark, title, UI, progress indicator, people, recognizable vehicles, protected character, recognizable landmark, weapons, police spectacle, palms, hot pink, tropical or synthwave cliché, dramatic chase, crash, or recognizable franchise composition. Avoid accidental pseudo-text and excessive tiny lights.",
+      "negativeConstraints": [
+        "no montage or split screen",
+        "no text, letters, numbers, glyphs, signage, logos, brands, watermarks, titles, UI, or progress indicators",
+        "no people, recognizable vehicles, protected characters, or recognizable landmarks",
+        "no weapons, police spectacle, dramatic chase, or crash",
+        "no palms, hot pink, tropical or synthwave cliché, or recognizable franchise composition"
+      ],
+      "source": {
+        "file": "sources/junction-loading-source.png",
+        "dimensions": "2048x1152",
+        "sha256": "e079905278427c35398191216472252e93b886b98b0510087c5d3d2ea46e943c"
+      },
+      "runtime": {
+        "file": "junction-loading-road.jpg",
+        "dimensions": "1920x1080",
+        "sha256": "17b186a360545d75881d0d3617be68d0b379a52f01c02b04560846127565bfc8",
+        "transform": "sips resize to 1920x1080 and JPEG quality 86"
+      },
+      "originalityReview": "Accepted as an original painterly screenprint/rotogravure windshield composition. No readable text, glyph artifact, logo, brand, protected character, recognizable landmark, or recognizable franchise composition was found."
+    }
+  ],
+  "rights": {
+    "representation": "Original project-owned assets generated specifically for Vanta City",
+    "thirdPartyAttributionRequired": false,
+    "runtimeNetworkRequired": false
+  }
+}

@@ -13,6 +13,7 @@ import {
   validateLevelDefinition,
 } from '../src/world/LevelDefinition';
 import type { SectorStreamingSnapshot } from '../src/world/LevelSystem';
+import { AdaptiveSectorStreamingPolicy } from '../src/world/AdaptiveSectorStreamingPolicy';
 import type { WorldEvents } from '../src/world/WorldEvents';
 import { testDistrict } from '../src/world/levels/testDistrict';
 import { flushPromises } from './helpers/flushPromises';
@@ -42,6 +43,179 @@ class CharacterLoaderFixture {
   }
 }
 
+class DeferredCharacterLoaderFixture {
+  public disposed = 0;
+  private readonly pending: {
+    readonly definition: CharacterDefinition;
+    readonly resolve: (loaded: LoadedCharacter) => void;
+  }[] = [];
+
+  public instantiate(
+    definition: CharacterDefinition,
+  ): Promise<LoadedCharacter> {
+    return new Promise((resolve) => {
+      this.pending.push({ definition, resolve });
+    });
+  }
+
+  public resolveNext(): void {
+    const pending = this.pending.shift();
+    if (!pending) throw new Error('No deferred character load is pending');
+    const root = new Group();
+    root.add(new Group());
+    pending.resolve({
+      definition: pending.definition,
+      root,
+      animationClips: new Map([
+        ['idle', new AnimationClip('idle', 1, [])],
+        ['walk', new AnimationClip('walk', 1, [])],
+      ]),
+      discoveredClipNames: ['idle', 'walk'],
+      source: 'asset',
+      warnings: [],
+      dispose: () => {
+        this.disposed += 1;
+      },
+    });
+  }
+}
+
+const edgeLevel: LevelDefinition = {
+  id: 'edge-route-fixture',
+  name: 'Edge route fixture',
+  environment: [],
+  staticCollision: [
+    {
+      id: 'c.sidewalk-edge',
+      position: [1, 0, 0],
+      size: [24, 0.4, 4],
+      tags: ['walkable', 'sidewalk'],
+    },
+  ],
+  spawns: [
+    {
+      id: 'spawn.edge-route',
+      kind: 'player',
+      default: true,
+      position: [0, 0.2, 0],
+    },
+  ],
+  locations: [],
+  zones: [],
+  landmarks: [],
+  triggers: [],
+  cinematicAnchors: [],
+  mapPresentation: {
+    orientation: 'north-up',
+    bounds: { minX: -10, maxX: 10, minZ: -10, maxZ: 10 },
+    geometry: [],
+    markers: [{ entryId: 'spawn.edge-route', layer: 'spawns' }],
+  },
+  streaming: {
+    sectors: [
+      {
+        id: 'sector.edge',
+        center: [0, 0],
+        loadDistance: 20,
+        unloadDistance: 30,
+        alwaysLoaded: true,
+        entryIds: ['c.sidewalk-edge'],
+      },
+    ],
+  },
+  pedestrians: {
+    seed: 3003,
+    residentCap: 1,
+    activationDistance: 25,
+    visibilityDistance: 30,
+    routes: [
+      {
+        id: 'route.edge-east',
+        sectorId: 'sector.edge',
+        loop: false,
+        exit: {
+          edge: 'east',
+          clearance: 0.35,
+          minimumTraversalDistance: 18,
+          repopulation: 'sector-reload',
+        },
+        population: 1,
+        speed: [10, 10],
+        nodes: [
+          {
+            id: 'route.edge-east.node-1',
+            position: [-8, 0.2, 0],
+            surfaceColliderId: 'c.sidewalk-edge',
+          },
+          {
+            id: 'route.edge-east.node-2',
+            position: [0, 0.2, 0],
+            surfaceColliderId: 'c.sidewalk-edge',
+          },
+          {
+            id: 'route.edge-east.node-3',
+            position: [10.4, 0.2, 0],
+            surfaceColliderId: 'c.sidewalk-edge',
+          },
+        ],
+      },
+    ],
+  },
+};
+
+function createEdgeHarness(
+  loader:
+    | CharacterLoaderFixture
+    | DeferredCharacterLoaderFixture = new CharacterLoaderFixture(),
+) {
+  const scene = new Scene();
+  const collision = new StaticCollisionWorld();
+  collision.addDefinitions(edgeLevel.staticCollision);
+  const events = new EventBus<WorldEvents>();
+  const levels = {
+    activeLevel: edgeLevel as LevelDefinition | undefined,
+    getStreamingSnapshot: (): SectorStreamingSnapshot => ({
+      levelId: edgeLevel.id,
+      authored: 1,
+      active: ['sector.edge'],
+      pending: [],
+      states: { 'sector.edge': 'active' },
+      loadCount: 1,
+      unloadCount: 0,
+      sceneObjects: 0,
+      ownedResources: 0,
+      modelInstances: 0,
+      colliders: 1,
+      lodHiddenObjects: 0,
+      transitionsPending: false,
+      lastError: undefined,
+      policy: new AdaptiveSectorStreamingPolicy().evaluate({
+        sectors: edgeLevel.streaming!.sectors,
+        playerPosition: { x: 0, y: 0, z: 0 },
+        activeSectorIds: new Set(['sector.edge']),
+      }),
+      attempts: {},
+    }),
+  };
+  const playerPosition = { x: 0, y: 0.2, z: 0 };
+  const system = new PedestrianSystem(
+    pedestrianCharacterDefinitions,
+    loader,
+    scene,
+    collision,
+    {
+      getWorldPose: () => ({
+        position: playerPosition,
+        forward: { x: 0, y: 0, z: 1 },
+      }),
+    },
+    levels,
+    events,
+    { current: 'playing' },
+  );
+  return { system, loader, scene, events, levels, playerPosition };
+}
+
 function createHarness() {
   const scene = new Scene();
   const collision = new StaticCollisionWorld();
@@ -67,6 +241,11 @@ function createHarness() {
       lodHiddenObjects: 0,
       transitionsPending: false,
       lastError: undefined,
+      policy: new AdaptiveSectorStreamingPolicy().evaluate({
+        sectors: testDistrict.definition.streaming.sectors,
+        playerPosition: { x: 0, y: 0, z: 0 },
+      }),
+      attempts: {},
     }),
   };
   const player = {
@@ -236,5 +415,190 @@ describe('PedestrianSystem', () => {
     expect(scene.children).toHaveLength(0);
     expect(loader.disposed).toBe(28);
     system.dispose();
+  });
+
+  it('walks a long terminal route fully through the edge, retires, and repopulates only after sector reload', async () => {
+    validateLevelDefinition(edgeLevel);
+    const { system, loader, events, scene, playerPosition } =
+      createEdgeHarness();
+    await system.init();
+    expect(system.getSnapshot()).toMatchObject({
+      residentCount: 1,
+      visibleCount: 1,
+      mixerOwnerCount: 1,
+      retiredCount: 0,
+      boundaryExitCount: 0,
+    });
+
+    let sawApproach = false;
+    let sawEdgeCrossing = false;
+    let sawCulledTraversal = false;
+    for (let frame = 0; frame < 30; frame += 1) {
+      if (frame === 5) playerPosition.x = -100;
+      system.update({ delta: 0.1, elapsed: frame * 0.1, frame });
+      const resident = system.getSnapshot().pedestrians[0];
+      const lifecycleState = resident?.lifecycleState;
+      sawApproach ||= lifecycleState === 'approaching-boundary';
+      sawEdgeCrossing ||= lifecycleState === 'exiting-boundary';
+      sawCulledTraversal ||= resident?.visible === false;
+    }
+    expect(sawApproach).toBe(true);
+    expect(sawEdgeCrossing).toBe(true);
+    expect(sawCulledTraversal).toBe(true);
+    const exited = system.getSnapshot();
+    expect(exited).toMatchObject({
+      residentCount: 0,
+      visibleCount: 0,
+      mixerOwnerCount: 0,
+      retiredCount: 1,
+      boundaryExitCount: 1,
+      disposeCount: 1,
+      repopulationCount: 0,
+    });
+    expect(exited.lifecycleEvents.at(-1)).toMatchObject({
+      id: 'pedestrian.route.edge-east.1',
+      state: 'despawned',
+      reason: 'authored-boundary-exit',
+      boundaryEdge: 'east',
+      mixerOwnerCountBeforeDispose: 1,
+    });
+    expect(
+      exited.lifecycleEvents.at(-1)?.distanceTravelled,
+    ).toBeGreaterThanOrEqual(18.3);
+    expect(exited.lifecycleEvents.at(-1)?.position[0]).toBeGreaterThanOrEqual(
+      10.35,
+    );
+    expect(scene.children).toHaveLength(0);
+    expect(loader.disposed).toBe(1);
+
+    for (let frame = 30; frame < 60; frame += 1) {
+      system.update({ delta: 0.1, elapsed: frame * 0.1, frame });
+    }
+    expect(system.getSnapshot()).toMatchObject({
+      residentCount: 0,
+      retiredCount: 1,
+      spawnCount: 1,
+    });
+    events.emit('sector:loaded', {
+      levelId: edgeLevel.id,
+      sectorId: 'sector.edge',
+      colliders: edgeLevel.staticCollision,
+    });
+    await flushPromises();
+    expect(system.getSnapshot()).toMatchObject({
+      residentCount: 0,
+      retiredCount: 1,
+      spawnCount: 1,
+      repopulationCount: 0,
+    });
+
+    events.emit('sector:unloaded', {
+      levelId: edgeLevel.id,
+      sectorId: 'sector.edge',
+    });
+    expect(system.getSnapshot().retiredCount).toBe(0);
+    events.emit('sector:loaded', {
+      levelId: edgeLevel.id,
+      sectorId: 'sector.edge',
+      colliders: edgeLevel.staticCollision,
+    });
+    await flushPromises();
+    playerPosition.x = 0;
+    system.update({ delta: 0, elapsed: 6, frame: 60 });
+    const repopulated = system.getSnapshot();
+    expect(repopulated).toMatchObject({
+      residentCount: 1,
+      mixerOwnerCount: 1,
+      retiredCount: 0,
+      repopulationCount: 1,
+      spawnCount: 2,
+    });
+    expect(repopulated.pedestrians[0]).toMatchObject({
+      lifecycleState: 'resident',
+      lifecycleReason: null,
+      visible: true,
+      position: [-8, 0.2, 0],
+      distanceTravelled: 0,
+    });
+    for (let cycle = 2; cycle <= 3; cycle += 1) {
+      for (let frame = 0; frame < 30; frame += 1) {
+        system.update({
+          delta: 0.1,
+          elapsed: cycle * 10 + frame * 0.1,
+          frame: cycle * 100 + frame,
+        });
+      }
+      expect(system.getSnapshot()).toMatchObject({
+        residentCount: 0,
+        mixerOwnerCount: 0,
+        retiredCount: 1,
+        boundaryExitCount: cycle,
+      });
+      events.emit('sector:unloaded', {
+        levelId: edgeLevel.id,
+        sectorId: 'sector.edge',
+      });
+      events.emit('sector:loaded', {
+        levelId: edgeLevel.id,
+        sectorId: 'sector.edge',
+        colliders: edgeLevel.staticCollision,
+      });
+      await flushPromises();
+      system.update({ delta: 0, elapsed: cycle * 20, frame: cycle * 200 });
+      expect(system.getSnapshot()).toMatchObject({
+        residentCount: 1,
+        mixerOwnerCount: 1,
+        retiredCount: 0,
+        boundaryExitCount: cycle,
+        repopulationCount: cycle,
+      });
+    }
+    expect(system.getSnapshot()).toMatchObject({
+      spawnCount: 4,
+      disposeCount: 3,
+      boundaryExitCount: 3,
+      repopulationCount: 3,
+    });
+    expect(loader.disposed).toBe(3);
+    system.dispose();
+    expect(loader.disposed).toBe(4);
+    expect(scene.children).toHaveLength(0);
+  });
+
+  it('cancels and eventually disposes a model that resolves after sector unload', async () => {
+    const loader = new DeferredCharacterLoaderFixture();
+    const { system, events, scene } = createEdgeHarness(loader);
+    const initialization = system.init();
+    await flushPromises();
+
+    events.emit('sector:unloaded', {
+      levelId: edgeLevel.id,
+      sectorId: 'sector.edge',
+    });
+    expect(system.getSnapshot()).toMatchObject({
+      residentCount: 0,
+      loadingCount: 0,
+      mixerOwnerCount: 0,
+      disposeCount: 1,
+      loadCancellationCount: 1,
+    });
+    expect(system.getSnapshot().lifecycleEvents.at(-1)).toMatchObject({
+      state: 'disposed',
+      reason: 'load-cancelled',
+      mixerOwnerCountBeforeDispose: 0,
+    });
+
+    loader.resolveNext();
+    await initialization;
+    expect(loader.disposed).toBe(1);
+    expect(scene.children).toHaveLength(0);
+    expect(system.getSnapshot()).toMatchObject({
+      residentCount: 0,
+      loadingCount: 0,
+      mixerOwnerCount: 0,
+      loadCancellationCount: 1,
+    });
+    system.dispose();
+    expect(loader.disposed).toBe(1);
   });
 });

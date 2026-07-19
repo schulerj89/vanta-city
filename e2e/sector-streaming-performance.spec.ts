@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type {
@@ -8,7 +8,7 @@ import type {
 } from '../src/debug/BrowserTestBridge';
 
 const base = '/?e2e=1&skipPicker=1&traffic=0';
-const outputDirectory = join(process.cwd(), 'docs/screenshots/perf-001');
+const outputDirectory = join(process.cwd(), 'docs/screenshots/perf-002');
 const performanceMode = process.env.VANTA_PERF === '1';
 
 // Video/trace encoding competes with software WebGL and invalidates frame pacing.
@@ -18,6 +18,7 @@ test('streams three deterministic cycles without retained ownership growth', asy
   page,
 }) => {
   const faults = observeBrowserFaults(page);
+  await mkdir(outputDirectory, { recursive: true });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(base);
   await waitForReady(page);
@@ -37,6 +38,10 @@ test('streams three deterministic cycles without retained ownership growth', asy
     evidence.push(current);
     expect(ownership(current)).toEqual(ownership(baseline));
   }
+
+  expect(rendererOwnership(evidence.at(-1)!)).toEqual(
+    rendererOwnership(evidence.at(-2)!),
+  );
 
   expect(evidence.at(-1)?.world.sectors.unloadCount).toBeGreaterThanOrEqual(8);
   expect(faults.consoleErrors).toEqual([]);
@@ -83,6 +88,95 @@ test('streams three deterministic cycles without retained ownership growth', asy
   );
 });
 
+test('traverses every Junction seam with protected geometry resident', async ({
+  page,
+}, testInfo) => {
+  const faults = observeBrowserFaults(page);
+  await mkdir(outputDirectory, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(base);
+  await waitForReady(page);
+
+  const seams = [
+    ['core', 0, 0],
+    ['northwest-west-rim', -25, 17],
+    ['southwest-west-rim', -25, -17],
+    ['northeast-east-quay', 25, 14],
+    ['east-quay-east-rim', 40, 14],
+    ['southeast-east-rim', 35, -14],
+    ['northwest-north-rim', -18, 25],
+    ['northeast-north-contact', 22, 25],
+    ['southwest-south-rim', -18, -25],
+    ['southeast-south-rim', 22, -25],
+  ] as const;
+
+  for (const [name, x, z] of seams) {
+    await command(page, 'player.teleport-position', `${x},0.22,${z},0`);
+    await expect
+      .poll(async () => {
+        const sectors = (await snapshot(page)).world.sectors;
+        const protectedIds = Object.values(sectors.policy.decisions)
+          .filter((decision) => decision.protected)
+          .map(({ sectorId }) => sectorId);
+        return {
+          pending: sectors.pending,
+          missing: protectedIds.filter(
+            (sectorId) => !sectors.active.includes(sectorId),
+          ),
+        };
+      })
+      .toEqual({ pending: [], missing: [] });
+    const current = await snapshot(page);
+    expect(current.player.grounded).toBe(true);
+    expect(current.world.initializedColliderCount).toBe(
+      current.world.activeDeclaredColliderCount,
+    );
+    await waitForFrames(page, 2);
+    if (['core', 'east-quay-east-rim', 'northwest-north-rim'].includes(name)) {
+      await page.screenshot({
+        path: join(outputDirectory, `junction-seam-${name}.png`),
+      });
+      await attachScreenshot(page, testInfo, `junction-seam-${name}`);
+    }
+  }
+
+  const final = await snapshot(page);
+  expect(final.runtimeErrors.count, final.runtimeErrors.last).toBe(0);
+  expect(faults.consoleErrors).toEqual([]);
+  expect(faults.failedRequests).toEqual([]);
+  expect(faults.externalRequests).toEqual([]);
+});
+
+test('makes the active mission destination resident before arrival', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`${base}&cinematics=0`);
+  await waitForReady(page);
+  await command(page, 'mission.start', 'ash-001-walk-the-block');
+  await command(page, 'mission.complete-objective');
+
+  await expect
+    .poll(async () => {
+      const state = await snapshot(page);
+      const target = state.missions.runtime.highlights[0]?.target.referenceId;
+      const decision =
+        state.world.sectors.policy.decisions['sector.north-rim-east'];
+      return {
+        target,
+        active: state.world.sectors.active.includes('sector.north-rim-east'),
+        protected: decision?.protected,
+        reason: decision?.reason,
+      };
+    })
+    .toMatchObject({
+      target: 'location.ash-001.contact-yard',
+      active: true,
+      protected: true,
+      reason: 'mission-near',
+    });
+});
+
 test('records full-level before and streamed 20s/60s performance', async ({
   page,
 }) => {
@@ -107,17 +201,19 @@ test('records full-level before and streamed 20s/60s performance', async ({
   expect(after.averageFps).toBeGreaterThanOrEqual(50);
   expect(after.onePercentLowFps).toBeGreaterThanOrEqual(45);
   expect(after.frameTimeP95Ms).toBeLessThanOrEqual(20);
-  expect(after.renderer.drawCalls).toBeLessThanOrEqual(
-    before.renderer.drawCalls,
-  );
-  expect(after.renderer.triangles).toBeLessThanOrEqual(
-    before.renderer.triangles,
+  // Renderer totals include sector-aware pedestrians, which intentionally do
+  // not spawn for the synthetic `legacy-full-level` sector ID. Compare the
+  // authoritative sector-owned scene/resources rather than unlike populations.
+  expect(after.sectors.sceneObjects).toBeLessThan(before.sectors.sceneObjects);
+  expect(after.sectors.ownedResources).toBeLessThan(
+    before.sectors.ownedResources,
   );
   if (after.browserMemory.peakUsedJsHeapSize !== undefined) {
     expect(after.browserMemory.peakUsedJsHeapSize).toBeLessThan(
       900 * 1024 * 1024,
     );
   }
+  expect(after.sectors.policy.memory.estimatedWorkingSetMb).toBeLessThan(900);
   expect(faults.consoleErrors).toEqual([]);
   expect(faults.failedRequests).toEqual([]);
   expect(faults.externalRequests).toEqual([]);
@@ -180,6 +276,39 @@ function ownership(snapshot: BrowserTestSnapshot) {
     assetSourceReferences: snapshot.performance.assets.sourceReferences,
     assetInstanceReferences: snapshot.performance.assets.instanceReferences,
   };
+}
+
+function rendererOwnership(snapshot: BrowserTestSnapshot) {
+  return {
+    geometries: snapshot.performance.renderer.geometries,
+    textures: snapshot.performance.renderer.textures,
+  };
+}
+
+async function command(
+  page: Page,
+  id: string,
+  argument?: string,
+): Promise<void> {
+  await page.evaluate(
+    async ({ commandId, commandArgument }) =>
+      window.__VANTA_TEST__!.executeDebugCommand(commandId, commandArgument),
+    { commandId: id, commandArgument: argument },
+  );
+}
+
+async function waitForFrames(page: Page, count: number): Promise<void> {
+  const frame = (await snapshot(page)).renderer.renderedFrames;
+  await expect
+    .poll(async () => (await snapshot(page)).renderer.renderedFrames)
+    .toBeGreaterThanOrEqual(frame + count);
+}
+
+async function attachScreenshot(page: Page, testInfo: TestInfo, name: string) {
+  await testInfo.attach(name, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  });
 }
 
 function observeBrowserFaults(page: Page) {

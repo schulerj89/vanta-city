@@ -10,7 +10,7 @@ that govern the implementation. Canon remains in
 
 The boot flow answers three questions in order: what is this place, has the
 player deliberately begun, and why is Rook entering Ashfall Junction? An
-accessible original Ashfall title screen yields only after Start/Continue is
+accessible original Vanta City title screen yields only after Start/Continue is
 activated. A truthful readiness presentation reports local asset, Northbar
 level, character, and cinematic preflight status. The stable opening
 `cinematic.ash-001.northbar-arrival` then stages the canonical 5:42 a.m.
@@ -110,7 +110,7 @@ Feature IDs: `presentation.ashfall-title`, `control.music-muted`, and
   cream paper, a narrow local/system display stack, offset rules, and subtle
   rain/scan texture are composed in CSS. There is no copied logo silhouette,
   postcard montage, pink/palm palette, franchise font, or external artwork.
-- Hierarchy: ASHFALL wordmark and “The Cinder Ledger”; concise date/location
+- Hierarchy: VANTA CITY wordmark, Ashfall City setting, and “The Cinder Ledger”; concise date/location
   line; primary Start/Continue; secondary Music mute; small keyboard hint.
 - Start state: “Start” on first run and “Continue” when a local prior-start fact
   exists. The button is native, initially focused, activates by mouse, Enter,

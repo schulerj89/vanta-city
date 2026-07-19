@@ -10,6 +10,11 @@ import type { SectorStreamingSnapshot } from '../world/LevelSystem';
 import type { WorldEvents } from '../world/WorldEvents';
 import type { WorldPoseSource } from '../world/Spatial';
 import {
+  PedestrianBoundaryLifecyclePolicy,
+  type PedestrianBoundaryEdge,
+  type PedestrianLifecycleReason,
+} from './PedestrianBoundaryLifecyclePolicy';
+import {
   PedestrianEntity,
   type PedestrianCharacterLoader,
   type PedestrianSnapshot,
@@ -26,13 +31,32 @@ export interface PedestrianPopulationSnapshot {
   readonly residentCap: number;
   readonly residentCount: number;
   readonly activeCount: number;
+  readonly visibleCount: number;
   readonly loadingCount: number;
   readonly mixerOwnerCount: number;
   readonly routeCount: number;
   readonly sectorCounts: Readonly<Record<string, number>>;
   readonly spawnCount: number;
   readonly disposeCount: number;
+  readonly boundaryExitCount: number;
+  readonly retiredCount: number;
+  readonly repopulationCount: number;
+  readonly loadCancellationCount: number;
+  readonly lifecycleEvents: readonly PedestrianLifecycleRecord[];
   readonly pedestrians: readonly PedestrianSnapshot[];
+}
+
+export interface PedestrianLifecycleRecord {
+  readonly sequence: number;
+  readonly id: string;
+  readonly routeId: string;
+  readonly sectorId: string;
+  readonly state: 'despawned' | 'disposed';
+  readonly reason: PedestrianLifecycleReason;
+  readonly boundaryEdge: PedestrianBoundaryEdge | null;
+  readonly position: readonly [number, number, number];
+  readonly distanceTravelled: number;
+  readonly mixerOwnerCountBeforeDispose: number;
 }
 
 interface GameStateSource {
@@ -44,10 +68,18 @@ export class PedestrianSystem implements GameSystem {
   private readonly characters: readonly CharacterDefinition[];
   private readonly entities = new Map<string, PedestrianEntity>();
   private readonly loading = new Map<string, number>();
+  private readonly constructing = new Map<string, PedestrianEntity[]>();
+  private readonly retired = new Map<string, PedestrianLifecycleRecord>();
+  private readonly repopulateOnNextLoad = new Set<string>();
+  private readonly lifecycleEvents: PedestrianLifecycleRecord[] = [];
   private readonly unsubscribeWorld: (() => void)[] = [];
   private generation = 0;
   private spawnCount = 0;
   private disposeCount = 0;
+  private boundaryExitCount = 0;
+  private repopulationCount = 0;
+  private loadCancellationCount = 0;
+  private lifecycleSequence = 0;
 
   public constructor(
     characterDefinitions: readonly CharacterDefinition[],
@@ -78,9 +110,9 @@ export class PedestrianSystem implements GameSystem {
         );
       }),
       this.events.on('sector:unloaded', ({ sectorId }) =>
-        this.clearSector(sectorId),
+        this.clearSector(sectorId, 'sector-unloaded'),
       ),
-      this.events.on('level:unloaded', () => this.clear()),
+      this.events.on('level:unloaded', () => this.clear('level-unloaded')),
       this.events.on('level:loaded', ({ level }) => {
         if (!level.pedestrians) return;
         for (const sectorId of this.levels.getStreamingSnapshot().active) {
@@ -121,7 +153,10 @@ export class PedestrianSystem implements GameSystem {
             : distance <= definition.activationDistance,
         );
       }
-      entity.update(time.delta, neighbors);
+      const update = entity.update(time.delta, neighbors);
+      if (update.shouldDespawn && update.reason) {
+        this.retireAtBoundary(entity, update.reason, update.edge);
+      }
     }
   }
 
@@ -141,6 +176,7 @@ export class PedestrianSystem implements GameSystem {
       residentCount: pedestrians.length,
       activeCount: pedestrians.filter(({ state }) => state !== 'inactive')
         .length,
+      visibleCount: pedestrians.filter(({ visible }) => visible).length,
       loadingCount: this.loading.size,
       mixerOwnerCount: pedestrians.reduce(
         (sum, pedestrian) => sum + pedestrian.mixerOwnerCount,
@@ -150,13 +186,18 @@ export class PedestrianSystem implements GameSystem {
       sectorCounts,
       spawnCount: this.spawnCount,
       disposeCount: this.disposeCount,
+      boundaryExitCount: this.boundaryExitCount,
+      retiredCount: this.retired.size,
+      repopulationCount: this.repopulationCount,
+      loadCancellationCount: this.loadCancellationCount,
+      lifecycleEvents: [...this.lifecycleEvents],
       pedestrians,
     };
   }
 
   public dispose(): void {
     for (const unsubscribe of this.unsubscribeWorld.splice(0)) unsubscribe();
-    this.clear();
+    this.clear('system-disposed');
   }
 
   private async spawnSector(sectorId: string): Promise<void> {
@@ -176,6 +217,9 @@ export class PedestrianSystem implements GameSystem {
     const version = ++this.generation;
     this.loading.set(sectorId, version);
     const constructing: PedestrianEntity[] = [];
+    const boundaryLifecycle = new PedestrianBoundaryLifecyclePolicy(
+      level.mapPresentation?.bounds,
+    );
     try {
       for (const route of routes) {
         const routeIndex = population.routes.indexOf(route);
@@ -186,66 +230,170 @@ export class PedestrianSystem implements GameSystem {
               .reduce((sum, candidate) => sum + candidate.population, 0) +
             index;
           if (ordinal >= population.residentCap) continue;
+          const id = `pedestrian.${route.id}.${index + 1}`;
+          if (this.retired.has(id)) continue;
           const random = seededUnit(population.seed, ordinal);
           const character =
             this.characters[
               (population.seed + ordinal) % this.characters.length
             ]!;
           const entity = new PedestrianEntity(
-            `pedestrian.${route.id}.${index + 1}`,
+            id,
             route,
             character,
             this.loader,
             this.collision,
             route.speed[0] + (route.speed[1] - route.speed[0]) * random,
-            Math.floor((index * route.nodes.length) / route.population),
+            route.loop
+              ? Math.floor((index * route.nodes.length) / route.population)
+              : 0,
             seededUnit(population.seed ^ 0x9e3779b9, ordinal),
+            boundaryLifecycle,
           );
           constructing.push(entity);
         }
       }
-      await Promise.all(constructing.map((entity) => entity.init()));
+      this.constructing.set(sectorId, constructing);
+      const results = await Promise.allSettled(
+        constructing.map((entity) => entity.init()),
+      );
+      const failed = results.find(
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected',
+      );
       if (
         this.loading.get(sectorId) !== version ||
-        this.levels.activeLevel?.id !== level.id
+        this.levels.activeLevel?.id !== level.id ||
+        this.constructing.get(sectorId) !== constructing
       ) {
-        for (const entity of constructing) entity.dispose();
         return;
       }
+      if (failed) throw failed.reason;
       for (const entity of constructing) {
         this.entities.set(entity.id, entity);
         this.scene.add(entity.object3d);
         this.spawnCount += 1;
+        if (this.repopulateOnNextLoad.delete(entity.id)) {
+          this.repopulationCount += 1;
+        }
       }
     } catch (error) {
-      for (const entity of constructing) entity.dispose();
+      if (this.constructing.get(sectorId) === constructing) {
+        this.disposeConstructing(constructing, 'load-failed');
+      }
       throw error;
     } finally {
       if (this.loading.get(sectorId) === version) this.loading.delete(sectorId);
+      if (this.constructing.get(sectorId) === constructing) {
+        this.constructing.delete(sectorId);
+      }
     }
   }
 
-  private clearSector(sectorId: string): void {
+  private clearSector(
+    sectorId: string,
+    reason: Extract<PedestrianLifecycleReason, 'sector-unloaded'>,
+  ): void {
     this.loading.delete(sectorId);
     this.generation += 1;
+    const constructing = this.constructing.get(sectorId);
+    if (constructing) {
+      this.constructing.delete(sectorId);
+      this.disposeConstructing(constructing, 'load-cancelled');
+    }
+    for (const [id, record] of this.retired) {
+      if (record.sectorId !== sectorId) continue;
+      this.retired.delete(id);
+      this.repopulateOnNextLoad.add(id);
+    }
     for (const [id, entity] of this.entities) {
       if (entity.route.sectorId !== sectorId) continue;
-      this.scene.remove(entity.object3d);
-      entity.dispose();
-      this.entities.delete(id);
-      this.disposeCount += 1;
+      this.disposeResident(id, entity, reason);
     }
   }
 
-  private clear(): void {
+  private clear(
+    reason: Extract<
+      PedestrianLifecycleReason,
+      'level-unloaded' | 'system-disposed'
+    >,
+  ): void {
     this.generation += 1;
     this.loading.clear();
-    for (const entity of this.entities.values()) {
-      this.scene.remove(entity.object3d);
+    for (const constructing of this.constructing.values()) {
+      this.disposeConstructing(constructing, 'load-cancelled');
+    }
+    this.constructing.clear();
+    for (const [id, entity] of this.entities) {
+      this.disposeResident(id, entity, reason);
+    }
+    this.retired.clear();
+    this.repopulateOnNextLoad.clear();
+  }
+
+  private retireAtBoundary(
+    entity: PedestrianEntity,
+    reason: Extract<PedestrianLifecycleReason, 'authored-boundary-exit'>,
+    edge: PedestrianBoundaryEdge | null,
+  ): void {
+    const record = this.recordLifecycle(entity, 'despawned', reason, edge);
+    this.scene.remove(entity.object3d);
+    entity.dispose();
+    this.entities.delete(entity.id);
+    this.retired.set(entity.id, record);
+    this.disposeCount += 1;
+    this.boundaryExitCount += 1;
+  }
+
+  private disposeResident(
+    id: string,
+    entity: PedestrianEntity,
+    reason: PedestrianLifecycleReason,
+  ): void {
+    this.recordLifecycle(entity, 'disposed', reason, null);
+    this.scene.remove(entity.object3d);
+    entity.dispose();
+    this.entities.delete(id);
+    this.disposeCount += 1;
+  }
+
+  private disposeConstructing(
+    entities: readonly PedestrianEntity[],
+    reason: Extract<
+      PedestrianLifecycleReason,
+      'load-cancelled' | 'load-failed'
+    >,
+  ): void {
+    for (const entity of entities) {
+      this.recordLifecycle(entity, 'disposed', reason, null);
       entity.dispose();
       this.disposeCount += 1;
+      if (reason === 'load-cancelled') this.loadCancellationCount += 1;
     }
-    this.entities.clear();
+  }
+
+  private recordLifecycle(
+    entity: PedestrianEntity,
+    state: PedestrianLifecycleRecord['state'],
+    reason: PedestrianLifecycleReason,
+    boundaryEdge: PedestrianBoundaryEdge | null,
+  ): PedestrianLifecycleRecord {
+    const snapshot = entity.getSnapshot();
+    const record: PedestrianLifecycleRecord = {
+      sequence: ++this.lifecycleSequence,
+      id: entity.id,
+      routeId: entity.route.id,
+      sectorId: entity.route.sectorId,
+      state,
+      reason,
+      boundaryEdge,
+      position: snapshot.position,
+      distanceTravelled: snapshot.distanceTravelled,
+      mixerOwnerCountBeforeDispose: snapshot.mixerOwnerCount,
+    };
+    this.lifecycleEvents.push(record);
+    if (this.lifecycleEvents.length > 64) this.lifecycleEvents.shift();
+    return record;
   }
 }
 

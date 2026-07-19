@@ -64,6 +64,9 @@ import { sparringTargetConfig } from './debug/sparringTarget';
 import { LevelRegistry } from './world/LevelRegistry';
 import { findSpawn } from './world/LevelQueries';
 import { LevelSystem } from './world/LevelSystem';
+import type { LevelDefinition } from './world/LevelDefinition';
+import type { MissionHighlightSnapshot } from './missions/MissionHighlight';
+import type { WorldPosition } from './world/Spatial';
 import { TimeOfDayLightingSystem } from './world/TimeOfDayLightingSystem';
 import type { WorldEvents } from './world/WorldEvents';
 import { testDistrict } from './world/levels/testDistrict';
@@ -105,14 +108,21 @@ import { createCinematicRuntimeAdapters } from './cinematics/CinematicRuntimeInt
 import { TitleScreen } from './ui/TitleScreen';
 
 let activeLoadingScreen: LoadingScreen | undefined;
+let activePresentationMount: HTMLElement | undefined;
 
 async function bootstrap(): Promise<void> {
   const mount = document.querySelector<HTMLElement>('#game');
   if (!mount) throw new Error('Game mount element was not found');
 
+  const uiLayout = new ScreenSpaceLayoutSystem(mount);
+  activePresentationMount = uiLayout.zone('presentation');
   const pageParameters = new URLSearchParams(window.location.search);
   const audioPreferences = new AudioPreferenceStore(window.localStorage);
-  const title = new TitleScreen(mount, audioPreferences, window.localStorage);
+  const title = new TitleScreen(
+    activePresentationMount,
+    audioPreferences,
+    window.localStorage,
+  );
   if (
     (pageParameters.get('e2e') !== '1' ||
       pageParameters.get('title') === '1') &&
@@ -125,7 +135,6 @@ async function bootstrap(): Promise<void> {
 
   const input = new InputSystem(defaultBindings);
   const render = new RenderSystem(mount);
-  const uiLayout = new ScreenSpaceLayoutSystem(mount);
   let assetFaults:
     import('./debug/DevelopmentAssetFaults').DevelopmentAssetFaults | undefined;
   if (import.meta.env.DEV) {
@@ -239,6 +248,22 @@ async function bootstrap(): Promise<void> {
     false,
     developmentParameters?.get('streaming') !== '0',
   );
+  levelSystem.setStreamingMemorySource(() => {
+    const renderer = render.getPerformanceSnapshot();
+    const assetPerformance = assets.getPerformanceSnapshot();
+    return {
+      renderer: {
+        geometries: renderer.geometries,
+        textures: renderer.textures,
+      },
+      assets: {
+        sourceReferences: assetPerformance.sourceReferences,
+        instanceReferences: assetPerformance.instanceReferences,
+        inFlight: assetPerformance.inFlight,
+      },
+      usedJsHeapBytes: readUsedJsHeapBytes(),
+    };
+  });
   const requestedHour = Number(pageParameters.get('time'));
   const timeOfDay = new TimeOfDayLightingSystem(
     render.scene,
@@ -603,6 +628,14 @@ async function bootstrap(): Promise<void> {
       },
     },
   );
+  levelSystem.setStreamingInterestSource(() => {
+    const level = levelSystem.activeLevel;
+    if (!level) return [];
+    return missions.getHighlights().flatMap((highlight) => {
+      const position = resolveMissionStreamingPosition(level, highlight);
+      return position ? [position] : [];
+    });
+  });
   const fullWorldMap = new FullWorldMapSystem(
     uiLayout.zone('modal'),
     runtime,
@@ -2332,6 +2365,32 @@ function formatOptionalNumber(value: number | undefined): string {
   return value === undefined ? 'loading' : value.toFixed(3);
 }
 
+function readUsedJsHeapBytes(): number | undefined {
+  return (
+    performance as Performance & {
+      readonly memory?: { readonly usedJSHeapSize: number };
+    }
+  ).memory?.usedJSHeapSize;
+}
+
+function resolveMissionStreamingPosition(
+  level: LevelDefinition,
+  highlight: MissionHighlightSnapshot,
+): WorldPosition | undefined {
+  const { kind, referenceId } = highlight.target;
+  const entry =
+    kind === 'spawn' || kind === 'entity'
+      ? level.spawns.find(({ id }) => id === referenceId)
+      : kind === 'location' || kind === 'interaction'
+        ? level.locations.find(({ id }) => id === referenceId)
+        : kind === 'trigger'
+          ? level.triggers.find(({ id }) => id === referenceId)
+          : level.landmarks.find(({ id }) => id === referenceId);
+  return entry
+    ? { x: entry.position[0], y: entry.position[1], z: entry.position[2] }
+    : undefined;
+}
+
 function parsePositiveInteger(
   value: string | undefined,
   fallback: number,
@@ -2376,6 +2435,16 @@ function installHotDisposal(
 }
 
 void bootstrap().catch((error: unknown) => {
-  activeLoadingScreen?.fail(error);
+  if (activeLoadingScreen && !activeLoadingScreen.getSnapshot().disposed) {
+    activeLoadingScreen.fail(error);
+  } else {
+    const mount =
+      activePresentationMount ??
+      document.querySelector<HTMLElement>('#game') ??
+      undefined;
+    if (mount) {
+      activeLoadingScreen = LoadingScreen.createFatal(mount, error);
+    }
+  }
   console.error('Failed to initialize Vanta City', error);
 });

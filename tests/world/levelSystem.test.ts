@@ -1,5 +1,8 @@
 import { Group, Scene, Texture } from 'three';
-import type { GameAssetLoader } from '../../src/assets/AssetLoader';
+import type {
+  GameAssetLoader,
+  ModelInstance,
+} from '../../src/assets/AssetLoader';
 import { EventBus } from '../../src/core/events';
 import { StaticCollisionWorld } from '../../src/physics/CollisionWorld';
 import { WorldCollisionSystem } from '../../src/physics/WorldCollisionSystem';
@@ -10,6 +13,7 @@ import {
   LevelSystem,
   StaleLevelPreparationError,
 } from '../../src/world/LevelSystem';
+import { AdaptiveSectorStreamingPolicy } from '../../src/world/AdaptiveSectorStreamingPolicy';
 import type { WorldEvents } from '../../src/world/WorldEvents';
 import { eastQuayCurvedRoad } from '../../src/world/levels/intersectionLayout';
 import { testDistrict } from '../../src/world/levels/testDistrict';
@@ -87,6 +91,48 @@ function travelLevel(
             entryIds: [`visual.${id}`, `collision.${id}`],
           },
         ],
+      },
+    },
+  };
+}
+
+function concurrencyLevel(): LevelModule {
+  const ids = ['zero', 'one', 'two', 'three'] as const;
+  return {
+    assets: Object.fromEntries(
+      ids.map((id) => [`model.${id}`, { type: 'model', url: `/${id}.glb` }]),
+    ),
+    definition: {
+      id: 'concurrency-level',
+      name: 'Concurrency level',
+      environment: ids.map((id, index) => ({
+        id: `visual.${id}`,
+        kind: 'gltf' as const,
+        assetId: `model.${id}`,
+        position: [index * 20, 0, 0] as const,
+      })),
+      staticCollision: [],
+      spawns: [
+        {
+          id: 'spawn.player-default',
+          kind: 'player',
+          default: true,
+          position: [0, 0, 0],
+        },
+      ],
+      locations: [],
+      zones: [],
+      landmarks: [],
+      triggers: [],
+      cinematicAnchors: [],
+      streaming: {
+        sectors: ids.map((id, index) => ({
+          id: `sector.${id}`,
+          center: [index * 20, 0] as const,
+          loadDistance: 0.5,
+          unloadDistance: 1,
+          entryIds: [`visual.${id}`],
+        })),
       },
     },
   };
@@ -227,11 +273,184 @@ describe('LevelSystem', () => {
       failureAttempts,
     );
     expect(system.getStreamingSnapshot().active).toEqual(failed.active);
-    await system.refreshStreaming({ x: 0, y: 0, z: 21 });
+    await system.refreshStreaming({ x: 0, y: 0, z: 60 });
     expect(system.getStreamingSnapshot()).toMatchObject({
       states: { 'sector.southeast': 'inactive' },
       lastError: undefined,
     });
+    system.dispose();
+  });
+
+  it('retries a transient desired-sector failure on a bounded evaluation cadence', async () => {
+    let trashAttempts = 0;
+    const assets: GameAssetLoader = {
+      ...unusedAssets,
+      instantiateModel: async (assetId) => {
+        if (assetId.endsWith('trash-bags') && trashAttempts++ === 0) {
+          throw new Error('transient sector failure');
+        }
+        return {
+          assetId,
+          scene: new Group(),
+          animations: [],
+          dispose: vi.fn(),
+        };
+      },
+    };
+    const system = new LevelSystem(
+      new Scene(),
+      assets,
+      new LevelRegistry([testDistrict]),
+      'test-district',
+      new EventBus<WorldEvents>(),
+      undefined,
+      false,
+      true,
+      new AdaptiveSectorStreamingPolicy({ retryAfterEvaluations: 1 }),
+    );
+    await system.init();
+
+    await system.refreshStreaming({ x: 0, y: 0, z: -21 });
+    expect(system.getStreamingSnapshot()).toMatchObject({
+      states: { 'sector.southeast': 'failed' },
+      attempts: { 'sector.southeast': 1 },
+    });
+    await system.refreshStreaming({ x: 0, y: 0, z: -21 });
+    expect(system.getStreamingSnapshot()).toMatchObject({
+      states: { 'sector.southeast': 'active' },
+      attempts: {},
+      lastError: undefined,
+    });
+    expect(trashAttempts).toBe(2);
+    system.dispose();
+  });
+
+  it('preserves an exhausted load error while evicting unrelated stale sectors', async () => {
+    const assets: GameAssetLoader = {
+      ...unusedAssets,
+      instantiateModel: async (assetId) => {
+        if (assetId.endsWith('trash-bags'))
+          throw new Error('exhausted sector failure');
+        return {
+          assetId,
+          scene: new Group(),
+          animations: [],
+          dispose: vi.fn(),
+        };
+      },
+    };
+    const system = new LevelSystem(
+      new Scene(),
+      assets,
+      new LevelRegistry([testDistrict]),
+      'test-district',
+      new EventBus<WorldEvents>(),
+      undefined,
+      false,
+      true,
+      new AdaptiveSectorStreamingPolicy({ maxLoadAttempts: 1 }),
+    );
+    await system.init();
+    expect(system.getStreamingSnapshot().active).toContain('sector.northwest');
+    system.setStreamingMemorySource(() => ({
+      renderer: { geometries: 0, textures: 0 },
+      assets: {
+        sourceReferences: 950,
+        instanceReferences: 0,
+        inFlight: 0,
+      },
+    }));
+
+    await system.refreshStreaming({ x: 0, y: 0, z: -21 });
+
+    expect(system.getStreamingSnapshot()).toMatchObject({
+      states: { 'sector.southeast': 'failed' },
+      attempts: { 'sector.southeast': 1 },
+      lastError: 'exhausted sector failure',
+    });
+    expect(system.getStreamingSnapshot().active).not.toContain(
+      'sector.northwest',
+    );
+    system.dispose();
+  });
+
+  it('loads sectors with bounded concurrency and deterministic batches', async () => {
+    const level = concurrencyLevel();
+    const pending = new Map<
+      string,
+      ReturnType<typeof deferred<ModelInstance>>
+    >();
+    let activeLoads = 0;
+    let peakLoads = 0;
+    const assets: GameAssetLoader = {
+      ...unusedAssets,
+      instantiateModel: async (assetId) => {
+        if (assetId === 'model.zero') {
+          return {
+            assetId,
+            scene: new Group(),
+            animations: [],
+            dispose: vi.fn(),
+          };
+        }
+        activeLoads += 1;
+        peakLoads = Math.max(peakLoads, activeLoads);
+        const load = deferred<ModelInstance>();
+        pending.set(assetId, load);
+        const instance = await load.promise;
+        activeLoads -= 1;
+        return instance;
+      },
+    };
+    const system = new LevelSystem(
+      new Scene(),
+      assets,
+      new LevelRegistry([level]),
+      level.definition.id,
+      new EventBus<WorldEvents>(),
+      undefined,
+      false,
+      true,
+      new AdaptiveSectorStreamingPolicy({
+        hardNearRadius: 1,
+        criticalAdjacencyDistance: 0,
+        lowPressurePrefetchRadius: 100,
+        fallbackBaseMb: 0,
+        maxConcurrentLoads: 2,
+      }),
+    );
+    await system.init();
+
+    const refresh = system.refreshStreaming({ x: 0, y: 0, z: 0 });
+    await Promise.resolve();
+    expect([...pending.keys()].sort()).toEqual(['model.one', 'model.two']);
+    for (const assetId of ['model.one', 'model.two']) {
+      pending.get(assetId)!.resolve({
+        assetId,
+        scene: new Group(),
+        animations: [],
+        dispose: vi.fn(),
+      });
+    }
+    for (let turn = 0; turn < 10 && !pending.has('model.three'); turn += 1) {
+      await Promise.resolve();
+    }
+    expect(pending.has('model.three')).toBe(true);
+    pending.get('model.three')!.resolve({
+      assetId: 'model.three',
+      scene: new Group(),
+      animations: [],
+      dispose: vi.fn(),
+    });
+    await refresh;
+
+    expect(peakLoads).toBe(2);
+    expect(system.getStreamingSnapshot().active).toEqual([
+      'sector.one',
+      'sector.three',
+      'sector.two',
+      'sector.zero',
+    ]);
     system.dispose();
   });
 

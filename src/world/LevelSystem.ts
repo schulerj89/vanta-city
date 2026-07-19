@@ -45,6 +45,11 @@ import type { WorldPosition } from './Spatial';
 import type { ResolvedLevelLocation } from './LocationResolver';
 import { AshfallBuildingRenderer } from './buildings/AshfallBuildingKit';
 import {
+  AdaptiveSectorStreamingPolicy,
+  type AdaptiveSectorStreamingSnapshot,
+  type StreamingMemorySample,
+} from './AdaptiveSectorStreamingPolicy';
+import {
   offsetSplineSamples,
   sampleSplineRoad,
 } from './levels/SplineRoadGeometry';
@@ -55,6 +60,13 @@ interface LoadedLevel {
   readonly locations: DefinitionLevelLocations;
   readonly sectors: Map<string, LoadedSector>;
   readonly states: Map<string, SectorLifecycleState>;
+  readonly failures: Map<string, SectorFailureState>;
+  policySnapshot: AdaptiveSectorStreamingSnapshot;
+}
+
+interface SectorFailureState {
+  readonly attempts: number;
+  readonly evaluation: number;
 }
 
 interface LoadedSector {
@@ -85,6 +97,8 @@ export interface SectorStreamingSnapshot {
   readonly pinnedSectors?: readonly string[];
   readonly visualPathPinCount?: number;
   readonly lastError: string | undefined;
+  readonly policy: AdaptiveSectorStreamingSnapshot;
+  readonly attempts: Readonly<Record<string, number>>;
 }
 
 export type LevelPreparationState =
@@ -187,6 +201,11 @@ export class LevelSystem implements GameSystem, LevelLocations {
     string,
     Map<string, Vector3Tuple>
   >();
+  private previousStreamingPosition: WorldPosition | undefined;
+  private streamingEvaluation = 0;
+  private streamingInterestSource: (() => readonly WorldPosition[]) | undefined;
+  private streamingMemorySource: (() => StreamingMemorySample) | undefined;
+  private lastPolicySnapshot: AdaptiveSectorStreamingSnapshot;
 
   public constructor(
     private readonly scene: Scene,
@@ -197,11 +216,16 @@ export class LevelSystem implements GameSystem, LevelLocations {
     private readonly input?: InputReader,
     initiallyDebugVisible = false,
     private readonly streamingEnabled = true,
+    public readonly streamingPolicy = new AdaptiveSectorStreamingPolicy(),
   ) {
     this.debugVisible = initiallyDebugVisible;
     for (const group of Object.keys(debugGroupNames) as LevelDebugGroup[]) {
       this.debugGroups.set(group, initiallyDebugVisible);
     }
+    this.lastPolicySnapshot = this.streamingPolicy.evaluate({
+      sectors: [],
+      playerPosition: { x: 0, y: 0, z: 0 },
+    });
   }
 
   public async init(): Promise<void> {
@@ -223,6 +247,18 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   public setStreamingPositionSource(source?: () => WorldPosition): void {
     this.positionSource = source;
+  }
+
+  /** Adds high-value world positions (for example the current mission target). */
+  public setStreamingInterestSource(
+    source?: () => readonly WorldPosition[],
+  ): void {
+    this.streamingInterestSource = source;
+  }
+
+  /** Uses public renderer/asset counters plus optional heap telemetry. */
+  public setStreamingMemorySource(source?: () => StreamingMemorySample): void {
+    this.streamingMemorySource = source;
   }
 
   public async refreshStreaming(position?: WorldPosition): Promise<void> {
@@ -266,7 +302,17 @@ export class LevelSystem implements GameSystem, LevelLocations {
       const spawn = locations.getSpawn(spawnId);
       next = this.createLevel(definition);
       const focus = toWorldPosition(spawn.position);
-      const desired = desiredSectors(definition, focus, this.streamingEnabled);
+      const definitions = sectorsFor(definition, this.streamingEnabled);
+      const initialSelection = this.streamingPolicy.evaluate({
+        sectors: definitions,
+        playerPosition: focus,
+        activeSectorIds: new Set(),
+        softPrefetchEnabled: false,
+        memory: this.streamingMemorySource?.(),
+      });
+      next.policySnapshot = initialSelection;
+      const initialIds = new Set(initialSelection.desiredSectorIds);
+      const desired = definitions.filter(({ id }) => initialIds.has(id));
       this.preparationSpawnId = spawn.id;
       this.preparationSectorIds = desired.map(({ id }) => id);
       for (const sector of desired) {
@@ -322,6 +368,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
     this.scene.remove(current.root);
     current.root.clear();
     this.loaded = undefined;
+    this.previousStreamingPosition = undefined;
     this.events.emit('level:unloaded', { levelId: current.definition.id });
   }
 
@@ -397,6 +444,14 @@ export class LevelSystem implements GameSystem, LevelLocations {
         0,
       ),
       lastError: this.lastError,
+      policy: this.lastPolicySnapshot,
+      attempts: loaded
+        ? Object.fromEntries(
+            [...loaded.failures]
+              .map(([id, failure]) => [id, failure.attempts] as const)
+              .sort(([left], [right]) => left.localeCompare(right)),
+          )
+        : {},
     };
   }
 
@@ -701,6 +756,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
     this.activeLevelGeneration += 1;
     this.visualPathPins.clear();
     this.loaded = level;
+    this.lastPolicySnapshot = level.policySnapshot;
     this.scene.add(level.root);
     this.applyDebugVisibility();
     for (const sectorId of activeSectorIds(level)) {
@@ -748,6 +804,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
       states: new Map<string, SectorLifecycleState>(
         definitions.map((sector) => [sector.id, 'inactive']),
       ),
+      failures: new Map(),
+      policySnapshot: this.streamingPolicy.evaluate({
+        sectors: definitions,
+        playerPosition: { x: 0, y: 0, z: 0 },
+        softPrefetchEnabled: false,
+      }),
     };
   }
 
@@ -900,13 +962,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
   ): Promise<void> {
     const loaded = this.loaded;
     if (!loaded) return;
+    this.streamingEvaluation += 1;
     const desired = [
-      ...desiredSectors(
-        loaded.definition,
-        position,
-        this.streamingEnabled,
-        loaded.sectors,
-      ),
+      ...this.selectSectors(loaded.definition, position).desired,
     ];
     const desiredIds = new Set(desired.map(({ id }) => id));
     for (const sector of sectorsFor(loaded.definition, this.streamingEnabled)) {
@@ -918,37 +976,71 @@ export class LevelSystem implements GameSystem, LevelLocations {
     for (const [sectorId, state] of loaded.states) {
       if (state === 'failed' && !desiredIds.has(sectorId)) {
         loaded.states.set(sectorId, 'inactive');
+        loaded.failures.delete(sectorId);
       }
     }
     for (const sector of desired) {
-      if (
-        !loaded.sectors.has(sector.id) &&
-        loaded.states.get(sector.id) !== 'failed'
-      )
+      if (loaded.sectors.has(sector.id)) continue;
+      const failure = loaded.failures.get(sector.id);
+      const retryReady =
+        failure !== undefined &&
+        failure.attempts < this.streamingPolicy.config.maxLoadAttempts &&
+        this.streamingEvaluation - failure.evaluation >=
+          this.streamingPolicy.config.retryAfterEvaluations;
+      if (loaded.states.get(sector.id) !== 'failed' || retryReady)
         loaded.states.set(sector.id, 'requested');
     }
+    const toLoad = desired.filter(
+      ({ id }) =>
+        !loaded.sectors.has(id) && loaded.states.get(id) === 'requested',
+    );
     let loadFailed = desired.some(
       ({ id }) => loaded.states.get(id) === 'failed',
     );
-    for (const sector of desired) {
-      if (
-        loaded.sectors.has(sector.id) ||
-        loaded.states.get(sector.id) === 'failed'
-      )
-        continue;
-      loaded.states.set(sector.id, 'loading');
-      try {
-        const built = await this.buildSector(loaded.definition, sector);
+    for (
+      let offset = 0;
+      offset < toLoad.length;
+      offset += this.streamingPolicy.config.maxConcurrentLoads
+    ) {
+      const batch = toLoad.slice(
+        offset,
+        offset + this.streamingPolicy.config.maxConcurrentLoads,
+      );
+      for (const sector of batch) loaded.states.set(sector.id, 'loading');
+      const results = await Promise.allSettled(
+        batch.map(async (sector) => ({
+          sector,
+          built: await this.buildSector(loaded.definition, sector),
+        })),
+      );
+      for (let index = 0; index < results.length; index += 1) {
+        const result = results[index]!;
+        const sector = batch[index]!;
+        if (result.status === 'rejected') {
+          loadFailed = true;
+          const previous = loaded.failures.get(sector.id)?.attempts ?? 0;
+          loaded.failures.set(sector.id, {
+            attempts: previous + 1,
+            evaluation: this.streamingEvaluation,
+          });
+          loaded.states.set(sector.id, 'failed');
+          this.lastError =
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason);
+          if (initial) throw result.reason;
+          continue;
+        }
+        const { built } = result.value;
         if (this.loaded !== loaded) {
           disposeSector(built);
-          return;
+          continue;
         }
+        loaded.failures.delete(sector.id);
         loaded.sectors.set(sector.id, built);
         loaded.root.add(built.root);
-        this.applyDistanceLod(position);
         loaded.states.set(sector.id, 'active');
         this.loadCount += 1;
-        this.applyDebugVisibility();
         this.events.emit('sector:loaded', {
           levelId: loaded.definition.id,
           sectorId: sector.id,
@@ -957,15 +1049,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
             new Set(sector.entryIds),
           ).staticCollision,
         });
-      } catch (error) {
-        loadFailed = true;
-        loaded.states.set(sector.id, 'failed');
-        this.lastError = error instanceof Error ? error.message : String(error);
-        if (initial) throw error;
       }
+      this.applyDistanceLod(position);
+      this.applyDebugVisibility();
+      if (this.loaded !== loaded) return;
     }
-    if (loadFailed) return;
-    this.lastError = undefined;
+    if (!loadFailed) this.lastError = undefined;
     for (const sectorId of [...loaded.sectors.keys()].sort()) {
       if (!desiredIds.has(sectorId)) this.unloadSector(loaded, sectorId);
     }
@@ -996,6 +1085,28 @@ export class LevelSystem implements GameSystem, LevelLocations {
           Math.hypot(position.x - world.x, position.z - world.z) <= 24;
       });
     }
+  }
+
+  private selectSectors(
+    definition: LevelDefinition,
+    position: WorldPosition,
+  ): { readonly desired: readonly WorldSectorDefinition[] } {
+    const sectors = sectorsFor(definition, this.streamingEnabled);
+    const selection = this.streamingPolicy.evaluate({
+      sectors,
+      playerPosition: position,
+      previousPlayerPosition: this.previousStreamingPosition,
+      missionPositions: this.streamingInterestSource?.() ?? [],
+      activeSectorIds: new Set(this.loaded?.sectors.keys() ?? []),
+      memory: this.streamingMemorySource?.(),
+    });
+    this.previousStreamingPosition = { ...position };
+    this.lastPolicySnapshot = selection;
+    if (this.loaded?.definition === definition) {
+      this.loaded.policySnapshot = selection;
+    }
+    const desiredIds = new Set(selection.desiredSectorIds);
+    return { desired: sectors.filter(({ id }) => desiredIds.has(id)) };
   }
 }
 
@@ -1208,23 +1319,6 @@ function sectorsFor(
       },
     ]
   );
-}
-
-function desiredSectors(
-  definition: LevelDefinition,
-  position: WorldPosition,
-  streamingEnabled: boolean,
-  activeSectors?: ReadonlyMap<string, LoadedSector>,
-): readonly WorldSectorDefinition[] {
-  return sectorsFor(definition, streamingEnabled).filter((sector) => {
-    if (sector.alwaysLoaded) return true;
-    const active = activeSectors?.has(sector.id) ?? false;
-    const distance = Math.hypot(
-      position.x - sector.center[0],
-      position.z - sector.center[1],
-    );
-    return distance <= (active ? sector.unloadDistance : sector.loadDistance);
-  });
 }
 
 function activeSectorIds(level: LoadedLevel): readonly string[] {

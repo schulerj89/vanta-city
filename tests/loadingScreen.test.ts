@@ -11,6 +11,10 @@ import { LoadingScreen } from '../src/ui/LoadingScreen';
 class ObservableAssets implements GameAssetLoader {
   private readonly listeners = new Set<AssetStatusListener>();
 
+  public get listenerCount(): number {
+    return this.listeners.size;
+  }
+
   public emit(status: AssetLoadStatus): void {
     for (const listener of this.listeners) listener(status);
   }
@@ -96,12 +100,15 @@ describe('LoadingScreen', () => {
       'player character',
     ]);
     expect(mount.textContent).toContain('2 local asset fallbacks are active');
+    expect(mount.textContent).toContain('Ashfall City is ready');
+    expect(assets.listenerCount).toBe(0);
     mount.querySelector<HTMLButtonElement>('button')?.click();
     expect(screen.getSnapshot().disposed).toBe(true);
   });
 
   it('shows fatal errors and ignores asset events after disposal', () => {
     const mount = document.createElement('main');
+    document.body.append(mount);
     const assets = new ObservableAssets();
     const failed = new LoadingScreen(mount, assets);
     failed.fail(new Error('renderer unavailable'));
@@ -109,10 +116,104 @@ describe('LoadingScreen', () => {
       'renderer unavailable',
     );
     expect(failed.getSnapshot().fatal).toBe(true);
+    expect(assets.listenerCount).toBe(0);
+    expect(mount.querySelector('[data-testid="loading-retry"]')).toBe(
+      document.activeElement,
+    );
 
     failed.dispose();
     assets.emit({ id: 'late', phase: 'loading', progress: 0.5 });
     expect(failed.getSnapshot().fallbackAssetIds).toEqual([]);
     expect(mount.querySelector('.loading-screen')).toBeNull();
+    mount.remove();
+  });
+
+  it('shows bounded elapsed truth without time-driving completion', () => {
+    vi.useFakeTimers();
+    const mount = document.createElement('main');
+    const assets = new ObservableAssets();
+    let now = 0;
+    const screen = new LoadingScreen(mount, assets, () => now);
+    const status = mount.querySelector<HTMLElement>('[role="status"]')!;
+    const elapsed = mount.querySelector<HTMLElement>(
+      '.loading-screen__elapsed',
+    )!;
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    expect(status.getAttribute('aria-atomic')).toBe('true');
+    expect(status.contains(elapsed)).toBe(false);
+    expect(elapsed.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      mount
+        .querySelector('.loading-screen__phase')
+        ?.getAttribute('aria-hidden'),
+    ).not.toBe('true');
+    expect(mount.textContent).toContain('Preparing district · Indeterminate');
+    expect(screen.getSnapshot().slowElapsedSeconds).toBeUndefined();
+
+    now = 3_200;
+    vi.advanceTimersByTime(1_000);
+    expect(mount.textContent).toContain('3 seconds elapsed');
+    expect(screen.getSnapshot()).toMatchObject({
+      readiness: 'starting',
+      elapsedClockActive: true,
+      slowElapsedSeconds: 3,
+      disposed: false,
+    });
+
+    screen.markWorldReady();
+    expect(screen.getSnapshot().readiness).toBe('world');
+    screen.dispose();
+    expect(screen.getSnapshot().elapsedClockActive).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it('creates the canonical fatal alert before an asset loader exists', () => {
+    const mount = document.createElement('main');
+    document.body.append(mount);
+    const retry = vi.fn();
+    const screen = LoadingScreen.createFatal(
+      mount,
+      new Error('WebGL unavailable before asset setup'),
+      retry,
+    );
+
+    const alert = mount.querySelector<HTMLElement>('[role="alert"]')!;
+    const retryButton = mount.querySelector<HTMLButtonElement>(
+      '[data-testid="loading-retry"]',
+    )!;
+    expect(alert.textContent).toContain('Vanta City could not start');
+    expect(alert.textContent).toContain('WebGL unavailable before asset setup');
+    expect(alert.querySelector('[role="status"]')).toBeNull();
+    expect(mount.querySelector('progress')).toBeNull();
+    expect(screen.getSnapshot()).toMatchObject({
+      assetProgress: undefined,
+      fallbackAssetIds: [],
+      fatal: true,
+      disposed: false,
+    });
+    expect(retryButton).toBe(document.activeElement);
+    expect(screen.getSnapshot().elapsedClockActive).toBe(false);
+    retryButton.click();
+    expect(retry).toHaveBeenCalledOnce();
+
+    screen.dispose();
+    expect(mount.querySelector('.loading-screen')).toBeNull();
+    mount.remove();
+  });
+
+  it('supports clean disposal and reentry without retaining the old root', () => {
+    const mount = document.createElement('main');
+    const assets = new ObservableAssets();
+    const first = new LoadingScreen(mount, assets);
+    first.dispose();
+    const second = new LoadingScreen(mount, assets);
+
+    expect(
+      mount.querySelectorAll('[data-testid="loading-screen"]'),
+    ).toHaveLength(1);
+    expect(first.getSnapshot().disposed).toBe(true);
+    expect(second.getSnapshot().disposed).toBe(false);
+    second.dispose();
   });
 });

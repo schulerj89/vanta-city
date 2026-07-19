@@ -25,6 +25,17 @@ The primitive fallback character is generated entirely from Three.js geometry an
 
 The five Ashfall facade/roof textures are original project assets created with OpenAI image generation for this repository. They are not externally sourced and carry no third-party attribution requirement. The committed local files, generation date, source output filenames, intent, prompt constraints, conversion, dimensions, hashes, and runtime-network policy are documented in `public/assets/environment/ashfall-buildings/README.md`. Runtime code loads only the local 512×512 derivatives.
 
+# Vanta City title and loading art
+
+The Northbar title hero and Junction loading-road backgrounds are original
+project assets created with OpenAI Image API model `gpt-image-2` for this
+repository. They are not externally sourced and carry no third-party
+attribution requirement. Accepted sources, local runtime derivatives, full
+prompts, request settings, transformations, hashes, candidate decisions, and
+originality review are documented in
+`public/assets/presentation/vanta-title-loading/provenance.json`. Runtime uses
+only the checked-in local JPEG derivatives.
+
 # Civilian traffic vehicles
 
 - **Pickup Truck** and **Sports Car** by Quaternius, from the
