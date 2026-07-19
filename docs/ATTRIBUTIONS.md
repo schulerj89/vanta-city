@@ -38,11 +38,15 @@ only the checked-in local JPEG derivatives.
 
 # Civilian traffic vehicles
 
-- **Pickup Truck** and **Sports Car** by Quaternius, from the
-  [Cars Pack](https://quaternius.com/packs/cars.html). Licensed CC0 1.0
-  Universal. Individual sources: [Pickup Truck](https://poly.pizza/m/qn4grQgHm8)
-  and [Sports Car](https://poly.pizza/m/OyqKvX9xNh). Local hashes and geometry
-  details are recorded in the asset folder README.
+- **Pickup Truck, Sports Car, Sport Coupe, Family Sedan, Taxi Sedan, SUV, and
+  Compact Wagon** by Quaternius, from the
+  [Cars Bundle](https://poly.pizza/bundle/Cars-Bundle-FE5IWe6OMk) and original
+  [Cars Pack](https://quaternius.com/packs/cars.html). Licensed
+  [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+  The repository retains the complete legal code. Exact individual source
+  records, original archive names, archive/file hashes, geometry counts,
+  bounds, transforms, and the deliberate Police Car exclusion are recorded in
+  `public/assets/vehicles/quaternius-cars/README.md`.
 
 # Ashfall Night Service audio
 

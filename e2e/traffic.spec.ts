@@ -38,8 +38,13 @@ test.describe('bounded autonomous traffic', () => {
     const state = await snapshot(page);
     expect(state.traffic.pooledModels).toBe(8);
     expect(state.traffic.catalog).toEqual([
-      expect.objectContaining({ id: 'pickup-truck', pooledModels: 4 }),
-      expect.objectContaining({ id: 'sports-car', pooledModels: 4 }),
+      expect.objectContaining({ id: 'pickup-truck', pooledModels: 2 }),
+      expect.objectContaining({ id: 'sports-car', pooledModels: 1 }),
+      expect.objectContaining({ id: 'sport-coupe', pooledModels: 1 }),
+      expect.objectContaining({ id: 'family-sedan', pooledModels: 1 }),
+      expect.objectContaining({ id: 'taxi-sedan', pooledModels: 1 }),
+      expect.objectContaining({ id: 'suv', pooledModels: 1 }),
+      expect.objectContaining({ id: 'compact-wagon', pooledModels: 1 }),
     ]);
     expect(state.runtimeErrors.count, state.runtimeErrors.last).toBe(0);
     expect(failures).toEqual([]);

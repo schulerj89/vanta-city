@@ -10,8 +10,9 @@ there is no navigation mesh, route planning, pedestrian logic, vehicle damage,
 mission state, or runtime network access.
 
 The authored road cross and curved corridor are 12 m wide with 3 m lanes.
-Vehicle paths use right-hand centers offset ±1.5 m from the shared centerline. Catalog models
-normalize to 4.4 m long, remain below 2.05 m wide, and use 1.8 m detectors.
+Vehicle paths use right-hand centers offset ±1.5 m from the shared centerline.
+Catalog models normalize to 4.08–4.40 m long, remain at or below 2.05 m wide,
+and use 1.8 m detectors.
 Path centers therefore leave at least 0.47 m on either side inside a lane.
 Baseline north/south centers spawn at 24.5 m inside the visible boundary at
 27.5 m. East/west endpoints are derived by trimming the sampled spline offsets
@@ -63,8 +64,9 @@ advance.
   width/height, ground clearance, and detector dimensions. Selection cycles
   through that stable order and respects per-type pool quotas, preserving the
   lane seed and bounded population even when types despawn in a different order.
-- An eight-instance model pool is loaded once, split deterministically across every
-  catalog entry. Spawn/despawn only assigns a hidden instance of the selected
+- An eight-instance model pool is loaded once, split deterministically across
+  every catalog entry. The seven-model TRAFFIC-003 catalog gives Pickup Truck
+  two slots and every other model one. Spawn/despawn only assigns a hidden instance of the selected
   type. Disposal clears occupancy, unregisters debug entries, removes
   scene/debug nodes, releases every instance, and disposes owned helper geometry
   and materials. There are no browser listeners or independent timers.
@@ -82,15 +84,18 @@ decision, commitment, speed, and control reason.
 Normal traffic defaults to enabled because the conservative cap stayed within
 the software-rendered browser bounds used by the feature suite: fewer than 150
 total draw calls, fewer than 150,000 total rendered triangles, and traffic update
-p95 below 5 ms at the eight-model cap. The repository audit finds exactly two
-compatible local civilian GLBs—Pickup Truck and Sports Car—and fails if a local
+p95 below 5 ms at the eight-model cap. The repository audit finds exactly seven
+compatible local civilian GLBs—Pickup Truck, Sports Car, Sport Coupe, Family
+Sedan, Taxi Sedan, SUV, and Compact Wagon—and fails if a local
 vehicle file or `civilian-traffic` manifest entry lacks a runtime catalog entry.
-It also checks integrity, geometry counts, source and normalized safe bounds,
-forward/ground presentation data, and detector dimensions. No variants were
-created because the two source models are already materially distinct.
+It also checks GLB 2.0 chunk structure, embedded resources, immutable integrity,
+geometry counts, exact source and normalized safe bounds, forward/ground
+presentation data, and detector dimensions. The source Police Car is audited
+but deliberately not shipped or registered because ordinary civilian behavior
+would misrepresent a marked emergency vehicle.
 
-The two local assets contribute at most
-37,992 model triangles when the alternating eight-slot pool is visible. Gameplay
+The seven local assets contribute 31,728 source model triangles across the
+eight-slot pool. Gameplay
 tests verify every catalog type is pooled, spawned, moved, despawned, and
 disposed across two repeated four-approach cycles, plus player stop/resume,
 pause/resume, central occupancy, cleanup, and no page/console errors.
@@ -123,3 +128,51 @@ The street and narrow views check vehicle scale and preserve the existing HUD.
 Asset provenance, hashes, sizes, triangle/material/texture counts, and license
 links are recorded in
 `public/assets/vehicles/quaternius-cars/README.md` and `docs/ATTRIBUTIONS.md`.
+
+## TRAFFIC-003 catalog expansion
+
+TRAFFIC-003 keeps `TrafficVehicleCatalog.ts` as the sole ordered runtime model
+authority and preserves the normal population cap of eight. Each catalog entry
+owns its measured forward axis, normalization length, safe width/height,
+grounding, detector, and static-sweep contract. The simulation's existing quota
+allocator and the render pool use the same stable order, so an eight-resident
+population visibly covers all seven types without starvation. No traffic AI,
+signal, collision, streaming, player-vehicle, or renderer authority changed.
+
+The source GLBs export rear, front-left, and front-right static wheels as
+separate equal-material meshes. The traffic scene adapter merges only those
+same-material wheel geometries per pooled instance, hiding the redundant draw
+meshes while preserving source geometry, materials, transforms, and loader
+ownership. The merged geometries are traffic-owned and disposed with the
+system. This reduced the measured active scene from 153 failing draw calls to
+149 without weakening the existing `<150` gate.
+
+The development-only `traffic-vehicle-lab` sandbox loads every entry through
+the production asset loader and catalog, applies the production normalizer, and
+provides overview, front, and side cameras plus an amber front-bumper marker.
+Run it with `pnpm lab:vehicles`. Its DOM rail is an audit aid only: it owns no
+simulation or gameplay state, stays keyboard accessible, and moves below the
+stage at narrow widths.
+
+The 1280×720 hardware-WebGL TRAFFIC-003 capture with all eight residents
+recorded 149 draw calls, 35,755 rendered triangles, 392.7 average FPS, 106.4
+one-percent-low FPS, 7.8 ms frame-time p95, 7.1 ms renderer p95, 24.5 MB peak
+heap proxy, and 0.10 ms traffic-update p95. Runtime console errors, failed
+requests, external requests, asset failures, and runtime errors were empty.
+
+### TRAFFIC-003 visual evidence
+
+- [Vehicle lab overview](screenshots/traffic-003/traffic-003-vehicle-lab-overview.png)
+- [Vehicle lab front](screenshots/traffic-003/traffic-003-vehicle-lab-front.png)
+- [Vehicle lab side](screenshots/traffic-003/traffic-003-vehicle-lab-side.png)
+- [Vehicle lab narrow](screenshots/traffic-003/traffic-003-vehicle-lab-narrow.png)
+- [Gameplay overhead](screenshots/traffic-003/traffic-003-gameplay-overhead.png)
+- [Gameplay street](screenshots/traffic-003/traffic-003-gameplay-street.png)
+- [Gameplay narrow](screenshots/traffic-003/traffic-003-gameplay-narrow.png)
+- [Performance capture](screenshots/traffic-003/traffic-003-performance.json)
+
+The lab views verify scale, ground contact, `+Z` forward direction, silhouettes,
+wheel/material readability, and the shorter width-safe SUV/compact/coupe
+normalization. Gameplay views verify that the distinct blue pickup, orange
+sports car, white coupe, blue sedan, yellow taxi, tall SUV, and compact wagon
+remain recognizable in the real street lighting and bounded traffic flow.

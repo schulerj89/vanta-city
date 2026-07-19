@@ -13,6 +13,7 @@ const expected = {
     triangles: 6_432,
     materials: 3,
     textures: 1,
+    sourceSize: [2.312174, 1.848446, 5.180381],
   },
   'sports-car.glb': {
     bytes: 171_300,
@@ -20,6 +21,47 @@ const expected = {
     triangles: 3_066,
     materials: 7,
     textures: 0,
+    sourceSize: [1.804519, 1.155404, 3.968707],
+  },
+  'sport-coupe.glb': {
+    bytes: 175_100,
+    sha256: 'bbb1c718d2aaf5f4344e9fb2cd66d8332a998a515b09ddd4dfa14698d787124e',
+    triangles: 3_148,
+    materials: 6,
+    textures: 0,
+    sourceSize: [1.871591, 1.203055, 3.926533],
+  },
+  'family-sedan.glb': {
+    bytes: 164_752,
+    sha256: 'bf00f2f0386a25aa310abc0424d22586e46a59ee6c737e6b375c97c9f01bd462',
+    triangles: 2_954,
+    materials: 6,
+    textures: 0,
+    sourceSize: [1.80736, 1.176579, 4.220717],
+  },
+  'taxi-sedan.glb': {
+    bytes: 181_084,
+    sha256: '14b2f982f8a501565702ecb56f917c82e9abae914fa3f76d2f622a8670598af1',
+    triangles: 3_278,
+    materials: 6,
+    textures: 0,
+    sourceSize: [1.80736, 1.310465, 4.220717],
+  },
+  'suv.glb': {
+    bytes: 181_608,
+    sha256: '1a9ce2bba813dca5005abab09715b01b8b5f4a9c48d7260463afdfeb876aa8b6',
+    triangles: 3_294,
+    materials: 6,
+    textures: 0,
+    sourceSize: [2.111102, 1.527851, 4.209349],
+  },
+  'compact-wagon.glb': {
+    bytes: 174_320,
+    sha256: 'e5f5fa41c4434383b20287725c0e9d757cbd0f059eedc342ec265d32a195fe39',
+    triangles: 3_124,
+    materials: 7,
+    textures: 0,
+    sourceSize: [1.638448, 1.145616, 3.309623],
   },
 } as const;
 
@@ -53,6 +95,7 @@ for (const definition of trafficVehicleCatalog) {
   const json = JSON.parse(
     bytes.subarray(20, 20 + jsonLength).toString('utf8'),
   ) as GlbJson;
+  validateEmbeddedGlb(file, bytes, jsonLength, json);
   const sourceBounds = sceneBounds(json);
   const sourceSize = sourceBounds.getSize(new Vector3());
   const { presentation } = definition;
@@ -82,6 +125,13 @@ for (const definition of trafficVehicleCatalog) {
     materials: json.materials?.length ?? 0,
     textures: json.textures?.length ?? 0,
   };
+  expectation.sourceSize.forEach((value, index) => {
+    if (Math.abs(sourceSize.getComponent(index) - value) > 1e-5) {
+      throw new Error(
+        `${file}: source bound axis ${index} expected ${value}, received ${sourceSize.getComponent(index)}`,
+      );
+    }
+  });
   if (declaredLength !== bytes.length) {
     throw new Error(
       `${file}: GLB declares ${declaredLength} bytes, read ${bytes.length}`,
@@ -120,6 +170,14 @@ interface GlbJson {
   }[];
   readonly materials?: readonly unknown[];
   readonly textures?: readonly unknown[];
+  readonly images?: readonly {
+    readonly uri?: string;
+    readonly bufferView?: number;
+  }[];
+  readonly buffers?: readonly {
+    readonly uri?: string;
+    readonly byteLength: number;
+  }[];
 }
 
 interface GlbNode {
@@ -188,6 +246,37 @@ function triangleCount(json: GlbJson): number {
     }
   }
   return triangles;
+}
+
+function validateEmbeddedGlb(
+  file: string,
+  bytes: Buffer,
+  jsonLength: number,
+  json: GlbJson,
+): void {
+  if (bytes.readUInt32LE(4) !== 2) {
+    throw new Error(`${file}: expected glTF 2.0`);
+  }
+  if (bytes.toString('ascii', 16, 20) !== 'JSON') {
+    throw new Error(`${file}: malformed JSON chunk`);
+  }
+  const binaryOffset = 20 + jsonLength;
+  if (binaryOffset + 8 > bytes.length) {
+    throw new Error(`${file}: missing binary chunk`);
+  }
+  const binaryLength = bytes.readUInt32LE(binaryOffset);
+  if (bytes.toString('ascii', binaryOffset + 4, binaryOffset + 8) !== 'BIN\0') {
+    throw new Error(`${file}: malformed binary chunk`);
+  }
+  if (binaryOffset + 8 + binaryLength !== bytes.length) {
+    throw new Error(`${file}: binary chunk does not consume the GLB`);
+  }
+  if ((json.buffers ?? []).length !== 1 || json.buffers?.[0]?.uri) {
+    throw new Error(`${file}: runtime geometry must use one embedded buffer`);
+  }
+  if ((json.images ?? []).some(({ uri }) => uri !== undefined)) {
+    throw new Error(`${file}: runtime images must be embedded buffer views`);
+  }
 }
 
 function format(vector: Vector3): string {

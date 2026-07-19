@@ -6,6 +6,7 @@ import {
   Group,
   Line,
   LineBasicMaterial,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -13,6 +14,7 @@ import {
   Vector3,
 } from 'three';
 import type { Material, Object3D, Scene } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { GameAssetLoader, ModelInstance } from '../assets/AssetLoader';
 import type { FrameTime } from '../core/time';
 import type { GameSystem } from '../core/lifecycle';
@@ -195,6 +197,7 @@ export class TrafficSystem implements GameSystem {
     root.name = `traffic-model-slot:${this.slots.length}`;
     root.visible = false;
     const model = instance.scene;
+    consolidateStaticWheelMeshes(model, this.debugResources);
     normalizeVehicleModel(model, definition);
     model.traverse((child) => {
       if ('isMesh' in child) {
@@ -522,6 +525,41 @@ export class TrafficSystem implements GameSystem {
         },
       }),
     );
+  }
+}
+
+/** Source cars split static wheels by side; merge equal-material pieces per instance. */
+function consolidateStaticWheelMeshes(
+  model: Object3D,
+  ownedResources: Set<BufferGeometry | Material>,
+): void {
+  model.updateMatrixWorld(true);
+  const modelInverse = new Matrix4().copy(model.matrixWorld).invert();
+  const byMaterial = new Map<Material, Mesh[]>();
+  model.traverse((child) => {
+    if (!('isMesh' in child) || !/wheel/i.test(child.name)) return;
+    const mesh = child as Mesh;
+    if (Array.isArray(mesh.material)) return;
+    const matches = byMaterial.get(mesh.material) ?? [];
+    matches.push(mesh);
+    byMaterial.set(mesh.material, matches);
+  });
+  for (const [material, meshes] of byMaterial) {
+    if (meshes.length < 2) continue;
+    const transformed = meshes.map((mesh) => {
+      const geometry = mesh.geometry.clone();
+      geometry.applyMatrix4(
+        new Matrix4().multiplyMatrices(modelInverse, mesh.matrixWorld),
+      );
+      return geometry;
+    });
+    const mergedGeometry = mergeGeometries(transformed, false);
+    for (const geometry of transformed) geometry.dispose();
+    if (!mergedGeometry) continue;
+    const merged = new Mesh(own(ownedResources, mergedGeometry), material);
+    merged.name = `traffic-static-wheels:${material.name || material.uuid}`;
+    model.add(merged);
+    for (const mesh of meshes) mesh.visible = false;
   }
 }
 

@@ -5,6 +5,7 @@ import { cameraCompositionLab } from './scenarios/cameraCompositionLab';
 import { buildingVisualLab } from './scenarios/buildingVisualLab';
 import { uiCompositionLab } from './scenarios/uiCompositionLab';
 import { northbarLocationLab } from './scenarios/northbarLocationLab';
+import { trafficVehicleLab } from './scenarios/trafficVehicleLab';
 
 const scenarios = new Map<string, SandboxScenario>([
   [foundationSandbox.id, foundationSandbox],
@@ -13,6 +14,7 @@ const scenarios = new Map<string, SandboxScenario>([
   [buildingVisualLab.id, buildingVisualLab],
   [uiCompositionLab.id, uiCompositionLab],
   [northbarLocationLab.id, northbarLocationLab],
+  [trafficVehicleLab.id, trafficVehicleLab],
 ]);
 
 export function loadSandboxScenario(

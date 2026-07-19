@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, Mesh } from 'three';
+import { Box3, BoxGeometry, Group, Mesh, Vector3 } from 'three';
 import { assetManifest } from '../src/assets/catalog';
 import {
   trafficVehicleCatalog,
@@ -15,6 +15,31 @@ describe('traffic vehicle catalog', () => {
     expect(trafficVehicleCatalog.map(({ assetId }) => assetId).sort()).toEqual(
       manifestIds,
     );
+  });
+
+  it('publishes unique stable metadata and safe detector contracts', () => {
+    expect(trafficVehicleCatalog).toHaveLength(7);
+    expect(new Set(trafficVehicleCatalog.map(({ id }) => id)).size).toBe(7);
+    for (const definition of trafficVehicleCatalog) {
+      const asset = assetManifest[definition.assetId];
+      expect(
+        'attribution' in asset ? asset.attribution : undefined,
+      ).toMatchObject({
+        creator: 'Quaternius',
+        license: 'CC0 1.0 Universal',
+      });
+      expect(asset.url).toMatch(
+        /^\/assets\/vehicles\/quaternius-cars\/.+\.glb$/,
+      );
+      expect(definition.presentation.length).toBeGreaterThanOrEqual(4.08);
+      expect(definition.presentation.length).toBeLessThanOrEqual(4.4);
+      expect(definition.presentation.detectionWidth).toBeLessThanOrEqual(
+        definition.presentation.maximumWidth,
+      );
+      expect(definition.presentation.staticSweepRadius).toBeLessThanOrEqual(
+        definition.presentation.detectionWidth / 2,
+      );
+    }
   });
 
   it('rejects duplicate assets and lane-unsafe presentation bounds', () => {
@@ -39,11 +64,19 @@ describe('traffic vehicle catalog', () => {
       model.add(new Mesh(new BoxGeometry(2, 1.5, 5)));
       normalizeVehicleModel(model, definition);
       model.updateMatrixWorld(true);
-      expect(model.position.y).toBeCloseTo(
-        definition.presentation.groundClearance + 0.66,
-        1,
+      const bounds = new Box3().setFromObject(model);
+      const size = bounds.getSize(new Vector3());
+      expect(bounds.min.y).toBeCloseTo(
+        definition.presentation.groundClearance,
+        5,
       );
-      expect(model.scale.x).toBeCloseTo(0.88);
+      expect(size.z).toBeCloseTo(definition.presentation.length, 5);
+      expect(size.x).toBeLessThanOrEqual(
+        definition.presentation.maximumWidth + 1e-3,
+      );
+      expect(size.y).toBeLessThanOrEqual(
+        definition.presentation.maximumHeight + 1e-3,
+      );
     },
   );
 });

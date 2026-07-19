@@ -1,0 +1,125 @@
+.traffic-vehicle-lab-panel {
+  position: fixed;
+  inset: 1rem 1rem 1rem auto;
+  z-index: 30;
+  width: min(22rem, calc(100vw - 2rem));
+  overflow: auto;
+  border: 1px solid rgb(129 164 169 / 42%);
+  border-radius: 0.45rem;
+  background: rgb(11 20 25 / 92%);
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 35%);
+  color: #dce9e9;
+  font: 500 0.75rem/1.35 var(--font-interface, system-ui, sans-serif);
+  backdrop-filter: blur(0.5rem);
+}
+
+.traffic-vehicle-lab-panel header,
+.traffic-vehicle-lab-panel nav,
+.traffic-vehicle-lab-note,
+.traffic-vehicle-lab-panel li {
+  padding: 0.72rem 0.85rem;
+}
+
+.traffic-vehicle-lab-panel header {
+  border-bottom: 1px solid rgb(129 164 169 / 24%);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.traffic-vehicle-lab-panel header strong,
+.traffic-vehicle-lab-panel header span,
+.traffic-vehicle-lab-panel li b,
+.traffic-vehicle-lab-panel li code,
+.traffic-vehicle-lab-panel li span {
+  display: block;
+}
+
+.traffic-vehicle-lab-panel header strong {
+  color: #f2c46f;
+  font-size: 0.88rem;
+}
+
+.traffic-vehicle-lab-panel header span,
+.traffic-vehicle-lab-panel li code,
+.traffic-vehicle-lab-panel li span {
+  color: #91a8aa;
+}
+
+.traffic-vehicle-lab-panel nav {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.traffic-vehicle-lab-panel button {
+  flex: 1;
+  border: 1px solid #557276;
+  border-radius: 0.25rem;
+  background: #172b31;
+  color: #dce9e9;
+  padding: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.traffic-vehicle-lab-panel button[aria-pressed='true'] {
+  border-color: #e6a73d;
+  background: #4b3920;
+  color: #ffe1a7;
+}
+
+.traffic-vehicle-lab-panel button:focus-visible {
+  outline: 2px solid #9ce1eb;
+  outline-offset: 2px;
+}
+
+.traffic-vehicle-lab-note {
+  margin: 0;
+  border-block: 1px solid rgb(129 164 169 / 20%);
+  color: #b9caca;
+}
+
+.traffic-vehicle-lab-note i {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.18rem;
+  margin-right: 0.45rem;
+  background: #e6a73d;
+  vertical-align: middle;
+}
+
+.traffic-vehicle-lab-panel ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.traffic-vehicle-lab-panel li + li {
+  border-top: 1px solid rgb(129 164 169 / 16%);
+}
+
+.traffic-vehicle-lab-panel li b {
+  color: #e5eeee;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .traffic-vehicle-lab-panel {
+    inset: auto 0.5rem 0.5rem;
+    width: auto;
+    max-height: 42vh;
+  }
+
+  .traffic-vehicle-lab-panel header,
+  .traffic-vehicle-lab-panel nav,
+  .traffic-vehicle-lab-note,
+  .traffic-vehicle-lab-panel li {
+    padding: 0.55rem 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .traffic-vehicle-lab-panel * {
+    scroll-behavior: auto;
+  }
+}

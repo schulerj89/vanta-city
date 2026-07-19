@@ -185,8 +185,8 @@ describe('TrafficSimulation', () => {
   });
 
   it('selects every catalog entry deterministically within its pool quota', () => {
-    const traffic = new TrafficSimulation(config({ maxPopulation: 6 }));
-    traffic.spawnEachApproach();
+    const traffic = new TrafficSimulation(config({ maxPopulation: 8 }));
+    traffic.populateResidents();
     expect(
       new Set(
         traffic.getSnapshot().vehicles.map(({ vehicleType }) => vehicleType),
@@ -194,9 +194,18 @@ describe('TrafficSimulation', () => {
     ).toEqual(new Set(trafficVehicleCatalog.map(({ id }) => id)));
     expect(
       traffic.getSnapshot().vehicles.map(({ vehicleType }) => vehicleType),
-    ).toEqual(['pickup-truck', 'sports-car', 'pickup-truck', 'sports-car']);
+    ).toEqual([
+      'pickup-truck',
+      'sports-car',
+      'sport-coupe',
+      'family-sedan',
+      'taxi-sedan',
+      'suv',
+      'compact-wagon',
+      'pickup-truck',
+    ]);
     for (let index = 0; index < 4; index += 1) traffic.update(11);
-    expect(traffic.getSnapshot()).toMatchObject({ count: 0, despawned: 4 });
+    expect(traffic.getSnapshot()).toMatchObject({ count: 0, despawned: 8 });
   });
 
   it('seeds eight separated residents without advancing the signal cycle', () => {
@@ -280,19 +289,21 @@ describe('TrafficSystem lifecycle', () => {
     expect(instantiateModel.mock.calls.map(([assetId]) => assetId)).toEqual([
       trafficVehicleCatalog[0]!.assetId,
       trafficVehicleCatalog[1]!.assetId,
-      trafficVehicleCatalog[0]!.assetId,
-      trafficVehicleCatalog[1]!.assetId,
+      trafficVehicleCatalog[2]!.assetId,
+      trafficVehicleCatalog[3]!.assetId,
     ]);
     system.spawnEachApproach();
     system.update({ delta: 1, elapsed: 1, frame: 1 });
     expect(system.getSnapshot()).toMatchObject({
       count: 4,
       pooledModels: 4,
-      catalog: [
-        { id: 'pickup-truck', pooledModels: 2, activeVehicles: 2 },
-        { id: 'sports-car', pooledModels: 2, activeVehicles: 2 },
-      ],
     });
+    expect(system.getSnapshot().catalog.slice(0, 4)).toMatchObject([
+      { id: 'pickup-truck', pooledModels: 1, activeVehicles: 1 },
+      { id: 'sports-car', pooledModels: 1, activeVehicles: 1 },
+      { id: 'sport-coupe', pooledModels: 1, activeVehicles: 1 },
+      { id: 'family-sedan', pooledModels: 1, activeVehicles: 1 },
+    ]);
     expect(
       system.getSnapshot().vehicles.every(({ progress }) => progress === 0),
     ).toBe(true);
