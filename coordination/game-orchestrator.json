@@ -724,7 +724,7 @@
     {
       "id": "WORLD-004",
       "title": "Expand Ashfall on every side and author two enterable interiors",
-      "status": "ready",
+      "status": "completed",
       "priority": "critical",
       "source": "explicit-user-request",
       "duplicateKey": "ashfall-four-side-linear-growth-textured-interiors",
@@ -743,7 +743,7 @@
     {
       "id": "NPC-002",
       "title": "Acquire a second unique CC0 animated NPC cast",
-      "status": "ready",
+      "status": "completed",
       "priority": "critical",
       "source": "explicit-user-request",
       "duplicateKey": "cc0-unique-animated-npc-venue-cast",
@@ -760,7 +760,7 @@
     {
       "id": "SAVE-001",
       "title": "Create authoritative campaign persistence and safe respawn",
-      "status": "ready",
+      "status": "completed",
       "priority": "critical",
       "source": "explicit-user-request",
       "duplicateKey": "versioned-campaign-save-reset-respawn-empty-loadout",
@@ -778,7 +778,7 @@
     {
       "id": "MISSION-003A",
       "title": "Design the second story mission and its cinematic performance",
-      "status": "ready",
+      "status": "completed",
       "priority": "critical",
       "source": "explicit-user-request",
       "duplicateKey": "ashfall-second-mission-story-cinematic-production-brief",
@@ -796,7 +796,7 @@
     {
       "id": "UI-002A",
       "title": "Design objective navigation, save reset, map access, and locked loadout UX",
-      "status": "ready",
+      "status": "completed",
       "priority": "critical",
       "source": "explicit-user-request",
       "duplicateKey": "ui-objective-distance-map-reset-locked-loadout-death",
@@ -838,7 +838,7 @@
     {
       "id": "INTERIOR-POP-001",
       "title": "Populate the new interiors with the expanded animated cast",
-      "status": "blocked",
+      "status": "ready",
       "priority": "high",
       "source": "explicit-user-request",
       "duplicateKey": "night-venue-home-authored-animated-population",
@@ -853,7 +853,7 @@
     {
       "id": "MISSION-003B",
       "title": "Implement the second story mission and cinematic",
-      "status": "blocked",
+      "status": "ready",
       "priority": "high",
       "source": "explicit-user-request",
       "duplicateKey": "ashfall-second-mission-runtime-cinematic",
@@ -869,7 +869,7 @@
     {
       "id": "NAV-001",
       "title": "Implement objective distance and world-aware direction guidance",
-      "status": "blocked",
+      "status": "ready",
       "priority": "high",
       "source": "explicit-user-request",
       "duplicateKey": "objective-distance-world-cursor-map-control",
@@ -898,7 +898,7 @@
     {
       "id": "UI-SAVE-001",
       "title": "Implement title reset and death-respawn presentation",
-      "status": "blocked",
+      "status": "ready",
       "priority": "high",
       "source": "explicit-user-request",
       "duplicateKey": "title-reset-confirmation-death-respawn-ui",
@@ -926,7 +926,7 @@
     {
       "id": "LOADOUT-001",
       "title": "Implement original locked handgun and knife quickbar icons",
-      "status": "blocked",
+      "status": "ready",
       "priority": "high",
       "source": "explicit-user-request",
       "duplicateKey": "locked-handgun-knife-icons-empty-start",
@@ -966,30 +966,43 @@
       "PRESENTATION-002",
       "CINEMATIC-005",
       "WORLD-003",
-      "TRAFFIC-003"
+      "TRAFFIC-003",
+      "WORLD-004",
+      "NPC-002",
+      "SAVE-001",
+      "MISSION-003A",
+      "UI-002A"
     ],
     "lastMapExpansion": {
-      "taskId": "WORLD-002B",
-      "previousPlayableAreaSquareMetres": 4900,
-      "playableAreaSquareMetres": 6125,
-      "growthPercent": 25
+      "taskId": "WORLD-004",
+      "previousPlayableAreaSquareMetres": 6125,
+      "playableAreaSquareMetres": 9570.3125,
+      "growthPercent": 56.25,
+      "linearGrowthPercent": 25,
+      "growthBasis": "four-side-linear-half-extent",
+      "widthMetres": 109.375,
+      "depthMetres": 87.5
     },
     "lastVisibleWorldRepair": {
-      "taskId": "WORLD-003",
-      "playableAreaSquareMetres": 6125,
-      "buildingCount": 25,
-      "naturalTraversalCount": 8,
-      "boundaryExitCount": 1
+      "taskId": "WORLD-004",
+      "playableAreaSquareMetres": 9570.3125,
+      "buildingCount": 37,
+      "sectorCount": 22,
+      "roadCount": 10,
+      "interiorCount": 2,
+      "boundarySegmentCount": 12
     },
     "lastPerformanceReport": {
-      "taskId": "WORLD-003",
+      "taskId": "WORLD-004",
       "referenceViewport": "1280x720",
-      "capture": "docs/screenshots/world-003/performance/performance-capture.json",
-      "leakEvidence": "docs/screenshots/world-003/performance/three-cycle-leak-evidence.json",
-      "averageFps": 326.89,
-      "onePercentLowFps": 102.04,
-      "frameTimeP95Ms": 8.3,
-      "peakJsHeapProxyMb": 23.1
+      "capture": "docs/screenshots/world-004/performance-capture.json",
+      "leakEvidence": "docs/screenshots/world-004/capture-report.json",
+      "averageFps": 550.86,
+      "onePercentLowFps": 277.78,
+      "frameTimeP95Ms": 3,
+      "rendererFrameTimeP95Ms": 2.3,
+      "triangleCount": 12446,
+      "peakJsHeapProxyMb": 24.5
     },
     "notes": [
       "The primary session must inspect live tasks, worktrees, branches, commits, and main before dispatching or integrating manual Codex workers.",

@@ -101,7 +101,7 @@ test('new campaign, purchase, reload, corrupt fallback, and scoped reset', async
   expect(failures).toEqual([]);
 });
 
-test('mission reward survives repeated reload and death uses default fallback once', async ({
+test('mission reward survives repeated reload and death uses clinic fallback once', async ({
   page,
 }) => {
   const failures = monitor(page);
@@ -135,7 +135,7 @@ test('mission reward survives repeated reload and death uses default fallback on
     .poll(async () => (await snapshot(page)).playerDeath.visible)
     .toBe(false);
   state = await snapshot(page);
-  expect(state.playerDeath.lastRespawnId).toBe('spawn.player-default');
+  expect(state.playerDeath.lastRespawnId).toBe('spawn.player.clinic');
   expect(state.money.account.balance).toBe(575);
   expect(state.missions.runtime.missions[0]?.status).toBe('completed');
   expect(state.camera).toMatchObject({ mode: 'gameplay', owner: 'gameplay' });

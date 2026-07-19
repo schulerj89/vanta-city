@@ -113,7 +113,11 @@ test('delivers aimed repeat-fire damage, death, and impact-timed knife damage', 
 
   await executeCommand(page, 'sparring-target.reset');
   await executeCommand(page, 'sparring-target.teleport-to-player');
+  await executeCommand(page, 'player.acquire-item', 'knife');
   await page.keyboard.press('Digit2');
+  await expect
+    .poll(async () => (await snapshot(page)).player.equipment.equippedId)
+    .toBe('knife');
   await page.keyboard.press('KeyU');
   await expect
     .poll(async () => (await snapshot(page)).weaponCombat.knifeSequence)
