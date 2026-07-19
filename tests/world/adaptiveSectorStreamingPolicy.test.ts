@@ -99,22 +99,30 @@ describe('AdaptiveSectorStreamingPolicy', () => {
     );
   });
 
-  it('retains active sectors in the hysteresis band without boundary thrash', () => {
+  it('retains hysteresis at high pressure but evicts it over the hard ceiling', () => {
     const hysteresisPolicy = new AdaptiveSectorStreamingPolicy({
       ...policy.config,
       criticalAdjacencyDistance: 0,
       hardNearRadius: 5,
     });
     const hysteresisSector = sector('hysteresis', 30, 0, 5, 10);
-    const result = hysteresisPolicy.evaluate({
-      sectors: [sector('current', 13), hysteresisSector],
-      playerPosition: { x: 13, y: 0, z: 0 },
-      activeSectorIds: new Set(['hysteresis']),
-      memory: memory(950),
-    });
-    expect(result.decisions.hysteresis).toMatchObject({
+    const evaluate = (proxyMb: number) =>
+      hysteresisPolicy.evaluate({
+        sectors: [sector('current', 13), hysteresisSector],
+        playerPosition: { x: 13, y: 0, z: 0 },
+        activeSectorIds: new Set(['hysteresis']),
+        memory: memory(proxyMb),
+      });
+
+    expect(evaluate(650).decisions.hysteresis).toMatchObject({
       disposition: 'retained',
       reason: 'active-hysteresis',
+      protected: false,
+    });
+    expect(evaluate(950).decisions.hysteresis).toMatchObject({
+      disposition: 'evicted',
+      reason: 'memory-hard-trim',
+      protected: false,
     });
   });
 
@@ -135,6 +143,24 @@ describe('AdaptiveSectorStreamingPolicy', () => {
     expect(teleported.decisions['stale-ahead']!.reason).not.toBe(
       'movement-prefetch',
     );
+  });
+
+  it('always protects the nearest streamable sector at a distant teleport landing', () => {
+    const result = policy.evaluate({
+      sectors: [sector('distant-nearest', 40), sector('farther', 80)],
+      previousPlayerPosition: { x: 0, y: 0, z: 0 },
+      playerPosition: { x: 100, y: 0, z: 0 },
+      memory: memory(950),
+    });
+
+    expect(result.teleported).toBe(true);
+    expect(result.desiredSectorIds).toContain('farther');
+    expect(result.decisions.farther).toMatchObject({
+      disposition: 'desired',
+      reason: 'player-current',
+      protected: true,
+      playerDistance: 20,
+    });
   });
 
   it('protects the mission destination and its neighbor before arrival', () => {

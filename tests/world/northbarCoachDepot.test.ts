@@ -175,6 +175,7 @@ describe('Northbar Coach Depot level', () => {
     for (let cycle = 0; cycle < 3; cycle += 1) {
       await system.refreshStreaming({ x: 80, y: 0, z: 80 });
       expect(system.getStreamingSnapshot().active).toEqual([
+        'sector.northbar.departure',
         'sector.northbar.infrastructure',
       ]);
       await system.refreshStreaming({ x: -13, y: 0, z: 2 });

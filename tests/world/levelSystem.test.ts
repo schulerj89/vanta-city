@@ -325,6 +325,55 @@ describe('LevelSystem', () => {
     system.dispose();
   });
 
+  it('preserves an exhausted load error while evicting unrelated stale sectors', async () => {
+    const assets: GameAssetLoader = {
+      ...unusedAssets,
+      instantiateModel: async (assetId) => {
+        if (assetId.endsWith('trash-bags'))
+          throw new Error('exhausted sector failure');
+        return {
+          assetId,
+          scene: new Group(),
+          animations: [],
+          dispose: vi.fn(),
+        };
+      },
+    };
+    const system = new LevelSystem(
+      new Scene(),
+      assets,
+      new LevelRegistry([testDistrict]),
+      'test-district',
+      new EventBus<WorldEvents>(),
+      undefined,
+      false,
+      true,
+      new AdaptiveSectorStreamingPolicy({ maxLoadAttempts: 1 }),
+    );
+    await system.init();
+    expect(system.getStreamingSnapshot().active).toContain('sector.northwest');
+    system.setStreamingMemorySource(() => ({
+      renderer: { geometries: 0, textures: 0 },
+      assets: {
+        sourceReferences: 950,
+        instanceReferences: 0,
+        inFlight: 0,
+      },
+    }));
+
+    await system.refreshStreaming({ x: 0, y: 0, z: -21 });
+
+    expect(system.getStreamingSnapshot()).toMatchObject({
+      states: { 'sector.southeast': 'failed' },
+      attempts: { 'sector.southeast': 1 },
+      lastError: 'exhausted sector failure',
+    });
+    expect(system.getStreamingSnapshot().active).not.toContain(
+      'sector.northwest',
+    );
+    system.dispose();
+  });
+
   it('loads sectors with bounded concurrency and deterministic batches', async () => {
     const level = concurrencyLevel();
     const pending = new Map<

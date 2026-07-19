@@ -850,8 +850,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
       this.applyDebugVisibility();
       if (this.loaded !== loaded) return;
     }
-    if (loadFailed) return;
-    this.lastError = undefined;
+    if (!loadFailed) this.lastError = undefined;
     for (const sectorId of [...loaded.sectors.keys()].sort()) {
       if (!desiredIds.has(sectorId)) this.unloadSector(loaded, sectorId);
     }

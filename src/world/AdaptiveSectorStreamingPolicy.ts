@@ -170,13 +170,7 @@ export class AdaptiveSectorStreamingPolicy {
       ]),
     );
     const streamable = sectors.filter(({ alwaysLoaded }) => !alwaysLoaded);
-    const nearestPlayerSector = closestSector(streamable, input.playerPosition);
-    const current =
-      nearestPlayerSector &&
-      distanceToCenter(input.playerPosition, nearestPlayerSector) <=
-        Math.max(this.config.hardNearRadius, nearestPlayerSector.loadDistance)
-        ? nearestPlayerSector
-        : undefined;
+    const current = closestSector(streamable, input.playerPosition);
     const missionAnchors = new Set(
       (input.missionPositions ?? []).flatMap((position) => {
         const sector = closestSector(streamable, position);
@@ -255,6 +249,7 @@ export class AdaptiveSectorStreamingPolicy {
       } else if (prefetchRadius > 0 && distance <= prefetchRadius) {
         reasons.set(sector.id, 'proximity-prefetch');
       } else if (
+        !memory.overHardCeiling &&
         active.has(sector.id) &&
         distance <= sector.unloadDistance + this.config.hysteresisDistance
       ) {

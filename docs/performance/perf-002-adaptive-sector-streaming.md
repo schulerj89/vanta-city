@@ -27,9 +27,11 @@ Reasons are ordered as follows:
 8. soft, high, or hard memory trim; or ordinary outside-retention eviction.
 
 Protected reasons (1–4) cannot be removed by memory pressure. This is the hard
-anti-hole invariant. A teleport immediately selects the landing safety ring and
-discards stale direction projection. Active sectors retain an additional band
-outside their authored unload distance to prevent boundary thrash.
+anti-hole invariant. A teleport always selects the nearest streamable sector and
+its landing safety ring, even when every authored center is outside its normal
+load radius, and discards stale direction projection. Active sectors retain an
+additional band outside their authored unload distance to prevent boundary
+thrash until the hard memory ceiling is crossed.
 
 ## Tunable defaults
 
@@ -50,10 +52,11 @@ outside their authored unload distance to prevent boundary thrash.
 
 Level preparation loads safety and authored-proximity coverage first; soft
 prefetch continues through the normal update lifecycle after commit. Loads run
-in deterministic definition-order batches. A failed desired sector retains the
-already-active coverage set, retries on the bounded cadence, and resets its
-failure state after leaving the desired set. Disposal still releases model
-instances first, then level-owned geometry/materials.
+in deterministic definition-order batches. A failed desired sector preserves
+its error and protected active coverage while unrelated no-longer-desired
+sectors still unload, retries on the bounded cadence, and resets its failure
+state after leaving the desired set. Disposal still releases model instances
+first, then level-owned geometry/materials.
 
 ## Memory decision
 
@@ -71,8 +74,8 @@ the shipped low-poly/local-asset workload:
 These weights are conservative decision inputs, not claims of byte-accurate GPU
 allocation. Medium pressure begins at 75% of the 650 MB preferred ceiling and
 reduces the prefetch radius. High pressure at 650 MB disables soft prefetch.
-Crossing 900 MB records hard pressure, but still cannot evict player/mission
-safety coverage.
+Crossing 900 MB evicts unprotected hysteresis retention, but still cannot evict
+always-loaded, player, or mission safety coverage.
 
 The retained performance capture reports a 318.3 MB streamed estimate and a
 23.1 MB peak JS heap sample, safely below both ceilings. See
@@ -93,9 +96,10 @@ same authoritative contract.
 
 ## Evidence
 
-- Deterministic policy and lifecycle tests cover low/medium/high pressure,
+- Deterministic policy and lifecycle tests cover low/medium/high/hard pressure,
   current/near/adjacent selection, mission protection, hysteresis, direction,
-  teleport, failure cooldown/retry, and two-sector load concurrency.
+  distant teleport landing, failure cooldown/retry, stale eviction during an
+  exhausted failure, and two-sector load concurrency.
 - Junction browser traversal covers ten internal/core/rim seam positions. At
   each position all protected sectors are active, transitions are settled,
   collision ownership matches the active definition, and the player is
@@ -120,8 +124,9 @@ same authoritative contract.
   landmark targets. Dynamic entity targets without an authored spawn do not
   currently provide a streaming interest position.
 - A sector that exhausts all three load attempts remains failed until it leaves
-  the desired set; active safety coverage is retained and the error remains
-  visible rather than retrying forever.
+  the desired set; protected active safety coverage is retained, unrelated
+  stale sectors unload, and the error remains visible rather than retrying
+  forever.
 - The East Quay road opening visible near `(40, 14)` is also present with the
   synthetic full-level sector loaded. It is authored topology, not a streaming
   omission; reauthoring it is outside PERF-002's protected map scope.
