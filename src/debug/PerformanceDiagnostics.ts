@@ -53,6 +53,31 @@ export function registerSectorStreamingDiagnostics(
         return `${value.loadCount} / ${value.unloadCount} / ${value.lodHiddenObjects}`;
       },
     }),
+    debug.registerValue({
+      id: 'performance.streaming-pressure',
+      label: 'Streaming memory pressure / estimate / ceilings',
+      read: () => {
+        const { memory } = level.getStreamingSnapshot().policy;
+        return `${memory.pressure} · ${memory.estimatedWorkingSetMb.toFixed(1)} MB (${memory.source}) · ${memory.preferredCeilingMb}/${memory.hardCeilingMb} MB`;
+      },
+    }),
+    debug.registerValue({
+      id: 'performance.streaming-reasons',
+      label: 'Streaming desired / retained / evicted reasons',
+      read: () => {
+        const decisions = Object.values(
+          level.getStreamingSnapshot().policy.decisions,
+        );
+        const summarize = (
+          disposition: (typeof decisions)[number]['disposition'],
+        ) =>
+          decisions
+            .filter((decision) => decision.disposition === disposition)
+            .map(({ sectorId, reason }) => `${sectorId}:${reason}`)
+            .join(', ') || 'none';
+        return `desired ${summarize('desired')} · retained ${summarize('retained')} · evicted ${summarize('evicted')}`;
+      },
+    }),
   ];
 }
 

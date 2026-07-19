@@ -13,6 +13,7 @@ import {
   validateLevelDefinition,
 } from '../src/world/LevelDefinition';
 import type { SectorStreamingSnapshot } from '../src/world/LevelSystem';
+import { AdaptiveSectorStreamingPolicy } from '../src/world/AdaptiveSectorStreamingPolicy';
 import type { WorldEvents } from '../src/world/WorldEvents';
 import { testDistrict } from '../src/world/levels/testDistrict';
 import { flushPromises } from './helpers/flushPromises';
@@ -234,6 +235,11 @@ function createHarness() {
       lodHiddenObjects: 0,
       transitionsPending: false,
       lastError: undefined,
+      policy: new AdaptiveSectorStreamingPolicy().evaluate({
+        sectors: testDistrict.definition.streaming.sectors,
+        playerPosition: { x: 0, y: 0, z: 0 },
+      }),
+      attempts: {},
     }),
   };
   const player = {
