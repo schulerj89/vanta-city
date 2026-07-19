@@ -16,6 +16,10 @@ export interface JunctionSurfacePair {
   readonly collider: StaticColliderDefinition;
 }
 
+export interface JunctionOwnedSurfacePair extends JunctionSurfacePair {
+  readonly sectorId: string;
+}
+
 export interface JunctionOwnedBuildingPlacement extends AshfallBuildingPlacement {
   readonly sectorId: string;
   readonly purpose: 'contact-yard' | 'street-frontage' | 'world-growth';
@@ -267,7 +271,7 @@ export const world004Roads = [
     'road-world-004-west',
     [-42.21875, -0.2, 0],
     [10.9375, 0.4, 12],
-    'sector.world-004-west-north',
+    'sector.west-rim-north',
     ['walkable', 'road', world004JunctionPlan.id],
   ),
   ownedSurface(
@@ -290,6 +294,86 @@ export const world004Roads = [
     [12, 0.4, 8.75],
     'sector.world-004-south-west',
     ['walkable', 'road', world004JunctionPlan.id],
+  ),
+] as const;
+
+/**
+ * Perimeter collision is segmented by the protected outer-sector rings. No
+ * segment reaches farther than the adaptive policy's hard-near radius from
+ * its owner, including at the four map corners.
+ */
+export const world004BoundarySegments = [
+  ownedBoundary(
+    'boundary-west-north',
+    [-47.1875, 0.65, 21.875],
+    [1, 1.3, 43.75],
+    'sector.world-004-west-north',
+  ),
+  ownedBoundary(
+    'boundary-west-south',
+    [-47.1875, 0.65, -21.875],
+    [1, 1.3, 43.75],
+    'sector.world-004-west-south',
+  ),
+  ownedBoundary(
+    'boundary-east-north',
+    [61.1875, 0.65, 24.875],
+    [1, 1.3, 37.75],
+    'sector.world-004-east-north',
+  ),
+  ownedBoundary(
+    'boundary-east-south',
+    [61.1875, 0.65, -18.875],
+    [1, 1.3, 49.75],
+    'sector.world-004-east-south',
+  ),
+  ownedBoundary(
+    'boundary-north-west-edge',
+    [-40.84375, 0.65, 43.25],
+    [13.6875, 1.3, 1],
+    'sector.world-004-west-north',
+  ),
+  ownedBoundary(
+    'boundary-north-west',
+    [-15, 0.65, 43.25],
+    [38, 1.3, 1],
+    'sector.world-004-north-west',
+  ),
+  ownedBoundary(
+    'boundary-north-east',
+    [22.5, 0.65, 43.25],
+    [37, 1.3, 1],
+    'sector.world-004-north-east',
+  ),
+  ownedBoundary(
+    'boundary-north-east-edge',
+    [51.34375, 0.65, 43.25],
+    [20.6875, 1.3, 1],
+    'sector.world-004-east-north',
+  ),
+  ownedBoundary(
+    'boundary-south-west-edge',
+    [-40.84375, 0.65, -43.25],
+    [13.6875, 1.3, 1],
+    'sector.world-004-west-south',
+  ),
+  ownedBoundary(
+    'boundary-south-west',
+    [-15, 0.65, -43.25],
+    [38, 1.3, 1],
+    'sector.world-004-south-west',
+  ),
+  ownedBoundary(
+    'boundary-south-east',
+    [22.5, 0.65, -43.25],
+    [37, 1.3, 1],
+    'sector.world-004-south-east',
+  ),
+  ownedBoundary(
+    'boundary-south-east-edge',
+    [51.34375, 0.65, -43.25],
+    [20.6875, 1.3, 1],
+    'sector.world-004-east-south',
   ),
 ] as const;
 
@@ -740,7 +824,7 @@ function ownedSurface(
   tags: readonly string[] = ['walkable', 'sidewalk', world004JunctionPlan.id],
   textureAssetId = 'environment.ashfall-building.sidewalk-concrete',
   uvMetersPerRepeat = 6,
-): JunctionSurfacePair & { readonly sectorId: string } {
+): JunctionOwnedSurfacePair {
   return {
     ...surfacePair(
       id,
@@ -751,6 +835,21 @@ function ownedSurface(
       textureAssetId,
       uvMetersPerRepeat,
     ),
+    sectorId,
+  };
+}
+
+function ownedBoundary(
+  id: string,
+  position: Vector3Tuple,
+  size: Vector3Tuple,
+  sectorId: string,
+): JunctionOwnedSurfacePair {
+  return {
+    ...surfacePair(id, position, size, 0x59666a, [
+      'boundary',
+      world004JunctionPlan.id,
+    ]),
     sectorId,
   };
 }

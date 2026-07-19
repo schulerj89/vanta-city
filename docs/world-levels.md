@@ -78,9 +78,13 @@ The current WORLD-004 authored footprint is centered at `(7, 0)`, spans X
 = 9,570.3125m². It retains the baseline geometry as historical construction,
 adds four straight road continuations, 37 catalog buildings, two sector-owned
 enterable room shells, 22 sectors, and exact map/traffic/collision agreement.
-The machine-readable authority and architectural decisions are documented in
-`docs/world/plans/world-004-four-side-interiors.json` and
-`docs/world/world-004-four-side-interiors.md`.
+Its perimeter is authored as 12 contiguous visual/collider pairs with one
+nearby protected sector owner per pair, keeping every outer-corner footprint
+inside the adaptive policy's 28m hard-near radius. The unsplit west continuation
+belongs to `sector.west-rim-north` for the same guarantee while the map retains
+its ten logical roads. The machine-readable authority and architectural
+decisions are documented in `docs/world/plans/world-004-four-side-interiors.json`
+and `docs/world/world-004-four-side-interiors.md`.
 
 ### WORLD-001 acceptance evidence
 
@@ -147,4 +151,4 @@ Add `warehouseDistrict` to `new LevelRegistry([...])`. The registry merges its a
 
 The backtick action toggles both the existing overlay and world helpers. Colors are: red collision, green player spawns, blue NPC spawns, yellow triggers, cyan interactions, pink mission locations, green zone bounds, gold landmarks, and purple cinematic anchors/look lines. Rotated red wireframes preserve the authored transform. The Collision / Physics panel also reports rotated-box count, last supporting shape, movement contacts, and the latest camera obstruction ID. Helpers live under `debug-helpers`; rendered geometry and hidden semantic data have separate groups.
 
-Known limits: sectors currently stream level-owned visuals and static collision only. Lighting metadata, semantic queries, minimap/full-map facts, actors, and traffic remain full-definition consumers; later actor/vehicle milestones must adopt the events above. Curved roads use bounded spline strips plus overlapping oriented-box collision rather than arbitrary triangle collision. Moving platforms, dynamic bodies, navigation, controllable vehicles, destructibility, and arbitrary non-ramp pitch/roll remain outside this boundary. Ramps remain bounded planar height fields for character grounding; they do not add side-wall resolution. Teleports ground-probe the requested point but do not search for a nearby free position.
+Known limits: sectors currently stream level-owned visuals, static collision, and time-of-day emissive-material bindings. The bounded four-light rig and immutable lighting metadata remain full-definition consumers; sector load/unload events bind and release only materials belonging to resident fixture visuals. Semantic queries, minimap/full-map facts, actors, and traffic also remain full-definition consumers; later actor/vehicle milestones must adopt the events above. Curved roads use bounded spline strips plus overlapping oriented-box collision rather than arbitrary triangle collision. Moving platforms, dynamic bodies, navigation, controllable vehicles, destructibility, and arbitrary non-ramp pitch/roll remain outside this boundary. Ramps remain bounded planar height fields for character grounding; they do not add side-wall resolution. Teleports ground-probe the requested point but do not search for a nearby free position.

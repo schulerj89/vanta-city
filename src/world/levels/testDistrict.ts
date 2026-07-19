@@ -37,6 +37,7 @@ import {
   world003EastQuayGroundFill,
   world003EastQuayRimSeam,
   world003StreetEdgeVisuals,
+  world004BoundarySegments,
   world004BuildingPlacements,
   world004ClinicFoyer,
   world004JunctionPlan,
@@ -50,7 +51,6 @@ const colors = {
   sidewalk: 0x858783,
   curb: 0xb9b4a7,
   marking: 0xe7d9a1,
-  boundary: 0x59666a,
   signalBox: 0x31585a,
 } as const;
 
@@ -220,16 +220,6 @@ for (const [id, signX, signZ] of [
   );
 }
 
-// Visible, collidable termination at every road end and around the outer corners.
-for (const [id, position, size] of [
-  ['boundary-north-west', [-26.84375, 0.65, 43.25], [41.6875, 1.3, 1]],
-  ['boundary-north-east', [27.84375, 0.65, 43.25], [67.6875, 1.3, 1]],
-  ['boundary-south', [7, 0.65, -43.25], [109.375, 1.3, 1]],
-  ['boundary-east', [61.1875, 0.65, 0], [1, 1.3, 87.5]],
-  ['boundary-west', [-47.1875, 0.65, 0], [1, 1.3, 87.5]],
-] as const)
-  surface(id, position, size, colors.boundary, ['boundary']);
-
 // Lane dashes complement the imported crosswalk without affecting collision.
 const markings: BoxVisualDefinition[] = [];
 for (const offset of [-22, -16, 16, 22]) {
@@ -337,6 +327,7 @@ const environment = [
   ...world003StreetEdgeVisuals.map(({ visual }) => visual),
   ...world004Roads.map(({ visual }) => visual),
   ...world004Sidewalks.map(({ visual }) => visual),
+  ...world004BoundarySegments.map(({ visual }) => visual),
   world004ClinicFoyer.visual,
   ...ashfallInteriors.flatMap(({ visuals }) => visuals),
   eastQuayCurvedRoad,
@@ -358,6 +349,7 @@ const staticCollision = [
   world003EastQuayGroundFill.collider,
   ...world004Roads.map(({ collider: definition }) => definition),
   ...world004Sidewalks.map(({ collider: definition }) => definition),
+  ...world004BoundarySegments.map(({ collider: definition }) => definition),
   world004ClinicFoyer.collider,
   ...ashfallInteriors.flatMap(({ colliders }) => colliders),
   ...splineRoadColliders(eastQuayCurvedRoad),
@@ -391,6 +383,10 @@ const world004EntryIds = new Set([
     definition.id,
   ]),
   ...world004Sidewalks.flatMap(({ visual, collider: definition }) => [
+    visual.id,
+    definition.id,
+  ]),
+  ...world004BoundarySegments.flatMap(({ visual, collider: definition }) => [
     visual.id,
     definition.id,
   ]),
@@ -431,10 +427,6 @@ const world002AEntryIds = new Set([
         id.includes('east-quay-ground') || id.includes('building-east-quay'),
     )
     .map(({ id }) => id),
-  'v.boundary-west',
-  'c.boundary-west',
-  'v.boundary-east',
-  'c.boundary-east',
 ]);
 const world002BEntryIds = new Set([
   ...world002BRoads.flatMap(({ visual, collider: definition }) => [
@@ -449,12 +441,6 @@ const world002BEntryIds = new Set([
     visual.id,
     definition.id,
   ]),
-  'v.boundary-north-west',
-  'c.boundary-north-west',
-  'v.boundary-north-east',
-  'c.boundary-north-east',
-  'v.boundary-south',
-  'c.boundary-south',
 ]);
 const coreEntryIds = streamableEntries
   .filter(
@@ -534,6 +520,9 @@ const world004IdsForSector = (sectorId: string): string[] => [
     .filter((placement) => placement.sectorId === sectorId)
     .flatMap(({ visual, collider: definition }) => [visual.id, definition.id]),
   ...[...world004Roads, ...world004Sidewalks]
+    .filter((entry) => entry.sectorId === sectorId)
+    .flatMap(({ visual, collider: definition }) => [visual.id, definition.id]),
+  ...world004BoundarySegments
     .filter((entry) => entry.sectorId === sectorId)
     .flatMap(({ visual, collider: definition }) => [visual.id, definition.id]),
   ...(world004ClinicFoyer.sectorId === sectorId
@@ -983,7 +972,11 @@ export const testDistrict = {
           center: [x, z] as const,
           loadDistance: 26,
           unloadDistance: 32,
-          entryIds: [...rimIds(east, north), ...world003IdsForSector(id)],
+          entryIds: [
+            ...rimIds(east, north),
+            ...world003IdsForSector(id),
+            ...world004IdsForSector(id),
+          ],
         })),
         ...(
           [

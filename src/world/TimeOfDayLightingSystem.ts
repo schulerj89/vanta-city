@@ -30,6 +30,8 @@ export interface TimeOfDaySnapshot {
   readonly reducedMotion: boolean;
   readonly localLightCount: number;
   readonly emissiveFixtureCount: number;
+  readonly emissiveFixtureIds: readonly string[];
+  readonly emissiveMaterialCount: number;
   readonly maxLocalLights: number;
   readonly shadowsEnabled: false;
   readonly pauseBehavior: 'freeze';
@@ -47,6 +49,7 @@ interface Transition {
 interface MaterialState {
   readonly emissive: Color;
   readonly emissiveIntensity: number;
+  readonly fixtureIds: Set<string>;
 }
 
 const DAY_HOUR = 13;
@@ -89,15 +92,19 @@ export class TimeOfDayLightingSystem implements GameSystem {
     MeshStandardMaterial,
     MaterialState
   >();
+  private readonly fixtureMaterials = new Map<
+    string,
+    Set<MeshStandardMaterial>
+  >();
   private readonly debugUnregister: DebugUnregister[] = [];
-  private unsubscribeLevel: (() => void)[] = [];
+  private unsubscribeWorld: (() => void)[] = [];
   private unsubscribeAccessibility: (() => void) | undefined;
   private transition: Transition | undefined;
   private currentHour: number;
   private currentNightBlend: number;
   private targetHour: number;
   private reducedMotion: boolean;
-  private emissiveFixtureCount = 0;
+  private boundLevel: LevelDefinition | undefined;
   private previousBackground: Scene['background'] = null;
 
   public constructor(
@@ -126,9 +133,15 @@ export class TimeOfDayLightingSystem implements GameSystem {
     this.previousBackground = this.scene.background;
     this.scene.add(this.root);
     this.bindLevel(this.levels.activeLevel);
-    this.unsubscribeLevel = [
+    this.unsubscribeWorld = [
       this.worldEvents.on('level:loaded', ({ level }) => this.bindLevel(level)),
       this.worldEvents.on('level:unloaded', () => this.clearLevelLighting()),
+      this.worldEvents.on('sector:loaded', ({ levelId, sectorId }) =>
+        this.bindSectorMaterials(levelId, sectorId),
+      ),
+      this.worldEvents.on('sector:unloaded', ({ levelId, sectorId }) =>
+        this.releaseSectorMaterials(levelId, sectorId),
+      ),
     ];
     this.unsubscribeAccessibility = this.accessibility.subscribe(
       ({ reducedCameraMotion }) => {
@@ -202,7 +215,9 @@ export class TimeOfDayLightingSystem implements GameSystem {
       transitionProgress: progress,
       reducedMotion: this.reducedMotion,
       localLightCount: this.lampLights.children.length,
-      emissiveFixtureCount: this.emissiveFixtureCount,
+      emissiveFixtureCount: this.fixtureMaterials.size,
+      emissiveFixtureIds: [...this.fixtureMaterials.keys()].sort(),
+      emissiveMaterialCount: this.materialStates.size,
       maxLocalLights: MAX_LOCAL_LIGHTS,
       shadowsEnabled: false,
       pauseBehavior: 'freeze',
@@ -212,7 +227,7 @@ export class TimeOfDayLightingSystem implements GameSystem {
 
   public dispose(): void {
     for (const unregister of this.debugUnregister.splice(0)) unregister();
-    for (const unsubscribe of this.unsubscribeLevel.splice(0)) unsubscribe();
+    for (const unsubscribe of this.unsubscribeWorld.splice(0)) unsubscribe();
     this.unsubscribeAccessibility?.();
     this.unsubscribeAccessibility = undefined;
     this.clearLevelLighting();
@@ -234,24 +249,29 @@ export class TimeOfDayLightingSystem implements GameSystem {
   private bindLevel(level: LevelDefinition | undefined): void {
     this.clearLevelLighting();
     if (!level) return;
+    this.boundLevel = level;
     for (const fixture of (level.lighting?.lamps ?? []).slice(
       0,
       MAX_LOCAL_LIGHTS,
     )) {
-      this.bindFixture(fixture);
+      this.addFixtureLight(fixture);
+      this.bindFixtureMaterials(fixture);
     }
     this.applyLighting();
   }
 
-  private bindFixture(fixture: LampFixtureDefinition): void {
+  private addFixtureLight(fixture: LampFixtureDefinition): void {
     const light = new PointLight(lampColor, 0, 12, 2);
     light.name = `environment:${fixture.id}`;
     light.position.set(...fixture.position);
     light.castShadow = false;
     this.lampLights.add(light);
+  }
 
+  private bindFixtureMaterials(fixture: LampFixtureDefinition): void {
+    this.releaseFixtureMaterials(fixture.id);
     const visual = this.scene.getObjectByName(`visual:${fixture.visualId}`);
-    let bound = false;
+    const bound = new Set<MeshStandardMaterial>();
     visual?.traverse((object) => {
       if (!(object instanceof Mesh)) return;
       const materials = Array.isArray(object.material)
@@ -268,12 +288,68 @@ export class TimeOfDayLightingSystem implements GameSystem {
           this.materialStates.set(material, {
             emissive: material.emissive.clone(),
             emissiveIntensity: material.emissiveIntensity,
+            fixtureIds: new Set(),
           });
         }
-        bound = true;
+        this.materialStates.get(material)!.fixtureIds.add(fixture.id);
+        bound.add(material);
       }
     });
-    if (bound) this.emissiveFixtureCount += 1;
+    if (bound.size > 0) this.fixtureMaterials.set(fixture.id, bound);
+  }
+
+  private bindSectorMaterials(levelId: string, sectorId: string): void {
+    const level = this.boundLevel;
+    if (!level || level.id !== levelId) return;
+    const entryIds = this.sectorEntryIds(level, sectorId);
+    for (const fixture of (level.lighting?.lamps ?? []).slice(
+      0,
+      MAX_LOCAL_LIGHTS,
+    )) {
+      if (entryIds.has(fixture.visualId)) this.bindFixtureMaterials(fixture);
+    }
+    this.applyLighting();
+  }
+
+  private releaseSectorMaterials(levelId: string, sectorId: string): void {
+    const level = this.boundLevel;
+    if (!level || level.id !== levelId) return;
+    const entryIds = this.sectorEntryIds(level, sectorId);
+    for (const fixture of (level.lighting?.lamps ?? []).slice(
+      0,
+      MAX_LOCAL_LIGHTS,
+    )) {
+      if (entryIds.has(fixture.visualId)) {
+        this.releaseFixtureMaterials(fixture.id);
+      }
+    }
+  }
+
+  private sectorEntryIds(
+    level: LevelDefinition,
+    sectorId: string,
+  ): ReadonlySet<string> {
+    const sector = level.streaming?.sectors.find(({ id }) => id === sectorId);
+    if (sector) return new Set(sector.entryIds);
+    if (sectorId === 'legacy-full-level') {
+      return new Set(level.environment.map(({ id }) => id));
+    }
+    return new Set();
+  }
+
+  private releaseFixtureMaterials(fixtureId: string): void {
+    const materials = this.fixtureMaterials.get(fixtureId);
+    if (!materials) return;
+    for (const material of materials) {
+      const state = this.materialStates.get(material);
+      if (!state) continue;
+      state.fixtureIds.delete(fixtureId);
+      if (state.fixtureIds.size > 0) continue;
+      material.emissive.copy(state.emissive);
+      material.emissiveIntensity = state.emissiveIntensity;
+      this.materialStates.delete(material);
+    }
+    this.fixtureMaterials.delete(fixtureId);
   }
 
   private clearLevelLighting(): void {
@@ -283,7 +359,8 @@ export class TimeOfDayLightingSystem implements GameSystem {
       material.emissiveIntensity = state.emissiveIntensity;
     }
     this.materialStates.clear();
-    this.emissiveFixtureCount = 0;
+    this.fixtureMaterials.clear();
+    this.boundLevel = undefined;
   }
 
   private applyLighting(): void {

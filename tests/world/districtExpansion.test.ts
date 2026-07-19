@@ -4,6 +4,7 @@ import { defaultPlayerMovementConfig } from '../../src/player/PlayerMovement';
 import { pedestrianCollisionRadius } from '../../src/pedestrians/PedestrianBoundaryLifecyclePolicy';
 import { getPedestrianRouteDistance } from '../../src/pedestrians/PedestrianBoundaryLifecyclePolicy';
 import { findSpawn } from '../../src/world/LevelQueries';
+import { AdaptiveSectorStreamingPolicy } from '../../src/world/AdaptiveSectorStreamingPolicy';
 import {
   ashfallExpansionPlan,
   eastQuayCurvedRoad,
@@ -28,6 +29,7 @@ import {
   world003EastQuayGroundFill,
   world003JunctionPlan,
   world003StreetEdgeVisuals,
+  world004BoundarySegments,
   world004BuildingPlacements,
   world004ClinicFoyer,
   world004JunctionPlan,
@@ -102,7 +104,7 @@ describe('Ashfall Junction intersection', () => {
           id.startsWith('c.east-quay-ground') ||
           id.startsWith('c.boundary-')),
     );
-    expect(structural).toHaveLength(39);
+    expect(structural).toHaveLength(46);
     for (const definition of structural) {
       const visual = visuals.get(definition.id.replace(/^c\./, 'v.'));
       expect(visual, definition.id).toBeDefined();
@@ -115,10 +117,10 @@ describe('Ashfall Junction intersection', () => {
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
     for (const [from, to, expected] of [
-      [[0, 1, 41], [0, 1, 45], 'c.boundary-north-east'],
-      [[0, 1, -41], [0, 1, -45], 'c.boundary-south'],
-      [[59, 1, 0], [63, 1, 0], 'c.boundary-east'],
-      [[-45, 1, 0], [-49, 1, 0], 'c.boundary-west'],
+      [[0, 1, 41], [0, 1, 45], 'c.boundary-north-west'],
+      [[0, 1, -41], [0, 1, -45], 'c.boundary-south-west'],
+      [[59, 1, 0], [63, 1, 0], 'c.boundary-east-south'],
+      [[-45, 1, 0], [-49, 1, 0], 'c.boundary-west-north'],
     ] as const) {
       expect(
         collision.castSegment(new Vector3(...from), new Vector3(...to))
@@ -331,6 +333,10 @@ describe('Ashfall Junction intersection', () => {
         visual.id,
         collider.id,
       ]),
+      ...world004BoundarySegments.flatMap(({ visual, collider }) => [
+        visual.id,
+        collider.id,
+      ]),
       ...world004BuildingPlacements.flatMap(({ visual, collider }) => [
         visual.id,
         collider.id,
@@ -343,6 +349,104 @@ describe('Ashfall Junction intersection', () => {
       ]),
     ];
     for (const id of entries) expect(ownerCounts.get(id), id).toBe(1);
+  });
+
+  it('retains each expanded corner and west-road owner above the hard memory ceiling', () => {
+    const sectors = testDistrict.definition.streaming.sectors;
+    const activeSectorIds = new Set(sectors.map(({ id }) => id));
+    const policy = new AdaptiveSectorStreamingPolicy();
+    const cases = [
+      {
+        label: 'northwest corner',
+        position: { x: -47.1, y: 0.2, z: 43.1 },
+        owner: 'sector.world-004-west-north',
+        entries: [
+          'v.boundary-west-north',
+          'c.boundary-west-north',
+          'v.boundary-north-west-edge',
+          'c.boundary-north-west-edge',
+        ],
+      },
+      {
+        label: 'southwest corner',
+        position: { x: -47.1, y: 0.2, z: -43.1 },
+        owner: 'sector.world-004-west-south',
+        entries: [
+          'v.boundary-west-south',
+          'c.boundary-west-south',
+          'v.boundary-south-west-edge',
+          'c.boundary-south-west-edge',
+        ],
+      },
+      {
+        label: 'northeast corner',
+        position: { x: 61.1, y: 0.2, z: 43.1 },
+        owner: 'sector.world-004-east-north',
+        entries: [
+          'v.boundary-east-north',
+          'c.boundary-east-north',
+          'v.boundary-north-east-edge',
+          'c.boundary-north-east-edge',
+        ],
+      },
+      {
+        label: 'southeast corner',
+        position: { x: 61.1, y: 0.2, z: -43.1 },
+        owner: 'sector.world-004-east-south',
+        entries: [
+          'v.boundary-east-south',
+          'c.boundary-east-south',
+          'v.boundary-south-east-edge',
+          'c.boundary-south-east-edge',
+        ],
+      },
+      {
+        label: 'southwest span',
+        position: { x: -20, y: 0.2, z: -43.1 },
+        owner: 'sector.world-004-south-west',
+        entries: ['v.boundary-south-west', 'c.boundary-south-west'],
+      },
+      {
+        label: 'southeast span',
+        position: { x: 28, y: 0.2, z: -43.1 },
+        owner: 'sector.world-004-south-east',
+        entries: ['v.boundary-south-east', 'c.boundary-south-east'],
+      },
+      {
+        label: 'west road southwest extent',
+        position: { x: -47.6, y: 0.2, z: -6 },
+        owner: 'sector.west-rim-north',
+        entries: ['v.road-world-004-west', 'c.road-world-004-west'],
+      },
+    ] as const;
+
+    for (const sample of cases) {
+      const result = policy.evaluate({
+        sectors,
+        playerPosition: sample.position,
+        activeSectorIds,
+        memory: {
+          renderer: { geometries: 0, textures: 0 },
+          assets: {
+            sourceReferences: 500,
+            instanceReferences: 0,
+            inFlight: 0,
+          },
+        },
+      });
+      expect(result.memory.overHardCeiling, sample.label).toBe(true);
+      expect(result.decisions[sample.owner], sample.label).toMatchObject({
+        disposition: 'retained',
+        protected: true,
+      });
+      const owner = sectors.find(({ id }) => id === sample.owner);
+      expect(owner, sample.label).toBeDefined();
+      for (const entryId of sample.entries) {
+        expect(owner?.entryIds, `${sample.label}: ${entryId}`).toContain(
+          entryId,
+        );
+      }
+    }
   });
 
   it('authors safe home and clinic spawns plus distinct enterable room shells', () => {

@@ -5,6 +5,7 @@ import {
   MeshStandardMaterial,
   Scene,
   Texture,
+  Vector3,
 } from 'three';
 import type {
   GameAssetLoader,
@@ -527,6 +528,111 @@ describe('LevelSystem', () => {
     system.dispose();
   });
 
+  it('keeps expanded corner and west-road geometry active at hard memory pressure', async () => {
+    const scene = new Scene();
+    const events = new EventBus<WorldEvents>();
+    const collision = new StaticCollisionWorld();
+    const collisionSystem = new WorldCollisionSystem(collision, events);
+    collisionSystem.init();
+    const system = new LevelSystem(
+      scene,
+      unusedAssets,
+      new LevelRegistry([testDistrict]),
+      testDistrict.definition.id,
+      events,
+      undefined,
+      false,
+      true,
+    );
+    system.setStreamingMemorySource(() => ({
+      renderer: { geometries: 0, textures: 0 },
+      assets: {
+        sourceReferences: 500,
+        instanceReferences: 0,
+        inFlight: 0,
+      },
+    }));
+    await system.init();
+
+    const cases = [
+      {
+        position: { x: -46, y: 0.2, z: -42 },
+        owner: 'sector.world-004-west-south',
+        visualId: 'v.boundary-west-south',
+        cast: [
+          [-46, 1, -42],
+          [-49, 1, -42],
+        ],
+        colliderId: 'c.boundary-west-south',
+      },
+      {
+        position: { x: -46, y: 0.2, z: -42 },
+        owner: 'sector.world-004-west-south',
+        visualId: 'v.boundary-south-west-edge',
+        cast: [
+          [-46, 1, -42],
+          [-46, 1, -45],
+        ],
+        colliderId: 'c.boundary-south-west-edge',
+      },
+      {
+        position: { x: 60, y: 0.2, z: -42 },
+        owner: 'sector.world-004-east-south',
+        visualId: 'v.boundary-east-south',
+        cast: [
+          [60, 1, -42],
+          [63, 1, -42],
+        ],
+        colliderId: 'c.boundary-east-south',
+      },
+      {
+        position: { x: 60, y: 0.2, z: 42 },
+        owner: 'sector.world-004-east-north',
+        visualId: 'v.boundary-north-east-edge',
+        cast: [
+          [60, 1, 42],
+          [60, 1, 45],
+        ],
+        colliderId: 'c.boundary-north-east-edge',
+      },
+      {
+        position: { x: -45, y: 0.2, z: -5.5 },
+        owner: 'sector.west-rim-north',
+        visualId: 'v.road-world-004-west',
+        cast: [
+          [-45, 1, -5.5],
+          [-45, -1, -5.5],
+        ],
+        colliderId: 'c.road-world-004-west',
+      },
+    ] as const;
+
+    for (const sample of cases) {
+      await system.refreshStreaming(sample.position);
+      const streaming = system.getStreamingSnapshot();
+      expect(streaming.policy.memory.overHardCeiling).toBe(true);
+      expect(streaming.active, sample.visualId).toContain(sample.owner);
+      expect(streaming.policy.decisions[sample.owner]).toMatchObject({
+        protected: true,
+      });
+      expect(
+        scene.getObjectByName(`visual:${sample.visualId}`),
+        sample.visualId,
+      ).toBeDefined();
+      expect(
+        collision.castSegment(
+          new Vector3(...sample.cast[0]),
+          new Vector3(...sample.cast[1]),
+          { ignoreColliderTags: ['building'] },
+        ).colliderId,
+        sample.colliderId,
+      ).toBe(sample.colliderId);
+    }
+
+    system.dispose();
+    collisionSystem.dispose();
+  });
+
   it('loads sectors with bounded concurrency and deterministic batches', async () => {
     const level = concurrencyLevel();
     const pending = new Map<
@@ -620,8 +726,12 @@ describe('LevelSystem', () => {
     const collisionSystem = new WorldCollisionSystem(collision, events);
     collisionSystem.init();
     const order: string[] = [];
+    const unloadVisualAttached: boolean[] = [];
     events.on('sector:unloaded', ({ levelId }) => {
       order.push(`sector:unloaded:${levelId}:${collision.getColliderCount()}`);
+      unloadVisualAttached.push(
+        scene.getObjectByName(`visual:visual.${levelId}`) !== undefined,
+      );
     });
     events.on('level:unloaded', ({ levelId }) => {
       order.push(`level:unloaded:${levelId}:${collision.getColliderCount()}`);
@@ -686,6 +796,7 @@ describe('LevelSystem', () => {
       'sector:loaded:destination-level:1',
       'level:loaded:destination-level:1',
     ]);
+    expect(unloadVisualAttached).toEqual([true]);
     expect(system.getPreparationSnapshot().state).toBe('idle');
     system.dispose();
     collisionSystem.dispose();

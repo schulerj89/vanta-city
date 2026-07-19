@@ -19,6 +19,7 @@ test('reports controlled slow progress and clean loading disposal', async ({
 
   await waitForReady(page);
   await waitForLoadingReady(page);
+  await waitForAssetsIdle(page);
   const state = await snapshot(page);
   expect(state.performance.loading.disposed).toBe(true);
   expect(state.performance.loading.durationsMs.total).toBeGreaterThan(800);
@@ -73,6 +74,7 @@ test('defers Help, survives cold reload, and replaces disposed startup state', a
   await page.reload();
   await waitForReady(page);
   await waitForLoadingReady(page);
+  await waitForAssetsIdle(page);
   const state = await snapshot(page);
   expect(state.performance.loading.disposed).toBe(true);
   expect(state.performance.assets.inFlight).toBe(0);
@@ -104,6 +106,19 @@ async function waitForLoadingReady(page: Page): Promise<void> {
       { timeout: 20_000 },
     )
     .toBe('ready');
+}
+
+async function waitForAssetsIdle(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            window.__VANTA_TEST__?.snapshot().performance.assets.inFlight ?? -1,
+        ),
+      { timeout: 20_000 },
+    )
+    .toBe(0);
 }
 
 async function snapshot(page: Page): Promise<BrowserTestSnapshot> {

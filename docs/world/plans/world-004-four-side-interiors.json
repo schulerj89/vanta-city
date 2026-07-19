@@ -47,7 +47,9 @@
       "v.road-world-004-south"
     ],
     "addedSidewalkSurfaceCount": 8,
-    "boundaryPolicy": "Move the existing continuous player/vehicle boundary colliders to the exact target bounds; retain the north pedestrian exit surface beyond the new north edge.",
+    "boundarySegmentCount": 12,
+    "boundaryPolicy": "Segment the exact outer player/vehicle boundary across nearby protected WORLD-004 sectors so every extent remains resident at hard memory pressure; retain the north pedestrian exit surface beyond the north edge.",
+    "westRoadOwnership": "The unsplit cross-axis west extension is uniquely owned by nearby sector.west-rim-north; every footprint corner is within the current 28m hard-near radius.",
     "trafficPolicy": "Straight road continuations preserve the inherited 12m corridor and do not alter signal-controlled central lanes."
   },
   "addedSectors": [

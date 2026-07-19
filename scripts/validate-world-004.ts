@@ -3,11 +3,14 @@ import { ashfallTrafficLanes } from '../src/traffic/TrafficSimulation';
 import { ashfallBuildingAssets } from '../src/world/buildings/AshfallBuildingKit';
 import { ashfallInteriors } from '../src/world/interiors/AshfallInteriorKit';
 import {
+  world004BoundarySegments,
   world004BuildingPlacements,
   world004JunctionPlan,
+  world004Roads,
 } from '../src/world/levels/junctionGrowth';
 import { testDistrict } from '../src/world/levels/testDistrict';
 import { validateLevelDefinition } from '../src/world/LevelDefinition';
+import { defaultAdaptiveSectorStreamingConfig } from '../src/world/AdaptiveSectorStreamingPolicy';
 
 interface World004PlanDocument {
   readonly target: {
@@ -89,6 +92,44 @@ for (const interior of ashfallInteriors) {
     ...interior.colliders.map(({ id }) => id),
   ]) {
     assert(ownerCounts.get(id) === 1, `${id} must have one sector owner`);
+  }
+}
+
+const sectors = new Map<
+  string,
+  (typeof testDistrict.definition.streaming.sectors)[number]
+>(
+  testDistrict.definition.streaming.sectors.map((sector) => [
+    sector.id,
+    sector,
+  ]),
+);
+for (const entry of [...world004BoundarySegments, ...world004Roads]) {
+  for (const id of [entry.visual.id, entry.collider.id]) {
+    assert(ownerCounts.get(id) === 1, `${id} must have one sector owner`);
+    assert(
+      sectors.get(entry.sectorId)?.entryIds.includes(id) === true,
+      `${id} must be owned by ${entry.sectorId}`,
+    );
+  }
+  const owner = sectors.get(entry.sectorId);
+  assert(owner !== undefined, `missing owner ${entry.sectorId}`);
+  const [x, , z] = entry.visual.position;
+  const [width, , depth] = entry.visual.size;
+  for (const corner of [
+    [x - width / 2, z - depth / 2],
+    [x - width / 2, z + depth / 2],
+    [x + width / 2, z - depth / 2],
+    [x + width / 2, z + depth / 2],
+  ] as const) {
+    const distance = Math.hypot(
+      corner[0] - owner.center[0],
+      corner[1] - owner.center[1],
+    );
+    assert(
+      distance <= defaultAdaptiveSectorStreamingConfig.hardNearRadius,
+      `${entry.visual.id} extent is ${distance.toFixed(3)}m from ${entry.sectorId}`,
+    );
   }
 }
 

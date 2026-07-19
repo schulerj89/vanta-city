@@ -22,7 +22,9 @@ test.describe('time-of-day lighting', () => {
     const night = await snapshot(page);
     expect(night.lighting).toMatchObject({
       localLightCount: 4,
-      emissiveFixtureCount: 1,
+      emissiveFixtureCount: 2,
+      emissiveFixtureIds: ['lamp.street-light-nw', 'lamp.street-light-se'],
+      emissiveMaterialCount: 1,
       maxLocalLights: 4,
       shadowsEnabled: false,
     });

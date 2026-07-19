@@ -19,93 +19,111 @@
   "homeOwnership": [
     {
       "activeSectorCount": 7,
-      "activeDeclaredColliderCount": 36,
-      "initializedColliderCount": 36,
+      "activeDeclaredColliderCount": 39,
+      "initializedColliderCount": 39,
       "assetInstances": 11,
       "sourceReferences": 25,
       "textures": 60,
       "geometries": 86,
       "pedestrianResidents": 5,
-      "pedestrianMixers": 5
+      "pedestrianMixers": 5,
+      "emissiveFixtureIds": ["lamp.interior-rook-home"],
+      "emissiveMaterialCount": 1,
+      "localLightCount": 4
     },
     {
       "activeSectorCount": 7,
-      "activeDeclaredColliderCount": 36,
-      "initializedColliderCount": 36,
+      "activeDeclaredColliderCount": 39,
+      "initializedColliderCount": 39,
       "assetInstances": 11,
       "sourceReferences": 25,
       "textures": 60,
-      "geometries": 87,
+      "geometries": 86,
       "pedestrianResidents": 5,
-      "pedestrianMixers": 5
+      "pedestrianMixers": 5,
+      "emissiveFixtureIds": ["lamp.interior-rook-home"],
+      "emissiveMaterialCount": 1,
+      "localLightCount": 4
     },
     {
       "activeSectorCount": 7,
-      "activeDeclaredColliderCount": 36,
-      "initializedColliderCount": 36,
+      "activeDeclaredColliderCount": 39,
+      "initializedColliderCount": 39,
       "assetInstances": 11,
       "sourceReferences": 25,
       "textures": 60,
-      "geometries": 87,
+      "geometries": 86,
       "pedestrianResidents": 5,
-      "pedestrianMixers": 5
+      "pedestrianMixers": 5,
+      "emissiveFixtureIds": ["lamp.interior-rook-home"],
+      "emissiveMaterialCount": 1,
+      "localLightCount": 4
     }
   ],
   "venueOwnership": [
     {
       "activeSectorCount": 8,
-      "activeDeclaredColliderCount": 51,
-      "initializedColliderCount": 51,
+      "activeDeclaredColliderCount": 52,
+      "initializedColliderCount": 52,
       "assetInstances": 11,
       "sourceReferences": 25,
       "textures": 48,
       "geometries": 86,
       "pedestrianResidents": 6,
-      "pedestrianMixers": 6
+      "pedestrianMixers": 6,
+      "emissiveFixtureIds": ["lamp.interior-night-venue"],
+      "emissiveMaterialCount": 1,
+      "localLightCount": 4
     },
     {
       "activeSectorCount": 8,
-      "activeDeclaredColliderCount": 51,
-      "initializedColliderCount": 51,
+      "activeDeclaredColliderCount": 52,
+      "initializedColliderCount": 52,
       "assetInstances": 11,
       "sourceReferences": 25,
       "textures": 48,
       "geometries": 86,
       "pedestrianResidents": 6,
-      "pedestrianMixers": 6
+      "pedestrianMixers": 6,
+      "emissiveFixtureIds": ["lamp.interior-night-venue"],
+      "emissiveMaterialCount": 1,
+      "localLightCount": 4
     },
     {
       "activeSectorCount": 8,
-      "activeDeclaredColliderCount": 51,
-      "initializedColliderCount": 51,
+      "activeDeclaredColliderCount": 52,
+      "initializedColliderCount": 52,
       "assetInstances": 11,
       "sourceReferences": 25,
       "textures": 48,
       "geometries": 86,
       "pedestrianResidents": 6,
-      "pedestrianMixers": 6
+      "pedestrianMixers": 6,
+      "emissiveFixtureIds": ["lamp.interior-night-venue"],
+      "emissiveMaterialCount": 1,
+      "localLightCount": 4
     }
   ],
   "performance": {
     "warmupMs": 1000,
     "measurementMs": 3000,
-    "frames": 102,
-    "averageFps": 33.62785177370433,
-    "onePercentLowFps": 28.40909090909032,
-    "frameTimeP95Ms": 34.5,
-    "frameTimeMaxMs": 35.29999999999927,
+    "frames": 79,
+    "averageFps": 26.188424053570227,
+    "onePercentLowFps": 19.455252918288764,
+    "frameTimeP95Ms": 50.79999999999927,
+    "frameTimeMaxMs": 51.39999999999782,
     "renderer": {
       "frameTime": {
         "enabled": true,
         "samples": 120,
-        "minMs": 0.5,
-        "averageMs": 0.6624999990065893,
-        "maxMs": 0.9000000059604645,
-        "p95Ms": 0.7999999821186066
+        "minMs": 0.19999998807907104,
+        "averageMs": 0.9141666673123836,
+        "maxMs": 16.100000023841858,
+        "p95Ms": 1.5
       },
       "drawCalls": 105,
       "triangles": 30406,
-      "geometries": 87,
+      "geometries": 86,
       "textures": 127,
       "pixelRatio": 1,
       "viewport": {
@@ -159,10 +177,10 @@
       },
       "loadCount": 138,
       "unloadCount": 126,
-      "sceneObjects": 348,
-      "ownedResources": 379,
+      "sceneObjects": 350,
+      "ownedResources": 384,
       "modelInstances": 8,
-      "colliders": 55,
+      "colliders": 56,
       "lodHiddenObjects": 62,
       "transitionsPending": false,
       "pinnedSectors": [],
@@ -172,8 +190,8 @@
         "memory": {
           "pressure": "low",
           "source": "heap-and-proxy",
-          "estimatedWorkingSetBytes": 325703456,
-          "estimatedWorkingSetMb": 310.6150207519531,
+          "estimatedWorkingSetBytes": 325441312,
+          "estimatedWorkingSetMb": 310.3650207519531,
           "preferredCeilingMb": 650,
           "hardCeilingMb": 900,
           "overHardCeiling": false
@@ -366,7 +384,7 @@
     "browserMemory": {
       "supported": true,
       "usedJsHeapSize": 24500000,
-      "totalJsHeapSize": 29400000,
+      "totalJsHeapSize": 27600000,
       "jsHeapSizeLimit": 3760000000,
       "peakUsedJsHeapSize": 24500000
     }
@@ -380,7 +398,9 @@
     "transitionProgress": 1,
     "reducedMotion": false,
     "localLightCount": 4,
-    "emissiveFixtureCount": 1,
+    "emissiveFixtureCount": 2,
+    "emissiveFixtureIds": ["lamp.street-light-nw", "lamp.street-light-se"],
+    "emissiveMaterialCount": 1,
     "maxLocalLights": 4,
     "shadowsEnabled": false,
     "pauseBehavior": "freeze",

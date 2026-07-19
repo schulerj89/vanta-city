@@ -49,6 +49,9 @@ test('proves four-side growth, both interiors, occupants, maps, and three stable
   await command(page, 'camera.preview-anchor', 'camera.ashfall.rook-home-wide');
   await waitForCameraPreview(page);
   await expectInteriorOccupant(page, 'route.interior-rook-home-idle-walk');
+  await expect
+    .poll(async () => (await snapshot(page)).lighting.emissiveFixtureIds)
+    .toContain('lamp.interior-rook-home');
   await page.screenshot({
     path: join(outputDirectory, 'rook-home-interior-day.png'),
   });
@@ -76,7 +79,11 @@ test('proves four-side growth, both interiors, occupants, maps, and three stable
     localLightCount: 4,
     maxLocalLights: 4,
     nightBlend: 1,
+    emissiveFixtureIds: expect.arrayContaining(['lamp.interior-night-venue']),
   });
+  expect(venue.lighting.emissiveFixtureIds).not.toContain(
+    'lamp.interior-rook-home',
+  );
   await page.screenshot({
     path: join(outputDirectory, 'night-venue-interior-night.png'),
   });
@@ -147,6 +154,13 @@ test('proves four-side growth, both interiors, occupants, maps, and three stable
   ]);
   expect(homeOwnership[2].geometries).toBe(homeOwnership[1].geometries);
   expect(venueOwnership[2].geometries).toBe(venueOwnership[1].geometries);
+  const coreLighting = (await snapshot(page)).lighting;
+  expect(coreLighting.emissiveFixtureIds).not.toContain(
+    'lamp.interior-rook-home',
+  );
+  expect(coreLighting.emissiveFixtureIds).not.toContain(
+    'lamp.interior-night-venue',
+  );
 
   const performance = await page.evaluate(() =>
     window.__VANTA_TEST__!.capturePerformance(1_000, 3_000),
@@ -239,6 +253,9 @@ interface OwnershipSample {
   readonly geometries: number;
   readonly pedestrianResidents: number;
   readonly pedestrianMixers: number;
+  readonly emissiveFixtureIds: readonly string[];
+  readonly emissiveMaterialCount: number;
+  readonly localLightCount: number;
 }
 
 function ownership(state: BrowserTestSnapshot): OwnershipSample {
@@ -252,6 +269,9 @@ function ownership(state: BrowserTestSnapshot): OwnershipSample {
     geometries: state.performance.renderer.geometries,
     pedestrianResidents: state.pedestrians.residentCount,
     pedestrianMixers: state.pedestrians.mixerOwnerCount,
+    emissiveFixtureIds: state.lighting.emissiveFixtureIds,
+    emissiveMaterialCount: state.lighting.emissiveMaterialCount,
+    localLightCount: state.lighting.localLightCount,
   };
 }
 
@@ -265,6 +285,9 @@ function logicalOwnership(sample: OwnershipSample) {
     textures: sample.textures,
     pedestrianResidents: sample.pedestrianResidents,
     pedestrianMixers: sample.pedestrianMixers,
+    emissiveFixtureIds: sample.emissiveFixtureIds,
+    emissiveMaterialCount: sample.emissiveMaterialCount,
+    localLightCount: sample.localLightCount,
   };
 }
 
