@@ -432,8 +432,16 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
         'Mission persistence must be restored before initialization',
       );
     }
-    if (snapshot.missions.length !== this.definitions.length) {
-      throw new Error('Mission snapshot definition count does not match');
+    const savedIds = new Set(snapshot.missions.map(({ id }) => id));
+    if (savedIds.size !== snapshot.missions.length) {
+      throw new Error('Mission snapshot contains duplicate mission IDs');
+    }
+    for (const saved of snapshot.missions) {
+      if (!this.definitionsById.has(saved.id)) {
+        throw new Error(
+          `Mission snapshot contains unknown mission "${saved.id}"`,
+        );
+      }
     }
     const restoredActive = snapshot.missions.filter(
       ({ status }) => status === 'active',
@@ -444,12 +452,9 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
     ) {
       throw new Error('Mission snapshot active mission is inconsistent');
     }
-    for (const definition of this.definitions) {
-      const saved = snapshot.missions.find(({ id }) => id === definition.id);
-      if (
-        !saved ||
-        saved.objectiveStatuses.length !== definition.objectives.length
-      ) {
+    for (const saved of snapshot.missions) {
+      const definition = this.requireDefinition(saved.id);
+      if (saved.objectiveStatuses.length !== definition.objectives.length) {
         throw new Error(
           `Mission snapshot is incompatible with "${definition.id}"`,
         );
@@ -468,6 +473,25 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
     this.activeMissionId = snapshot.activeMissionId;
     this.revision = snapshot.revision;
     this.notification = undefined;
+    this.refreshAvailability();
+  }
+
+  /** Applies canonical story facts through the mission-owned persistence surface. */
+  public applyFactChanges(
+    changes: Readonly<Record<string, MissionFactValue>>,
+  ): boolean {
+    this.assertAvailable();
+    let changed = false;
+    for (const [id, value] of Object.entries(changes)) {
+      if (this.facts.get(id) === value) continue;
+      this.facts.set(id, value);
+      changed = true;
+    }
+    if (changed) {
+      this.refreshAvailability();
+      this.bump();
+    }
+    return changed;
   }
 
   public dispose(): void {

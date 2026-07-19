@@ -11,6 +11,7 @@ import {
   MissionSystem,
   type MissionPersistenceSnapshot,
 } from '../src/missions/MissionSystem';
+import type { MissionDefinition } from '../src/missions/MissionDefinition';
 import {
   ashfallInitialMissionFacts,
   missionDefinitions,
@@ -18,7 +19,10 @@ import {
 import { DefinitionLevelLocations } from '../src/world/LevelQueries';
 import { testDistrict } from '../src/world/levels/testDistrict';
 
-function harness() {
+function harness(
+  definitions: readonly MissionDefinition[] = missionDefinitions,
+  initialize = true,
+) {
   const stateEvents = new EventBus<StateEvents>();
   const state = new GameStateMachine(stateEvents);
   state.transition('playing');
@@ -29,33 +33,29 @@ function harness() {
   const equipment = new CharacterEquipment('player');
   const position = { x: 2, y: 0.22, z: 19 };
   const locations = new DefinitionLevelLocations(testDistrict.definition);
-  const missions = new MissionSystem(
-    missionDefinitions,
-    ashfallInitialMissionFacts,
-    {
-      state,
-      player: {
-        getWorldPose: () => ({
-          position: { ...position },
-          forward: { x: 0, y: 0, z: -1 },
-          radius: 0.38,
-        }),
-      },
-      level: {
-        activeLevel: testDistrict.definition,
-        resolveLocation: (world) => locations.resolveLocation(world),
-      },
-      interactions,
-      dialogue,
-      health,
-      money,
-      equipment: {
-        owns: (itemId) => isEquipmentId(itemId) && equipment.owns(itemId),
-        acquire: (itemId) => isEquipmentId(itemId) && equipment.acquire(itemId),
-      },
+  const missions = new MissionSystem(definitions, ashfallInitialMissionFacts, {
+    state,
+    player: {
+      getWorldPose: () => ({
+        position: { ...position },
+        forward: { x: 0, y: 0, z: -1 },
+        radius: 0.38,
+      }),
     },
-  );
-  missions.init();
+    level: {
+      activeLevel: testDistrict.definition,
+      resolveLocation: (world) => locations.resolveLocation(world),
+    },
+    interactions,
+    dialogue,
+    health,
+    money,
+    equipment: {
+      owns: (itemId) => isEquipmentId(itemId) && equipment.owns(itemId),
+      acquire: (itemId) => isEquipmentId(itemId) && equipment.acquire(itemId),
+    },
+  });
+  if (initialize) missions.init();
   return {
     dialogue,
     equipment,
@@ -259,5 +259,50 @@ describe('MissionSystem', () => {
         triggerId: 'trigger.intersection-center',
       }),
     ).toThrow('Mission system is disposed');
+  });
+
+  it('restores older snapshots by stable ID while appended missions keep defaults', () => {
+    const source = harness();
+    expect(source.missions.start('ash-001-walk-the-block')).toBe(true);
+    const persisted = source.missions.getPersistenceSnapshot();
+    source.missions.dispose();
+
+    const appended: MissionDefinition = {
+      ...missionDefinitions[0]!,
+      id: 'ash-002-appended',
+      objectives: missionDefinitions[0]!.objectives.map((objective, index) => ({
+        ...objective,
+        id: `ash-002-objective-${index}`,
+        highlights: undefined,
+      })),
+      reward: {
+        ...missionDefinitions[0]!.reward,
+        id: 'reward.ash-002-appended',
+      },
+    };
+    const restored = harness([...missionDefinitions, appended], false);
+    restored.missions.restore(persisted);
+    restored.missions.init();
+
+    expect(restored.missions.getSnapshot().missions).toEqual([
+      expect.objectContaining({
+        id: 'ash-001-walk-the-block',
+        status: 'active',
+        attempt: 1,
+      }),
+      expect.objectContaining({
+        id: 'ash-002-appended',
+        status: 'available',
+        attempt: 0,
+        rewardGranted: false,
+      }),
+    ]);
+    expect(
+      restored.missions.applyFactChanges({ 'rook-arrived-in-ashfall': true }),
+    ).toBe(true);
+    expect(
+      restored.missions.applyFactChanges({ 'rook-arrived-in-ashfall': true }),
+    ).toBe(false);
+    restored.missions.dispose();
   });
 });

@@ -93,6 +93,42 @@ describe('campaign save schema and storage authority', () => {
         validation,
       ).ok,
     ).toBe(false);
+
+    const appendedDefinition = {
+      ...missionDefinitions[0]!,
+      id: 'ash-002-appended',
+      objectives: missionDefinitions[0]!.objectives.map((objective, index) => ({
+        ...objective,
+        id: `ash-002-objective-${index}`,
+        highlights: undefined,
+      })),
+      reward: {
+        ...missionDefinitions[0]!.reward,
+        id: 'reward.ash-002-appended',
+      },
+    };
+    const older = validSnapshot();
+    expect(
+      parseCampaignSave(JSON.stringify(older), {
+        ...validation,
+        missions: [...missionDefinitions, appendedDefinition],
+      }).ok,
+    ).toBe(true);
+    expect(
+      parseCampaignSave(
+        JSON.stringify({
+          ...older,
+          mission: {
+            ...older.mission,
+            missions: [
+              ...older.mission.missions,
+              { ...older.mission.missions[0], id: 'unknown-mission' },
+            ],
+          },
+        }),
+        validation,
+      ),
+    ).toEqual({ ok: false, reason: 'invalid-mission-progress' });
   });
 
   it('reports storage failures and resets only campaign/title progress', () => {
@@ -103,6 +139,10 @@ describe('campaign save schema and storage authority', () => {
     const saves = new CampaignSaveSystem(storage, validation);
     expect(saves.hasSave()).toBe(true);
     expect(saves.reset()).toBe(true);
+    expect(saves.getStatus()).toMatchObject({
+      readResult: 'empty',
+      readError: undefined,
+    });
     expect(storage.getItem(CAMPAIGN_SAVE_STORAGE_KEY)).toBeNull();
     expect(storage.getItem(TITLE_STARTED_STORAGE_KEY)).toBeNull();
     expect(storage.getItem('vanta-city:audio')).toBe('preserve');
@@ -151,6 +191,7 @@ describe('campaign save schema and storage authority', () => {
     }>();
     const equipment = new CharacterEquipment('player', []);
     const money = new PlayerMoneyAccount('player');
+    const livePosition = { x: 1, y: 0.22, z: 2 };
     const sources = {
       missions: {
         events: missionEvents,
@@ -160,7 +201,7 @@ describe('campaign save schema and storage authority', () => {
       equipment: Object.assign(equipment, { events: equipmentEvents }),
       health: { current: 100, events: healthEvents },
       player: {
-        getWorldPose: () => ({ position: { x: 1, y: 0.22, z: 2 } }),
+        getWorldPose: () => ({ position: { ...livePosition } }),
         getDebugSnapshot: () => ({ facingYaw: 0.5 }),
       },
       levels: { activeLevel: { id: 'test-district' } },
@@ -175,8 +216,13 @@ describe('campaign save schema and storage authority', () => {
     vi.runAllTimers();
     expect(saves.getStatus().writeCount).toBe(1);
     missionEvents.emit('changed', {});
+    Object.assign(livePosition, { x: 42, z: -11 });
     saves.dispose();
     expect(saves.getStatus().writeCount).toBe(2);
+    const stored = JSON.parse(
+      storage.getItem(CAMPAIGN_SAVE_STORAGE_KEY)!,
+    ) as CampaignSaveSnapshot;
+    expect(stored.player.position).toEqual([42, 0.22, -11]);
     missionEvents.emit('changed', {});
     vi.runAllTimers();
     expect(saves.getStatus().writeCount).toBe(2);
@@ -205,6 +251,48 @@ describe('campaign respawn resolution', () => {
         .id,
     ).toBe('spawn.player.clinic');
     expect(findSafePlayerSpawn(level, ['missing']).id).toBe(
+      'spawn.player-default',
+    );
+  });
+
+  it('honors default preference and loads fallback residency after failure', async () => {
+    const saves = new CampaignSaveSystem(new MemoryStorage(), validation);
+    const refreshStreaming = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('clinic sector failed'))
+      .mockResolvedValue(undefined);
+    const levels = {
+      resolveSafePlayerSpawn: (candidates: readonly string[]) =>
+        candidates.includes('spawn.player.clinic')
+          ? {
+              id: 'spawn.player.clinic',
+              position: [40, 0.2, 0],
+              rotation: [0, 1, 0],
+            }
+          : {
+              id: 'spawn.player-default',
+              position: [0, 0.2, 7],
+              rotation: [0, 0, 0],
+            },
+      refreshStreaming,
+    };
+    saves.setRespawnPreference('clinic');
+    await expect(saves.prepareRespawn(levels as never)).resolves.toMatchObject({
+      id: 'spawn.player-default',
+    });
+    expect(refreshStreaming).toHaveBeenNthCalledWith(1, {
+      x: 40,
+      y: 0.2,
+      z: 0,
+    });
+    expect(refreshStreaming).toHaveBeenNthCalledWith(2, {
+      x: 0,
+      y: 0.2,
+      z: 7,
+    });
+
+    saves.setRespawnPreference('default');
+    expect(saves.resolveRespawn(levels as never).id).toBe(
       'spawn.player-default',
     );
   });

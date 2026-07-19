@@ -28,6 +28,12 @@ mutating live systems. Version 1 has no predecessor to migrate. Future versions
 must add an explicit whole-record migration before increasing the exported
 schema version; unknown versions are never partially interpreted.
 
+Mission progress is matched by stable mission ID rather than array position or
+definition count. A version 1 save may omit missions appended in a later build;
+those missions retain their authored initial state. Duplicate saved IDs,
+unknown IDs, changed objective topology, and inconsistent active-mission data
+are rejected as tampered or incompatible.
+
 Storage access is defensive. Unavailable/private storage, quota failures, and
 remove failures are reported through `getStatus()` and cannot crash boot.
 Snapshots returned by the authority are deeply immutable.
@@ -41,11 +47,23 @@ therefore precedes reward and content listeners. Save listeners attach only
 after every runtime system has initialized, preventing restore/init side effects
 from producing writes or replaying rewards.
 
+Initial sector selection uses the restored player pose, so its nearby geometry
+and colliders are resident before the player controller settles there. Authored
+level transitions still stage around their requested/default spawn.
+
+The Northbar opening is gated by the mission-owned
+`rook-arrived-in-ashfall` fact committed by the canonical arrival landing
+transaction. Merely having a save is not story progress: a save taken during the
+opening safely replays it, while a save after the landing checkpoint cannot
+replay it.
+
 Meaningful authoritative events request a save: mission revision changes, money
 transactions, equipment ownership/equip/ammunition changes, living health
 changes, level loads, and resolved respawns. Requests within one task are
 coalesced into one zero-delay write. There is no frame polling. Disposal removes
-all listeners and cancels the pending timer.
+all listeners and cancels the pending timer. Page hide, document visibility
+loss, and disposal synchronously flush a final snapshot so the latest pose is
+not lost between meaningful events.
 
 Public APIs are `hasSave()`, `getStatus()`, immutable `getSnapshot()`,
 `restoreBeforeInit()`, `attach()`, `requestSave()`, `saveNow()`, `reset()`,
@@ -78,6 +96,11 @@ resolution asks `LevelSystem.resolveSafePlayerSpawn()` for stable candidates:
 
 The query skips missing and capsule-obstructed candidates, so SAVE-001 works with
 today's definitions. WORLD-004 can add home and clinic IDs without persistence
-code changes. Respawn teleports through the player controller, resets health and
-transient movement/actions without changing missions, money, owned equipment or
-ammo, releases death-camera ownership, and snaps the gameplay camera.
+code changes. An explicit default preference skips home and clinic. Before
+teleporting, the save authority awaits sector reconciliation for the resolved
+spawn so geometry and collision are resident. If a preferred sector cannot
+load, it prepares the safe default as a bounded fallback; if that also fails,
+the death overlay retains camera/input ownership, exposes the error in its debug
+snapshot, and permits retry. Repeated revive clicks share one in-progress
+request. Only a prepared respawn resets health and transient movement/actions;
+missions, money, owned equipment, and ammunition remain unchanged.

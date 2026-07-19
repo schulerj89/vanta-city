@@ -61,6 +61,7 @@ export class CampaignSaveSystem {
   private lastError: string | undefined;
   private readResult: CampaignSaveStatus['readResult'] = 'empty';
   private readError: string | undefined;
+  private lastObservedRaw: string | null | undefined;
   private lastSpawnId: string | undefined;
   private homeUnlocked = false;
   private respawnPreference: CampaignSaveSnapshot['world']['respawnPreference'] =
@@ -128,6 +129,20 @@ export class CampaignSaveSystem {
       }),
       sources.worldEvents.on('level:loaded', () => this.requestSave()),
     ];
+    if (typeof window !== 'undefined') {
+      const flush = (): void => {
+        this.saveOnExit();
+      };
+      const flushWhenHidden = (): void => {
+        if (document.visibilityState === 'hidden') this.saveOnExit();
+      };
+      window.addEventListener('pagehide', flush);
+      document.addEventListener('visibilitychange', flushWhenHidden);
+      this.unsubscribers.push(
+        () => window.removeEventListener('pagehide', flush),
+        () => document.removeEventListener('visibilitychange', flushWhenHidden),
+      );
+    }
   }
 
   public requestSave(): void {
@@ -179,8 +194,10 @@ export class CampaignSaveSystem {
       },
     };
     try {
-      this.storage?.setItem(CAMPAIGN_SAVE_STORAGE_KEY, JSON.stringify(next));
+      const raw = JSON.stringify(next);
+      this.storage?.setItem(CAMPAIGN_SAVE_STORAGE_KEY, raw);
       if (!this.storage) throw new Error('storage-unavailable');
+      this.lastObservedRaw = raw;
       this.snapshot = deepFreeze(next);
       this.available = true;
       this.lastError = undefined;
@@ -221,12 +238,15 @@ export class CampaignSaveSystem {
     };
     readonly facingYaw: number | undefined;
   } {
-    const candidates = [
-      ...(this.homeUnlocked && this.respawnPreference === 'home'
-        ? ['spawn.player.home']
-        : []),
-      'spawn.player.clinic',
-    ];
+    const candidates =
+      this.respawnPreference === 'default'
+        ? []
+        : [
+            ...(this.homeUnlocked && this.respawnPreference === 'home'
+              ? ['spawn.player.home']
+              : []),
+            'spawn.player.clinic',
+          ];
     const spawn = levels.resolveSafePlayerSpawn(candidates);
     return {
       id: spawn.id,
@@ -237,6 +257,30 @@ export class CampaignSaveSystem {
       },
       facingYaw: spawn.rotation?.[1],
     };
+  }
+
+  public async prepareRespawn(
+    levels: LevelSystem,
+  ): Promise<ReturnType<CampaignSaveSystem['resolveRespawn']>> {
+    const preferred = this.resolveRespawn(levels);
+    try {
+      await levels.refreshStreaming(preferred.position);
+      return preferred;
+    } catch (error) {
+      const fallbackSpawn = levels.resolveSafePlayerSpawn([]);
+      if (fallbackSpawn.id === preferred.id) throw error;
+      const fallback = {
+        id: fallbackSpawn.id,
+        position: {
+          x: fallbackSpawn.position[0],
+          y: fallbackSpawn.position[1],
+          z: fallbackSpawn.position[2],
+        },
+        facingYaw: fallbackSpawn.rotation?.[1],
+      };
+      await levels.refreshStreaming(fallback.position);
+      return fallback;
+    }
   }
 
   /** Deletes only campaign progress and the title's first-run marker. */
@@ -254,6 +298,9 @@ export class CampaignSaveSystem {
       this.respawnPreference = 'home';
       this.available = true;
       this.lastError = undefined;
+      this.readResult = 'empty';
+      this.readError = undefined;
+      this.lastObservedRaw = null;
       return true;
     } catch (error) {
       this.available = false;
@@ -267,8 +314,8 @@ export class CampaignSaveSystem {
     if (this.writeTimer !== undefined) {
       clearTimeout(this.writeTimer);
       this.writeTimer = undefined;
-      this.saveNow();
     }
+    if (this.sources) this.saveOnExit();
     this.writeTimer = undefined;
     this.sources = undefined;
   }
@@ -277,6 +324,7 @@ export class CampaignSaveSystem {
     try {
       const raw = this.storage?.getItem(CAMPAIGN_SAVE_STORAGE_KEY);
       if (raw === undefined) throw new Error('storage-unavailable');
+      this.lastObservedRaw = raw;
       if (raw === null) return;
       const parsed = parseCampaignSave(raw, this.validation);
       if (!parsed.ok) {
@@ -296,6 +344,21 @@ export class CampaignSaveSystem {
       this.readError = error instanceof Error ? error.message : String(error);
       this.lastError = this.readError;
     }
+  }
+
+  /** Avoids overwriting another tab or an intentional external corruption on exit. */
+  private saveOnExit(): void {
+    try {
+      if (
+        this.storage?.getItem(CAMPAIGN_SAVE_STORAGE_KEY) !==
+        this.lastObservedRaw
+      ) {
+        return;
+      }
+    } catch {
+      // saveNow owns the normal storage error/status reporting path.
+    }
+    this.saveNow();
   }
 }
 

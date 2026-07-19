@@ -134,12 +134,106 @@ test('mission reward survives repeated reload and death uses default fallback on
   expect(failures).toEqual([]);
 });
 
+test('page hide saves a remote pose and boot restores its collider residency', async ({
+  page,
+}) => {
+  const failures = monitor(page);
+  await command(page, 'player.teleport-position', '40,0.22,0,0.75');
+  await expect
+    .poll(async () => (await snapshot(page)).player.grounded)
+    .toBe(true);
+  await page.evaluate(() =>
+    window.dispatchEvent(new PageTransitionEvent('pagehide')),
+  );
+  expect(
+    await page.evaluate((key) => {
+      const stored = JSON.parse(localStorage.getItem(key)!) as {
+        player: { position: [number, number, number] };
+      };
+      return stored.player.position;
+    }, CAMPAIGN_SAVE_STORAGE_KEY),
+  ).toEqual([40, expect.any(Number), 0]);
+
+  await page.reload();
+  await ready(page);
+  await expect
+    .poll(async () => (await snapshot(page)).player.grounded)
+    .toBe(true);
+  const state = await snapshot(page);
+  expect(state.player.position.x).toBeCloseTo(40, 1);
+  expect(state.player.position.z).toBeCloseTo(0, 1);
+  expect(state.player.groundColliderId).not.toBe('');
+  expect(state.world.sectors.active).toContain('sector.east-rim-north');
+  expect(state.world.activeDeclaredColliderCount).toBeGreaterThan(0);
+  expect(failures).toEqual([]);
+});
+
+test('opening save replays until its canonical landing checkpoint', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const failures = monitor(page);
+  const openingUrl =
+    '/?e2e=1&opening=1&skipTitle=1&traffic=0&dialogueTypewriter=0';
+  await page.goto(openingUrl);
+  await bridgeReady(page);
+  await expect
+    .poll(async () => (await snapshot(page)).cinematic.shotId)
+    .toBe('shot.ash-001.northbar-establish');
+  expect(
+    await page.evaluate(() => window.__VANTA_TEST__!.campaignSaveNow()),
+  ).toBe(true);
+
+  await page.reload();
+  await bridgeReady(page);
+  await expect
+    .poll(async () => (await snapshot(page)).cinematic.shotId)
+    .toBe('shot.ash-001.northbar-establish');
+  expect((await snapshot(page)).world.levelId).toBe('northbar-coach-depot');
+
+  expect(
+    await page.evaluate(() => window.__VANTA_TEST__!.requestCinematicSkip()),
+  ).toBe(true);
+  expect(
+    await page.evaluate(() => window.__VANTA_TEST__!.confirmCinematicSkip()),
+  ).toBe(true);
+  await expect
+    .poll(async () => (await snapshot(page)).cinematic, { timeout: 15_000 })
+    .toMatchObject({
+      state: 'idle',
+      lastResult: 'skipped',
+      committedLandingTransactionId: 'transaction.ash-001.northbar-arrival',
+    });
+  await expect
+    .poll(async () => (await snapshot(page)).world.levelId)
+    .toBe('test-district');
+  let state = await snapshot(page);
+  expect(state.missions.runtime.facts['rook-arrived-in-ashfall']).toBe(true);
+  expect(
+    await page.evaluate(() => window.__VANTA_TEST__!.campaignSaveNow()),
+  ).toBe(true);
+
+  await page.reload();
+  await ready(page);
+  state = await snapshot(page);
+  expect(state.world.levelId).toBe('test-district');
+  expect(state.cinematic.state).toBe('idle');
+  expect(state.missions.runtime.facts['rook-arrived-in-ashfall']).toBe(true);
+  expect(failures).toEqual([]);
+});
+
 async function ready(page: Page): Promise<void> {
   await expect
     .poll(() =>
       page.evaluate(() => window.__VANTA_TEST__?.snapshot().gameState),
     )
     .toBe('playing');
+}
+
+async function bridgeReady(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.evaluate(() => window.__VANTA_TEST__?.snapshot().ready))
+    .toBe(true);
 }
 
 async function snapshot(page: Page): Promise<BrowserTestSnapshot> {

@@ -237,6 +237,25 @@ function deferred<T>(): {
 }
 
 describe('LevelSystem', () => {
+  it('chooses initial streaming residency around a restored pose', async () => {
+    const system = new LevelSystem(
+      new Scene(),
+      unusedAssets,
+      new LevelRegistry([textureOwnershipLevel()]),
+      'texture-ownership-level',
+      new EventBus<WorldEvents>(),
+    );
+    system.setStreamingPositionSource(() => ({ x: 100, y: 0, z: 0 }));
+
+    await system.init();
+
+    expect(system.getStreamingSnapshot().active).toEqual(
+      expect.arrayContaining(['sector.core', 'sector.streamed']),
+    );
+    expect(system.getStreamingSnapshot().active).not.toContain('sector.home');
+    system.dispose();
+  });
+
   it('disposes only sector-owned texture clones across repeated reloads', async () => {
     const sourceTexture = new Texture();
     const sourceDispose = vi.spyOn(sourceTexture, 'dispose');

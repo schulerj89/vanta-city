@@ -153,14 +153,18 @@ async function bootstrap(): Promise<void> {
       await import('./debug/DevelopmentAssetFaults');
     assetFaults = DevelopmentAssetFaults.from(pageParameters);
   }
+  const openingCompleted =
+    campaignSave.getSnapshot()?.mission.facts['rook-arrived-in-ashfall'] ===
+    true;
   const authoredOpening =
-    !campaignSave.hasSave() &&
+    !openingCompleted &&
     (pageParameters.get('e2e') !== '1' ||
       pageParameters.get('opening') === '1') &&
     !pageParameters.has('sandbox');
   const initialLevelId =
-    campaignSave.getSnapshot()?.world.levelId ??
-    (authoredOpening ? 'northbar-coach-depot' : 'test-district');
+    (authoredOpening
+      ? 'northbar-coach-depot'
+      : campaignSave.getSnapshot()?.world.levelId) ?? 'test-district';
   const initialLevel = levels.get(initialLevelId);
   const assetCatalog = new AssetCatalog({
     ...assetManifest,
@@ -555,7 +559,7 @@ async function bootstrap(): Promise<void> {
     camera,
     prefersReducedMotion,
     () => sparringTarget?.reset(),
-    () => campaignSave.resolveRespawn(levelSystem),
+    () => campaignSave.prepareRespawn(levelSystem),
     ({ id }) => campaignSave.recordRespawn(id),
   );
   const healthHud = new HealthHudSystem(
@@ -1718,7 +1722,9 @@ function registerVerticalSliceDebug(
       id: 'player.revive',
       label: 'Revive player and restart debug combat',
       group: sections.combat,
-      run: () => playerDeath?.reviveNow(),
+      run: async () => {
+        await playerDeath?.reviveNow();
+      },
     }),
     debug.registerCommand({
       id: 'sparring-target.health-damage',

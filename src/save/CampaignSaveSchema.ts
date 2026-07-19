@@ -134,8 +134,7 @@ function parseMission(
     (value.activeMissionId !== undefined &&
       typeof value.activeMissionId !== 'string') ||
     !record(value.facts) ||
-    !Array.isArray(value.missions) ||
-    value.missions.length !== definitions.length
+    !Array.isArray(value.missions)
   ) {
     return invalid('invalid-mission');
   }
@@ -164,12 +163,17 @@ function parseMission(
     'completed',
   ];
   const missionValues = value.missions as unknown[];
-  const parsed = definitions.map((definition) => {
-    const item = missionValues.find(
-      (candidate) => record(candidate) && candidate.id === definition.id,
-    );
+  const savedIds = new Set<string>();
+  const definitionsById = new Map(
+    definitions.map((definition) => [definition.id, definition]),
+  );
+  const parsed = missionValues.map((item) => {
+    if (!record(item) || typeof item.id !== 'string') return undefined;
+    if (savedIds.has(item.id)) return undefined;
+    savedIds.add(item.id);
+    const definition = definitionsById.get(item.id);
     if (
-      !record(item) ||
+      !definition ||
       !statuses.includes(item.status as MissionStatus) ||
       !safeInteger(item.attempt, 0) ||
       !Array.isArray(item.objectiveStatuses) ||

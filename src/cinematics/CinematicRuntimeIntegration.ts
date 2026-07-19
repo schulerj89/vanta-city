@@ -601,6 +601,14 @@ class MissionLandingAdapter implements CinematicLandingAdapter {
     transaction: Parameters<CinematicLandingAdapter['commitLanding']>[0],
   ) {
     if (this.committed.has(transaction.id)) return { committed: true };
+    if (transaction.id === 'transaction.ash-001.northbar-arrival') {
+      this.missions.applyFactChanges({
+        'orin-status': 'missing',
+        'rook-accepted-orin-search': true,
+        'marrow-has-rook-arrival-time': true,
+        'rook-arrived-in-ashfall': true,
+      });
+    }
     for (const hookId of [
       ...transaction.storyEffectIds,
       ...transaction.missionHandoffIds,

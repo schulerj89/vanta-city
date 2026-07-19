@@ -236,7 +236,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
   }
 
   public async init(): Promise<void> {
-    await this.load(this.initialLevelId);
+    const prepared = await this.prepareInternal(
+      this.initialLevelId,
+      undefined,
+      this.positionSource?.(),
+    );
+    await prepared.commit();
   }
 
   public update(): void {
@@ -291,6 +296,14 @@ export class LevelSystem implements GameSystem, LevelLocations {
     levelId: string,
     spawnId?: string,
   ): Promise<PreparedLevelTransition> {
+    return this.prepareInternal(levelId, spawnId);
+  }
+
+  private async prepareInternal(
+    levelId: string,
+    spawnId?: string,
+    streamingFocus?: WorldPosition,
+  ): Promise<PreparedLevelTransition> {
     const generation = ++this.preparationGeneration;
     this.disposePrepared();
     this.preparationState = 'preparing';
@@ -308,7 +321,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
       const locations = new DefinitionLevelLocations(definition);
       const spawn = locations.getSpawn(spawnId);
       next = this.createLevel(definition);
-      const focus = toWorldPosition(spawn.position);
+      const focus = streamingFocus ?? toWorldPosition(spawn.position);
       const definitions = sectorsFor(definition, this.streamingEnabled);
       const initialSelection = this.streamingPolicy.evaluate({
         sectors: definitions,

@@ -11,6 +11,8 @@ export interface PlayerDeathSnapshot {
   readonly reviveSequence: number;
   readonly cameraOwned: boolean;
   readonly lastRespawnId: string | undefined;
+  readonly reviveInProgress: boolean;
+  readonly lastRespawnError: string | undefined;
 }
 
 export interface DeathPlayerSurface {
@@ -58,6 +60,9 @@ export class PlayerDeathSystem implements GameSystem {
   private depletionSequence = 0;
   private reviveSequence = 0;
   private lastRespawnId: string | undefined;
+  private revivePromise: Promise<boolean> | undefined;
+  private lastRespawnError: string | undefined;
+  private disposed = false;
 
   public constructor(
     mount: HTMLElement,
@@ -65,7 +70,8 @@ export class PlayerDeathSystem implements GameSystem {
     private readonly camera: DeathCameraSurface,
     private readonly reducedMotion: boolean,
     private readonly resetOpponent?: () => void,
-    private readonly resolveRespawn?: () => DeathRespawnResolution,
+    private readonly resolveRespawn?: () =>
+      DeathRespawnResolution | Promise<DeathRespawnResolution>,
     private readonly onRespawn?: (resolution: DeathRespawnResolution) => void,
   ) {
     this.element = document.createElement('section');
@@ -106,26 +112,30 @@ export class PlayerDeathSystem implements GameSystem {
       reviveSequence: this.reviveSequence,
       cameraOwned: this.cameraHandle?.active ?? false,
       lastRespawnId: this.lastRespawnId,
+      reviveInProgress: this.revivePromise !== undefined,
+      lastRespawnError: this.lastRespawnError,
     };
   }
 
-  public reviveNow(): void {
-    if (!this.visible) return;
-    this.reviveSequence += 1;
-    this.resetOpponent?.();
-    const respawn = this.resolveRespawn?.();
-    if (respawn && this.player.respawnAt) {
-      this.lastRespawnId = respawn.id;
-      this.player.respawnAt(respawn.position, respawn.facingYaw);
-      this.onRespawn?.(respawn);
-    } else {
-      this.player.reset();
-    }
-    this.releaseCamera();
-    this.camera.snapToPlayer();
+  public reviveNow(): Promise<boolean> {
+    if (!this.visible || this.disposed) return Promise.resolve(false);
+    if (this.revivePromise) return this.revivePromise;
+    this.reviveButton.disabled = true;
+    this.reviveButton.setAttribute('aria-busy', 'true');
+    const pending = this.performRevive();
+    this.revivePromise = pending;
+    void pending.finally(() => {
+      if (this.revivePromise === pending) {
+        this.revivePromise = undefined;
+        this.reviveButton.disabled = false;
+        this.reviveButton.removeAttribute('aria-busy');
+      }
+    });
+    return pending;
   }
 
   public dispose(): void {
+    this.disposed = true;
     for (const unsubscribe of this.unsubscribe.splice(0)) unsubscribe();
     this.releaseCamera();
     if (this.visible)
@@ -168,5 +178,31 @@ export class PlayerDeathSystem implements GameSystem {
     this.cameraHandle = undefined;
   }
 
-  private readonly revive = (): void => this.reviveNow();
+  private async performRevive(): Promise<boolean> {
+    try {
+      const respawn = await this.resolveRespawn?.();
+      if (this.disposed || !this.visible) return false;
+      this.resetOpponent?.();
+      if (respawn && this.player.respawnAt) {
+        this.lastRespawnId = respawn.id;
+        this.player.respawnAt(respawn.position, respawn.facingYaw);
+        this.onRespawn?.(respawn);
+      } else {
+        this.player.reset();
+      }
+      this.reviveSequence += 1;
+      this.lastRespawnError = undefined;
+      this.releaseCamera();
+      this.camera.snapToPlayer();
+      return true;
+    } catch (error) {
+      this.lastRespawnError =
+        error instanceof Error ? error.message : String(error);
+      return false;
+    }
+  }
+
+  private readonly revive = (): void => {
+    void this.reviveNow();
+  };
 }

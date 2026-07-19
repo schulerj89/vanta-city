@@ -205,6 +205,9 @@ export class PlayerControllerSystem
   ) {
     this.spawnPosition = spawnPosition.clone();
     this.movement = new PlayerMovementSimulation(collision, config);
+    this.movement.position.copy(this.spawnPosition);
+    this.movement.facingYaw = spawnFacingYaw;
+    this.movement.desiredFacingYaw = spawnFacingYaw;
     this.presentationFacingYaw = spawnFacingYaw;
     this.equipment =
       equipment ?? visual.equipment ?? new CharacterEquipment('player');
