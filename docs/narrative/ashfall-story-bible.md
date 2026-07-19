@@ -10,7 +10,7 @@ In autumn 1997, a wary courier known as Rook returns to a salt-bitten port city 
 - **Canonical source:** `narrative/ashfall-story-bible.json`
 - **Playable entity:** `casual`
 - **Player dialogue identity:** `rook` (alias only; never a second playable definition)
-- **Existing NPC/speakers:** `mack`, `nox`, `raze`
+- **Existing NPC/speakers:** `mack`, `della-voss`, `nox`, `raze`
 - **Runtime boundary:** This bible is planning data only. It is not imported by runtime startup, does not register entities or listeners, and does not claim unimplemented systems.
 
 ## Setting, history, and pressure
@@ -21,14 +21,14 @@ Ashfall is a fictional Atlantic port built where a tidal channel meets steep ind
 
 The city built Northbar at the northern cut in 1971 to separate intercity coaches from quay freight. Its glazed-brick waiting hall and sawtooth bays survived the channel fire, but Marrow Transit now leases the baggage counter as contract overflow and quietly copies the paper traffic passing through it.
 
-- **Current status:** Canonical opening location only; requires a separate production level with authored geometry, collision, staging marks, vehicle paths, camera anchors, local assets, and cross-level readiness.
+- **Current status:** Implemented as the separate northbar-coach-depot opening level for the 46.9-second cinematic.ash-001.opening, with authored geometry and collision, grounded blocking marks, camera anchors, local props and wagon paths, production Mack and Della, adaptive-sector pins, composition preflight, and an atomic cross-level landing into test-district.
 - **Current pressures:** Marrow uses its baggage-counter lease to connect passenger manifests with vehicles and garage accounts.; The shrinking coach schedule gives an arriving traveler only one early eastbound chance to leave Ashfall the same morning.; Mack must collect Rook without revealing why Orin summoned an outside courier.
 
 ### Ashfall Junction (`ashfall-junction`)
 
 The Junction formed where foundry shifts crossed the channel road. Its street grid survived the 1984 channel fire, but the surrounding workshops became repair yards, storage rooms, and informal offices. The signal cabinet still bears layers of municipal paint from administrations that never replaced its wiring.
 
-- **Current status:** Implemented as level test-district with authored roads, approaches, landmarks, collision, trigger.intersection-center, interaction.signal-controller, mission.intersection-center, and two static civilian vehicle models in the traffic catalog.
+- **Current status:** Implemented as level test-district at WORLD-003's current 87.5m by 70m bounds with 6,125 square metres, 25 structures, 14 adaptive-streaming sectors, authored roads and collision, the East Quay curve, Contact Yard, seven deterministic civilian vehicle types, pedestrians, minimap, and full-map data.
 - **Current pressures:** Recovery Office survey crews are reclassifying occupied workshops as unsafe vacancies.; Straight-through traffic and perimeter closures make the intersection easy to watch and hard to leave unnoticed.; Mack's garage network is one late payroll away from accepting predatory financing.
 
 ### Cinder Quay (`cinder-quay`)
@@ -132,7 +132,7 @@ Concrete stairs and service roads climb to the capped municipal reservoir. The u
 - **Gameplay function:** First mission giver, grounded tutorial relationship, garage access gate, vehicle identification source, and emotional measure of Rook's reliability.
 - **Arc:** From guarding people through omission to risking the garage by giving them the whole record.
 - **Voice:** Concrete nouns, mechanical comparisons, dry three-beat corrections; rarely uses a name when a task will do.
-- **Visual dependency:** Preserve NPC ID mack, character ID npc-worker, spawn spawn.npc-mechanic, close camera profile, and existing local CC0 model. Production use requires promoting the fixture through a reviewed production roster; portrait remains optional.
+- **Visual dependency:** Preserve production NPC ID mack, character ID npc-worker, spawn spawn.npc-mechanic, close camera profile, and existing local CC0 model. Mack is already in productionNpcDefinitions; portrait remains optional.
 
 ### Nox Arlen (`nox`)
 
@@ -197,7 +197,7 @@ Concrete stairs and service roads climb to the capped municipal reservoir. The u
 - **Gameplay function:** Street-level antagonist, vehicle-route pressure owner, alternate information source, and recurring negotiator who makes nonviolent compromise costly.
 - **Arc:** From controlling every exit to discovering that a network held together by coercion cannot keep a secret under shared risk.
 - **Voice:** Friendly dispatch shorthand, conditional favors, and precise route names; answers accusations by offering a better price.
-- **Visual dependency:** Requires an original-project-owned or accepted-license production NPC model, portrait, dispatch-yard placement, and noncombat interaction animations.
+- **Visual dependency:** Preserve existing NPC and speaker ID della-voss. Her current production NpcDefinition uses pedestrian-street for Northbar and intentionally has no test-district spawn. NPC-002's contribution is limited to unplaced licensed candidates; MISSION-003B owns focal-character selection, NpcDefinition update, Northbar regression, and the venue mapping; portrait remains an accepted-license dependency.
 
 ## Three-act spine
 
@@ -224,21 +224,21 @@ Rook's coalition races the king tide and an administrative purge to assemble a p
 
 ## Location glossary
 
-- **`northbar-coach-depot` — Northbar Coach Depot level:** Opening-only intercity coach annex at Ashfall's northern cut, physically separate from the playable Junction. Runtime: Canonical definition only; CINEMATIC-002 world, asset, performance, and transition work required.
-- **`test-district` — Ashfall Junction level:** Authoritative current level and fallback district label. Runtime: Implemented.
-- **`zone.ashfall-junction` — Ashfall Junction zone:** The full 56m current playable zone. Runtime: Implemented.
+- **`northbar-coach-depot` — Northbar Coach Depot level:** Opening-only intercity coach annex at Ashfall's northern cut, physically separate from the playable Junction. Runtime: Implemented opening level used by cinematic.ash-001.opening with authored geometry, collision, blocking marks, camera anchors, local props and wagon paths, production Mack and Della, and an atomic cross-level landing into test-district.
+- **`test-district` — Ashfall Junction level:** Authoritative current level and fallback district label. Runtime: Implemented at WORLD-003's 87.5m by 70m current bounds; WORLD-004's proposed expansion and interiors are not yet runtime facts.
+- **`zone.ashfall-junction` — Ashfall Junction zone:** The current 87.5m by 70m, 6,125-square-metre playable zone. Runtime: Implemented.
 - **`landmark.signal-corner` — Signal Corner:** High-priority northeast landmark near the traffic light and controller. Runtime: Implemented.
 - **`landmark.north-approach` — North Approach:** Rook's destination after the Northbar wagon transition and the default-spawn side of the Junction. Runtime: Implemented.
 - **`landmark.east-approach` — East Approach:** Straight road exit useful for traffic observation. Runtime: Implemented.
 - **`landmark.south-approach` — South Approach:** Approach near Nox's development fixture position. Runtime: Implemented.
 - **`landmark.west-approach` — West Approach:** Approach near Mack's side of the Junction. Runtime: Implemented.
-- **`interaction.signal-controller` — Signal controller:** Existing non-NPC inspect/use point at the northeast signal cabinet. Runtime: Implemented as an interaction location; mission behavior must be registered by MISSION-001.
+- **`interaction.signal-controller` — Signal controller:** Existing non-NPC inspect/use point at the northeast signal cabinet. Runtime: Implemented as an interaction location and consumed by the implemented MISSION-001 definition.
 - **`mission.intersection-center` — Junction center mission point:** Existing mission-kind location at the crossing. Runtime: Implemented as level metadata only.
 - **`trigger.intersection-center` — Junction center trigger:** Existing 12m crossing volume tagged future-mission. Runtime: Implemented as metadata; no general overlap mission owner exists.
 - **`trigger.signal-corner` — Signal Corner trigger:** Existing northeast box volume near the signal controller. Runtime: Implemented as metadata; mission consumption is unimplemented.
-- **`spawn.npc-mechanic` — Mack fixture spawn:** Authoritative current authored transform for Mack. Runtime: Development fixture only; production roster promotion required.
+- **`spawn.npc-mechanic` — Mack fixture spawn:** Authoritative current authored transform for Mack. Runtime: Implemented authored transform used by production Mack.
 - **`spawn.npc-alley` — Nox fixture spawn:** Authoritative current authored transform for Nox. Runtime: Development fixture only; production roster promotion required.
-- **`location.ashfall.night-venue` — Ashfall night venue:** A public after-hours room with two usable doors where Della can expose the original impound register without giving Nox private custody. Runtime: Planned enterable location owned by WORLD-004; MISSION-003A requires a public entrance, mission interaction, staging marks, camera anchors, prop paths, map/readiness metadata, and authored night lighting.
+- **`location.ashfall.night-venue` — Ashfall night venue:** A public after-hours room with two usable doors where Della can expose the original impound register without giving Nox private custody. Runtime: Roadmap location only; no current geometry is claimed. WORLD-004 owns the generic enterable interior, collision, camera-safe entrance, map/readiness data, authored lighting, and generic anchors; MISSION-003B owns Carbon Copy's interaction, story-participant integration, mission-specific marks/anchor bindings, evidence visuals, and prop paths.
 - **`spawn.npc-deck` — Raze fixture spawn:** Authoritative current authored transform for Raze. Runtime: Development fixture only; production roster promotion required.
 - **`cinder-quay` — Cinder Quay:** Bonded warehouses and the contested working berth. Runtime: Canon definition only; requires a later world milestone.
 - **`glasshouse-row` — Glasshouse Row:** Print shops, boarding rooms, and distributed record network. Runtime: Canon definition only; world and interaction work unscheduled.
@@ -293,13 +293,13 @@ Rook's coalition races the king tide and an administrative purge to assemble a p
 **Objectives**
 
 - **`ash-001-hear-mack-out`:** Speak with Mack about Orin's missed pickup. Mapping: dialogue-completion-event `conversation.mack.introduction` (implemented).
-- **`ash-001-meet-yard-contact`:** Take the long road east and meet Nox at the contact yard. Mapping: world-location-entry `location.ash-001.contact-yard` (WORLD-002 physical location contract).
+- **`ash-001-meet-yard-contact`:** Take the long road east and meet Nox at the contact yard. Mapping: world-location-entry `location.ash-001.contact-yard` (implemented-WORLD-003-location-and-mission-observation).
 - **Highlights:** world `spawn.npc-mechanic`; world-and-map `location.ash-001.contact-yard`
 - **Dialogue IDs:** `conversation.mack.introduction`, `conversation.nox.check-in`
 - **Cinematic IDs:** `cinematic.ash-001.opening`, `cinematic.ash-001.destination-reveal`
-- **Gameplay events:** `dialogue.completed` via dialogue (implemented); `mission.content-requested` via mission (implemented objective-completed request); `world.location-changed` via location-resolver (definition-only-observation-needed)
-- **System dependencies:** `mission-001` implemented: Owns the two objectives, dialogue completion, destination highlight, once-only reveal request, facts, reward, retry, persistence, and disposal.; `core-001` implemented: Boot already selects casual through the existing character-selection authority; the opening must preserve that identity and registry.; `npc-production-roster` implemented: Mack and Nox retain their stable licensed local assets and dialogue identities. This mission requests no applause or unverified acting.; `cinematic-002` roadmap: Implement cinematic.ash-001.destination-reveal as optional presentation using only verified neutral, indicate, and acknowledge intents; it never advances the travel objective.; `world-002-contact-yard` roadmap: Physically author location.ash-001.contact-yard and place Nox consistently with entity nox, spawn spawn.npc-alley, and interaction interaction.npc.nox.
-- **Failure:** Player health depletes before the contact-yard meeting completes; The active meeting location becomes unavailable during WORLD-002 integration
+- **Gameplay events:** `dialogue.completed` via dialogue (implemented); `mission.content-requested` via mission (implemented objective-completed request); `world.location-changed` via location-resolver (implemented-through-MissionSystem-location-observation)
+- **System dependencies:** `mission-001` implemented: Owns the two objectives, dialogue completion, destination highlight, once-only reveal request, facts, reward, retry, persistence, and disposal.; `core-001` implemented: Boot already selects casual through the existing character-selection authority; the opening must preserve that identity and registry.; `npc-production-roster` roadmap: Mack is production-ready and Nox retains a stable NpcDefinition and local character, but Nox remains outside productionNpcDefinitions until MISSION-003B promotes him for the interactive second-mission setup.; `cinematic-005` implemented: Owns the grounded Northbar performance, atomic cross-level landing, and current public cinematic performance/path/restoration capabilities; cinematic.ash-001.destination-reveal is also implemented as optional presentation.; `world-003-contact-yard` implemented: Owns the physical location.ash-001.contact-yard, collision-supported apron, map reference, mission residency, and unobstructed reveal anchor.
+- **Failure:** Player health depletes before the contact-yard meeting completes; The active contact-yard location becomes unavailable before the meeting completes
 - **Retry:** Restart at Mack's briefing with no reward or campaign fact changes. A restored save already on the travel objective does not replay the destination reveal or giver conversation.
 - **Cancel:** Allowed until Mack's briefing completes. Once Rook accepts the search and the travel objective activates, cancellation is disabled.
 - **Skip:** Skipping either cinematic changes presentation only. It never completes Mack's dialogue, enters the contact-yard location, grants facts, or pays the reward.
@@ -323,7 +323,7 @@ Rook's coalition races the king tide and an administrative purge to assemble a p
 - **Dialogue IDs:** `conversation.nox.check-in`
 - **Cinematic IDs:** `cinematic.ash-002-copy-choice`
 - **Gameplay events:** `dialogue-completed` via dialogue-to-mission-adapter (implemented-public-mission-event); `interaction-completed` via interaction-to-mission-adapter (implemented-public-mission-event-new-interaction-required); `money.transaction` via economy (implemented-once-only-mission-reward); `mission-content-requested` via mission-to-cinematic-adapter (implemented-completed-phase-request)
-- **System dependencies:** `world-004` roadmap: Must author location.ashfall.night-venue, its public entrance and map reference, the verification interaction, mission-critical sector readiness, blocking marks, camera anchors, evidence visuals, and prop paths.; `npc-002` roadmap: Must promote Nox and Della Voss into the production roster at venue spawns, preserve their entity and speaker IDs, and give focal Della a verified unique production character instead of pedestrian-street.; `save-001` roadmap: Must persist objective status, the 100-unit once-only reward, all five campaign facts, a corrected no-weapon new-game loadout, and retry/respawn state.; `mission-003b` roadmap: Implements the two objective MissionDefinition, rewrites conversation.nox.check-in, registers interaction.ash-002.verify-register, and connects completed-phase presentation without adding a choice UI.; `cinematic-006` definition-only: Implements cinematic.ash-002-copy-choice as optional post-completion presentation with exact-prior restoration and no story authority.
+- **System dependencies:** `world-004` roadmap: Must author the generic location.ashfall.night-venue interior, public entrance, collision, map/readiness data, authored lighting, mission-safe sector coverage, and stable generic cinematic anchors. It does not own Carbon Copy interactions, story NPC placement, or mission-specific prop choreography.; `npc-002` roadmap: Supplies only unplaced, license-verified AssetCatalog and CharacterDefinition entries with exact clip inventories. It owns no NpcDefinition promotion, story identity, mission logic, or world placement.; `save-001` roadmap: Must persist objective status, the 100-unit once-only reward, all five campaign facts, a corrected no-weapon new-game loadout, and retry/respawn state.; `mission-003b` roadmap: Implements the two-objective MissionDefinition and dialogue, promotes Nox through the existing production NPC authority, selects and regression-validates Della's focal CharacterDefinition, authors Della's test-district venue spawn and temporary cinematic staging, registers the verification interaction and mission-specific level requests, and connects completed-phase presentation without adding a choice UI.; `cinematic-006` definition-only: Implements cinematic.ash-002-copy-choice as optional post-completion presentation with exact-prior restoration and no story authority.
 - **Failure:** Rook is depleted before the verification interaction completes; The mission-critical night-venue location, entrance, or verification interaction becomes unavailable; The active level changes before interaction.ash-002.verify-register commits
 - **Retry:** Reset the attempt at Nox's contact-yard setup, restore Orin's marked carbon there, clear only ash-002 objective-local state, and never duplicate money or campaign facts. A save restored on objective two resumes the venue journey without replaying Nox's completed setup.
 - **Cancel:** Allowed only until ash-002-take-nox-copy completes. Cancellation removes ash-002 highlights and interactions while preserving every ash-001 fact.
@@ -460,32 +460,34 @@ Rook's coalition races the king tide and an administrative purge to assemble a p
 
 - MissionSystem provides authoritative objective, highlight, event, content-request, reward, and snapshot behavior; MISSION-003B still must implement the two-objective Carbon Copy definition and its one new interaction without adding a branch.
 - CORE-001 selects casual through existing character selection while preserving the registry and debug switching; Northbar must reuse that authority.
-- NPC-002 must promote Nox and Della Voss at stable venue spawns and provide a focal, verified unique production character for Della while preserving entity della-voss and speaker della-voss.
-- WORLD-004 must implement location.ashfall.night-venue with a discoverable public entrance, map/readiness facts, mission interaction, collision, staging marks, camera anchors, evidence visuals, prop paths, and authored nighttime fixtures.
+- NPC-002 supplies an unplaced, license-verified animated cast through AssetCatalog and CharacterDefinition only. MISSION-003B, not NPC-002, must promote Nox, select Della's focal character, and author story-participant placement through the existing NPC authority.
+- WORLD-004 must implement the generic location.ashfall.night-venue interior with a discoverable entrance, collision, map/readiness facts, authored nighttime fixtures, mission-safe sectors, and stable generic anchors. MISSION-003B must add Carbon Copy's interaction, marks/anchor bindings, evidence visuals, and prop paths after that contract lands.
 - NPC-001 provides a licensed ambient presentation library, but production identity, performance mappings, scheduling/awareness, and authored placement are still required for Orin, Vera, quay workers, residents, and timed routes. Static fixture behavior is insufficient.
-- VEHICLE-001 provides an enter-drive-exit ownership foundation, but the Northbar opening requires separate verified passenger entry/exit, NPC driving, door/seat choreography, and cross-level vehicle presentation.
-- CINEMATIC-001 provides camera requests, subtitle staging, skip confirmation, pause, and exact captured-state cleanup; the optional destination reveal remains a separate presentation dependency and cannot become mission progress.
+- VEHICLE-001 provides an enter-drive-exit ownership foundation, and Northbar's implemented level-owned wagon path plus atomic landing do not imply cinematic passenger entry/exit, operable doors, seat choreography, or NPC driving; those remain general capability boundaries.
+- CINEMATIC-005 provides current performance ownership, composition preflight, level-owned visual paths, adaptive-sector pinning, destination preparation, cross-level landing, skip confirmation, and exact restoration. Carbon Copy must reuse those public contracts rather than depend on pre-CINEMATIC-005 assumptions.
 - MAP-001 provides full-world route display for implemented level data; future locations remain unavailable until their own map/readiness facts exist.
 - SAVE-001 must persist Carbon Copy objective state, five campaign facts, the once-only 100-unit reward, and safe retry/respawn state; it also owns the corrected new-game loadout with neither knife nor handgun.
+- INTERIOR-POP-001 owns ambient night-venue occupants and dance/service population after WORLD-004 and NPC-002. Ambient population is not a blocker for Carbon Copy's three story participants or mission completion.
 - Carbon Copy deliberately uses no dialogue choice UI. The authored interaction and mission completion fix Rook's refusal before the cinematic presents it.
 - AUDIO-001 provides licensed local theme/radio playback, but character voice-over remains prohibited. Every story clue and performance must work through visible action and subtitles.
 
 **Production assets and systems needed**
 
-- Original-project-owned or CC0/public-domain production NPC models and reviewed portraits for Orin Bell, Vera Sorn, Della Voss, workers, residents, and clerks, with full source/license/hash/scale/axis/animation provenance. Della requires a focal unique production character; pedestrian-street is not a close-up contract.
-- Reviewed production promotion and placement for existing Mack, Nox, and Raze CC0 models plus existing Della Voss identity; no duplication of their entity, speaker, character, spawn, portrait, or conversation authority.
-- Authored Northbar opening level, WORLD-004's Ashfall night venue, and later streamed world sectors with collision, triggers, landmarks, mission locations, map/readiness references, staging marks, vehicle paths, and cinematic anchors.
+- Original-project-owned or CC0/public-domain production NPC models and reviewed portraits for Orin Bell, Vera Sorn, workers, residents, and clerks, with full source/license/hash/scale/axis/animation provenance. NPC-002's unplaced cast may supply Della's focal candidate, but MISSION-003B owns selection and regression approval; pedestrian-street is not a close-up contract.
+- MISSION-003B-owned production promotion and placement for established Nox and Della Voss identities, with no duplicate entity, speaker, portrait, or conversation authority. Nox keeps his contact-yard gameplay spawn and is staged temporarily at the venue; Della receives the authored test-district venue mapping.
+- WORLD-004's generic Ashfall night venue plus MISSION-003B's mission-specific interaction, blocking marks, anchor bindings, evidence visuals, and prop paths; later streamed world sectors still require their own collision, triggers, landmarks, map/readiness references, and cinematic integration.
 - Original environmental props for paper records, carbon sheets, pay phones, cassette decks, manifests, filing shelves, garage details, and quay work areas. Placeholder geometry cannot satisfy production acceptance.
 - MISSION-003B integration for the existing MissionSystem: two objectives, dialogue/event mapping, interaction.ash-002.verify-register, world/map highlights, completed-phase cinematic request, deterministic retry/cancel, and debug inspection.
 - NPC production roster and performance owner with verified logical-intent mappings, deterministic schedules where needed, and explicit trigger-based pressure. Clapping cannot substitute for conversation, listening, tension, or held acting, and navigation/awareness must not be implied before implementation.
+- INTERIOR-POP-001-owned ambient venue cast and genuine dance/service performances remain optional scene dressing for Carbon Copy; ambient actors never replace or own Nox, Della, mission logic, or cinematic facts.
 - Cinematic sequence and dialogue presentation using stable IDs, existing game-state/camera ownership, subtitle-safe cue arrays, skip confirmation, exact captured-state cleanup, and destination-aware cross-level restoration.
 - Accessibility and localization pass for subtitle length, reading speed, speaker labels, contrast, reduced motion, and non-audio delivery of every required clue.
 - No visual or audio asset is acquired or generated by STORY-001. Future accepted assets must be CC0-1.0, public-domain, or original-project-owned with complete provenance.
 
 **Next smallest slices**
 
-- **MISSION-001:** Integrate WORLD-002's physical location.ash-001.contact-yard so the public location-entry event completes ash-001-meet-yard-contact without a debug command. Preserve entity nox, interaction interaction.npc.nox, the 75-unit reward, once-only facts, retry/persistence behavior, and the two-objective limit.
-- **CINEMATIC-001:** Implement cinematic.ash-001.destination-reveal as a brief optional presentation after Mack's completed briefing. Use only verified neutral-hold, indicate, or acknowledge performance intents, and preserve CINEMATIC-001 camera, input, subtitle, pause, skip-confirmation, cleanup, and no-voice-over contracts.
+- **MISSION-001:** MISSION-001, MISSION-002, and WORLD-003 already provide the authoritative two-objective first mission and physical Contact Yard. MISSION-003B extends that public mission/location contract without reopening the completed WORLD-002 integration.
+- **CINEMATIC-001:** CINEMATIC-001 and CINEMATIC-005 already provide skip confirmation, performance ownership, visual paths, destination landing, and exact restoration. CINEMATIC-006 consumes those implemented APIs without reintroducing legacy assumptions.
 
 ## Provenance and originality
 

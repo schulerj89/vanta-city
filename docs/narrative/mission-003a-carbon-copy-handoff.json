@@ -12,6 +12,9 @@
     "interactionRuntime": "InteractionSystem",
     "levelRuntime": "LevelSystem",
     "cinematicRuntime": "CinematicCoordinator",
+    "castAssetCatalog": "NPC-002-unplaced-assets-and-CharacterDefinitions",
+    "storyNpcIntegration": "MISSION-003B",
+    "ambientVenuePopulation": "INTERIOR-POP-001",
     "persistence": "SAVE-001"
   },
   "fixedDecisions": {
@@ -179,10 +182,33 @@
     "missionCriticalWhileObjectiveId": "ash-002-verify-night-register",
     "timeOfDayPreset": "night",
     "timeOwnership": "TimeOfDayLightingSystem-through-approved-mission-adapter-not-cinematic",
-    "spawnIds": [
-      "spawn.npc.nox.night-venue",
-      "spawn.npc.della-voss.night-venue"
+    "genericVenueContractOwner": "WORLD-004",
+    "missionSpecificLevelIntegrationOwner": "MISSION-003B",
+    "spawnIds": ["spawn.npc.della-voss.night-venue"],
+    "participantIntegrationRequests": [
+      {
+        "npcId": "nox",
+        "currentCharacterId": "npc-hoodie",
+        "productionPromotionOwner": "MISSION-003B",
+        "gameplaySpawnId": "spawn.npc-alley",
+        "venuePresence": "temporary-cinematic-staging-to-mark.ash-002.nox-table",
+        "exactRestorationRequired": true,
+        "persistentVenueSpawnAllowed": false
+      },
+      {
+        "npcId": "della-voss",
+        "currentCharacterId": "pedestrian-street",
+        "focalCharacterCandidateSource": "NPC-002-unplaced-AssetCatalog-and-CharacterDefinitions",
+        "selectionAndNpcDefinitionOwner": "MISSION-003B",
+        "gameplaySpawnId": "spawn.npc.della-voss.night-venue",
+        "northbarRegressionRequired": true
+      }
     ],
+    "ambientPopulation": {
+      "owner": "INTERIOR-POP-001",
+      "requiredForMissionOrCinematic": false,
+      "maySubstituteForStoryParticipants": false
+    },
     "blockingMarkIds": [
       "mark.ash-002.rook-table",
       "mark.ash-002.nox-table",
@@ -222,6 +248,17 @@
       "point.ash-002.receipt-marked"
     ]
   },
+  "performanceSemantics": {
+    "performance.ash-002.choice.rook-indicate": {
+      "participantId": "casual",
+      "intent": "indicate",
+      "logicalAnimationId": "interact",
+      "playback": "one-shot",
+      "completionSignal": "mixer-finished",
+      "holdPhaseAllowed": false,
+      "restCueId": "performance.ash-002.choice.rook-rest"
+    }
+  },
   "cinematicDefinitionDraft": {
     "id": "cinematic.ash-002-copy-choice",
     "storyBeatId": "story-beat.ash-002-copy-choice",
@@ -255,7 +292,7 @@
         "prop.ash-002.della-cash",
         "prop.ash-002.marrow-receipt"
       ],
-      "animationIds": ["idle", "Interact"],
+      "animationIds": ["idle", "interact"],
       "worldFactIds": [
         "ledger-copy-custody",
         "nox-trust",
@@ -497,6 +534,16 @@
             "propMarkId": "point.ash-002.copy-envelope",
             "missingPerformancePolicy": "block",
             "required": true
+          },
+          {
+            "cueId": "performance.ash-002.choice.rook-rest",
+            "shotId": "shot.ash-002.rook-choice",
+            "atSeconds": 1.9,
+            "participantId": "casual",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
           }
         ],
         "pathRequests": [
@@ -677,31 +724,37 @@
     "unexpectedApplicationExternalHttpRequests": 0,
     "consoleRuntimeErrors": 0
   },
+  "implementationAssignments": [
+    {
+      "ownerTaskId": "MISSION-003B",
+      "role": "runtime-mission-and-cinematic-implementation-owner",
+      "consumesDirectionBriefId": "CINEMATIC-006",
+      "provides": "runtime mission and dialogue, Nox production promotion, Della focal selection and venue mapping, Northbar regression, mission-specific level requests, interaction registration, completed-phase presentation, and browser evidence",
+      "isDependency": false
+    },
+    {
+      "ownerTaskId": "INTERIOR-POP-001",
+      "role": "optional-ambient-venue-follow-up",
+      "provides": "ambient venue occupants and dance/service population; never Carbon Copy's Nox or Della integration",
+      "blocksMissionOrCinematic": false,
+      "isDependency": false
+    }
+  ],
   "dependencies": [
     {
       "id": "WORLD-004",
       "status": "required",
-      "provides": "night venue, route, entrance, map and readiness metadata, interaction, marks, anchors, visuals, paths, lighting fixtures"
+      "provides": "generic night venue, route, entrance, map and readiness metadata, collision, lighting fixtures, and stable generic anchors; no mission-specific interaction, story placement, visual, or path ownership"
     },
     {
       "id": "NPC-002",
-      "status": "required",
-      "provides": "production Nox and focal Della placements plus verified performance capabilities"
+      "status": "required-asset-catalog-input",
+      "provides": "unplaced, license-verified AssetCatalog and CharacterDefinition entries with exact clip inventories; no story NpcDefinition promotion, selection, or world placement"
     },
     {
       "id": "SAVE-001",
       "status": "required",
       "provides": "objective, fact, money, retry, death-spawn, and corrected no-weapon new-game persistence"
-    },
-    {
-      "id": "MISSION-003B",
-      "status": "blocked-on-this-handoff-and-required-integrations",
-      "provides": "runtime mission, dialogue rewrite, interaction registration, and completed-phase presentation request"
-    },
-    {
-      "id": "CINEMATIC-006",
-      "status": "design-provided-runtime-unimplemented",
-      "provides": "post-completion scene implementation and browser evidence"
     }
   ],
   "explicitNonGoals": [
@@ -715,6 +768,9 @@
     "weapon-reward",
     "cinematic-owned-progress-or-facts",
     "raw-threejs-participant-or-prop-mutation",
+    "persistent-second-nox-venue-spawn",
+    "NPC-002-owned-story-NpcDefinition-promotion-selection-or-placement",
+    "ambient-population-as-mission-or-cinematic-blocker",
     "unverified-applause-nearest-random-combat-or-locomotion-fallback"
   ]
 }

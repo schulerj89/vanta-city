@@ -30,11 +30,14 @@ Rook accepts a slower, witnessed chain of custody instead of a private deal.
 - Rook is speaker `rook` and playable entity `casual`; no second Rook entity or
   character definition is allowed.
 - Nox retains entity, NPC, and speaker ID `nox`. His current character is
-  `npc-hoodie`; NPC-002 must promote him rather than duplicate him.
+  `npc-hoodie`; MISSION-003B must add his existing NpcDefinition to the
+  production roster rather than duplicate him. His gameplay placement remains
+  the existing Contact Yard spawn.
 - Della retains entity, NPC, and speaker ID `della-voss`. Her present
   `pedestrian-street` character is not approved for focal close-up work;
-  NPC-002 must provide a verified unique production character while preserving
-  her existing story identity.
+  NPC-002 supplies verified unplaced character candidates, while MISSION-003B
+  selects one, updates the existing Della NpcDefinition, authors her
+  test-district venue placement, and reruns Northbar regressions.
 - Mack, Raze, Orin, and ambient venue patrons do not participate. The mission
   does not need a new named NPC.
 - The evidence is not a magical single document. Orin's carbon supplies a
@@ -69,10 +72,12 @@ and establishes the corroborated early-closure lead for `ash-003-night-manifest`
   start and dialogue event adapters must not race or double-start it.
 - Availability highlight: entity `nox`, world channel only.
 
-MISSION-003B should register the definition only when WORLD-004's venue facts,
-NPC-002's production placements, and the SAVE-001 persistence schema are
-present. A missing integration dependency is a catalog/preflight error, not a
-reason to redirect the mission to Signal Corner or Mack.
+MISSION-003B should register the definition only when WORLD-004's generic venue
+contract, NPC-002's unplaced character definitions and clip inventory, and the
+SAVE-001 persistence schema are present. MISSION-003B itself owns story NPC
+promotion, focal-character selection, and venue placement. A missing
+integration dependency is a catalog/preflight error, not a reason to redirect
+the mission to Signal Corner or Mack.
 
 ### Objective 1 — receive the carbon
 
@@ -160,10 +165,15 @@ must not replay the mission conversation or duplicate the carbon.
 
 - Destination location: `location.ashfall.night-venue`
 - Venue interaction: `interaction.ash-002.verify-register`
-- Planned Nox spawn: `spawn.npc.nox.night-venue`
+- Nox gameplay spawn: existing `spawn.npc-alley` at the Contact Yard; his venue
+  presence is temporary cinematic blocking restored through his participant
+  owner, not a second persistent Nox spawn.
 - Planned Della spawn: `spawn.npc.della-voss.night-venue`
-- WORLD-004 owns transforms, collision, sector IDs, public entrance, map
-  geometry, readiness, lighting fixtures, and cinematic anchors.
+- WORLD-004 owns the generic interior transforms, collision, sector IDs, public
+  entrance, map geometry, readiness, lighting fixtures, and stable generic
+  anchors. MISSION-003B binds Carbon Copy's exact interaction, Della spawn,
+  blocking marks, camera requests, evidence visuals, and prop paths into that
+  implemented level contract.
 - The intended traversable route is 85–140 metres from the contact yard after
   WORLD-004 expansion, measurably farther than the `ash-001` contact journey.
   This is an acceptance range, not permission to hard-code story coordinates.
@@ -251,10 +261,16 @@ confirmation resumes the exact shot, cue, path, and performance generation.
 - InteractionSystem owns surface distance, prompt activation, and the public
   completion event for `interaction.ash-002.verify-register`.
 - LevelSystem/WORLD-004 own venue geometry, route, collision, locations,
-  interactions, map references, readiness, lighting fixtures, camera anchors,
-  blocking marks, evidence visuals, and prop paths.
-- NPC system/NPC-002 own Nox and Della placement, character assets, animation
-  capabilities, and exact participant restoration.
+  map references, readiness, lighting fixtures, and generic cinematic anchors.
+  MISSION-003B authors the mission interaction, exact mark/anchor bindings,
+  evidence visuals, and prop paths through those public level definitions.
+- NPC system owns runtime story participants and exact restoration. NPC-002 owns
+  only unplaced AssetCatalog/CharacterDefinition entries and verified clip
+  inventory. MISSION-003B promotes Nox, selects Della's focal character, and
+  authors their production placement without duplicating either identity.
+- INTERIOR-POP-001 owns ambient venue occupants and dance/service population.
+  Ambient population is not required for the mission interaction or the
+  three-participant cinematic and never owns Nox or Della.
 - CinematicCoordinator owns temporary camera/subtitle/skip/presentation state;
   it owns no mission truth and no raw Three.js participant objects.
 - UI systems own HUD zones, subtitle rendering, skip-confirmation modal, focus,
@@ -263,16 +279,21 @@ confirmation resumes the exact shot, cue, path, and performance generation.
 - SAVE-001 owns campaign serialization, no-weapon new-game equipment, and
   death-safe spawn selection.
 
-## Integration dependencies
+## Required integration inputs
 
-| Dependency        | Required output                                                                                                                                          | Blocking condition                                                                                               |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| WORLD-004         | Enterable night venue, public route, location/interaction/map/readiness IDs, mission-critical sectors, lighting fixtures, marks, anchors, visuals, paths | Any exact ID or readiness fact is absent                                                                         |
-| NPC-002           | Production Nox and focal Della at stable venue spawns; verified idle/locomotion and exact performance capability report                                  | Della remains `pedestrian-street`, either entity is development-only, or required Rook `indicate` is unavailable |
-| SAVE-001          | Objective/fact/money persistence, retry and death spawn behavior, no-weapon new game                                                                     | Duplicate reward/facts or weapon ownership survives a new game                                                   |
-| MISSION-003B      | Runtime definitions, conversation rewrite, interaction registration, completed-phase cinematic adapter                                                   | More than two objectives, branch UI, or cinematic-owned progress                                                 |
-| CINEMATIC-006     | Post-completion scene from its direction brief                                                                                                           | Missing preflight/cleanup/responsive evidence                                                                    |
-| UI-002A / NAV-001 | Existing objective/navigation presentation consumes public mission data                                                                                  | Mission reaches into UI internals                                                                                |
+| Input     | Required output                                                                                                                                  | Blocking condition                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| WORLD-004 | Generic enterable night venue, public route, location/map/readiness IDs, mission-critical sectors, lighting fixtures, and stable generic anchors | The venue contract is absent or cannot accept mission-specific integration  |
+| NPC-002   | Unplaced, license-verified AssetCatalog and CharacterDefinition entries with exact clip inventories; no NpcDefinition or world placement         | Required candidate assets/clip facts are absent from the integrated catalog |
+| SAVE-001  | Objective/fact/money persistence, retry and death spawn behavior, no-weapon new game                                                             | Duplicate reward/facts or weapon ownership survives a new game              |
+
+MISSION-003B is the implementation owner, not a dependency on later work. It
+owns the runtime definitions, dialogue rewrite, Nox production promotion,
+Della focal selection and venue mapping, mission-specific level requests,
+interaction, and the CINEMATIC-006 direction. INTERIOR-POP-001 may later add
+ambient venue presentation but is non-blocking and may not substitute for story
+participants. Existing UI-002A/NAV-001 presentation consumes public mission
+data; MISSION-003B does not reach into UI internals.
 
 No new network asset, font, icon, portrait, audio service, control binding, or
 interface component is part of this design.
@@ -288,10 +309,11 @@ not a borrowed branching set piece.
 
 This task adds no runtime art, model, portrait, music, character voice, or paid
 generation output. The five JPEG files under the evidence directory are local
-screenshots of this repository. WORLD-004 and NPC-002 retain license,
-provenance, source-hash, asset-catalog, and local-runtime authority for every
-future venue prop, texture, and character asset; only CC0-1.0, public-domain,
-or original-project-owned material is acceptable.
+screenshots of this repository. WORLD-004 retains venue/texture provenance;
+NPC-002 retains unplaced cast provenance and catalog authority; MISSION-003B
+records the exact accepted Della selection and story placement; INTERIOR-POP-001
+owns ambient cast assignment. Only CC0-1.0, public-domain, or
+original-project-owned material is acceptable.
 
 ## Acceptance criteria
 

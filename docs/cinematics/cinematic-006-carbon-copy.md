@@ -1,7 +1,8 @@
 # CINEMATIC-006 direction: Carbon Copy
 
-Status: design-complete request for implementation after WORLD-004, NPC-002,
-SAVE-001, and MISSION-003B integration.
+Status: design-complete direction to be implemented within MISSION-003B after
+WORLD-004's generic venue, NPC-002's unplaced cast definitions, and SAVE-001's
+persistence contract are integrated.
 
 Canonical cinematic ID: `cinematic.ash-002-copy-choice`.
 
@@ -55,13 +56,22 @@ equipment, or fact transaction.
 - Rook participant/entity: `casual`; speaker: `rook`
 - Nox participant/entity/NPC/speaker: `nox`
 - Della participant/entity/NPC/speaker: `della-voss`
-- Planned Nox venue spawn: `spawn.npc.nox.night-venue`
+- Nox gameplay spawn: existing `spawn.npc-alley` at the Contact Yard; the
+  cinematic temporarily stages that production participant to
+  `mark.ash-002.nox-table` and restores his exact prior state.
 - Planned Della venue spawn: `spawn.npc.della-voss.night-venue`
 
-NPC-002 must preserve those entity and speaker IDs. Della's focal production
-character should reserve `npc-della-voss` only if NPC-002 confirms that exact
-catalog ID; this brief does not claim it already exists. Her current
+NPC-002 supplies only unplaced, license-verified AssetCatalog and
+CharacterDefinition candidates with their clip inventories. MISSION-003B
+preserves the existing story IDs, promotes Nox's existing NpcDefinition into
+the production roster, selects Della's focal CharacterDefinition, updates her
+existing NpcDefinition and test-district mapping, and reruns Northbar
+regressions. This brief does not reserve a new character ID. Della's current
 `pedestrian-street` character fails focal acceptance.
+
+INTERIOR-POP-001 owns optional ambient venue patrons. Their absence cannot
+block this three-participant story scene, and no ambient actor may substitute
+for Nox or Della.
 
 ### Blocking marks
 
@@ -102,11 +112,13 @@ It does not derive camera transforms in this definition.
 - `prop.ash-002.della-cash`
 - `prop.ash-002.marrow-receipt`
 
-These are level-owned cinematic visuals, not equipment IDs. WORLD-004 must
-provide reviewed production geometry and readable value grouping. Printed text
-does not need to be legible at screen resolution; the register number, carbon
-number, date order, cash, and custody envelope must remain visually distinct by
-shape, placement, and subtitle meaning.
+These are level-owned cinematic visuals, not equipment IDs. WORLD-004 provides
+the generic venue contract and reviewed production geometry; MISSION-003B
+authors these mission-specific visual requests and bindings through public
+level definitions. Printed text does not need to be legible at screen
+resolution; the register number, carbon number, date order, cash, and custody
+envelope must remain visually distinct by shape, placement, and subtitle
+meaning.
 
 ### Level-owned path requests
 
@@ -119,9 +131,11 @@ shape, placement, and subtitle meaning.
 | `path.ash-002.cash-withdraw` | cash     | `point.ash-002.cash-offer`, `point.ash-002.cash-withdrawn`     | Remove the refused cash                         |
 | `path.ash-002.receipt-mark`  | receipt  | `point.ash-002.receipt-blank`, `point.ash-002.receipt-marked`  | Show Della recording who carried the copy       |
 
-Path handles own only temporary visual motion. Cleanup releases them and the
-world projects its final prop layout from committed mission facts. No path may
-move a participant, claim hand contact, or update an inventory.
+MISSION-003B authors these mission-specific path and point requests against the
+generic WORLD-004 venue contract. Path handles own only temporary visual
+motion. Cleanup releases them and the world projects its final prop layout from
+committed mission facts. No path may move a participant, claim hand contact, or
+update an inventory.
 
 ## Shot plan and timing
 
@@ -200,8 +214,11 @@ cash enters low in frame while her silhouette stays readable.
 - Participants/required subjects: `casual`
 - Required visuals: cash, carbon, envelope
 - Safe frame: minimum 14% subject margin; narrow field of view 37 degrees
-- Performance: Rook exact, required `indicate` at 0.5 seconds, target mark
-  `mark.ash-002.nox-table`, held until 2.8 seconds; missing policy `block`
+- Performance: Rook exact, required one-shot `indicate` at 0.5 seconds, target
+  mark `mark.ash-002.nox-table`; its logical animation ID is lowercase
+  `interact`, and mixer completion releases the registered source clip. Start
+  exact `neutral-hold` at 1.9 seconds for the rest of the shot. Missing policy
+  for both cues: `block`.
 - Path: copy to envelope at 0.85 seconds for 1.0 second
 - Subtitle cue `subtitle.ash-002.rook.cheap-paper`, speaker `rook`:
   “Cheap paper burns first.” from 0.7–3.2 seconds
@@ -258,20 +275,25 @@ Total authored duration: 31.0 seconds.
 
 ## Performance request policy
 
-The implementation JSON may request one start and one release cue per held
-performance if the participant adapter requires explicit releases. Preflight
-rules are invariant:
+The implementation JSON may request one start and one release cue per looping
+held performance if the participant adapter requires explicit releases.
+One-shot performance completion is driven by the mixer `finished` event, not by
+a `hold` phase or an authored duration. Preflight rules are invariant:
 
 - Rook `indicate` in shot 4 is exact and required. Missing capability blocks
-  the cinematic before ownership.
+  the cinematic before ownership. It starts at 0.5 seconds, completes through
+  the supported one-shot path, and is followed by an exact `neutral-hold` start
+  cue at 1.9 seconds.
 - Every `neutral-hold` is exact for the selected production participant.
 - `speak-restrained`, `listen`, `prop-use`, `dismiss`, `approach`, `turn-to`,
   `react-alert`, `sit`, `stand`, and `acknowledge` are not requested.
 - No request may resolve to applause, Wave, a nearest clip, a random clip, a
   combat action, or locomotion.
-- Della's unique production character and both NPC venue placements are hard
-  preflight dependencies. The scene does not fall back to `pedestrian-street`
-  or spawn development fixtures.
+- Della's MISSION-003B-approved focal character and venue placement, plus Nox's
+  MISSION-003B production promotion and temporarily stageable gameplay
+  participant, are hard preflight dependencies. The scene does not fall back
+  to `pedestrian-street`, duplicate Nox at a second spawn, or use development
+  fixtures.
 
 Participant adapters capture opaque restore tokens before staging. Marks and
 paths are separate owner requests. The coordinator never edits mixers, skeletons,
@@ -397,9 +419,10 @@ Implementation is not complete until all of the following pass:
 
 1. Definition validation accepts unique IDs, cue order, durations, participants,
    marks, anchors, visuals, path points, and exact-prior policy.
-2. Preflight blocks on missing Rook `indicate`, focal Della, either NPC spawn,
-   any required anchor/mark/visual/path, invalid grounding, occlusion, or failed
-   venue readiness before it changes gameplay ownership.
+2. Preflight blocks on missing Rook `indicate`, focal Della and her venue spawn,
+   production Nox or his exact-restoration staging support, any required
+   anchor/mark/visual/path, invalid grounding, occlusion, or failed venue
+   readiness before it changes gameplay ownership.
 3. At 1280×720, 390×844, and 1920×800, committed early/middle/late frames keep
    required faces/silhouettes and evidence readable outside subtitle/UI reserves.
 4. Narrow does not reuse an unreadable three-body wide. Ultrawide keeps the
