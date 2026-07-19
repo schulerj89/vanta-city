@@ -1,7 +1,7 @@
 # CINEMATIC-004 visual review
 
 Evidence in this directory is captured from the live browser through
-`e2e/title-opening-flow.spec.ts`. Review covers the original Ashfall title,
+`e2e/title-opening-flow.spec.ts`. Review covers the original Vanta City title,
 Northbar event coverage, truthful destination presentation when readiness is
 pending, and the Junction handoff. Images are retained only after checking
 composition, subtitle reserve, focus, overflow, runtime errors, failed local

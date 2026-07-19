@@ -6,6 +6,7 @@ export interface TitleScreenSnapshot {
   readonly visible: boolean;
   readonly startedBefore: boolean;
   readonly musicMuted: boolean;
+  readonly state: 'first-run' | 'returning' | 'departing' | 'disposed';
   readonly connected: boolean;
 }
 
@@ -17,7 +18,9 @@ export class TitleScreen {
   private readonly startedBefore: boolean;
   private readonly unsubscribeAudio: () => void;
   private resolveStart: (() => void) | undefined;
+  private startPromise: Promise<void> | undefined;
   private started = false;
+  private disposed = false;
 
   public constructor(
     private readonly mount: HTMLElement,
@@ -27,17 +30,20 @@ export class TitleScreen {
     this.startedBefore = this.readStarted();
     this.element.className = 'title-screen';
     this.element.dataset.testid = 'title-screen';
+    this.element.dataset.runState = this.startedBefore
+      ? 'returning'
+      : 'first-run';
     this.element.setAttribute('role', 'region');
-    this.element.setAttribute('aria-labelledby', 'ashfall-title');
+    this.element.setAttribute('aria-labelledby', 'vanta-city-title');
 
     const atmosphere = document.createElement('div');
     atmosphere.className = 'title-screen__atmosphere';
     atmosphere.setAttribute('aria-hidden', 'true');
-    const signal = document.createElement('span');
-    signal.className = 'title-screen__signal';
-    const depot = document.createElement('span');
-    depot.className = 'title-screen__depot';
-    atmosphere.append(signal, depot);
+    const hero = document.createElement('span');
+    hero.className = 'title-screen__hero';
+    const rain = document.createElement('span');
+    rain.className = 'title-screen__rain';
+    atmosphere.append(hero, rain);
 
     const content = document.createElement('div');
     content.className = 'title-screen__content';
@@ -45,9 +51,9 @@ export class TitleScreen {
     kicker.className = 'title-screen__kicker';
     kicker.textContent = 'Ashfall City · September 1997';
     const title = document.createElement('h1');
-    title.id = 'ashfall-title';
+    title.id = 'vanta-city-title';
     title.className = 'title-screen__wordmark';
-    title.textContent = 'Ashfall';
+    title.textContent = 'VANTA CITY';
     const subtitle = document.createElement('p');
     subtitle.className = 'title-screen__subtitle';
     subtitle.textContent = 'The Cinder Ledger';
@@ -82,27 +88,45 @@ export class TitleScreen {
 
   public waitForStart(): Promise<void> {
     if (this.started) return Promise.resolve();
+    if (this.startPromise) return this.startPromise;
     this.startButton.focus({ preventScroll: true });
-    return new Promise((resolve) => {
+    this.startPromise = new Promise((resolve) => {
       this.resolveStart = resolve;
     });
+    return this.startPromise;
+  }
+
+  /** Restores the deliberate entry action after an integrator-owned failure. */
+  public restoreFocus(): void {
+    if (!this.started && !this.disposed)
+      this.startButton.focus({ preventScroll: true });
   }
 
   public getSnapshot(): TitleScreenSnapshot {
     return {
-      visible: !this.started,
+      visible: !this.started && !this.disposed && this.element.isConnected,
       startedBefore: this.startedBefore,
       musicMuted: this.audioPreferences.current.muted,
+      state: this.disposed
+        ? 'disposed'
+        : this.started
+          ? 'departing'
+          : this.startedBefore
+            ? 'returning'
+            : 'first-run',
       connected: this.element.isConnected,
     };
   }
 
   public dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     this.startButton.removeEventListener('click', this.begin);
     this.musicButton.removeEventListener('click', this.toggleMusic);
     this.unsubscribeAudio();
     this.element.remove();
     this.resolveStart = undefined;
+    this.startPromise = undefined;
   }
 
   private readonly begin = (): void => {
@@ -116,6 +140,7 @@ export class TitleScreen {
     const resolve = this.resolveStart;
     this.resolveStart = undefined;
     this.element.dataset.state = 'departing';
+    this.element.setAttribute('aria-hidden', 'true');
     resolve?.();
   };
 
@@ -127,6 +152,7 @@ export class TitleScreen {
 
   private readonly syncMusic = (): void => {
     const muted = this.audioPreferences.current.muted;
+    this.element.dataset.music = muted ? 'muted' : 'on';
     this.musicButton.setAttribute('aria-pressed', String(muted));
     this.musicButton.setAttribute(
       'aria-label',

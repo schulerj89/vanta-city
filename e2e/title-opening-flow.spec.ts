@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
 
-test('Ashfall title starts by mouse/keyboard and persists authoritative music mute @visual', async ({
+test('Vanta City title starts by mouse/keyboard and persists authoritative music mute @visual', async ({
   page,
 }, testInfo) => {
   const diagnostics = monitor(page);
   await page.goto('/?e2e=1&title=1&traffic=0');
   const title = page.getByTestId('title-screen');
   await expect(title).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Ashfall' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'VANTA CITY' })).toBeVisible();
   await expect(page.getByTestId('title-start')).toBeFocused();
   await screenshot(page, testInfo, 'ashfall-title-desktop');
 

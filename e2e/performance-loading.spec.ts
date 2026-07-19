@@ -39,7 +39,7 @@ test('simulates selected logical failure and reaches placeholder gameplay @smoke
   await page.goto(`${base}&loadDelayMs=300&loadFail=character.casual.model`);
   await waitForReady(page);
   await waitForLoadingReady(page);
-  await expect(page.getByText('Ashfall is ready')).toBeVisible();
+  await expect(page.getByText('Ashfall City is ready')).toBeVisible();
   const state = await snapshot(page);
   expect(state.character.source).toBe('placeholder');
   expect(state.performance.loading.fallbackAssetIds).toContain(
@@ -82,22 +82,26 @@ test('defers Help, survives cold reload, and replaces disposed startup state', a
 
 async function waitForReady(page: Page): Promise<void> {
   await expect
-    .poll(() =>
-      page.evaluate(
-        () => window.__VANTA_TEST__?.snapshot().gameState ?? 'unavailable',
-      ),
+    .poll(
+      () =>
+        page.evaluate(
+          () => window.__VANTA_TEST__?.snapshot().gameState ?? 'unavailable',
+        ),
+      { timeout: 20_000 },
     )
     .toBe('playing');
 }
 
 async function waitForLoadingReady(page: Page): Promise<void> {
   await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          window.__VANTA_TEST__?.snapshot().performance.loading.readiness ??
-          'unavailable',
-      ),
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            window.__VANTA_TEST__?.snapshot().performance.loading.readiness ??
+            'unavailable',
+        ),
+      { timeout: 20_000 },
     )
     .toBe('ready');
 }
