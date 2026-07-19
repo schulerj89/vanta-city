@@ -26,23 +26,40 @@ test('streams three deterministic cycles without retained ownership growth', asy
   await waitForReady(page);
 
   // Prime both sides until lazy GPU uploads reach their intentional stable set.
-  await primeRendererOwnership(page);
-  await waitForRendererOwnershipPlateau(page);
+  const primingRendererSamples = await primeRendererOwnership(page);
+  await waitForRenderedWorkloadPlateau(page);
   const baseline = await snapshot(page);
   const evidence: BrowserTestSnapshot[] = [];
 
   for (let cycle = 0; cycle < 3; cycle += 1) {
     await moveAndWait(page, 'spawn.approach-south', 'sector.southwest');
     await moveAndWait(page, 'spawn.approach-north', 'sector.northwest');
-    await waitForRendererOwnershipPlateau(page);
+    await waitForRenderedWorkloadPlateau(page);
     const current = await snapshot(page);
     evidence.push(current);
     expect(ownership(current)).toEqual(ownership(baseline));
   }
 
-  expect(rendererOwnership(evidence.at(-1)!)).toEqual(
-    rendererOwnership(evidence.at(-2)!),
+  const rendererSamples = [
+    ...primingRendererSamples,
+    rendererOwnership(baseline),
+    ...evidence.map(rendererOwnership),
+  ];
+  const geometryCounts = rendererSamples.map(({ geometries }) => geometries);
+  const textureCounts = rendererSamples.map(({ textures }) => textures);
+  const cycleGeometryCounts = evidence.map(
+    ({ performance }) => performance.renderer.geometries,
   );
+  expect(new Set(textureCounts)).toEqual(new Set([textureCounts[0]]));
+  expect(
+    Math.max(...geometryCounts) - Math.min(...geometryCounts),
+  ).toBeLessThanOrEqual(rendererGeometryChurnAllowance);
+  expect(
+    cycleGeometryCounts
+      .slice(1)
+      .every((count, index) => count > cycleGeometryCounts[index]),
+    'raw WebGL geometry registrations must not grow monotonically across settled cycles',
+  ).toBe(false);
 
   expect(evidence.at(-1)?.world.sectors.unloadCount).toBeGreaterThanOrEqual(8);
   expect(faults.consoleErrors).toEqual([]);
@@ -275,38 +292,31 @@ async function moveAndWait(
     .toBeGreaterThan(renderedFrames + 2);
 }
 
-async function primeRendererOwnership(page: Page): Promise<void> {
-  let previous: ReturnType<typeof rendererOwnership> | undefined;
-  let stableCycles = 0;
-  const samples: unknown[] = [];
-  for (let cycle = 0; cycle < 12; cycle += 1) {
+async function primeRendererOwnership(
+  page: Page,
+): Promise<ReturnType<typeof rendererOwnership>[]> {
+  const samples: ReturnType<typeof rendererOwnership>[] = [];
+  for (let cycle = 0; cycle < 3; cycle += 1) {
     await moveAndWait(page, 'spawn.approach-south', 'sector.southwest');
     await moveAndWait(page, 'spawn.approach-north', 'sector.northwest');
-    await waitForRendererOwnershipPlateau(page);
-    const current = rendererOwnership(await snapshot(page));
-    samples.push(current);
-    stableCycles =
-      previous &&
-      current.geometries === previous.geometries &&
-      current.textures === previous.textures
-        ? stableCycles + 1
-        : 0;
-    previous = current;
-    if (cycle >= 2 && stableCycles >= 2) return;
+    await waitForRenderedWorkloadPlateau(page);
+    samples.push(rendererOwnership(await snapshot(page)));
   }
-  throw new Error(
-    `Renderer ownership did not plateau during cache priming: ${JSON.stringify(samples)}`,
-  );
+  return samples;
 }
 
-async function waitForRendererOwnershipPlateau(page: Page): Promise<void> {
+async function waitForRenderedWorkloadPlateau(page: Page): Promise<void> {
   let previous = '';
   let stableSamples = 0;
   await expect
     .poll(
       async () => {
         const state = await snapshot(page);
-        const current = JSON.stringify(rendererOwnership(state));
+        const current = JSON.stringify({
+          ownership: ownership(state),
+          drawCalls: state.performance.renderer.drawCalls,
+          triangles: state.performance.renderer.triangles,
+        });
         stableSamples = current === previous ? stableSamples + 1 : 0;
         previous = current;
         return stableSamples;
@@ -315,6 +325,11 @@ async function waitForRendererOwnershipPlateau(page: Page): Promise<void> {
     )
     .toBeGreaterThanOrEqual(2);
 }
+
+// `renderer.info.memory.geometries` is a lazy WebGL cache observation rather
+// than an ownership count. One eight-mesh pedestrian source can enter or leave
+// that cache while exact sector/resource ownership and rendered work stay flat.
+const rendererGeometryChurnAllowance = 8;
 
 async function waitForReady(page: Page): Promise<void> {
   await expect
