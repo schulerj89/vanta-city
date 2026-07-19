@@ -158,7 +158,7 @@ export function validatePedestrianPopulation(
       issues.push(
         `${route.id} crosses sidewalk surfaces; split it into curb-safe routes`,
       );
-    validateRouteLifecycle(level, route, issues);
+    validateRouteLifecycle(level, colliders, route, issues);
   }
   if (population > definition.residentCap)
     issues.push(
@@ -168,6 +168,7 @@ export function validatePedestrianPopulation(
 
 function validateRouteLifecycle(
   level: Pick<LevelDefinition, 'mapPresentation'>,
+  colliders: ReadonlyMap<string, LevelDefinition['staticCollision'][number]>,
   route: PedestrianRouteDefinition,
   issues: string[],
 ): void {
@@ -248,6 +249,31 @@ function validateRouteLifecycle(
       `${route.id} terminal segment must move outward through the ${route.exit.edge} map edge`,
     );
   }
+  const exitSurface = colliders.get(terminal.surfaceColliderId);
+  if (
+    exitSurface &&
+    Number.isFinite(route.exit.clearance) &&
+    terminalDistance > beforeDistance
+  ) {
+    const requiredSupportDistance =
+      route.exit.clearance + pedestrianCollisionRadius;
+    const supportProgress =
+      (requiredSupportDistance - beforeDistance) /
+      (terminalDistance - beforeDistance);
+    const supportPoint: Vector3Tuple = [
+      beforeTerminal.position[0] +
+        (terminal.position[0] - beforeTerminal.position[0]) * supportProgress,
+      beforeTerminal.position[1] +
+        (terminal.position[1] - beforeTerminal.position[1]) * supportProgress,
+      beforeTerminal.position[2] +
+        (terminal.position[2] - beforeTerminal.position[2]) * supportProgress,
+    ];
+    if (!pointInsideColliderXZ(supportPoint, exitSurface)) {
+      issues.push(
+        `${route.id} exit surface "${exitSurface.id}" must support the ${route.exit.edge} terminal trajectory to ${requiredSupportDistance.toFixed(3)}m beyond the map edge (${route.exit.clearance.toFixed(3)}m clearance + ${pedestrianCollisionRadius.toFixed(3)}m pedestrian radius)`,
+      );
+    }
+  }
 }
 
 function pointInsideMapBounds(
@@ -276,7 +302,8 @@ function pointInsideColliderXZ(
   point: Vector3Tuple,
   collider: LevelDefinition['staticCollision'][number],
 ): boolean {
-  const yaw = -(collider.rotation?.[1] ?? 0);
+  // Match StaticCollisionWorld's world-to-local yaw transform exactly.
+  const yaw = collider.rotation?.[1] ?? 0;
   const dx = point[0] - collider.position[0];
   const dz = point[2] - collider.position[2];
   const localX = dx * Math.cos(yaw) - dz * Math.sin(yaw);

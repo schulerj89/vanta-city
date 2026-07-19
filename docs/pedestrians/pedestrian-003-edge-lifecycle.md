@@ -64,15 +64,27 @@ Production validation rejects an edge route unless:
 - the penultimate node approaches the selected edge from inside;
 - the terminal segment moves outward through only that selected edge;
 - the terminal foot point reaches the configured clearance;
+- the selected sidewalk collider supports the authored terminal trajectory
+  through `clearance + 0.3 m pedestrian radius` beyond that map edge;
 - the same sector owns the referenced sidewalk collision;
 - the measured polyline meets `minimumTraversalDistance`;
 - clearance is at least the 0.3 m pedestrian collision radius; and
 - population is one, preventing overlapping initial residents on a terminal
   route. Multiple residents use separate authored routes.
 
-The terminal point must still lie on its referenced sidewalk collider. This makes
-WORLD-003 responsible for a real continuation surface rather than letting the
-animation drift through ungrounded scenery.
+The terminal point must still lie on its referenced sidewalk collider, and that
+collider must continue beneath the terminal trajectory for one pedestrian radius
+beyond the disposal clearance. The check uses the collider's authored yaw and is
+symmetric for all four map edges. This makes WORLD-003 responsible for a real
+continuation surface rather than letting the animation drift through ungrounded
+scenery.
+
+Static route validation does not claim that this surface corridor is free of
+every authored body obstruction. The authoritative runtime character sweep also
+depends on capsule height, step-up, head clearance, and collision resolution;
+reimplementing those rules in level validation would create a second collision
+authority. WORLD-003 must prove the production terminal segment is obstacle-free
+with the real pedestrian and `CollisionWorld` in its browser collision spec.
 
 ## Runtime lifecycle and ownership
 
@@ -133,9 +145,12 @@ production-accepted:
 
 1. Choose real sidewalk corridors that connect naturally to the authoritative
    `mapPresentation.bounds`; do not extend routes across road or nonwalkable space.
-2. Extend the selected sidewalk collision at least the pedestrian radius plus the
-   route's clearance beyond the relevant map edge. Keep collision, visual edge,
-   sector ownership, minimap/world bounds, and streaming intent coherent.
+2. Extend the selected sidewalk collision beneath the terminal trajectory at
+   least the pedestrian radius plus the route's clearance beyond the relevant
+   map edge. Validation enforces the collision extent; the production browser
+   spec must also prove matching visible sidewalk extent and an obstacle-free
+   runtime capsule sweep. Keep collision, visual edge, sector ownership,
+   minimap/world bounds, and streaming intent coherent.
 3. Author a long interior traversal, an interior penultimate approach node, and a
    grounded terminal node beyond the selected edge. Use `loop: false` and the
    exact `exit` contract above.
@@ -164,6 +179,9 @@ bounds will fail validation instead of silently disappearing at the wrong edge.
 - An exit collider that ends at the visible/map edge cannot satisfy full-clearance
   validation. Extending only the node without extending the sidewalk collider is
   invalid and would break grounding.
+- Passing static extent validation does not prove the terminal segment is clear
+  of buildings, barriers, or other runtime body collision. WORLD-003 owns that
+  assertion through the real pedestrian collision path.
 - Exit routes continue movement while visually culled so they can finish. A very
   large future exiting population should be measured, though hidden mixers remain
   paused and the intended route population is one.

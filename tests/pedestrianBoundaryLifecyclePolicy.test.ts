@@ -6,6 +6,7 @@ import {
 } from '../src/pedestrians/PedestrianBoundaryLifecyclePolicy';
 import type { PedestrianBoundaryExitRouteDefinition } from '../src/pedestrians/PedestrianRouteDefinition';
 import { validatePedestrianPopulation } from '../src/pedestrians/PedestrianRouteDefinition';
+import type { StaticColliderDefinition } from '../src/physics/StaticCollider';
 import type { LevelMapBoundsDefinition } from '../src/world/LevelDefinition';
 import type { Vector3Tuple } from '../src/world/Spatial';
 
@@ -99,6 +100,43 @@ describe('PedestrianBoundaryLifecyclePolicy', () => {
       });
     },
   );
+
+  it.each(['north', 'east', 'south', 'west'] as const)(
+    'requires the %s exit sidewalk to support clearance plus the pedestrian radius',
+    (edge) => {
+      const route = exitRoute(edge, routePositions(edge));
+      const insufficient = validateExitRoute(
+        route,
+        exitSurfaceCollider(edge, 0.4),
+      );
+      expect(insufficient).toEqual([
+        expect.stringContaining(
+          `exit surface "c.sidewalk-edge" must support the ${edge} terminal trajectory to 0.650m beyond the map edge`,
+        ),
+      ]);
+
+      expect(validateExitRoute(route, exitSurfaceCollider(edge, 0.65))).toEqual(
+        [],
+      );
+    },
+  );
+
+  it('uses the collision authority yaw when checking a diagonal exit surface', () => {
+    const route = exitRoute('east', [
+      [-8, 0.2, -8],
+      [0, 0.2, 0],
+      [10.4, 0.2, 10],
+    ]);
+    expect(
+      validateExitRoute(route, {
+        id: 'c.sidewalk-edge',
+        position: [0, 0, 0],
+        rotation: [0, -Math.PI / 4, 0],
+        size: [30, 0.4, 1],
+        tags: ['walkable', 'sidewalk'],
+      }),
+    ).toEqual([]);
+  });
 
   it('rejects short, inward, overlapping, or collider-incomplete exit authoring', () => {
     const route: PedestrianBoundaryExitRouteDefinition = {
@@ -216,5 +254,80 @@ function routePositions(edge: PedestrianBoundaryEdge): readonly Vector3Tuple[] {
         [0, 0.2, 0],
         [-10.4, 0.2, 0],
       ];
+  }
+}
+
+function validateExitRoute(
+  route: PedestrianBoundaryExitRouteDefinition,
+  collider: StaticColliderDefinition,
+): readonly string[] {
+  const issues: string[] = [];
+  validatePedestrianPopulation(
+    {
+      mapPresentation: {
+        orientation: 'north-up',
+        bounds,
+        geometry: [],
+        markers: [],
+      },
+      staticCollision: [collider],
+      streaming: {
+        sectors: [
+          {
+            id: 'sector.edge',
+            center: [0, 0],
+            loadDistance: 20,
+            unloadDistance: 30,
+            entryIds: [collider.id],
+          },
+        ],
+      },
+    },
+    {
+      seed: 1,
+      residentCap: 1,
+      activationDistance: 20,
+      visibilityDistance: 30,
+      routes: [route],
+    },
+    issues,
+  );
+  return issues;
+}
+
+function exitSurfaceCollider(
+  edge: PedestrianBoundaryEdge,
+  outwardSupport: number,
+): StaticColliderDefinition {
+  const span = 20 + outwardSupport;
+  switch (edge) {
+    case 'north':
+      return {
+        id: 'c.sidewalk-edge',
+        position: [0, 0, outwardSupport / 2],
+        size: [4, 0.4, span],
+        tags: ['walkable', 'sidewalk'],
+      };
+    case 'east':
+      return {
+        id: 'c.sidewalk-edge',
+        position: [outwardSupport / 2, 0, 0],
+        size: [span, 0.4, 4],
+        tags: ['walkable', 'sidewalk'],
+      };
+    case 'south':
+      return {
+        id: 'c.sidewalk-edge',
+        position: [0, 0, -outwardSupport / 2],
+        size: [4, 0.4, span],
+        tags: ['walkable', 'sidewalk'],
+      };
+    case 'west':
+      return {
+        id: 'c.sidewalk-edge',
+        position: [-outwardSupport / 2, 0, 0],
+        size: [span, 0.4, 4],
+        tags: ['walkable', 'sidewalk'],
+      };
   }
 }
