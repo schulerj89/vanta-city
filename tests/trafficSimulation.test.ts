@@ -21,9 +21,9 @@ const config = (overrides: Partial<typeof defaultTrafficConfig> = {}) => ({
 describe('TrafficSimulation', () => {
   it('drives a spawned vehicle straight through and despawns at the opposite edge', () => {
     const traffic = new TrafficSimulation(config({ speed: 10 }));
-    expect(traffic.spawn('north')).toMatchObject({ x: -1.5, z: 24.5 });
+    expect(traffic.spawn('north')).toMatchObject({ x: -1.5, z: 32 });
 
-    traffic.update(5);
+    traffic.update(7);
 
     expect(traffic.getSnapshot()).toMatchObject({
       count: 0,
@@ -71,17 +71,26 @@ describe('TrafficSimulation', () => {
     const eastLane = ashfallTrafficLanes.find(
       ({ approach }) => approach === 'east',
     )!;
-    traffic.update((eastLane.intersectionEntry - 19.2) / 4.5);
+    const northLane = ashfallTrafficLanes.find(
+      ({ approach }) => approach === 'north',
+    )!;
+    const approachLead = 0.5;
+    traffic.update(
+      (eastLane.intersectionEntry -
+        (northLane.intersectionEntry - approachLead)) /
+        4.5,
+    );
     traffic.spawn('north');
 
-    traffic.update(5);
+    traffic.update((northLane.intersectionEntry - approachLead) / 4.5);
+    traffic.update(0.2);
     const north = traffic
       .getSnapshot()
       .vehicles.find(({ approach }) => approach === 'north')!;
     const east = traffic
       .getSnapshot()
       .vehicles.find(({ approach }) => approach === 'east')!;
-    expect(north.progress).toBe(19.2);
+    expect(north.progress).toBe(northLane.intersectionEntry);
     expect(north.stoppingReason).toBe('intersection');
     expect(east.progress).toBeGreaterThan(eastLane.intersectionEntry);
     expect(east.progress).toBeLessThanOrEqual(eastLane.intersectionExit);
@@ -90,7 +99,7 @@ describe('TrafficSimulation', () => {
     const resumedNorth = traffic
       .getSnapshot()
       .vehicles.find(({ approach }) => approach === 'north')!;
-    expect(resumedNorth.progress).toBeGreaterThan(19.2);
+    expect(resumedNorth.progress).toBeGreaterThan(northLane.intersectionEntry);
     expect(resumedNorth.stoppingReason).toBeUndefined();
   });
 

@@ -13,6 +13,11 @@ import {
   world002APlan,
   world002ASidewalks,
   world002AWestRoad,
+  world002BBuildingPlacements,
+  world002BContact,
+  world002BPlan,
+  world002BRoads,
+  world002BSidewalks,
 } from '../../src/world/levels/junctionGrowth';
 import {
   offsetSplineSamples,
@@ -60,7 +65,7 @@ describe('Ashfall Junction intersection', () => {
           id.startsWith('c.east-quay-ground') ||
           id.startsWith('c.boundary-')),
     );
-    expect(structural).toHaveLength(16);
+    expect(structural).toHaveLength(22);
     for (const definition of structural) {
       const visual = visuals.get(definition.id.replace(/^c\./, 'v.'));
       expect(visual, definition.id).toBeDefined();
@@ -73,8 +78,8 @@ describe('Ashfall Junction intersection', () => {
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
     for (const [from, to, expected] of [
-      [[30, 1, 25], [30, 1, 30], 'c.boundary-north'],
-      [[30, 1, -25], [30, 1, -30], 'c.boundary-south'],
+      [[30, 1, 32], [30, 1, 36], 'c.boundary-north'],
+      [[30, 1, -32], [30, 1, -36], 'c.boundary-south'],
       [[48, 1, 0], [52, 1, 0], 'c.boundary-east'],
       [[-34, 1, 0], [-38, 1, 0], 'c.boundary-west'],
     ] as const) {
@@ -90,7 +95,7 @@ describe('Ashfall Junction intersection', () => {
       expect.objectContaining({
         id: 'zone.ashfall-junction',
         position: [7, 3, 0],
-        size: [world002APlan.widthMetres, 10, intersectionLayout.footprint],
+        size: [world002BPlan.widthMetres, 10, world002BPlan.depthMetres],
       }),
     );
     expect(testDistrict.definition.environment).toContainEqual(
@@ -127,12 +132,65 @@ describe('Ashfall Junction intersection', () => {
     expect(baselineArea).toBe(3920);
     expect(measuredArea).toBe(4900);
     expect(((measuredArea - baselineArea) / baselineArea) * 100).toBe(25);
+    expect(world002APlan.addedBuildingIds).toHaveLength(6);
+    expect(world002APlan.addedSectorIds).toHaveLength(4);
+  });
+
+  it('records WORLD-002B as a second exact 25 percent area milestone and final linear growth', () => {
+    const areaA =
+      (world002APlan.bounds.maxX - world002APlan.bounds.minX) *
+      (world002APlan.bounds.maxZ - world002APlan.bounds.minZ);
+    const { bounds } = world002BPlan;
+    const areaB = (bounds.maxX - bounds.minX) * (bounds.maxZ - bounds.minZ);
+    expect(areaA).toBe(4900);
+    expect(areaB).toBe(6125);
+    expect(((areaB - areaA) / areaA) * 100).toBe(25);
+    expect(world002BPlan.widthMetres / 70).toBe(1.25);
+    expect(world002BPlan.depthMetres / 56).toBe(1.25);
     expect(testDistrict.definition.mapPresentation.bounds).toEqual(bounds);
-    expect(ashfallBuildingPlacements).toHaveLength(16);
-    expect(testDistrict.definition.streaming.sectors).toHaveLength(10);
+    expect(ashfallBuildingPlacements).toHaveLength(22);
+    expect(testDistrict.definition.streaming.sectors).toHaveLength(14);
     expect(
       testDistrict.definition.streaming.sectors.map(({ id }) => id),
-    ).toEqual(expect.arrayContaining([...world002APlan.addedSectorIds]));
+    ).toEqual(
+      expect.arrayContaining([
+        ...world002APlan.addedSectorIds,
+        ...world002BPlan.addedSectorIds,
+      ]),
+    );
+  });
+
+  it('authors populated, collidable WORLD-002B sidewalks and north/south roads', () => {
+    for (const pair of [...world002BRoads, ...world002BSidewalks]) {
+      expect(testDistrict.definition.environment).toContainEqual(pair.visual);
+      expect(testDistrict.definition.staticCollision).toContainEqual(
+        pair.collider,
+      );
+    }
+    expect(world002BBuildingPlacements).toHaveLength(6);
+  });
+
+  it('grounds the distant contact-yard approach and exposes its reveal anchor', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addDefinitions(testDistrict.definition.staticCollision);
+    const spawn = findSpawn(testDistrict.definition, world002BContact.spawnId);
+    const grounded = collision.moveCharacter(
+      new Vector3(...spawn.position),
+      new Vector3(0, -1, 0),
+      defaultPlayerMovementConfig,
+      false,
+    );
+    expect(grounded.grounded).toBe(true);
+    expect(grounded.groundColliderId).toBe('c.sidewalk-north-rim-east');
+    expect(
+      Math.hypot(spawn.position[0] + 12, spawn.position[2] - 9.5),
+    ).toBeGreaterThan(45);
+    expect(testDistrict.definition.locations).toContainEqual(
+      expect.objectContaining({ id: world002BContact.locationId }),
+    );
+    expect(testDistrict.definition.cinematicAnchors).toContainEqual(
+      expect.objectContaining({ id: world002BContact.cameraAnchorId }),
+    );
   });
 
   it('authors populated, collidable WORLD-002A sidewalks and west road', () => {

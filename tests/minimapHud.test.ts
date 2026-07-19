@@ -21,19 +21,19 @@ describe('MinimapHudSystem', () => {
 
   it('projects the center and all bounds corners with north at the top', () => {
     expect(projectWorldToMap({ x: 0, z: 0 }, bounds)).toEqual({ x: 42, y: 50 });
-    expect(projectWorldToMap({ x: -36.75, z: 28 }, bounds)).toEqual({
+    expect(projectWorldToMap({ x: -36.75, z: 35 }, bounds)).toEqual({
       x: 0,
       y: 0,
     });
-    expect(projectWorldToMap({ x: 50.75, z: 28 }, bounds)).toEqual({
+    expect(projectWorldToMap({ x: 50.75, z: 35 }, bounds)).toEqual({
       x: 100,
       y: 0,
     });
-    expect(projectWorldToMap({ x: -36.75, z: -28 }, bounds)).toEqual({
+    expect(projectWorldToMap({ x: -36.75, z: -35 }, bounds)).toEqual({
       x: 0,
       y: 100,
     });
-    expect(projectWorldToMap({ x: 50.75, z: -28 }, bounds)).toEqual({
+    expect(projectWorldToMap({ x: 50.75, z: -35 }, bounds)).toEqual({
       x: 100,
       y: 100,
     });
@@ -74,15 +74,15 @@ describe('MinimapHudSystem', () => {
     expect(hud.getSnapshot()).toMatchObject({
       visible: true,
       orientation: 'north-up',
-      projected: { x: 74, y: 100 },
+      projected: { x: 74, y: 90 },
       headingDegrees: 90,
       layers: { roads: true, structures: true, spawns: false },
     });
-    expect(mount.querySelectorAll('[data-layer="roads"] rect')).toHaveLength(3);
+    expect(mount.querySelectorAll('[data-layer="roads"] rect')).toHaveLength(5);
     expect(mount.querySelectorAll('[data-layer="roads"] path')).toHaveLength(1);
     expect(
       mount.querySelectorAll('[data-layer="structures"] rect'),
-    ).toHaveLength(16);
+    ).toHaveLength(22);
     expect(
       mount.querySelector('[data-entry-id="v.road-east-quay-curve"]'),
     ).not.toBeNull();

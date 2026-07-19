@@ -1,0 +1,83 @@
+{
+  "id": "world-002ab-junction-growth",
+  "baseCommit": "466246cb5fa70b93960ce5b662224dc479193065",
+  "measurementConvention": "rectangular-playable-bounds-square-metres",
+  "baseline": {
+    "boundsMetres": { "minX": -28, "maxX": 42, "minZ": -28, "maxZ": 28 },
+    "widthMetres": 70,
+    "depthMetres": 56,
+    "playableAreaSquareMetres": 3920,
+    "buildingCount": 10,
+    "sectorCount": 6
+  },
+  "milestones": [
+    {
+      "id": "WORLD-002A",
+      "commit": "98b1dd1",
+      "boundsMetres": {
+        "minX": -36.75,
+        "maxX": 50.75,
+        "minZ": -28,
+        "maxZ": 28
+      },
+      "widthMetres": 87.5,
+      "depthMetres": 56,
+      "playableAreaSquareMetres": 4900,
+      "growthPercentFromPrior": 25,
+      "buildingCount": 16,
+      "sectorCount": 10,
+      "roadsAddedOrExtended": ["v.road-west-rim", "v.road-east-quay-curve"],
+      "sectorsAdded": [
+        "sector.west-rim-north",
+        "sector.west-rim-south",
+        "sector.east-rim-north",
+        "sector.east-rim-south"
+      ]
+    },
+    {
+      "id": "WORLD-002B",
+      "boundsMetres": {
+        "minX": -36.75,
+        "maxX": 50.75,
+        "minZ": -35,
+        "maxZ": 35
+      },
+      "widthMetres": 87.5,
+      "depthMetres": 70,
+      "playableAreaSquareMetres": 6125,
+      "growthPercentFromPrior": 25,
+      "buildingCount": 22,
+      "sectorCount": 14,
+      "roadsAdded": ["v.road-north-rim", "v.road-south-rim"],
+      "sectorsAdded": [
+        "sector.north-rim-west",
+        "sector.north-rim-east",
+        "sector.south-rim-west",
+        "sector.south-rim-east"
+      ]
+    }
+  ],
+  "finalRelativeToBaseline": {
+    "widthGrowthPercent": 25,
+    "depthGrowthPercent": 25,
+    "areaGrowthPercent": 56.25,
+    "westBoundOutwardMetres": 8.75,
+    "eastBoundOutwardMetres": 8.75,
+    "northBoundOutwardMetres": 7,
+    "southBoundOutwardMetres": 7
+  },
+  "constructionAuthority": "src/world/levels/junctionGrowth.ts",
+  "mapAuthority": "testDistrict.definition.mapPresentation",
+  "streamingProfile": {
+    "selection": "baseline-pending-final-profile-evidence",
+    "loadDistanceMetres": 26,
+    "unloadDistanceMetres": 32,
+    "detailDistanceMetres": 24,
+    "reason": "No farther profile is shipped without measured visual and performance evidence."
+  },
+  "missionIntegrationEntries": {
+    "locationId": "location.ash-001.contact-yard",
+    "spawnId": "spawn.ash-001.contact",
+    "cameraAnchorId": "camera.ash-001.contact-reveal"
+  }
+}
