@@ -23,10 +23,10 @@ import {
 import { sampleSplineRoad } from '../../src/world/levels/SplineRoadGeometry';
 
 describe('Ashfall building kit', () => {
-  it('provides 18 reusable, bounded variants across useful sizes', () => {
+  it('provides 26 reusable, bounded variants across useful sizes', () => {
     expect(validateAshfallBuildingKit()).toEqual([]);
-    expect(ashfallBuildingVariants).toHaveLength(18);
-    expect(new Set(ashfallBuildingVariants.map(({ id }) => id)).size).toBe(18);
+    expect(ashfallBuildingVariants).toHaveLength(26);
+    expect(new Set(ashfallBuildingVariants.map(({ id }) => id)).size).toBe(26);
     expect(
       Math.min(...ashfallBuildingVariants.map(({ height }) => height)),
     ).toBeLessThanOrEqual(5);
@@ -35,15 +35,43 @@ describe('Ashfall building kit', () => {
     ).toBeGreaterThanOrEqual(18);
     expect(
       new Set(ashfallBuildingVariants.map(({ profile }) => profile)).size,
-    ).toBe(4);
+    ).toBe(5);
+  });
+
+  it('authors the eight BUILDINGS-002 footprints, frontage, and entrances on local +Z', () => {
+    const planned = [
+      ['arrival-shed', 22, 12, 9, 'transit', 'sawtooth'],
+      ['ticket-arcade', 14, 8, 7, 'institutional', 'stepped'],
+      ['garage-six-bay', 20, 10, 8, 'service-bays', 'flat'],
+      ['print-house', 16, 9, 10, 'shopfront', 'stepped'],
+      ['boarding-court', 12, 16, 15, 'residential', 'setback'],
+      ['corner-chemist', 9, 11, 9, 'corner-shop', 'stepped'],
+      ['cold-store', 20, 14, 12, 'service-bays', 'setback'],
+      ['municipal-annex', 16, 12, 16, 'institutional', 'tower'],
+    ] as const;
+    for (const [id, width, depth, height, frontage, profile] of planned) {
+      const definition = getAshfallBuildingVariant(id);
+      expect(definition.footprint).toEqual([width, depth]);
+      expect(definition.height).toBe(height);
+      expect(definition.frontage).toBe(frontage);
+      expect(definition.profile).toBe(profile);
+      expect(definition.localFrontage).toEqual([0, 0, 1]);
+      expect(definition.entrances.length).toBeGreaterThan(0);
+      for (const entrance of definition.entrances) {
+        expect(entrance.width).toBeGreaterThanOrEqual(1.8);
+        expect(
+          Math.abs(entrance.offsetX) + entrance.width / 2,
+        ).toBeLessThanOrEqual(width / 2);
+      }
+    }
   });
 
   it('uses only the controlled local generated texture palette', () => {
-    expect(Object.keys(ashfallBuildingAssets)).toHaveLength(7);
+    expect(Object.keys(ashfallBuildingAssets)).toHaveLength(11);
     for (const descriptor of Object.values(ashfallBuildingAssets)) {
       expect(descriptor.type).toBe('texture');
       expect(descriptor.url).toMatch(
-        /^\/assets\/environment\/ashfall-buildings\/[^/]+\.generated\.jpg$/,
+        /^\/assets\/environment\/ashfall-buildings\/[^/]+\.(generated|procedural)\.jpg$/,
       );
       expect(descriptor.attribution.license).toBe('Project-generated original');
       expect(descriptor.metadata.runtimeNetwork).toBe(false);
@@ -182,7 +210,7 @@ describe('Ashfall building kit', () => {
     }
   });
 
-  it('builds all variants through one cached five-building-texture renderer', async () => {
+  it('builds all variants through one cached nine-building-material renderer', async () => {
     const loadTexture = vi.fn(() => Promise.resolve(new Texture()));
     const assets: GameAssetLoader = {
       loadTexture,
@@ -205,13 +233,45 @@ describe('Ashfall building kit', () => {
         }),
       ),
     );
-    expect(loadTexture).toHaveBeenCalledTimes(5);
+    expect(loadTexture).toHaveBeenCalledTimes(9);
     for (const [index, group] of groups.entries()) {
       expect(group.userData.buildingVariantId).toBe(
         ashfallBuildingVariants[index]!.id,
       );
       expect(new Box3().setFromObject(group).isEmpty()).toBe(false);
+      expect(group.userData.localFrontage).toEqual([0, 0, 1]);
+      const definition = ashfallBuildingVariants[index]!;
+      const bounds = new Box3().setFromObject(group);
+      expect(bounds.min.x).toBeCloseTo(-definition.footprint[0] / 2, 5);
+      expect(bounds.max.x).toBeCloseTo(definition.footprint[0] / 2, 5);
+      expect(bounds.min.y).toBeCloseTo(0, 5);
+      expect(bounds.max.y).toBeCloseTo(definition.height, 5);
+      expect(bounds.min.z).toBeCloseTo(-definition.footprint[1] / 2, 5);
+      expect(bounds.max.z).toBeCloseTo(definition.footprint[1] / 2, 5);
+      const lodTags = new Set<string>();
+      const entranceZ: number[] = [];
+      group.traverse((object) => {
+        if (typeof object.userData.ashfallLod === 'string')
+          lodTags.add(object.userData.ashfallLod);
+        if (object.userData.entrance === true)
+          entranceZ.push(object.position.z);
+      });
+      expect(lodTags).toEqual(new Set(['shell', 'far-detail', 'near-detail']));
+      expect(entranceZ).toHaveLength(definition.entrances.length);
+      expect(
+        entranceZ.every((z) => z > 0 && z <= definition.footprint[1] / 2),
+      ).toBe(true);
     }
+    const materials = [...resources].filter(
+      (resource) => 'isMaterial' in resource,
+    );
+    expect(materials).toHaveLength(9);
+    const disposals = [...resources].map((resource) =>
+      vi.spyOn(resource, 'dispose'),
+    );
     for (const resource of resources) resource.dispose();
+    expect(disposals.every((dispose) => dispose.mock.calls.length === 1)).toBe(
+      true,
+    );
   });
 });

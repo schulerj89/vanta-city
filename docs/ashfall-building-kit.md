@@ -14,14 +14,14 @@ The visual grammar was derived from authoritative architecture and preservation 
 
 Derived Ashfall principles are therefore: repeat structural bays at believable 2.5–4m intervals; distinguish street frontage from plain service treatment; use a strong fascia/cornice and readable sealed entrance bays; keep flat roofs behind parapet/coping lines; concentrate deco scoring at piers and roofline; weather masonry consistently at joints, bases, and water paths; use corrugated metal and concrete plinths for service walls; and keep scored sidewalk slabs and continuous aggregate kerbs aligned to street/building geometry.
 
-The 18 reusable shells span 6–18m footprints, 4.5–18m heights, four wall materials, and four massing profiles. Opaque window/storefront bays reveal no interiors and own no collision. The shells contain no interiors, readable text, brands, procedural placement, or simulation ownership.
+The 26 reusable shells span 6–22m footprints, 4.5–18m heights, eight wall/frontage materials, seven frontage uses, and five massing profiles. Opaque window/storefront/entrance bays reveal no interiors and own no collision. All entrances face local +Z before authored placement rotation. The shells contain no interiors, readable text, brands, procedural placement, or simulation ownership.
 
 ## Runtime and material policy
 
-- Seven 512×512 JPEG albedo textures form the controlled palette: four facade/service surfaces, one roof, one sidewalk, and one curb. `validate:buildings` caps aggregate size at 700KB; the current set is about 640KB.
+- Eleven 512×512 JPEG albedo textures form the controlled palette: eight facade/frontage surfaces, one roof, one sidewalk, and one curb. Seven are the accepted image-generated originals; four BUILDINGS-002 surfaces are deterministic project-owned procedural originals. `validate:buildings` hash-pins every file and caps aggregate size at 1.1 MiB; the current set is 817,716 bytes.
 - Textures load through the authoritative asset catalog and `GameAssetLoader`. Runtime URLs are local project paths; there is no runtime network dependency.
 - Repeating UVs are encoded in box geometry. Facades repeat every 3–4m, the sidewalk every 6m, and the curb every 3m. Shared materials and loader-cached textures prevent per-building texture allocation.
-- Shallow cornice bands and roof caps improve street and overhead silhouettes without creating alternate collision or lifecycle ownership.
+- Shallow cornice bands, roof caps, frontage bands, and opaque entrance bays improve street readability without creating alternate collision or lifecycle ownership. All detail remains inside the authored footprint. `near-detail` frontage and `far-detail` roof/cornice pieces use the same object tags consumed by gameplay's existing LevelSystem LOD visibility policy.
 
 ## Junction placement decisions
 
@@ -38,11 +38,11 @@ Eight baseline buildings form four outer-edge L-shaped corner groups; WORLD-001 
 
 Run `pnpm lab:buildings` or open `/?sandbox=building-visual-lab&debug=1`. The development-only lab displays:
 
-- all 18 live textured variants;
+- all 26 live textured variants;
 - mint world bounds and amber collision footprints;
 - exact width × depth × height, material, massing profile, and UV repeat;
-- all seven material swatches, including roof, sidewalk, and curb;
-- deterministic overview, street, overhead, materials, and narrow-viewport coverage through the existing `window.__VANTA_BUILDING_LAB__` bridge.
+- all eleven material swatches, including roof, sidewalk, and curb;
+- deterministic overview, close, street, overhead, materials, near/far/shell LOD, focused selection, independent bounds/collision, and 390×844 narrow coverage through the existing `window.__VANTA_BUILDING_LAB__` bridge.
 
 Gameplay day/night coverage remains owned by the time-of-day suite. Placement tests enforce a 4m minimum walking band, footprint non-overlap, protected-point clearance, and traffic-lane clearance. Browser performance coverage caps the district below 120 draw calls and checks for local texture loading and runtime/console errors.
 
@@ -51,5 +51,5 @@ Gameplay day/night coverage remains owned by the time-of-day suite. Placement te
 - Existing `LevelDefinition` box visuals gained optional `textureAssetId` and `uvMetersPerRepeat` fields. They resolve only through the existing asset loader; untextured boxes keep the previous color-material path.
 - Generated images were prompted as seamless, but image generation does not mathematically guarantee edge identity. Large 3–6m repeats, regular bays, and stepped silhouettes reduce repetition. Deterministic seam synthesis is the next art step if later inspection exposes seams.
 - Collision follows each full authored footprint, not rooftop setbacks, so the player/camera never enter apparent solid mass. Rooftop ledges remain inaccessible by design.
-- Buildings have no independent mesh LOD variants; roof/cornice detail on the ten production instances uses the shared 24m sector distance policy. Profile before increasing count and do not add procedural placement by default.
+- Buildings have no independent update loop or distance owner. Tagged frontage/roof/cornice pieces use the shared 24m LevelSystem policy; the lab exposes three deterministic inspection states without changing gameplay distance. Profile before increasing placed count and do not add procedural placement by default.
 - The lab remains development-only and adds no runtime global listeners. Lifecycle, game state, input, player transform, health, collision, camera, debug registry, and browser bridge ownership are unchanged.

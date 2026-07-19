@@ -22,16 +22,24 @@ const hashes = {
     'c3b85ce5949b7b667a468335f3ba2b03987072c44e72f3939579936ef226fb3e',
   'window-deco.generated.jpg':
     'ed4c12fccda5335d8d9bdd9bab5f88199a3b696236a52f63acb86cb19848600d',
+  'ribbed-zinc.procedural.jpg':
+    '12d3128fe4e4cc1e8b14710b84de107d0c0aadf07206766dab386736268e9b13',
+  'ceramic-tile.procedural.jpg':
+    'fed1b8be96bbd2cd50f7bd67b53921b8fff58b50b41ca59c7f0fcb9f21b8fe7a',
+  'glass-block.procedural.jpg':
+    'e1ee7d0be134cb93dc106dac94e4a101a914e42a09d4b31bec5e94f35d4a214f',
+  'painted-shopfront.procedural.jpg':
+    '89c52be626dfcb4a371699c877079a005215b3e8ee4208f04df74f6799d643a9',
 } as const;
 
 const issues = validateAshfallBuildingKit();
 if (issues.length > 0) throw new Error(issues.join('\n'));
 const variantCount: number = ashfallBuildingVariants.length;
-if (variantCount !== 18) {
-  throw new Error(`Expected 18 building variants, found ${variantCount}`);
+if (variantCount !== 26) {
+  throw new Error(`Expected 26 building variants, found ${variantCount}`);
 }
-if (Object.keys(ashfallBuildingAssets).length !== 7) {
-  throw new Error('Expected exactly seven controlled streetscape textures');
+if (Object.keys(ashfallBuildingAssets).length !== 11) {
+  throw new Error('Expected exactly eleven controlled streetscape textures');
 }
 
 let totalBytes = 0;
@@ -49,8 +57,8 @@ for (const [file, expectedHash] of Object.entries(hashes)) {
     );
   }
 }
-if (totalBytes > 700_000) {
-  throw new Error(`Streetscape textures exceed 700KB budget: ${totalBytes}`);
+if (totalBytes > 1_153_433) {
+  throw new Error(`Streetscape textures exceed 1.1MiB budget: ${totalBytes}`);
 }
 for (const descriptor of Object.values(ashfallBuildingAssets)) {
   if (!descriptor.url.startsWith('/assets/environment/ashfall-buildings/')) {
@@ -64,7 +72,7 @@ for (const descriptor of Object.values(ashfallBuildingAssets)) {
 }
 
 console.log(
-  `Validated ${variantCount} variants and 7 generated 512px textures (${totalBytes} bytes).`,
+  `Validated ${variantCount} variants and 11 local 512px textures (${totalBytes} bytes).`,
 );
 
 function jpegDimensions(bytes: Buffer): { width: number; height: number } {
