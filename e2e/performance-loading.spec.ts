@@ -39,7 +39,7 @@ test('simulates selected logical failure and reaches placeholder gameplay @smoke
   await page.goto(`${base}&loadDelayMs=300&loadFail=character.casual.model`);
   await waitForReady(page);
   await waitForLoadingReady(page);
-  await expect(page.getByText('Vanta City is ready')).toBeVisible();
+  await expect(page.getByText('Ashfall is ready')).toBeVisible();
   const state = await snapshot(page);
   expect(state.character.source).toBe('placeholder');
   expect(state.performance.loading.fallbackAssetIds).toContain(

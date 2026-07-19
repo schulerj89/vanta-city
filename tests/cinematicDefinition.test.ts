@@ -11,28 +11,35 @@ describe('CinematicDefinition', () => {
     const opening = catalog.get('cinematic.ash-001.opening');
     expect(opening).toMatchObject({
       missionId: 'ash-001-walk-the-block',
-      participantIds: ['casual', 'mack'],
-      speakerIds: ['rook', 'mack'],
+      participantIds: ['casual', 'mack', 'della-voss'],
+      speakerIds: ['rook', 'mack', 'della-voss'],
       skipPolicy: 'confirm',
-      restorationPolicy: 'exact-prior-gameplay',
+      restorationPolicy: 'authoritative-destination',
     });
     expect(opening?.shots.map(({ id }) => id)).toEqual([
-      'shot.ash-001.north-arrival',
-      'shot.ash-001.junction-watch',
-      'shot.ash-001.mack-position',
+      'shot.ash-001.northbar-establish',
+      'shot.ash-001.failed-pickup-two-shot',
+      'shot.ash-001.mack-missing-close',
+      'shot.ash-001.della-carbon-close',
+      'shot.ash-001.della-intercepts',
+      'shot.ash-001.rook-decision-close',
+      'shot.ash-001.ticket-choice',
+      'shot.ash-001.wagon-entry',
+      'shot.ash-001.wagon-departure',
     ]);
     expect(JSON.parse(JSON.stringify(opening))).toEqual(opening);
   });
 
   it('rejects subtitle windows outside their shot', () => {
-    const opening = cinematicDefinitions[0];
+    const opening: CinematicDefinition = cinematicDefinitions[0];
+    const first = opening.shots[0]!;
     expect(() =>
       validateCinematicDefinition({
         ...opening,
         shots: [
           {
-            ...opening.shots[0],
-            subtitle: { ...opening.shots[0].subtitle, endSeconds: 99 },
+            ...first,
+            subtitleCues: [{ ...first.subtitleCues![0]!, endSeconds: 99 }],
           },
         ],
       }),
@@ -92,6 +99,8 @@ describe('CinematicDefinition', () => {
       validateCinematicDefinition({
         ...opening,
         restorationPolicy: 'authoritative-destination',
+        destination: undefined,
+        landingTransaction: undefined,
       }),
     ).toThrow('incomplete destination transaction');
   });

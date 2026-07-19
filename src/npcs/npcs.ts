@@ -116,10 +116,30 @@ export const npcDefinitions = validateNpcDefinitions(
       defaultAnimation: 'idle',
       applauseAnimation: 'applaud',
       spawnId: 'spawn.npc-mechanic',
+      levelSpawnIds: {
+        'northbar-coach-depot': 'spawn.northbar.mack',
+      },
       interactionLabel: 'Talk',
       conversationId: 'conversation.mack.introduction',
       idleYaw: Math.PI * 0.75,
       ambientYaw: 0.08,
+      conversationCameraProfileId: 'close',
+    },
+    {
+      id: 'della-voss',
+      displayName: 'Della Voss',
+      characterId: 'pedestrian-street',
+      portraitAssetId: 'portrait.npc-della-voss',
+      defaultAnimation: 'idle',
+      applauseAnimation: 'applaud',
+      spawnId: 'spawn.northbar.della-voss',
+      levelSpawnIds: {
+        'test-district': null,
+      },
+      interactionLabel: 'Speak',
+      conversationId: 'conversation.della.northbar-record',
+      idleYaw: Math.PI,
+      ambientYaw: 0.04,
       conversationCameraProfileId: 'close',
     },
     {
@@ -156,5 +176,5 @@ export const npcDefinitions = validateNpcDefinitions(
 
 /** Story-critical NPCs available in production without development flags. */
 export const productionNpcDefinitions = Object.freeze(
-  npcDefinitions.filter(({ id }) => id === 'mack'),
+  npcDefinitions.filter(({ id }) => id === 'mack' || id === 'della-voss'),
 );

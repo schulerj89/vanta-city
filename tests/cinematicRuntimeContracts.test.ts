@@ -19,6 +19,12 @@ const destinationDefinition: CinematicDefinition = {
   completionEventId: 'cinematic.test.destination.completed',
   restorationPolicy: 'authoritative-destination',
   participantFailurePolicy: 'land-at-destination',
+  dependencies: {
+    ...cinematicDefinitions[0].dependencies,
+    levelId: 'test-district',
+    locationId: 'landmark.north-approach',
+    cameraAnchorIds: ['camera.ash-001.north-arrival'],
+  },
   destination: {
     id: 'travel.test.destination',
     levelId: 'destination-level',
@@ -35,6 +41,7 @@ const destinationDefinition: CinematicDefinition = {
     {
       ...cinematicDefinitions[0].shots[0],
       id: 'shot.test.multi-cue',
+      cameraAnchorId: 'camera.ash-001.north-arrival',
       participantIds: ['casual', 'mack'],
       durationSeconds: 3,
       subtitle: undefined,

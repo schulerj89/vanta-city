@@ -41,7 +41,10 @@ const npc: NpcDefinition = {
 
 describe('NPC definition validation', () => {
   it('promotes Mack through the production roster without changing IDs', () => {
-    expect(productionNpcDefinitions.map(({ id }) => id)).toEqual(['mack']);
+    expect(productionNpcDefinitions.map(({ id }) => id)).toEqual([
+      'mack',
+      'della-voss',
+    ]);
     expect(productionNpcDefinitions[0]).toBe(
       npcDefinitions.find(({ id }) => id === 'mack'),
     );
@@ -101,6 +104,12 @@ describe('NPC definition validation', () => {
       {
         id: 'mack',
         characterId: 'npc-worker',
+        applauseAnimation: 'applaud',
+        conversationCameraProfileId: 'close',
+      },
+      {
+        id: 'della-voss',
+        characterId: 'pedestrian-street',
         applauseAnimation: 'applaud',
         conversationCameraProfileId: 'close',
       },

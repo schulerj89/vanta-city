@@ -106,6 +106,7 @@ interface NpcPerformanceGameplayState {
   readonly gestureRemaining: number;
   readonly facingYaw: number;
   readonly facingTargetYaw: number | undefined;
+  readonly position: WorldPosition;
 }
 
 export class NpcEntity
@@ -353,6 +354,11 @@ export class NpcEntity
     };
   }
 
+  /** Participant-owner staging seam; cinematic data supplies authored marks. */
+  public setPerformancePosition(position: WorldPosition): void {
+    this.object3d.position.set(position.x, position.y, position.z);
+  }
+
   public getWorldPose(): WorldPose {
     return {
       position: this.getWorldPosition(),
@@ -498,6 +504,7 @@ export class NpcEntity
       gestureRemaining: this.gestureRemaining,
       facingYaw: this.object3d.rotation.y,
       facingTargetYaw: this.performanceFacingYaw,
+      position: this.getWorldPosition(),
     };
   }
 
@@ -526,6 +533,7 @@ export class NpcEntity
     this.gestureRemaining = state.gestureRemaining;
     this.object3d.rotation.y = state.facingYaw;
     this.performanceFacingYaw = state.facingTargetYaw;
+    this.setPerformancePosition(state.position);
   }
 
   private playPerformanceAnimation(

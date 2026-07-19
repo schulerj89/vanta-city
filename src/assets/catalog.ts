@@ -186,6 +186,12 @@ export const assetManifest = {
     optional: true,
     metadata: { intendedUse: 'dialogue-portrait' },
   },
+  'portrait.npc-della-voss': {
+    type: 'texture',
+    url: '/assets/portraits/npcs/della-voss.webp',
+    optional: true,
+    metadata: { intendedUse: 'dialogue-portrait' },
+  },
   'portrait.npc-nox': {
     type: 'texture',
     url: '/assets/portraits/npcs/nox.webp',

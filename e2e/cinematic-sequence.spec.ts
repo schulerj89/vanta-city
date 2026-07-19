@@ -3,7 +3,7 @@ import type { Page, TestInfo } from '@playwright/test';
 import type { BrowserTestSnapshot } from '../src/debug/BrowserTestBridge';
 
 const appUrl = '/?e2e=1&skipPicker=1&dialogueTypewriter=0&traffic=0';
-const openingId = 'cinematic.ash-001.opening';
+const openingId = 'cinematic.ash-001.legacy-opening';
 
 test('opening progression, pause, skip cancellation/confirmation, and exact restoration @visual', async ({
   page,
@@ -57,7 +57,7 @@ test('opening progression, pause, skip cancellation/confirmation, and exact rest
   await page.getByTestId('cinematic-skip-cancel').click();
   await expect(page.getByTestId('cinematic-skip-confirmation')).toBeHidden();
   expect((await snapshot(page)).cinematic.emittedEventIds).toEqual([
-    'cinematic.ash-001.opening.entered',
+    'cinematic.ash-001.legacy-opening.entered',
   ]);
 
   await advance(page, 3.5);

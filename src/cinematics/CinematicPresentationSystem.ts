@@ -66,10 +66,18 @@ export class CinematicPresentationSystem implements GameSystem {
     this.root.hidden = !active;
     this.root.dataset.state = snapshot.state;
     this.root.dataset.shotId = snapshot.shotId ?? '';
-    this.speaker.textContent = snapshot.speakerId
-      ? this.speakerName(snapshot.speakerId)
-      : '';
-    this.text.textContent = snapshot.subtitleText;
+    const landing = snapshot.state === 'landing';
+    this.speaker.textContent = landing
+      ? 'Ashfall Junction'
+      : snapshot.speakerId
+        ? this.speakerName(snapshot.speakerId)
+        : '';
+    this.text.textContent = landing
+      ? snapshot.destinationReadiness === 'failed'
+        ? 'The local destination could not be prepared.'
+        : 'Preparing the local district, collision, and arrival point…'
+      : snapshot.subtitleText;
+    this.skipHint.hidden = landing;
     const confirming = snapshot.state === 'confirming-skip';
     this.confirm.hidden = !confirming;
     if (confirming && !this.focusedConfirmation) {

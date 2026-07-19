@@ -33,6 +33,17 @@ export const conversationDefinitions = validateConversationDefinitions([
     onComplete: { id: 'conversation.mack-introduction.completed' },
   },
   {
+    id: 'conversation.della.northbar-record',
+    canCancel: true,
+    lines: [
+      {
+        id: 'conversation.della.northbar-record.closed',
+        speakerId: 'della-voss',
+        text: 'Counter is closed. Next coach is posted on the board.',
+      },
+    ],
+  },
+  {
     id: 'conversation.nox.check-in',
     canCancel: true,
     lines: [

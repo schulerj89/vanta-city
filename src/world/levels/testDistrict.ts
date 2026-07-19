@@ -498,6 +498,13 @@ export const testDistrict = {
     ],
     cinematicAnchors: [
       {
+        id: 'camera.ash-001.junction-arrival',
+        position: [6.5, 3.2, 24],
+        lookAt: [0, 1.25, 19.5],
+        fieldOfView: 44,
+        tags: ['cinematic', 'ash-001', 'arrival', 'destination'],
+      },
+      {
         id: 'camera.ash-001.north-arrival',
         position: [7.5, 3.4, 24.5],
         lookAt: [0, 1.15, 20],

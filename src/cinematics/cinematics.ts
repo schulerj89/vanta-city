@@ -1,14 +1,440 @@
-import type { CinematicDefinition } from './CinematicDefinition';
+import type {
+  CinematicDefinition,
+  CinematicPerformanceRequest,
+} from './CinematicDefinition';
+
+const performance = (
+  cueId: string,
+  shotId: string,
+  participantId: string,
+  targetParticipantId?: string,
+  targetMarkId?: string,
+): CinematicPerformanceRequest => ({
+  cueId,
+  shotId,
+  atSeconds: 0,
+  participantId,
+  intent: 'neutral-hold',
+  phase: 'start',
+  targetParticipantId,
+  targetMarkId,
+  missingPerformancePolicy: 'block',
+  required: true,
+});
 
 export const cinematicDefinitions = [
   {
     id: 'cinematic.ash-001.opening',
+    storyBeatId: 'ash-001-northbar-arrival',
+    missionId: 'ash-001-walk-the-block',
+    participantIds: ['casual', 'mack', 'della-voss'],
+    speakerIds: ['rook', 'mack', 'della-voss'],
+    entryEventId: 'cinematic.ash-001.northbar-arrival.entered',
+    completionEventId: 'cinematic.ash-001.northbar-arrival.completed',
+    skipPolicy: 'confirm',
+    dependencies: {
+      levelId: 'northbar-coach-depot',
+      locationId: 'landmark.northbar-bay-two',
+      cameraAnchorIds: [
+        'camera.northbar.establish-bay-two',
+        'camera.northbar.rook-mack-two-shot',
+        'camera.northbar.mack-missing-close',
+        'camera.northbar.della-carbon-close-safe',
+        'camera.northbar.three-way-cover',
+        'camera.northbar.rook-decision-close-safe',
+        'camera.northbar.ticket-choice',
+        'camera.northbar.wagon-entry',
+        'camera.northbar.wagon-departure',
+      ],
+      assetIds: [
+        'prop.northbar.arrival-manifest',
+        'prop.northbar.manifest-carbon',
+        'vehicle.northbar.intercity-coach',
+        'vehicle.mack.service-wagon',
+      ],
+      animationIds: ['idle'],
+      worldFactIds: [
+        'orin-status',
+        'rook-accepted-orin-search',
+        'marrow-has-rook-arrival-time',
+      ],
+    },
+    restorationPolicy: 'authoritative-destination',
+    destination: {
+      id: 'transition.ash-001.northbar-to-junction',
+      levelId: 'test-district',
+      locationId: 'landmark.north-approach',
+      spawnId: 'spawn.player-default',
+      cameraAnchorId: 'camera.ash-001.junction-arrival',
+    },
+    landingTransaction: {
+      id: 'transaction.ash-001.northbar-arrival',
+      storyEffectIds: [
+        'story.ash-001.orin-missing-revealed',
+        'story.ash-001.rook-chooses-junction',
+        'story.ash-001.marrow-copies-arrival',
+        'story.ash-001.rook-arrives-junction',
+      ],
+      missionHandoffIds: [
+        'ash-001-arrival-prelude-complete',
+        'ash-001-check-signal-corner',
+      ],
+    },
+    participantFailurePolicy: 'land-at-destination',
+    shots: [
+      {
+        id: 'shot.ash-001.northbar-establish',
+        purpose:
+          'Show Rook leaving the overnight coach while Mack and Della independently watch the arrival.',
+        cameraAnchorId: 'camera.northbar.establish-bay-two',
+        durationSeconds: 4,
+        transition: 'ease',
+        transitionSeconds: 0.55,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual', 'mack', 'della-voss'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.rook-arrival-hold',
+            'shot.ash-001.northbar-establish',
+            'casual',
+            'mack',
+            'mark.northbar.rook-coach-step',
+          ),
+          performance(
+            'performance.northbar.mack-clock-hold',
+            'shot.ash-001.northbar-establish',
+            'mack',
+            'casual',
+            'mark.northbar.mack-pillar',
+          ),
+          performance(
+            'performance.northbar.della-writing-hold',
+            'shot.ash-001.northbar-establish',
+            'della-voss',
+            undefined,
+            'mark.northbar.della-counter',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.mack.expected-someone',
+            speakerId: 'mack',
+            text: 'You were expecting someone else.',
+            startSeconds: 1,
+            endSeconds: 3.7,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 50 },
+      },
+      {
+        id: 'shot.ash-001.failed-pickup-two-shot',
+        purpose:
+          'Put Rook and Mack in one credible eyeline before the missing-person reveal.',
+        cameraAnchorId: 'camera.northbar.rook-mack-two-shot',
+        durationSeconds: 4.1,
+        transition: 'ease',
+        transitionSeconds: 0.35,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual', 'mack'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.rook-listens',
+            'shot.ash-001.failed-pickup-two-shot',
+            'casual',
+            'mack',
+            'mark.northbar.rook-curb',
+          ),
+          performance(
+            'performance.northbar.mack-restrained',
+            'shot.ash-001.failed-pickup-two-shot',
+            'mack',
+            'casual',
+            'mark.northbar.mack-pillar',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.rook.where-orin',
+            speakerId: 'rook',
+            text: 'Where is Orin?',
+            startSeconds: 0.45,
+            endSeconds: 1.8,
+          },
+          {
+            id: 'subtitle.northbar.mack.missed-two-nights',
+            speakerId: 'mack',
+            text: 'Missed two nights. That is not like him.',
+            startSeconds: 2,
+            endSeconds: 3.9,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 10, narrowFieldOfView: 44 },
+      },
+      {
+        id: 'shot.ash-001.mack-missing-close',
+        purpose: 'Hold on Mack long enough to read the cost he is withholding.',
+        cameraAnchorId: 'camera.northbar.mack-missing-close',
+        durationSeconds: 3.3,
+        transition: 'cut',
+        transitionSeconds: 0,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['mack'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.mack-reaction-hold',
+            'shot.ash-001.mack-missing-close',
+            'mack',
+            'casual',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.mack.orin-sent-ticket',
+            speakerId: 'mack',
+            text: 'He sent your ticket. Then he vanished.',
+            startSeconds: 0.35,
+            endSeconds: 3.05,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 13, narrowFieldOfView: 36 },
+      },
+      {
+        id: 'shot.ash-001.della-carbon-close',
+        purpose:
+          'Make Della taking the arrival carbon the dramatic action and future risk.',
+        cameraAnchorId: 'camera.northbar.della-carbon-close-safe',
+        durationSeconds: 3.8,
+        transition: 'cut',
+        transitionSeconds: 0,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['della-voss'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.della-carbon-hold',
+            'shot.ash-001.della-carbon-close',
+            'della-voss',
+            'mack',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.della.passenger-work',
+            speakerId: 'della-voss',
+            text: 'Passenger work now, Mack?',
+            startSeconds: 1.05,
+            endSeconds: 3.5,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 14, narrowFieldOfView: 34 },
+      },
+      {
+        id: 'shot.ash-001.della-intercepts',
+        purpose:
+          'Connect the stolen record, Mack’s wagon, and Rook in one spatial cover.',
+        cameraAnchorId: 'camera.northbar.three-way-cover',
+        durationSeconds: 4,
+        transition: 'ease',
+        transitionSeconds: 0.3,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual', 'mack', 'della-voss'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.rook-alert-hold',
+            'shot.ash-001.della-intercepts',
+            'casual',
+            'della-voss',
+          ),
+          performance(
+            'performance.northbar.mack-misdirect-hold',
+            'shot.ash-001.della-intercepts',
+            'mack',
+            'della-voss',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.mack.still-service',
+            speakerId: 'mack',
+            text: 'Still service. Just not yours.',
+            startSeconds: 0.45,
+            endSeconds: 2.2,
+          },
+          {
+            id: 'subtitle.northbar.della.see-you-junction',
+            speakerId: 'della-voss',
+            text: 'I know where that wagon sleeps.',
+            startSeconds: 2.35,
+            endSeconds: 3.8,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 48 },
+      },
+      {
+        id: 'shot.ash-001.rook-decision-close',
+        purpose:
+          'Let Rook connect the carbon theft to the available eastbound exit.',
+        cameraAnchorId: 'camera.northbar.rook-decision-close-safe',
+        durationSeconds: 3.2,
+        transition: 'cut',
+        transitionSeconds: 0,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.rook-decision-hold',
+            'shot.ash-001.rook-decision-close',
+            'casual',
+            'della-voss',
+          ),
+        ],
+        safeFrame: { minSubjectMarginPercent: 14, narrowFieldOfView: 36 },
+      },
+      {
+        id: 'shot.ash-001.ticket-choice',
+        purpose:
+          'Show the unused ticket, Mack’s keys, and Rook’s duffel turn into a decision.',
+        cameraAnchorId: 'camera.northbar.ticket-choice',
+        durationSeconds: 3.6,
+        transition: 'ease',
+        transitionSeconds: 0.25,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual', 'mack'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.rook-choice-hold',
+            'shot.ash-001.ticket-choice',
+            'casual',
+            'mack',
+            'mark.northbar.rook-curb',
+          ),
+          performance(
+            'performance.northbar.mack-keys-hold',
+            'shot.ash-001.ticket-choice',
+            'mack',
+            'casual',
+            'mark.northbar.mack-pillar',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.rook.junction-then',
+            speakerId: 'rook',
+            text: 'Junction, then.',
+            startSeconds: 1.25,
+            endSeconds: 3.25,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 11, narrowFieldOfView: 40 },
+      },
+      {
+        id: 'shot.ash-001.wagon-entry',
+        purpose:
+          'Move both participants from their conversation marks to the service wagon.',
+        cameraAnchorId: 'camera.northbar.wagon-entry',
+        durationSeconds: 3.3,
+        transition: 'ease',
+        transitionSeconds: 0.35,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual', 'mack'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.rook-wagon-hold',
+            'shot.ash-001.wagon-entry',
+            'casual',
+            'mack',
+            'mark.northbar.wagon-passenger-door',
+          ),
+          performance(
+            'performance.northbar.mack-wagon-hold',
+            'shot.ash-001.wagon-entry',
+            'mack',
+            'casual',
+            'mark.northbar.wagon-driver-door',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.mack.move',
+            speakerId: 'mack',
+            text: 'Before she finishes the plate.',
+            startSeconds: 0.5,
+            endSeconds: 3.05,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 50 },
+      },
+      {
+        id: 'shot.ash-001.wagon-departure',
+        purpose:
+          'Carry the service wagon behind the authored divider so real destination readiness can take over.',
+        cameraAnchorId: 'camera.northbar.wagon-departure',
+        durationSeconds: 4.2,
+        transition: 'ease',
+        transitionSeconds: 0.4,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual', 'mack', 'della-voss'],
+        performanceRequests: [
+          performance(
+            'performance.northbar.della-departure-hold',
+            'shot.ash-001.wagon-departure',
+            'della-voss',
+            'mack',
+          ),
+        ],
+        subtitleCues: [
+          {
+            id: 'subtitle.northbar.mack.route',
+            speakerId: 'mack',
+            text: 'Signal Corner first. Garage after.',
+            startSeconds: 0.65,
+            endSeconds: 3.8,
+          },
+        ],
+        safeFrame: { minSubjectMarginPercent: 7, narrowFieldOfView: 52 },
+      },
+    ],
+  },
+  {
+    id: 'cinematic.ash-001.destination-reveal',
+    storyBeatId: 'ash-001-contact-yard-reveal',
+    missionId: 'ash-001-walk-the-block',
+    participantIds: ['casual'],
+    speakerIds: [],
+    entryEventId: 'cinematic.ash-001.destination-reveal.entered',
+    completionEventId: 'cinematic.ash-001.destination-reveal.completed',
+    skipPolicy: 'confirm',
+    dependencies: {
+      levelId: 'test-district',
+      locationId: 'location.ash-001.contact-yard',
+      cameraAnchorIds: ['camera.ash-001.destination-reveal'],
+      assetIds: [],
+      animationIds: [],
+      worldFactIds: [],
+    },
+    restorationPolicy: 'exact-prior-gameplay',
+    shots: [
+      {
+        id: 'shot.ash-001.destination-reveal',
+        purpose:
+          'Briefly establish the meeting yard and return control without advancing the mission.',
+        cameraAnchorId: 'camera.ash-001.destination-reveal',
+        durationSeconds: 2.8,
+        transition: 'ease',
+        transitionSeconds: 0.35,
+        obstructionPolicy: 'shared-camera-collision',
+        participantIds: ['casual'],
+        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 50 },
+      },
+    ],
+  },
+  {
+    id: 'cinematic.ash-001.legacy-opening',
     storyBeatId: 'ash-001-walk-the-block',
     missionId: 'ash-001-walk-the-block',
     participantIds: ['casual', 'mack'],
     speakerIds: ['rook', 'mack'],
-    entryEventId: 'cinematic.ash-001.opening.entered',
-    completionEventId: 'cinematic.ash-001.opening.completed',
+    entryEventId: 'cinematic.ash-001.legacy-opening.entered',
+    completionEventId: 'cinematic.ash-001.legacy-opening.completed',
     skipPolicy: 'confirm',
     dependencies: {
       levelId: 'test-district',
@@ -27,7 +453,7 @@ export const cinematicDefinitions = [
       {
         id: 'shot.ash-001.north-arrival',
         purpose:
-          'Place Rook on the salt-bright north approach and make the late arrival feel observed.',
+          'Retain the legacy lifecycle coverage for focused regression tests.',
         cameraAnchorId: 'camera.ash-001.north-arrival',
         durationSeconds: 3.4,
         transition: 'ease',
@@ -44,8 +470,7 @@ export const cinematicDefinitions = [
       },
       {
         id: 'shot.ash-001.junction-watch',
-        purpose:
-          'Reveal the open crossing as a watched space instead of a welcoming destination.',
+        purpose: 'Retain the legacy Junction camera regression surface.',
         cameraAnchorId: 'camera.ash-001.junction-watch',
         durationSeconds: 3.2,
         transition: 'ease',
@@ -62,8 +487,7 @@ export const cinematicDefinitions = [
       },
       {
         id: 'shot.ash-001.mack-position',
-        purpose:
-          'Point the player west toward Mack without replacing the mission objective.',
+        purpose: 'Retain the legacy Mack camera regression surface.',
         cameraAnchorId: 'camera.ash-001.mack-position',
         durationSeconds: 3.5,
         transition: 'ease',

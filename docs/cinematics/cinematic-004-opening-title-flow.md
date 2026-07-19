@@ -84,17 +84,17 @@ All shots use Northbar's authored anchors, shared collision obstruction, stable
 subtitle placement, and participant/prop-relative action requests. Holds exist
 to read a decision or reaction, never to tour scenery.
 
-| # | Stable shot ID | Composition and event | Required visible change |
-|---|---|---|---|
-| 1 | `shot.ash-001.northbar-establish` | Wide Bay Two arrival; coach motion settles behind Rook | Rook steps down, secures duffel, scans; Mack watches the clock; Della writes |
-| 2 | `shot.ash-001.failed-pickup-two-shot` | Rook/Mack moving two-shot | Mack turns and approaches; Rook fixes the eyeline and asks where Orin is |
-| 3 | `shot.ash-001.mack-missing-close` | Justified medium close-up on Mack | Mack admits “Two nights”; shoulders hold the withheld cost, no celebratory gesture |
-| 4 | `shot.ash-001.della-carbon-close` | Prop-relative close-up at the counter | Pencil pauses, carbon separates from manifest, Della looks toward wagon plate |
-| 5 | `shot.ash-001.della-intercepts` | Three-way cover | Della needles Mack; Mack turns to her then checks Rook's reaction |
-| 6 | `shot.ash-001.rook-decision-close` | Justified Rook medium close-up | Eyeline moves board → carbon → Mack; reaction hold makes inference legible |
-| 7 | `shot.ash-001.ticket-choice` | Ticket/keys/duffel insert flowing into two-shot | Ticket folds, duffel lifts, keys expose; Rook says “Junction, then.” |
-| 8 | `shot.ash-001.wagon-departure` | Participant/vehicle-relative departure track | Both move to doors; wagon traverses authored exit lane behind divider |
-| 9 | `shot.ash-001.junction-arrival` | Destination anchor after committed readiness | Rook is grounded/on foot; wagon continues toward garage; gameplay route is named |
+| #   | Stable shot ID                        | Composition and event                                  | Required visible change                                                            |
+| --- | ------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| 1   | `shot.ash-001.northbar-establish`     | Wide Bay Two arrival; coach motion settles behind Rook | Rook steps down, secures duffel, scans; Mack watches the clock; Della writes       |
+| 2   | `shot.ash-001.failed-pickup-two-shot` | Rook/Mack moving two-shot                              | Mack turns and approaches; Rook fixes the eyeline and asks where Orin is           |
+| 3   | `shot.ash-001.mack-missing-close`     | Justified medium close-up on Mack                      | Mack admits “Two nights”; shoulders hold the withheld cost, no celebratory gesture |
+| 4   | `shot.ash-001.della-carbon-close`     | Prop-relative close-up at the counter                  | Pencil pauses, carbon separates from manifest, Della looks toward wagon plate      |
+| 5   | `shot.ash-001.della-intercepts`       | Three-way cover                                        | Della needles Mack; Mack turns to her then checks Rook's reaction                  |
+| 6   | `shot.ash-001.rook-decision-close`    | Justified Rook medium close-up                         | Eyeline moves board → carbon → Mack; reaction hold makes inference legible         |
+| 7   | `shot.ash-001.ticket-choice`          | Ticket/keys/duffel insert flowing into two-shot        | Ticket folds, duffel lifts, keys expose; Rook says “Junction, then.”               |
+| 8   | `shot.ash-001.wagon-departure`        | Participant/vehicle-relative departure track           | Both move to doors; wagon traverses authored exit lane behind divider              |
+| 9   | `shot.ash-001.junction-arrival`       | Destination anchor after committed readiness           | Rook is grounded/on foot; wagon continues toward garage; gameplay route is named   |
 
 Subtitle copy is the canonical nine-shot copy from CINEMATIC-002, kept concise,
 speaker-labelled through existing metadata, and limited to two lines. No line
