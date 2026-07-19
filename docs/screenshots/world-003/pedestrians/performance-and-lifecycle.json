@@ -1,0 +1,179 @@
+{
+  "baseline": {
+    "warmupMs": 250,
+    "measurementMs": 1000,
+    "frames": 15,
+    "averageFps": 13.845301827579846,
+    "onePercentLowFps": 9.940357852882668,
+    "frameTimeP95Ms": 100.60000000000036,
+    "frameTimeMaxMs": 100.60000000000036,
+    "renderer": {
+      "frameTime": {
+        "enabled": true,
+        "samples": 119,
+        "minMs": 0.3999999761581421,
+        "averageMs": 3.857142855890659,
+        "maxMs": 200.69999998807907,
+        "p95Ms": 14.900000005960464
+      },
+      "drawCalls": 95,
+      "triangles": 22532,
+      "geometries": 115,
+      "textures": 269,
+      "pixelRatio": 1,
+      "viewport": {
+        "cssWidth": 1280,
+        "cssHeight": 720,
+        "bufferWidth": 1280,
+        "bufferHeight": 720
+      }
+    },
+    "sectors": {
+      "levelId": "test-district",
+      "authored": 14,
+      "active": [
+        "sector.core",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest"
+      ],
+      "pending": [],
+      "states": {
+        "sector.core": "active",
+        "sector.east-quay": "inactive",
+        "sector.east-rim-north": "inactive",
+        "sector.east-rim-south": "inactive",
+        "sector.north-rim-east": "inactive",
+        "sector.north-rim-west": "active",
+        "sector.northeast": "active",
+        "sector.northwest": "active",
+        "sector.south-rim-east": "inactive",
+        "sector.south-rim-west": "inactive",
+        "sector.southeast": "inactive",
+        "sector.southwest": "inactive",
+        "sector.west-rim-north": "inactive",
+        "sector.west-rim-south": "inactive"
+      },
+      "loadCount": 25,
+      "unloadCount": 21,
+      "sceneObjects": 125,
+      "ownedResources": 138,
+      "modelInstances": 4,
+      "colliders": 17,
+      "lodHiddenObjects": 12,
+      "transitionsPending": false
+    },
+    "assets": {
+      "cacheEntries": 20,
+      "sourceReferences": 20,
+      "instanceReferences": 14,
+      "instancesCreated": 85,
+      "instancesDisposed": 71,
+      "loaded": 20,
+      "inFlight": 0,
+      "failures": 0,
+      "disposed": false
+    },
+    "browserMemory": {
+      "supported": true,
+      "usedJsHeapSize": 44700000,
+      "totalJsHeapSize": 64000000,
+      "jsHeapSizeLimit": 3760000000,
+      "peakUsedJsHeapSize": 44700000
+    }
+  },
+  "afterThreeRespawnCycles": {
+    "warmupMs": 250,
+    "measurementMs": 1000,
+    "frames": 14,
+    "averageFps": 14,
+    "onePercentLowFps": 11.976047904191617,
+    "frameTimeP95Ms": 83.5,
+    "frameTimeMaxMs": 83.5,
+    "renderer": {
+      "frameTime": {
+        "enabled": true,
+        "samples": 120,
+        "minMs": 0.3999999761581421,
+        "averageMs": 1.8949999980628491,
+        "maxMs": 20.400000005960464,
+        "p95Ms": 14.699999988079071
+      },
+      "drawCalls": 97,
+      "triangles": 24246,
+      "geometries": 96,
+      "textures": 315,
+      "pixelRatio": 1,
+      "viewport": {
+        "cssWidth": 1280,
+        "cssHeight": 720,
+        "bufferWidth": 1280,
+        "bufferHeight": 720
+      }
+    },
+    "sectors": {
+      "levelId": "test-district",
+      "authored": 14,
+      "active": [
+        "sector.core",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest"
+      ],
+      "pending": [],
+      "states": {
+        "sector.core": "active",
+        "sector.east-quay": "inactive",
+        "sector.east-rim-north": "inactive",
+        "sector.east-rim-south": "inactive",
+        "sector.north-rim-east": "inactive",
+        "sector.north-rim-west": "active",
+        "sector.northeast": "active",
+        "sector.northwest": "active",
+        "sector.south-rim-east": "inactive",
+        "sector.south-rim-west": "inactive",
+        "sector.southeast": "inactive",
+        "sector.southwest": "inactive",
+        "sector.west-rim-north": "inactive",
+        "sector.west-rim-south": "inactive"
+      },
+      "loadCount": 43,
+      "unloadCount": 39,
+      "sceneObjects": 125,
+      "ownedResources": 138,
+      "modelInstances": 4,
+      "colliders": 17,
+      "lodHiddenObjects": 12,
+      "transitionsPending": false
+    },
+    "assets": {
+      "cacheEntries": 20,
+      "sourceReferences": 20,
+      "instanceReferences": 14,
+      "instancesCreated": 145,
+      "instancesDisposed": 131,
+      "loaded": 20,
+      "inFlight": 0,
+      "failures": 0,
+      "disposed": false
+    },
+    "browserMemory": {
+      "supported": true,
+      "usedJsHeapSize": 44700000,
+      "totalJsHeapSize": 64000000,
+      "jsHeapSizeLimit": 3760000000,
+      "peakUsedJsHeapSize": 44700000
+    }
+  },
+  "pedestrianOwnership": {
+    "residents": 7,
+    "mixers": 7,
+    "spawns": 92,
+    "disposals": 85
+  },
+  "network": {
+    "consoleErrors": [],
+    "failedRequests": [],
+    "externalRequests": []
+  }
+}

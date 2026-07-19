@@ -4,10 +4,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BrowserTestSnapshot } from '../src/debug/BrowserTestBridge';
 
-const outputDirectory = join(process.cwd(), 'docs/screenshots/world-002ab');
+const outputDirectory = join(process.cwd(), 'docs/screenshots/world-003/after');
 const appUrl = '/?e2e=1&skipPicker=1&traffic=0';
 
-test('captures final Junction rims, bounds, maps, and clean runtime evidence', async ({
+test('captures visibly continuous Junction rims, frontage, maps, and clean runtime evidence', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -23,6 +23,10 @@ test('captures final Junction rims, bounds, maps, and clean runtime evidence', a
     )
     .toBe('playing');
   await command(page, 'time.day');
+  await waitForFrames(page, 2);
+  await page.screenshot({
+    path: join(outputDirectory, 'spawn-street-day.png'),
+  });
 
   for (const [name, spawnId, sectorId, anchorId] of [
     [
@@ -44,7 +48,7 @@ test('captures final Junction rims, bounds, maps, and clean runtime evidence', a
       'camera.world-002b.south-rim',
     ],
     [
-      'north-contact-entrance-day',
+      'contact-yard-approach-day',
       'spawn.ash-001.contact',
       'sector.north-rim-east',
       'camera.ash-001.contact-reveal',
@@ -73,46 +77,69 @@ test('captures final Junction rims, bounds, maps, and clean runtime evidence', a
   await expect
     .poll(async () => (await snapshot(page)).lighting.nightBlend)
     .toBeGreaterThan(0.95);
+  await command(page, 'player.teleport', 'spawn.ash-001.contact');
   await command(page, 'camera.preview-anchor', worldContactAnchor);
-  await waitForFrames(page, 2);
+  await waitForCameraPreview(page);
   await page.screenshot({
-    path: join(outputDirectory, 'north-contact-entrance-night.png'),
+    path: join(outputDirectory, 'contact-yard-approach-night.png'),
   });
 
-  await page.keyboard.press('m');
-  await expect(page.getByTestId('full-world-map')).toBeVisible();
-  await page.screenshot({ path: join(outputDirectory, 'full-map-final.png') });
-  await page.keyboard.press('m');
+  await command(page, 'camera.release-preview');
+  await command(page, 'mission.start', 'ash-001-walk-the-block');
+  await command(page, 'mission.complete-objective');
   await expect
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('playing');
+  await page.keyboard.press('m');
+  await expect(page.getByTestId('full-world-map')).toBeVisible();
+  await expect(
+    page.locator('[data-highlight-id="highlight.ash-001.contact-yard"]'),
+  ).toHaveCount(1);
+  await page.screenshot({ path: join(outputDirectory, 'full-map-final.png') });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await waitForFrames(page, 2);
   await page.screenshot({
-    path: join(outputDirectory, 'north-contact-narrow-night.png'),
+    path: join(outputDirectory, 'full-map-narrow.png'),
+  });
+  await page.keyboard.press('m');
+  await expect
+    .poll(async () => (await snapshot(page)).gameState)
+    .toBe('playing');
+  await command(page, 'camera.preview-anchor', worldContactAnchor);
+  await waitForCameraPreview(page);
+  await page.screenshot({
+    path: join(outputDirectory, 'contact-yard-narrow-night.png'),
   });
 
   const final = await snapshot(page);
   const report = {
     viewport: { desktop: '1280x720', narrow: '390x844' },
-    selectedVisibilityProfile: 'baseline-26-32-24',
+    selectedVisibilityProfile: 'inherited-baseline-26-32-24',
     levelId: final.world.levelId,
     bounds: final.minimapHud.bounds,
     sectors: final.world.sectors,
     renderer: final.performance.renderer,
     assets: final.performance.assets,
+    eastQuayContinuity: {
+      repairedInterior:
+        'Authored ground fill, raised sidewalk overlap, and matching collision join East Quay to the east rim beneath the spline road.',
+      intentionalOuterBoundary:
+        'The wall and sky beyond X=50.75 remain the authoritative east map edge, not a missing interior sector.',
+    },
     runtimeErrors: final.runtimeErrors,
     faults,
     screenshots: [
+      'spawn-street-day.png',
       'west-rim-day.png',
       'east-rim-curve-day.png',
       'south-rim-day.png',
-      'north-contact-entrance-day.png',
+      'contact-yard-approach-day.png',
       'overhead-final-bounds-day.png',
-      'north-contact-entrance-night.png',
+      'contact-yard-approach-night.png',
       'full-map-final.png',
-      'north-contact-narrow-night.png',
+      'full-map-narrow.png',
+      'contact-yard-narrow-night.png',
     ],
   };
   await writeFile(
@@ -139,13 +166,24 @@ async function teleportAndPreview(
   await expect
     .poll(async () => (await snapshot(page)).world.sectors)
     .toMatchObject({ active: expect.arrayContaining([sectorId]), pending: [] });
-  if (anchorId) await command(page, 'camera.preview-anchor', anchorId);
-  else {
+  if (anchorId) {
+    await command(page, 'camera.preview-anchor', anchorId);
+    await waitForCameraPreview(page);
+  } else {
     await expect
       .poll(async () => (await snapshot(page)).camera)
       .toMatchObject({ owner: 'gameplay', transitionProgress: 1 });
   }
   await waitForFrames(page, 2);
+}
+
+async function waitForCameraPreview(page: Page): Promise<void> {
+  await expect
+    .poll(async () => (await snapshot(page)).camera)
+    .toMatchObject({
+      owner: 'debug:camera-anchor-preview',
+      transitionProgress: 1,
+    });
 }
 
 async function command(

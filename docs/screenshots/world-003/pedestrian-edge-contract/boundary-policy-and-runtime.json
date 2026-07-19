@@ -1,0 +1,141 @@
+{
+  "fixture": {
+    "bounds": { "minX": -10, "maxX": 10, "minZ": -10, "maxZ": 10 },
+    "routeDistance": 18.4,
+    "minimumTraversalDistance": 18,
+    "clearance": 0.35,
+    "repopulation": "sector-reload",
+    "samples": [
+      {
+        "id": "resident",
+        "position": [0, 0.2, 0],
+        "decision": {
+          "state": "resident",
+          "edge": "east",
+          "signedBoundaryDistance": -10,
+          "shouldDespawn": false,
+          "reason": null
+        }
+      },
+      {
+        "id": "approach",
+        "position": [9, 0.2, 0],
+        "decision": {
+          "state": "approaching-boundary",
+          "edge": "east",
+          "signedBoundaryDistance": -1,
+          "shouldDespawn": false,
+          "reason": null
+        }
+      },
+      {
+        "id": "edge-crossed",
+        "position": [10.1, 0.2, 0],
+        "decision": {
+          "state": "exiting-boundary",
+          "edge": "east",
+          "signedBoundaryDistance": 0.09999999999999964,
+          "shouldDespawn": false,
+          "reason": null
+        }
+      },
+      {
+        "id": "cleared",
+        "position": [10.35, 0.2, 0],
+        "decision": {
+          "state": "exiting-boundary",
+          "edge": "east",
+          "signedBoundaryDistance": 0.34999999999999964,
+          "shouldDespawn": true,
+          "reason": "authored-boundary-exit"
+        }
+      },
+      {
+        "id": "inward-teleport",
+        "position": [-40, 0.2, 0],
+        "decision": {
+          "state": "approaching-boundary",
+          "edge": "east",
+          "signedBoundaryDistance": -50,
+          "shouldDespawn": false,
+          "reason": null
+        }
+      },
+      {
+        "id": "outward-teleport",
+        "position": [40, 0.2, 0],
+        "decision": {
+          "state": "exiting-boundary",
+          "edge": "east",
+          "signedBoundaryDistance": 30,
+          "shouldDespawn": true,
+          "reason": "authored-boundary-exit"
+        }
+      }
+    ],
+    "edgeChecks": {
+      "north": {
+        "state": "exiting-boundary",
+        "edge": "north",
+        "signedBoundaryDistance": 0.34999999999999964,
+        "shouldDespawn": true,
+        "reason": "authored-boundary-exit"
+      },
+      "east": {
+        "state": "exiting-boundary",
+        "edge": "east",
+        "signedBoundaryDistance": 0.34999999999999964,
+        "shouldDespawn": true,
+        "reason": "authored-boundary-exit"
+      },
+      "south": {
+        "state": "exiting-boundary",
+        "edge": "south",
+        "signedBoundaryDistance": 0.34999999999999964,
+        "shouldDespawn": true,
+        "reason": "authored-boundary-exit"
+      },
+      "west": {
+        "state": "exiting-boundary",
+        "edge": "west",
+        "signedBoundaryDistance": 0.34999999999999964,
+        "shouldDespawn": true,
+        "reason": "authored-boundary-exit"
+      }
+    }
+  },
+  "productionBoundaryRoute": "WORLD-003 activates route.north-rim-west as a grounded north-edge exit on the extended c.sidewalk-north-rim-west surface.",
+  "productionGeometry": {
+    "authoritativeMaxZ": 35,
+    "sidewalkMaxZ": 35.7,
+    "terminalFootZ": 35.4,
+    "exitClearance": 0.4,
+    "pedestrianCollisionRadius": 0.3,
+    "wallOpeningWidth": 2
+  },
+  "runtime": {
+    "initialResidents": 7,
+    "finalResidents": 5,
+    "finalMixers": 5,
+    "repopulatedDistanceTravelled": 0,
+    "boundaryExits": 1,
+    "repopulations": 1,
+    "productionExitLifecycle": {
+      "sequence": 4,
+      "id": "pedestrian.route.north-rim-west.1",
+      "routeId": "route.north-rim-west",
+      "sectorId": "sector.north-rim-west",
+      "state": "despawned",
+      "reason": "authored-boundary-exit",
+      "boundaryEdge": "north",
+      "position": [-15, 0.2, 35.4],
+      "distanceTravelled": 30.899999999999988,
+      "mixerOwnerCountBeforeDispose": 1
+    }
+  },
+  "network": {
+    "consoleErrors": [],
+    "failedRequests": [],
+    "externalRequests": []
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "id": "world-003-visible-junction",
+  "baseCommit": "9cc4b2fafdd3f0540d4ff733c53773f36b8ccdaa",
+  "measurementConvention": "rectangular-playable-bounds-square-metres",
+  "boundsMetres": {
+    "minX": -36.75,
+    "maxX": 50.75,
+    "minZ": -35,
+    "maxZ": 35
+  },
+  "widthMetres": 87.5,
+  "depthMetres": 70,
+  "playableAreaSquareMetresBefore": 6125,
+  "playableAreaSquareMetresAfter": 6125,
+  "growthPercent": 0,
+  "buildingCountBefore": 22,
+  "buildingCountAfter": 25,
+  "addedBuildingIds": [
+    "v.building-contact-yard-office",
+    "v.building-south-rim-canal-office",
+    "v.building-south-rim-ticket-arcade"
+  ],
+  "addedStreetEdgeVisualCount": 9,
+  "addedContactSurfaceId": "v.sidewalk-contact-yard-apron",
+  "eastQuaySeamSurfaceIds": [
+    "v.east-quay-rim-ground-fill",
+    "c.east-quay-rim-ground-fill",
+    "v.sidewalk-east-quay-rim-seam",
+    "c.sidewalk-east-quay-rim-seam"
+  ],
+  "pedestrianRouteCountBefore": 4,
+  "pedestrianRouteCountAfter": 8,
+  "pedestrianResidentCapBefore": 16,
+  "pedestrianResidentCapAfter": 16,
+  "productionBoundaryRoute": {
+    "id": "route.north-rim-west",
+    "loop": false,
+    "edge": "north",
+    "distanceMetres": 30.9,
+    "terminalZ": 35.4,
+    "surfaceMaxZ": 35.7,
+    "bodySupportMarginMetres": 0.3,
+    "wallOpeningWidthMetres": 2,
+    "repopulation": "sector-reload"
+  },
+  "constructionAuthority": "src/world/levels/junctionGrowth.ts",
+  "levelCompositionAuthority": "src/world/levels/testDistrict.ts",
+  "mapAuthority": "testDistrict.definition.mapPresentation",
+  "ownershipPolicy": "Every WORLD-003 visual and collider names one existing rim sector; level validation rejects zero or duplicate owners.",
+  "uiDecision": "The full map retains its existing modal, input, focus, responsive, and token contracts and consumes the added authoritative building references without a second geometry model.",
+  "visualEvidence": {
+    "before": "docs/screenshots/world-003/before",
+    "after": "docs/screenshots/world-003/after"
+  },
+  "performance": {
+    "referenceViewport": "1280x720",
+    "warmupSeconds": 20,
+    "measurementSeconds": 60,
+    "averageFps": 379.25,
+    "onePercentLowFps": 102.04,
+    "frameTimeP95Ms": 8.9,
+    "drawCalls": 94,
+    "triangles": 21324,
+    "peakUsedJsHeapProxyMb": 37.3,
+    "threeCycleOwnershipStable": true,
+    "artifact": "docs/screenshots/world-003/performance/performance-capture.json",
+    "leakArtifact": "docs/screenshots/world-003/performance/three-cycle-leak-evidence.json"
+  }
+}

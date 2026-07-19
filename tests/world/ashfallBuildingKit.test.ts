@@ -79,7 +79,7 @@ describe('Ashfall building kit', () => {
   });
 
   it('pairs each placed shell with an equivalent authored collision footprint', () => {
-    expect(ashfallBuildingPlacements).toHaveLength(22);
+    expect(ashfallBuildingPlacements).toHaveLength(25);
     for (const placement of ashfallBuildingPlacements) {
       const definition = getAshfallBuildingVariant(placement.visual.variantId);
       const rotated =

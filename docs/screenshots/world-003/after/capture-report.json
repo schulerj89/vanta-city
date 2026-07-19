@@ -1,0 +1,89 @@
+{
+  "viewport": {
+    "desktop": "1280x720",
+    "narrow": "390x844"
+  },
+  "selectedVisibilityProfile": "inherited-baseline-26-32-24",
+  "levelId": "test-district",
+  "bounds": {
+    "minX": -36.75,
+    "maxX": 50.75,
+    "minZ": -35,
+    "maxZ": 35
+  },
+  "sectors": {
+    "levelId": "test-district",
+    "authored": 1,
+    "active": ["legacy-full-level"],
+    "pending": [],
+    "states": {
+      "legacy-full-level": "active"
+    },
+    "loadCount": 1,
+    "unloadCount": 0,
+    "sceneObjects": 333,
+    "ownedResources": 443,
+    "modelInstances": 8,
+    "colliders": 69,
+    "lodHiddenObjects": 80,
+    "transitionsPending": false
+  },
+  "renderer": {
+    "frameTime": {
+      "enabled": true,
+      "samples": 120,
+      "minMs": 0.29999998211860657,
+      "averageMs": 0.6025000013411045,
+      "maxMs": 1.600000023841858,
+      "p95Ms": 1.0999999940395355
+    },
+    "drawCalls": 27,
+    "triangles": 5984,
+    "geometries": 172,
+    "textures": 31,
+    "pixelRatio": 1,
+    "viewport": {
+      "cssWidth": 390,
+      "cssHeight": 844,
+      "bufferWidth": 390,
+      "bufferHeight": 844
+    }
+  },
+  "assets": {
+    "cacheEntries": 18,
+    "sourceReferences": 18,
+    "instanceReferences": 11,
+    "instancesCreated": 11,
+    "instancesDisposed": 0,
+    "loaded": 18,
+    "inFlight": 0,
+    "failures": 0,
+    "disposed": false
+  },
+  "eastQuayContinuity": {
+    "repairedInterior": "Authored ground fill, raised sidewalk overlap, and matching collision join East Quay to the east rim beneath the spline road.",
+    "intentionalOuterBoundary": "The wall and sky beyond X=50.75 remain the authoritative east map edge, not a missing interior sector."
+  },
+  "runtimeErrors": {
+    "count": 0,
+    "last": "none"
+  },
+  "faults": {
+    "consoleErrors": [],
+    "pageErrors": [],
+    "failedRequests": [],
+    "externalRequests": []
+  },
+  "screenshots": [
+    "spawn-street-day.png",
+    "west-rim-day.png",
+    "east-rim-curve-day.png",
+    "south-rim-day.png",
+    "contact-yard-approach-day.png",
+    "overhead-final-bounds-day.png",
+    "contact-yard-approach-night.png",
+    "full-map-final.png",
+    "full-map-narrow.png",
+    "contact-yard-narrow-night.png"
+  ]
+}

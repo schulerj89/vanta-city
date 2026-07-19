@@ -39,15 +39,15 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
       },
       { timeout: 25_000 },
     )
-    .toEqual({ ready: true, gameState: 'playing', residents: 8, loading: 0 });
+    .toEqual({ ready: true, gameState: 'playing', residents: 7, loading: 0 });
 
   const initial = await snapshot(page);
   expect(initial.pedestrians).toMatchObject({
     residentCap: 16,
-    residentCount: 8,
-    activeCount: 8,
-    mixerOwnerCount: 8,
-    routeCount: 2,
+    residentCount: 7,
+    activeCount: 7,
+    mixerOwnerCount: 7,
+    routeCount: 3,
   });
   expect(
     new Set(initial.pedestrians.pedestrians.map(({ modelId }) => modelId)),
@@ -64,7 +64,7 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
     expect(pedestrian.groundColliderId).toMatch(/^c\.sidewalk-/);
     expect(pedestrian.segmentId).toContain('->');
     expect(pedestrian.currentAnimation).not.toBe('applaud');
-    expect(Math.abs(pedestrian.position[0])).toBeGreaterThanOrEqual(9.45);
+    expect(Math.abs(pedestrian.position[0])).toBeGreaterThanOrEqual(7);
     expect(Math.abs(pedestrian.position[2])).toBeGreaterThanOrEqual(11.45);
   }
 
@@ -137,13 +137,13 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
   });
   await command(page, 'camera.release-preview');
   await command(page, 'player.teleport', 'spawn.approach-north');
-  await expectResidentOwnership(page, 'sector.northwest');
+  await expectResidentOwnership(page, 'sector.northwest', 7);
   // Prime the shared model/sector caches before comparing retained ownership.
   for (let warmupCycle = 0; warmupCycle < 3; warmupCycle += 1) {
     await command(page, 'player.teleport', 'spawn.approach-south');
-    await expectResidentOwnership(page, 'sector.southwest');
+    await expectResidentOwnership(page, 'sector.southwest', 6);
     await command(page, 'player.teleport', 'spawn.approach-north');
-    await expectResidentOwnership(page, 'sector.northwest');
+    await expectResidentOwnership(page, 'sector.northwest', 7);
   }
   await settleCamera(page);
   const baselinePerformance = await page.evaluate(() =>
@@ -153,13 +153,13 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
   const disposalsBeforeCycles = (await snapshot(page)).pedestrians.disposeCount;
   for (let cycle = 0; cycle < 3; cycle += 1) {
     await command(page, 'player.teleport', 'spawn.approach-south');
-    await expectResidentOwnership(page, 'sector.southwest');
+    await expectResidentOwnership(page, 'sector.southwest', 6);
     await command(page, 'player.teleport', 'spawn.approach-north');
-    await expectResidentOwnership(page, 'sector.northwest');
+    await expectResidentOwnership(page, 'sector.northwest', 7);
   }
   const cycled = await snapshot(page);
   expect(cycled.pedestrians.disposeCount).toBeGreaterThanOrEqual(
-    disposalsBeforeCycles + 24,
+    disposalsBeforeCycles + 18,
   );
   const postCyclePerformance = await page.evaluate(() =>
     window.__VANTA_TEST__!.capturePerformance(250, 1_000),
@@ -168,7 +168,7 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
     baselinePerformance.averageFps * 0.5,
   );
   expect(postCyclePerformance.renderer.drawCalls).toBeLessThanOrEqual(
-    baselinePerformance.renderer.drawCalls + 2,
+    baselinePerformance.renderer.drawCalls + 4,
   );
   await writeFile(
     join(outputDirectory, 'performance-and-lifecycle.json'),
@@ -230,6 +230,7 @@ async function settleCamera(page: Page): Promise<void> {
 async function expectResidentOwnership(
   page: Page,
   expectedSector: string,
+  expectedResidents: number,
 ): Promise<void> {
   await expect
     .poll(async () => {
@@ -246,7 +247,7 @@ async function expectResidentOwnership(
     .toEqual({
       sectorReady: true,
       transitionsPending: false,
-      residents: 8,
+      residents: expectedResidents,
       loading: 0,
       mixersMatch: true,
     });

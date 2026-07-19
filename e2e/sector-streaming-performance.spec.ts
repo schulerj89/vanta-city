@@ -8,7 +8,9 @@ import type {
 } from '../src/debug/BrowserTestBridge';
 
 const base = '/?e2e=1&skipPicker=1&traffic=0';
-const outputDirectory = join(process.cwd(), 'docs/screenshots/perf-002');
+const outputDirectory =
+  process.env.VANTA_PERF_EVIDENCE_DIR ??
+  join(process.cwd(), 'docs/screenshots/perf-002');
 const performanceMode = process.env.VANTA_PERF === '1';
 
 // Video/trace encoding competes with software WebGL and invalidates frame pacing.

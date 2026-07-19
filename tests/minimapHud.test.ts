@@ -82,7 +82,7 @@ describe('MinimapHudSystem', () => {
     expect(mount.querySelectorAll('[data-layer="roads"] path')).toHaveLength(1);
     expect(
       mount.querySelectorAll('[data-layer="structures"] rect'),
-    ).toHaveLength(22);
+    ).toHaveLength(25);
     expect(
       mount.querySelector('[data-entry-id="v.road-east-quay-curve"]'),
     ).not.toBeNull();

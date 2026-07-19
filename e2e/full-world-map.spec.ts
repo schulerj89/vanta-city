@@ -19,9 +19,9 @@ test.describe('pause-safe full world map', () => {
       open: true,
       priorState: 'playing',
       levelId: 'test-district',
-      geometryCount: 28,
+      geometryCount: 31,
       roadCount: 6,
-      structureCount: 22,
+      structureCount: 25,
       sectorCount: 14,
       placeCount: 8,
       highlightCount: 0,
@@ -39,7 +39,7 @@ test.describe('pause-safe full world map', () => {
     ).toHaveCount(1);
     await expect(page.locator('[data-sector-id]')).toHaveCount(14);
     await expect(page.locator('.full-world-map__structures rect')).toHaveCount(
-      22,
+      25,
     );
 
     await page.getByTestId('map-zoom-in').click();

@@ -33,6 +33,11 @@ import {
   world002BRimSpawns,
   world002BRoads,
   world002BSidewalks,
+  world003BuildingPlacements,
+  world003ContactYardApron,
+  world003EastQuayGroundFill,
+  world003EastQuayRimSeam,
+  world003StreetEdgeVisuals,
 } from './junctionGrowth';
 
 const colors = {
@@ -172,6 +177,7 @@ export const ashfallBuildingPlacements = [
   ),
   ...world002ABuildingPlacements,
   ...world002BBuildingPlacements,
+  ...world003BuildingPlacements,
 ] as const;
 
 const buildings = ashfallBuildingPlacements.map(({ visual }) => visual);
@@ -210,7 +216,8 @@ for (const [id, signX, signZ] of [
 
 // Visible, collidable termination at every road end and around the outer corners.
 for (const [id, position, size] of [
-  ['boundary-north', [7, 0.65, 34.5], [87.5, 1.3, 1]],
+  ['boundary-north-west', [-26.375, 0.65, 34.5], [20.75, 1.3, 1]],
+  ['boundary-north-east', [18.375, 0.65, 34.5], [64.75, 1.3, 1]],
   ['boundary-south', [7, 0.65, -34.5], [87.5, 1.3, 1]],
   ['boundary-east', [50.25, 0.65, 0], [1, 1.3, 70]],
   ['boundary-west', [-36.25, 0.65, 0], [1, 1.3, 70]],
@@ -318,6 +325,10 @@ const environment = [
   ...world002ASidewalks.map(({ visual }) => visual),
   ...world002BRoads.map(({ visual }) => visual),
   ...world002BSidewalks.map(({ visual }) => visual),
+  world003ContactYardApron.visual,
+  world003EastQuayRimSeam.visual,
+  world003EastQuayGroundFill.visual,
+  ...world003StreetEdgeVisuals.map(({ visual }) => visual),
   eastQuayCurvedRoad,
   ...markings,
   ...curbs,
@@ -332,6 +343,9 @@ const staticCollision = [
   ...world002ASidewalks.map(({ collider: definition }) => definition),
   ...world002BRoads.map(({ collider: definition }) => definition),
   ...world002BSidewalks.map(({ collider: definition }) => definition),
+  world003ContactYardApron.collider,
+  world003EastQuayRimSeam.collider,
+  world003EastQuayGroundFill.collider,
   ...splineRoadColliders(eastQuayCurvedRoad),
   ...buildingCollision,
   signalControllerCollider,
@@ -353,6 +367,19 @@ const staticCollision = [
 ] as const;
 
 const streamableEntries = [...environment, ...staticCollision];
+const world003EntryIds = new Set([
+  ...world003BuildingPlacements.flatMap(({ visual, collider: definition }) => [
+    visual.id,
+    definition.id,
+  ]),
+  ...world003StreetEdgeVisuals.map(({ visual }) => visual.id),
+  world003ContactYardApron.visual.id,
+  world003ContactYardApron.collider.id,
+  world003EastQuayRimSeam.visual.id,
+  world003EastQuayRimSeam.collider.id,
+  world003EastQuayGroundFill.visual.id,
+  world003EastQuayGroundFill.collider.id,
+]);
 const world002AEntryIds = new Set([
   world002AWestRoad.visual.id,
   world002AWestRoad.collider.id,
@@ -388,8 +415,10 @@ const world002BEntryIds = new Set([
     visual.id,
     definition.id,
   ]),
-  'v.boundary-north',
-  'c.boundary-north',
+  'v.boundary-north-west',
+  'c.boundary-north-west',
+  'v.boundary-north-east',
+  'c.boundary-north-east',
   'v.boundary-south',
   'c.boundary-south',
 ]);
@@ -398,6 +427,7 @@ const coreEntryIds = streamableEntries
     ({ id }) =>
       !world002AEntryIds.has(id) &&
       !world002BEntryIds.has(id) &&
+      !world003EntryIds.has(id) &&
       !id.includes('east-quay') &&
       /road-|marking-|crosswalk|traffic-light|signal-controller/.test(id),
   )
@@ -407,6 +437,7 @@ const eastQuayEntryIds = streamableEntries
     ({ id }) =>
       !world002AEntryIds.has(id) &&
       !world002BEntryIds.has(id) &&
+      !world003EntryIds.has(id) &&
       id.includes('east-quay'),
   )
   .map(({ id }) => id);
@@ -414,6 +445,7 @@ const quadrantEntries = streamableEntries.filter(
   ({ id }) =>
     !world002AEntryIds.has(id) &&
     !world002BEntryIds.has(id) &&
+    !world003EntryIds.has(id) &&
     !coreEntryIds.includes(id) &&
     !eastQuayEntryIds.includes(id),
 );
@@ -441,6 +473,25 @@ const cardinalRimIds = (west: boolean, north: boolean): string[] =>
         position[2] >= 0 === north,
     )
     .map(({ id }) => id);
+const world003IdsForSector = (sectorId: string): string[] => [
+  ...world003BuildingPlacements
+    .filter((placement) => placement.sectorId === sectorId)
+    .flatMap(({ visual, collider: definition }) => [visual.id, definition.id]),
+  ...world003StreetEdgeVisuals
+    .filter((entry) => entry.sectorId === sectorId)
+    .map(({ visual }) => visual.id),
+  ...(sectorId === 'sector.north-rim-east'
+    ? [world003ContactYardApron.visual.id, world003ContactYardApron.collider.id]
+    : []),
+  ...(sectorId === 'sector.east-rim-north'
+    ? [
+        world003EastQuayRimSeam.visual.id,
+        world003EastQuayRimSeam.collider.id,
+        world003EastQuayGroundFill.visual.id,
+        world003EastQuayGroundFill.collider.id,
+      ]
+    : []),
+];
 
 const cc0 = {
   creator: 'Quaternius',
@@ -832,7 +883,7 @@ export const testDistrict = {
           center: [x, z] as const,
           loadDistance: 26,
           unloadDistance: 32,
-          entryIds: rimIds(east, north),
+          entryIds: [...rimIds(east, north), ...world003IdsForSector(id)],
         })),
         ...(
           [
@@ -846,7 +897,10 @@ export const testDistrict = {
           center: [x, z] as const,
           loadDistance: 26,
           unloadDistance: 32,
-          entryIds: cardinalRimIds(west, north),
+          entryIds: [
+            ...cardinalRimIds(west, north),
+            ...world003IdsForSector(id),
+          ],
         })),
       ],
     },
@@ -880,6 +934,54 @@ export const testDistrict = {
           [15, 0.2, -18],
           [15, 0.2, -11.5],
         ]),
+        sidewalkLoop(
+          'route.west-rim-north',
+          'sector.west-rim-north',
+          'west-rim-north',
+          [
+            [-28.9, 0.2, 7.5],
+            [-28.3, 0.2, 7.5],
+            [-28.3, 0.2, 26],
+            [-28.9, 0.2, 26],
+          ],
+          1,
+        ),
+        sidewalkLoop(
+          'route.east-rim-north',
+          'sector.east-rim-north',
+          'east-rim-north',
+          [
+            [42.9, 0.2, 15.5],
+            [43.8, 0.2, 15.5],
+            [43.8, 0.2, 26],
+            [42.9, 0.2, 26],
+          ],
+          1,
+        ),
+        sidewalkLoop(
+          'route.east-rim-south',
+          'sector.east-rim-south',
+          'east-rim-south',
+          [
+            [42.9, 0.2, -26],
+            [43.8, 0.2, -26],
+            [43.8, 0.2, -8],
+            [42.9, 0.2, -8],
+          ],
+          1,
+        ),
+        pedestrianBoundaryExit(
+          'route.north-rim-west',
+          'sector.north-rim-west',
+          'north-rim-west',
+          [
+            [-7.5, 0.2, 29],
+            [-23.5, 0.2, 29],
+            [-23.5, 0.2, 33.5],
+            [-15, 0.2, 33.5],
+            [-15, 0.2, 35.4],
+          ],
+        ),
       ],
     },
   },
@@ -890,12 +992,13 @@ function sidewalkLoop(
   sectorId: string,
   surface: string,
   positions: readonly Vector3Tuple[],
+  population = 3,
 ) {
   return {
     id,
     sectorId,
     loop: true as const,
-    population: 4,
+    population,
     speed: [1.15, 1.48] as const,
     nodes: positions.map((position, index) => ({
       id: `${id}.node-${index + 1}`,
@@ -904,6 +1007,33 @@ function sidewalkLoop(
       ...(index === 0 || index === 2
         ? { pauseSeconds: [0.65, 1.8] as const }
         : {}),
+    })),
+  };
+}
+
+function pedestrianBoundaryExit(
+  id: string,
+  sectorId: string,
+  surface: string,
+  positions: readonly Vector3Tuple[],
+) {
+  return {
+    id,
+    sectorId,
+    loop: false as const,
+    exit: {
+      edge: 'north' as const,
+      clearance: 0.4,
+      minimumTraversalDistance: 30,
+      repopulation: 'sector-reload' as const,
+    },
+    population: 1,
+    speed: [1.15, 1.48] as const,
+    nodes: positions.map((position, index) => ({
+      id: `${id}.node-${index + 1}`,
+      position,
+      surfaceColliderId: `c.sidewalk-${surface}`,
+      ...(index === 0 ? { pauseSeconds: [0.65, 1.8] as const } : {}),
     })),
   };
 }

@@ -1,0 +1,150 @@
+{
+  "before": {
+    "warmupMs": 20000,
+    "measurementMs": 60000,
+    "frames": 25478,
+    "averageFps": 424.61776401531944,
+    "onePercentLowFps": 117.6470588235294,
+    "frameTimeP95Ms": 7.30000000000291,
+    "frameTimeMaxMs": 10.5,
+    "renderer": {
+      "frameTime": {
+        "enabled": true,
+        "samples": 120,
+        "minMs": 0.29999998211860657,
+        "averageMs": 2.021666666865349,
+        "maxMs": 8,
+        "p95Ms": 7
+      },
+      "drawCalls": 123,
+      "triangles": 21548,
+      "geometries": 122,
+      "textures": 31,
+      "pixelRatio": 1,
+      "viewport": {
+        "cssWidth": 1280,
+        "cssHeight": 720,
+        "bufferWidth": 1280,
+        "bufferHeight": 720
+      }
+    },
+    "sectors": {
+      "levelId": "test-district",
+      "authored": 1,
+      "active": ["legacy-full-level"],
+      "pending": [],
+      "states": {
+        "legacy-full-level": "active"
+      },
+      "loadCount": 1,
+      "unloadCount": 0,
+      "sceneObjects": 333,
+      "ownedResources": 443,
+      "modelInstances": 8,
+      "colliders": 69,
+      "lodHiddenObjects": 95,
+      "transitionsPending": false
+    },
+    "assets": {
+      "cacheEntries": 18,
+      "sourceReferences": 18,
+      "instanceReferences": 11,
+      "instancesCreated": 11,
+      "instancesDisposed": 0,
+      "loaded": 18,
+      "inFlight": 0,
+      "failures": 0,
+      "disposed": false
+    },
+    "browserMemory": {
+      "supported": true,
+      "usedJsHeapSize": 37300000,
+      "totalJsHeapSize": 47400000,
+      "jsHeapSizeLimit": 3760000000,
+      "peakUsedJsHeapSize": 37300000
+    }
+  },
+  "after": {
+    "warmupMs": 20000,
+    "measurementMs": 60000,
+    "frames": 22756,
+    "averageFps": 379.25402486583783,
+    "onePercentLowFps": 102.0408163265003,
+    "frameTimeP95Ms": 8.900000000001455,
+    "frameTimeMaxMs": 11.700000000004366,
+    "renderer": {
+      "frameTime": {
+        "enabled": true,
+        "samples": 120,
+        "minMs": 0.19999998807907104,
+        "averageMs": 2.253333330402772,
+        "maxMs": 10.100000023841858,
+        "p95Ms": 8.900000005960464
+      },
+      "drawCalls": 94,
+      "triangles": 21324,
+      "geometries": 105,
+      "textures": 64,
+      "pixelRatio": 1,
+      "viewport": {
+        "cssWidth": 1280,
+        "cssHeight": 720,
+        "bufferWidth": 1280,
+        "bufferHeight": 720
+      }
+    },
+    "sectors": {
+      "levelId": "test-district",
+      "authored": 14,
+      "active": [
+        "sector.core",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest"
+      ],
+      "pending": [],
+      "states": {
+        "sector.core": "active",
+        "sector.east-quay": "inactive",
+        "sector.east-rim-north": "inactive",
+        "sector.east-rim-south": "inactive",
+        "sector.north-rim-east": "inactive",
+        "sector.north-rim-west": "active",
+        "sector.northeast": "active",
+        "sector.northwest": "active",
+        "sector.south-rim-east": "inactive",
+        "sector.south-rim-west": "inactive",
+        "sector.southeast": "inactive",
+        "sector.southwest": "inactive",
+        "sector.west-rim-north": "inactive",
+        "sector.west-rim-south": "inactive"
+      },
+      "loadCount": 4,
+      "unloadCount": 0,
+      "sceneObjects": 125,
+      "ownedResources": 138,
+      "modelInstances": 4,
+      "colliders": 17,
+      "lodHiddenObjects": 12,
+      "transitionsPending": false
+    },
+    "assets": {
+      "cacheEntries": 16,
+      "sourceReferences": 16,
+      "instanceReferences": 13,
+      "instancesCreated": 14,
+      "instancesDisposed": 1,
+      "loaded": 16,
+      "inFlight": 0,
+      "failures": 0,
+      "disposed": false
+    },
+    "browserMemory": {
+      "supported": true,
+      "usedJsHeapSize": 37300000,
+      "totalJsHeapSize": 47400000,
+      "jsHeapSizeLimit": 3760000000,
+      "peakUsedJsHeapSize": 37300000
+    }
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "baseline": {
+    "active": [
+      "sector.core",
+      "sector.north-rim-west",
+      "sector.northeast",
+      "sector.northwest"
+    ],
+    "sceneObjects": 125,
+    "ownedResources": 138,
+    "sectorModelInstances": 4,
+    "assetSourceReferences": 20,
+    "assetInstanceReferences": 14
+  },
+  "cycles": [
+    {
+      "active": [
+        "sector.core",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest"
+      ],
+      "sceneObjects": 125,
+      "ownedResources": 138,
+      "sectorModelInstances": 4,
+      "assetSourceReferences": 20,
+      "assetInstanceReferences": 14
+    },
+    {
+      "active": [
+        "sector.core",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest"
+      ],
+      "sceneObjects": 125,
+      "ownedResources": 138,
+      "sectorModelInstances": 4,
+      "assetSourceReferences": 20,
+      "assetInstanceReferences": 14
+    },
+    {
+      "active": [
+        "sector.core",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest"
+      ],
+      "sceneObjects": 125,
+      "ownedResources": 138,
+      "sectorModelInstances": 4,
+      "assetSourceReferences": 20,
+      "assetInstanceReferences": 14
+    }
+  ],
+  "rendererCycles": [
+    {
+      "geometries": 117,
+      "textures": 440,
+      "drawCalls": 36,
+      "triangles": 7987
+    },
+    {
+      "geometries": 117,
+      "textures": 537,
+      "drawCalls": 48,
+      "triangles": 14491
+    },
+    {
+      "geometries": 116,
+      "textures": 628,
+      "drawCalls": 29,
+      "triangles": 6974
+    }
+  ],
+  "network": {
+    "consoleErrors": [],
+    "failedRequests": [],
+    "externalRequests": [],
+    "expectedHeadAbortCount": 17
+  },
+  "finalTransitions": {
+    "levelId": "test-district",
+    "authored": 14,
+    "active": [
+      "sector.core",
+      "sector.north-rim-west",
+      "sector.northeast",
+      "sector.northwest"
+    ],
+    "pending": [],
+    "states": {
+      "sector.core": "active",
+      "sector.east-quay": "inactive",
+      "sector.east-rim-north": "inactive",
+      "sector.east-rim-south": "inactive",
+      "sector.north-rim-east": "inactive",
+      "sector.north-rim-west": "active",
+      "sector.northeast": "active",
+      "sector.northwest": "active",
+      "sector.south-rim-east": "inactive",
+      "sector.south-rim-west": "inactive",
+      "sector.southeast": "inactive",
+      "sector.southwest": "inactive",
+      "sector.west-rim-north": "inactive",
+      "sector.west-rim-south": "inactive"
+    },
+    "loadCount": 40,
+    "unloadCount": 36,
+    "sceneObjects": 125,
+    "ownedResources": 138,
+    "modelInstances": 4,
+    "colliders": 17,
+    "lodHiddenObjects": 12,
+    "transitionsPending": false
+  }
+}

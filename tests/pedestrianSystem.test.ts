@@ -313,7 +313,7 @@ describe('PedestrianSystem', () => {
     expect(snapshot.residentCount).toBe(16);
     expect(snapshot.activeCount).toBe(16);
     expect(snapshot.mixerOwnerCount).toBe(16);
-    expect(snapshot.routeCount).toBe(4);
+    expect(snapshot.routeCount).toBe(8);
     expect(new Set(snapshot.pedestrians.map(({ modelId }) => modelId))).toEqual(
       new Set(pedestrianCharacterDefinitions.map(({ id }) => id)),
     );
@@ -394,7 +394,7 @@ describe('PedestrianSystem', () => {
         levelId: testDistrict.definition.id,
         sectorId: 'sector.northwest',
       });
-      expect(system.getSnapshot().residentCount).toBe(12);
+      expect(system.getSnapshot().residentCount).toBe(13);
       events.emit('sector:loaded', {
         levelId: testDistrict.definition.id,
         sectorId: 'sector.northwest',
@@ -405,15 +405,15 @@ describe('PedestrianSystem', () => {
       expect(system.getSnapshot().mixerOwnerCount).toBe(16);
     }
     const snapshot = system.getSnapshot();
-    expect(snapshot.disposeCount).toBe(12);
-    expect(snapshot.spawnCount).toBe(28);
+    expect(snapshot.disposeCount).toBe(9);
+    expect(snapshot.spawnCount).toBe(25);
     expect(scene.children).toHaveLength(16);
-    expect(loader.disposed).toBe(12);
+    expect(loader.disposed).toBe(9);
     levels.activeLevel = undefined;
     events.emit('level:unloaded', { levelId: testDistrict.definition.id });
     expect(system.getSnapshot().residentCount).toBe(0);
     expect(scene.children).toHaveLength(0);
-    expect(loader.disposed).toBe(28);
+    expect(loader.disposed).toBe(25);
     system.dispose();
   });
 

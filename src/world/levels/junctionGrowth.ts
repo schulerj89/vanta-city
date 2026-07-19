@@ -16,6 +16,16 @@ export interface JunctionSurfacePair {
   readonly collider: StaticColliderDefinition;
 }
 
+export interface JunctionOwnedBuildingPlacement extends AshfallBuildingPlacement {
+  readonly sectorId: string;
+  readonly purpose: 'contact-yard' | 'street-frontage';
+}
+
+export interface JunctionOwnedVisual {
+  readonly visual: BoxVisualDefinition;
+  readonly sectorId: string;
+}
+
 export const world002ABaseline = {
   bounds: { minX: -28, maxX: 42, minZ: -28, maxZ: 28 },
   widthMetres: 70,
@@ -85,10 +95,196 @@ export const world002BContact = {
   locationId: 'location.ash-001.contact-yard',
   spawnId: 'spawn.ash-001.contact',
   cameraAnchorId: 'camera.ash-001.contact-reveal',
-  position: [30, 0.22, 31] as Vector3Tuple,
-  cameraPosition: [24, 4.5, 24] as Vector3Tuple,
-  cameraLookAt: [30, 1.8, 31] as Vector3Tuple,
+  position: [30, 0.22, 26.6] as Vector3Tuple,
+  cameraPosition: [30, 5, 18] as Vector3Tuple,
+  cameraLookAt: [30, 1.4, 27] as Vector3Tuple,
 } as const;
+
+/**
+ * WORLD-003 makes the already-authorized final footprint legible without
+ * changing its bounds or applying another growth milestone.
+ */
+export const world003JunctionPlan = {
+  id: 'world-003-visible-junction',
+  bounds: world002BPlan.bounds,
+  playableAreaSquareMetres: world002BPlan.playableAreaSquareMetres,
+  growthPercent: 0,
+  buildingCountBefore: 22,
+  buildingCountAfter: 25,
+  addedBuildingIds: [
+    'v.building-contact-yard-office',
+    'v.building-south-rim-canal-office',
+    'v.building-south-rim-ticket-arcade',
+  ],
+  streetEdgeVisualIds: [
+    'v.curb-west-rim-north',
+    'v.curb-west-rim-south',
+    'v.curb-north-rim-west',
+    'v.curb-north-rim-east',
+    'v.curb-south-rim-west',
+    'v.curb-south-rim-east',
+    'v.marking-west-rim',
+    'v.marking-north-rim',
+    'v.marking-south-rim',
+  ],
+  seamSurfaceIds: [
+    'v.sidewalk-east-quay-rim-seam',
+    'c.sidewalk-east-quay-rim-seam',
+    'v.east-quay-rim-ground-fill',
+    'c.east-quay-rim-ground-fill',
+  ],
+  pedestrianRouteIds: [
+    'route.west-rim-north',
+    'route.east-rim-north',
+    'route.east-rim-south',
+    'route.north-rim-west',
+  ],
+} as const;
+
+const world003BuildingCatalog = [
+  {
+    id: 'contact-yard-office',
+    variantId: 'boardwalk-kiosk',
+    position: [30, 0.2, 32] as Vector3Tuple,
+    yaw: Math.PI,
+    sectorId: 'sector.north-rim-east',
+    purpose: 'contact-yard',
+  },
+  {
+    id: 'south-rim-canal-office',
+    variantId: 'canal-workshop',
+    position: [-15, 0.2, -31.5] as Vector3Tuple,
+    yaw: 0,
+    sectorId: 'sector.south-rim-west',
+    purpose: 'street-frontage',
+  },
+  {
+    id: 'south-rim-ticket-arcade',
+    variantId: 'ticket-arcade',
+    position: [31, 0.2, -31] as Vector3Tuple,
+    yaw: 0,
+    sectorId: 'sector.south-rim-east',
+    purpose: 'street-frontage',
+  },
+] as const;
+
+export const world003BuildingPlacements: readonly JunctionOwnedBuildingPlacement[] =
+  world003BuildingCatalog.map((entry) => ({
+    ...createAshfallBuildingPlacement(
+      entry.id,
+      entry.variantId,
+      entry.position,
+      entry.yaw,
+    ),
+    sectorId: entry.sectorId,
+    purpose: entry.purpose,
+  }));
+
+export const world003StreetEdgeVisuals: readonly JunctionOwnedVisual[] = [
+  ownedBox(
+    'v.curb-west-rim-north',
+    [-32.375, 0.11, 6.125],
+    [8.75, 0.22, 0.25],
+    0xb9b4a7,
+    'sector.west-rim-north',
+  ),
+  ownedBox(
+    'v.curb-west-rim-south',
+    [-32.375, 0.11, -6.125],
+    [8.75, 0.22, 0.25],
+    0xb9b4a7,
+    'sector.west-rim-south',
+  ),
+  ownedBox(
+    'v.curb-north-rim-west',
+    [-6.125, 0.11, 31.5],
+    [0.25, 0.22, 7],
+    0xb9b4a7,
+    'sector.north-rim-west',
+  ),
+  ownedBox(
+    'v.curb-north-rim-east',
+    [6.125, 0.11, 31.5],
+    [0.25, 0.22, 7],
+    0xb9b4a7,
+    'sector.north-rim-east',
+  ),
+  ownedBox(
+    'v.curb-south-rim-west',
+    [-6.125, 0.11, -31.5],
+    [0.25, 0.22, 7],
+    0xb9b4a7,
+    'sector.south-rim-west',
+  ),
+  ownedBox(
+    'v.curb-south-rim-east',
+    [6.125, 0.11, -31.5],
+    [0.25, 0.22, 7],
+    0xb9b4a7,
+    'sector.south-rim-east',
+  ),
+  ownedBox(
+    'v.marking-west-rim',
+    [-32.375, 0.015, 0],
+    [4, 0.03, 0.18],
+    0xe7d9a1,
+    'sector.west-rim-north',
+  ),
+  ownedBox(
+    'v.marking-north-rim',
+    [0, 0.015, 31.5],
+    [0.18, 0.03, 4],
+    0xe7d9a1,
+    'sector.north-rim-west',
+  ),
+  ownedBox(
+    'v.marking-south-rim',
+    [0, 0.015, -31.5],
+    [0.18, 0.03, 4],
+    0xe7d9a1,
+    'sector.south-rim-west',
+  ),
+];
+
+/** Raised, textured arrival apron closes the inherited floor drop at the yard. */
+export const world003ContactYardApron = surfacePair(
+  'sidewalk-contact-yard-apron',
+  [30, 0.1, 26],
+  [10, 0.2, 4],
+  0x858783,
+  ['walkable', 'sidewalk', world003JunctionPlan.id],
+  'environment.ashfall-building.sidewalk-concrete',
+  6,
+);
+
+/**
+ * Raised overlap under the curve closes the inherited height/edge wedge where
+ * the low East Quay apron meets the final east-rim sidewalk.
+ */
+export const world003EastQuayRimSeam = surfacePair(
+  'sidewalk-east-quay-rim-seam',
+  [41.75, 0.1, 14],
+  [3.5, 0.2, 16],
+  0x858783,
+  ['walkable', 'sidewalk', world003JunctionPlan.id],
+  'environment.ashfall-building.sidewalk-concrete',
+  6,
+);
+
+/**
+ * Continuous concrete ground beneath the curve's final approach. It remains
+ * below the spline road, while extending the inherited quay apron to the rim so
+ * the road, sidewalk, and building corridor no longer terminate over sky.
+ */
+export const world003EastQuayGroundFill = surfacePair(
+  'east-quay-rim-ground-fill',
+  [39.375, -0.225, 7],
+  [23, 0.35, 14],
+  0x858783,
+  ['walkable', world003JunctionPlan.id],
+  'environment.ashfall-building.sidewalk-concrete',
+  6,
+);
 
 export const world002BRimSpawns = [
   {
@@ -150,14 +346,14 @@ export const world002ABuildingPlacements = [
   ),
   createAshfallBuildingPlacement(
     'east-rim-south-workshop',
-    'canal-workshop',
-    [47.25, 0.2, -15],
+    'boardwalk-kiosk',
+    [47.75, 0.2, -15],
     -Math.PI / 2,
   ),
   createAshfallBuildingPlacement(
     'east-rim-north-workshop',
-    'canal-workshop',
-    [47.25, 0.2, 23],
+    'boardwalk-kiosk',
+    [47.75, 0.2, 23],
     -Math.PI / 2,
   ),
 ] as const;
@@ -176,7 +372,7 @@ export const world002BRoads = [
 ] as const;
 
 export const world002BSidewalks = [
-  cardinalSidewalk('north-rim-west', -21.375, 31.5, 30.75),
+  cardinalSidewalk('north-rim-west', -21.375, 31.85, 30.75, 7.7),
   cardinalSidewalk('north-rim-east', 28.375, 31.5, 44.75),
   cardinalSidewalk('south-rim-west', -21.375, -31.5, 30.75),
   cardinalSidewalk('south-rim-east', 28.375, -31.5, 44.75),
@@ -185,8 +381,8 @@ export const world002BSidewalks = [
 export const world002BBuildingPlacements = [
   createAshfallBuildingPlacement(
     'north-rim-west-workshop',
-    'canal-workshop',
-    [-30, 0.2, 31.5],
+    'boardwalk-kiosk',
+    [-33.75, 0.2, 32],
     Math.PI,
   ),
   createAshfallBuildingPlacement(
@@ -289,14 +485,36 @@ function cardinalSidewalk(
   x: number,
   z: number,
   width: number,
+  depth = 7,
 ): JunctionSurfacePair {
   return surfacePair(
     `sidewalk-${id}`,
     [x, 0.1, z],
-    [width, 0.2, 7],
+    [width, 0.2, depth],
     0x858783,
     ['walkable', 'sidewalk', world002BPlan.id],
     'environment.ashfall-building.sidewalk-concrete',
     6,
   );
+}
+
+function ownedBox(
+  id: string,
+  position: Vector3Tuple,
+  size: Vector3Tuple,
+  color: number,
+  sectorId: string,
+): JunctionOwnedVisual {
+  return {
+    visual: {
+      id,
+      kind: 'box',
+      position,
+      size,
+      color,
+      textureAssetId: 'environment.ashfall-building.curb-aggregate',
+      uvMetersPerRepeat: 3,
+    },
+    sectorId,
+  };
 }
