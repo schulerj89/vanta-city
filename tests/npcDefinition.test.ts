@@ -6,6 +6,7 @@ import { assetManifest } from '../src/assets/catalog';
 import type { AssetManifest } from '../src/assets/AssetCatalog';
 import { characterDefinitions } from '../src/characters/characters';
 import {
+  cinematicCastCharacterDefinitions,
   npcCharacterDefinitions,
   npcDefinitions,
   npcFixtureCharacterDefinitions,
@@ -137,7 +138,7 @@ describe('NPC definition validation', () => {
       'pedestrian-tank-top',
       'pedestrian-dress',
     ]);
-    expect(npcCharacterDefinitions).toHaveLength(7);
+    expect(npcCharacterDefinitions).toHaveLength(13);
     expect(characterDefinitions.map(({ id }) => id)).toEqual([
       'casual',
       'punk',
@@ -164,6 +165,38 @@ describe('NPC definition validation', () => {
         /^https:\/\/poly\.pizza\/m\//,
       );
     }
+  });
+
+  it('registers an unplaced CC0 cinematic cast with honest performance clips', () => {
+    const manifest: AssetManifest = assetManifest;
+    expect(cinematicCastCharacterDefinitions.map(({ id }) => id)).toEqual([
+      'cast-business',
+      'cast-beach',
+      'cast-farmer',
+      'cast-hoodie',
+      'cast-worker',
+      'cast-performer',
+    ]);
+    for (const definition of cinematicCastCharacterDefinitions) {
+      expect(definition.animations).toMatchObject({
+        idle: { required: true },
+        walk: { required: true },
+        run: { required: true },
+      });
+      expect(manifest[definition.modelAssetId!]?.attribution).toMatchObject({
+        creator: 'Quaternius',
+        license: 'CC0 1.0 Universal',
+      });
+    }
+    expect(cinematicCastCharacterDefinitions.at(-1)?.animations).toMatchObject({
+      dance: { clipNames: ['Dance_Loop'], required: true },
+      sit: { clipNames: ['Sitting_Enter'], required: true },
+      seatedHold: { clipNames: ['Sitting_Idle_Loop'], required: true },
+      stand: { clipNames: ['Sitting_Exit'], required: true },
+    });
+    expect(
+      npcDefinitions.some(({ characterId }) => characterId.startsWith('cast-')),
+    ).toBe(false);
   });
 
   it('registers four production pedestrian models with exact interaction clips', () => {

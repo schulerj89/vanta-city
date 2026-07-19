@@ -1,0 +1,36 @@
+{
+  "task": "NPC-002",
+  "capturedAt": "2026-07-19",
+  "viewport": [1280, 720],
+  "route": "/?sandbox=character-animation-lab",
+  "browser": "Playwright Desktop Chrome / SwiftShader",
+  "command": "VANTA_E2E_PORT=4393 pnpm exec playwright test e2e/character-animation-lab.spec.ts --grep 'unplaced CC0 cast'",
+  "result": "1 passed",
+  "determinism": {
+    "playing": false,
+    "ambientNormalizedTime": 0.35,
+    "performerNormalizedTime": 0.55,
+    "view": "front",
+    "overlays": ["bounds", "alignment"]
+  },
+  "review": {
+    "desktop1280x720": "pass",
+    "characterReadability": "pass",
+    "footAlignment": "pass",
+    "boundsContainment": "pass",
+    "sitHoldStandContinuity": "pass",
+    "danceIsDistinctFromApplause": "pass",
+    "notes": "All five ambient candidates are distinct clothed silhouettes at consistent human scale. The specialty performer is intentionally unplaced and reserved for venue staging. Chair geometry is owned by the future scene, not by the character asset."
+  },
+  "files": {
+    "cast-business-run.png": "a419476ad8c3d70e32e57fb18a55553f2da7700412a84fffd9fb6e65b61e40bc",
+    "cast-beach-run.png": "bd0a5c35d14fb82e3e0e093003fc8286f077ea852752e10840bcb1d7682bf269",
+    "cast-farmer-run.png": "e4aa5a59199ed082769b94ca6b20147677d925936acac0948c32883c96c0c00d",
+    "cast-hoodie-run.png": "3163c5990d6635f869d62ba061456004e6da41b081f97d980afe4b794fa4dfde",
+    "cast-worker-run.png": "ce6aadf3c5fe58588a7f412965c4c10cbed2aab3102d496106aa117d47b4e788",
+    "cast-performer-sit.png": "32a864b59fc0890d9b73c508b336135b9042509eb36ec0903865b1b5a3120bc7",
+    "cast-performer-seated-hold.png": "7f29f60c900332b0dc3c7df746958b4070e9696397e6a6e2812bff8a5236306d",
+    "cast-performer-stand.png": "971b9d3ea600e3fda6d65ae9c74102ce23d287330b15e62fbc15d0272059cc30",
+    "cast-performer-dance.png": "0f27817566c68ee1ec7f6feeddc1d1e952b60d07514af77c2a19a7d48709b289"
+  }
+}

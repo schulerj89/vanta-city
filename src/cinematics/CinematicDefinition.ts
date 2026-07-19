@@ -22,6 +22,7 @@ export type CinematicPerformanceIntent =
   | 'sit'
   | 'seated-hold'
   | 'stand'
+  | 'dance'
   | 'prop-use';
 
 export interface CinematicPerformanceRequest {
@@ -301,6 +302,7 @@ const performanceIntents = new Set<CinematicPerformanceIntent>([
   'sit',
   'seated-hold',
   'stand',
+  'dance',
   'prop-use',
 ]);
 

@@ -14,6 +14,7 @@ export const cinematicPerformanceIntents = [
   'sit',
   'seated-hold',
   'stand',
+  'dance',
   'prop-use',
   'applaud',
 ] as const;

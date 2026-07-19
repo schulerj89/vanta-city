@@ -31,6 +31,32 @@ conversation NPC roster and never receive Talk, mission, cinematic-performance,
 or applause-fallback behavior. See [Sidewalk pedestrian population](pedestrians.md).
 The development Talk fixtures below remain separate.
 
+## Unplaced cinematic cast library
+
+`cinematicCastCharacterDefinitions` adds six production candidates to the same
+authoritative presentation registry without adding any `NpcDefinition`, spawn,
+or world placement. Five grounded Ultimate Modular Men variants provide exact
+idle/walk/run plus interact/wave clips. A separate Universal Base venue
+performer uses the rig-compatible Universal Animation Library for exact
+idle/walk/run, `Sitting_Enter` / `Sitting_Idle_Loop` / `Sitting_Exit`, and the
+genuine `Dance_Loop` clip. The dance intent never aliases applause.
+
+| Definition       | Intended role          |  Height | Performance coverage                     |
+| ---------------- | ---------------------- | ------: | ---------------------------------------- |
+| `cast-business`  | office/venue patron    | 1.789 m | neutral, approach, indicate, acknowledge |
+| `cast-beach`     | casual patron          | 1.801 m | neutral, approach, indicate, acknowledge |
+| `cast-farmer`    | rural/workwear patron  | 1.787 m | neutral, approach, indicate, acknowledge |
+| `cast-hoodie`    | street patron          | 1.800 m | neutral, approach, indicate, acknowledge |
+| `cast-worker`    | industrial patron      | 1.797 m | neutral, approach, indicate, acknowledge |
+| `cast-performer` | staged venue performer | 1.775 m | neutral, approach, sit/hold/stand, dance |
+
+Complete archive and file hashes, license evidence, technical metrics, and
+rejected alternatives are recorded in
+[NPC-002 source log](animation/npc-002-cc0-cast-source-log.md). The committed
+[validator report](animation/npc-002-character-validation.json) and
+[animation-lab captures](screenshots/npc-002-cc0-animated-cast/capture-report.json)
+cover every retained model.
+
 ## Development fixture roster
 
 The production/default Ashfall Junction startup passes an empty definition list to `NpcSystem`, so no ordinary NPC model, Talk prompt, occupancy, or health UI is present. The reusable definitions below remain system-test fixtures and are instantiated only in a Vite development build when the URL explicitly contains `?npcFixtures=1`. Production ignores the parameter.

@@ -231,6 +231,98 @@ export const assetManifest = {
     },
     metadata: { intendedUse: 'ambient-pedestrian', embeddedAnimations: 11 },
   },
+  'character.cast-business.model': {
+    type: 'model',
+    url: '/assets/characters/cc0-animated-cast/business-man.glb',
+    attribution: {
+      title: 'Business Man — Ultimate Modular Men Pack',
+      creator: 'Quaternius',
+      sourceUrl:
+        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: { intendedUse: 'cinematic-ambient-cast', embeddedAnimations: 24 },
+  },
+  'character.cast-beach.model': {
+    type: 'model',
+    url: '/assets/characters/cc0-animated-cast/beach-character.glb',
+    attribution: {
+      title: 'Beach Character — Ultimate Modular Men Pack',
+      creator: 'Quaternius',
+      sourceUrl:
+        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: { intendedUse: 'cinematic-ambient-cast', embeddedAnimations: 24 },
+  },
+  'character.cast-farmer.model': {
+    type: 'model',
+    url: '/assets/characters/cc0-animated-cast/farmer.glb',
+    attribution: {
+      title: 'Farmer — Ultimate Modular Men Pack',
+      creator: 'Quaternius',
+      sourceUrl:
+        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: { intendedUse: 'cinematic-ambient-cast', embeddedAnimations: 24 },
+  },
+  'character.cast-hoodie.model': {
+    type: 'model',
+    url: '/assets/characters/cc0-animated-cast/hoodie-character.glb',
+    attribution: {
+      title: 'Hoodie Character — Ultimate Modular Men Pack',
+      creator: 'Quaternius',
+      sourceUrl:
+        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: { intendedUse: 'cinematic-ambient-cast', embeddedAnimations: 24 },
+  },
+  'character.cast-worker.model': {
+    type: 'model',
+    url: '/assets/characters/cc0-animated-cast/worker.glb',
+    attribution: {
+      title: 'Worker — Ultimate Modular Men Pack',
+      creator: 'Quaternius',
+      sourceUrl:
+        'https://poly.pizza/bundle/Ultimate-Modular-Men-Pack-ZiH8muWqwQ',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: { intendedUse: 'cinematic-ambient-cast', embeddedAnimations: 24 },
+  },
+  'character.cast-performer.model': {
+    type: 'model',
+    url: '/assets/characters/universal-performer/superhero-female.glb',
+    attribution: {
+      title: 'Superhero Female Full Body — Universal Base Characters',
+      creator: 'Quaternius',
+      sourceUrl: 'https://quaternius.com/packs/universalbasecharacters.html',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: {
+      intendedUse: 'cinematic-venue-performer',
+      embeddedAnimations: 0,
+    },
+  },
+  'character.cast-performer.animations': {
+    type: 'animation',
+    url: '/assets/characters/universal-performer/universal-animation-library.glb',
+    attribution: {
+      title: 'Universal Animation Library Standard',
+      creator: 'Quaternius',
+      sourceUrl: 'https://quaternius.itch.io/universal-animation-library',
+      license: 'CC0 1.0 Universal',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    },
+    metadata: { intendedUse: 'cinematic-performance', embeddedAnimations: 43 },
+  },
   'equipment.handgun.model': {
     type: 'model',
     url: '/assets/equipment/kenney-weapon-pack/handgun.glb',

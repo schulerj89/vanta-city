@@ -38,6 +38,60 @@ const animatedWomenPedestrianAnimations = {
   },
 } as const;
 
+const ultimateModularCastAnimations = {
+  idle: { clipNames: ['CharacterArmature|Idle'], required: true },
+  walk: { clipNames: ['CharacterArmature|Walk'], required: true },
+  run: { clipNames: ['CharacterArmature|Run'], required: true },
+  interact: { clipNames: ['CharacterArmature|Interact'], required: true },
+  wave: { clipNames: ['CharacterArmature|Wave'], required: true },
+} as const;
+
+const universalPerformerAnimations = {
+  idle: {
+    assetId: 'character.cast-performer.animations',
+    clipNames: ['Idle_Loop'],
+    required: true,
+  },
+  walk: {
+    assetId: 'character.cast-performer.animations',
+    clipNames: ['Walk_Loop'],
+    required: true,
+  },
+  run: {
+    assetId: 'character.cast-performer.animations',
+    clipNames: ['Jog_Fwd_Loop'],
+    required: true,
+  },
+  dance: {
+    assetId: 'character.cast-performer.animations',
+    clipNames: ['Dance_Loop'],
+    required: true,
+  },
+  sit: {
+    assetId: 'character.cast-performer.animations',
+    clipNames: ['Sitting_Enter'],
+    required: true,
+  },
+  seatedHold: {
+    assetId: 'character.cast-performer.animations',
+    clipNames: ['Sitting_Idle_Loop'],
+    required: true,
+  },
+  stand: {
+    assetId: 'character.cast-performer.animations',
+    clipNames: ['Sitting_Exit'],
+    required: true,
+  },
+} as const;
+
+const cinematicCastModelEntries = [
+  ['cast-business', 'Business Cast Member', 'character.cast-business.model'],
+  ['cast-beach', 'Beach Cast Member', 'character.cast-beach.model'],
+  ['cast-farmer', 'Farmhand Cast Member', 'character.cast-farmer.model'],
+  ['cast-hoodie', 'Hoodie Cast Member', 'character.cast-hoodie.model'],
+  ['cast-worker', 'Worker Cast Member', 'character.cast-worker.model'],
+] as const;
+
 export const npcFixtureCharacterDefinitions = validateCharacterDefinitions([
   {
     id: 'npc-worker',
@@ -104,10 +158,32 @@ export const pedestrianCharacterDefinitions = validateCharacterDefinitions([
   },
 ] satisfies readonly CharacterDefinition[]);
 
+/** Unplaced production candidates for cinematics and future interior population. */
+export const cinematicCastCharacterDefinitions = validateCharacterDefinitions([
+  ...cinematicCastModelEntries.map(([id, displayName, modelAssetId]) => ({
+    id,
+    displayName,
+    modelAssetId,
+    equipmentRigId: 'ultimate-men' as const,
+    animations: ultimateModularCastAnimations,
+    transform: { scale: 0.98 },
+    fallback: 'placeholder' as const,
+  })),
+  {
+    id: 'cast-performer',
+    displayName: 'Venue Performer',
+    modelAssetId: 'character.cast-performer.model',
+    animations: universalPerformerAnimations,
+    transform: { scale: 1 },
+    fallback: 'placeholder',
+  },
+] satisfies readonly CharacterDefinition[]);
+
 /** Authoritative NPC presentation registry consumed by loaders and debug labs. */
 export const npcCharacterDefinitions = validateCharacterDefinitions([
   ...npcFixtureCharacterDefinitions,
   ...pedestrianCharacterDefinitions,
+  ...cinematicCastCharacterDefinitions,
 ]);
 
 export const npcDefinitions = validateNpcDefinitions(

@@ -1,0 +1,1874 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-19T07:54:11.648Z",
+  "config": {
+    "limits": {
+      "minScale": 0.01,
+      "maxScale": 10,
+      "minHeight": 0.5,
+      "maxHeight": 3,
+      "maxAbsoluteGroundOffset": 0.25,
+      "rootMotionTolerance": 0.05
+    },
+    "previewCycles": 3,
+    "requireSkeletonForMappedAnimations": true,
+    "rules": {
+      "optional-asset-missing": "warning",
+      "optional-animation-missing": "warning",
+      "scale-out-of-range": "warning",
+      "height-out-of-range": "warning",
+      "ground-offset-out-of-range": "warning",
+      "root-motion-exceeded": "failure"
+    }
+  },
+  "summary": {
+    "characters": 16,
+    "passed": 16,
+    "warnings": 0,
+    "failed": 0,
+    "hardFailures": 0,
+    "assetDefects": 0,
+    "codeDefects": 0
+  },
+  "catalogIssues": [],
+  "characters": [
+    {
+      "id": "casual",
+      "displayName": "Casual",
+      "modelAssetId": "character.casual.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/ultimate-modular-men/casual-character.glb",
+        "meshCount": 10,
+        "materialCount": 9,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2703337068446685, -0.0015725009556680982, -0.1672345555468885
+          ],
+          "max": [0.32432443036352604, 1.7854310281810652, 0.4625124122923654]
+        },
+        "calculatedHeight": 1.7870035291367334,
+        "lowestPoint": -0.0015725009556680982,
+        "visualGroundOffset": 0.0015725009556680982,
+        "scale": [0.98, 0.98, 0.98],
+        "skeletonCount": 10,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "walk": "CharacterArmature|Walk",
+          "run": "CharacterArmature|Run",
+          "previewIdle": "CharacterArmature|Idle_Neutral",
+          "wave": "CharacterArmature|Wave",
+          "interact": "CharacterArmature|Interact",
+          "punchLeft": "CharacterArmature|Punch_Left",
+          "punchRight": "CharacterArmature|Punch_Right",
+          "kickLeft": "CharacterArmature|Kick_Left",
+          "kickRight": "CharacterArmature|Kick_Right",
+          "death": "CharacterArmature|Death",
+          "roll": "CharacterArmature|Roll",
+          "gunIdle": "CharacterArmature|Idle_Gun",
+          "gunFire": "CharacterArmature|Idle_Gun_Shoot",
+          "gunRun": "CharacterArmature|Run_Shoot",
+          "knifeIdle": "CharacterArmature|Idle_Sword",
+          "knifeSlash": "CharacterArmature|Sword_Slash"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "punk",
+      "displayName": "Punk",
+      "modelAssetId": "character.punk.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/ultimate-modular-men/punk-character.glb",
+        "meshCount": 13,
+        "materialCount": 9,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2537826635684644, -0.004027772438166396, -0.15740740531859257
+          ],
+          "max": [0.30446783294061136, 1.7772819883320516, 0.43419532498310476]
+        },
+        "calculatedHeight": 1.781309760770218,
+        "lowestPoint": -0.004027772438166396,
+        "visualGroundOffset": 0.004027772438166396,
+        "scale": [0.92, 0.92, 0.92],
+        "skeletonCount": 13,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "walk": "CharacterArmature|Walk",
+          "run": "CharacterArmature|Run",
+          "previewIdle": "CharacterArmature|Idle_Neutral",
+          "wave": "CharacterArmature|Wave",
+          "interact": "CharacterArmature|Interact",
+          "punchLeft": "CharacterArmature|Punch_Left",
+          "punchRight": "CharacterArmature|Punch_Right",
+          "kickLeft": "CharacterArmature|Kick_Left",
+          "kickRight": "CharacterArmature|Kick_Right",
+          "death": "CharacterArmature|Death",
+          "roll": "CharacterArmature|Roll",
+          "gunIdle": "CharacterArmature|Idle_Gun",
+          "gunFire": "CharacterArmature|Idle_Gun_Shoot",
+          "gunRun": "CharacterArmature|Run_Shoot",
+          "knifeIdle": "CharacterArmature|Idle_Sword",
+          "knifeSlash": "CharacterArmature|Sword_Slash"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "npc-worker",
+      "displayName": "Worker",
+      "modelAssetId": "character.npc-worker.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/animated-men/mack-long-sleeves.glb",
+        "meshCount": 5,
+        "materialCount": 5,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2596385607478158, -0.0015890498277834429, -0.15201518996038774
+          ],
+          "max": [0.2646634053707208, 1.7788339255224583, 0.1846407954540195]
+        },
+        "calculatedHeight": 1.7804229753502419,
+        "lowestPoint": -0.0015890498277834429,
+        "visualGroundOffset": 0.0015890498277834429,
+        "scale": [0.37, 0.37, 0.37],
+        "skeletonCount": 5,
+        "animationClips": [
+          {
+            "name": "HumanArmature|Man_Clapping",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Death",
+            "duration": 2.0833332538604736
+          },
+          {
+            "name": "HumanArmature|Man_Idle",
+            "duration": 4.166666507720947
+          },
+          {
+            "name": "HumanArmature|Man_Jump",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Punch",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "HumanArmature|Man_Run",
+            "duration": 0.875
+          },
+          {
+            "name": "HumanArmature|Man_RunningJump",
+            "duration": 1.25
+          },
+          {
+            "name": "HumanArmature|Man_Sitting",
+            "duration": 8.333333015441895
+          },
+          {
+            "name": "HumanArmature|Man_Standing",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "HumanArmature|Man_SwordSlash",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Walk",
+            "duration": 1.0416666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "HumanArmature|Man_Idle",
+          "applaud": "HumanArmature|Man_Clapping",
+          "death": "HumanArmature|Man_Death",
+          "knifeSlash": "HumanArmature|Man_SwordSlash"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "npc-hoodie",
+      "displayName": "Hoodie Character",
+      "modelAssetId": "character.npc-hoodie.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/animated-men/nox-layered-shirt.glb",
+        "meshCount": 9,
+        "materialCount": 9,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2622980366497522, -0.0010912309433195335, -0.12057282669286987
+          ],
+          "max": [0.2632327923687169, 1.7812355719661637, 0.18189204672310078]
+        },
+        "calculatedHeight": 1.7823268029094832,
+        "lowestPoint": -0.0010912309433195335,
+        "visualGroundOffset": 0.0010912309433195335,
+        "scale": [0.368, 0.368, 0.368],
+        "skeletonCount": 9,
+        "animationClips": [
+          {
+            "name": "HumanArmature|Man_Clapping",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Death",
+            "duration": 2.0833332538604736
+          },
+          {
+            "name": "HumanArmature|Man_Idle",
+            "duration": 4.166666507720947
+          },
+          {
+            "name": "HumanArmature|Man_Jump",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Punch",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "HumanArmature|Man_Run",
+            "duration": 0.875
+          },
+          {
+            "name": "HumanArmature|Man_RunningJump",
+            "duration": 1.25
+          },
+          {
+            "name": "HumanArmature|Man_Sitting",
+            "duration": 8.333333015441895
+          },
+          {
+            "name": "HumanArmature|Man_Standing",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "HumanArmature|Man_SwordSlash",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Walk",
+            "duration": 1.0416666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "HumanArmature|Man_Idle",
+          "applaud": "HumanArmature|Man_Clapping",
+          "death": "HumanArmature|Man_Death",
+          "knifeSlash": "HumanArmature|Man_SwordSlash"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "npc-punk",
+      "displayName": "Punk",
+      "modelAssetId": "character.npc-punk.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/animated-men/raze-suit.glb",
+        "meshCount": 7,
+        "materialCount": 7,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2600262341039316, -0.001118592326017083, -0.16063522334595065
+          ],
+          "max": [0.26394809886971876, 1.7805188411950659, 0.17948382182055433]
+        },
+        "calculatedHeight": 1.781637433521083,
+        "lowestPoint": -0.001118592326017083,
+        "visualGroundOffset": 0.001118592326017083,
+        "scale": [0.369, 0.369, 0.369],
+        "skeletonCount": 7,
+        "animationClips": [
+          {
+            "name": "HumanArmature|Man_Clapping",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Death",
+            "duration": 2.0833332538604736
+          },
+          {
+            "name": "HumanArmature|Man_Idle",
+            "duration": 4.166666507720947
+          },
+          {
+            "name": "HumanArmature|Man_Jump",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Punch",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "HumanArmature|Man_Run",
+            "duration": 0.875
+          },
+          {
+            "name": "HumanArmature|Man_RunningJump",
+            "duration": 1.25
+          },
+          {
+            "name": "HumanArmature|Man_Sitting",
+            "duration": 8.333333015441895
+          },
+          {
+            "name": "HumanArmature|Man_Standing",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "HumanArmature|Man_SwordSlash",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Man_Walk",
+            "duration": 1.0416666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "HumanArmature|Man_Idle",
+          "applaud": "HumanArmature|Man_Clapping",
+          "death": "HumanArmature|Man_Death",
+          "knifeSlash": "HumanArmature|Man_SwordSlash"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "pedestrian-casual",
+      "displayName": "Casual Pedestrian",
+      "modelAssetId": "character.pedestrian-casual.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/animated-women/casual.glb",
+        "meshCount": 8,
+        "materialCount": 8,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.26321159470412303, -0.009497558299611603, -0.1263614643858689
+          ],
+          "max": [0.27181645486678907, 1.7522792968045466, 0.18483432416987627]
+        },
+        "calculatedHeight": 1.7617768551041582,
+        "lowestPoint": -0.009497558299611603,
+        "visualGroundOffset": 0.009497558299611603,
+        "scale": [0.38, 0.38, 0.38],
+        "skeletonCount": 8,
+        "animationClips": [
+          {
+            "name": "HumanArmature|Female_Clapping",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Death",
+            "duration": 2.0833332538604736
+          },
+          {
+            "name": "HumanArmature|Female_Idle",
+            "duration": 4.166666507720947
+          },
+          {
+            "name": "HumanArmature|Female_Jump",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Punch",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "HumanArmature|Female_Run",
+            "duration": 0.875
+          },
+          {
+            "name": "HumanArmature|Female_RunningJump",
+            "duration": 1.25
+          },
+          {
+            "name": "HumanArmature|Female_Sitting",
+            "duration": 8.333333015441895
+          },
+          {
+            "name": "HumanArmature|Female_Standing",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "HumanArmature|Female_SwordSlash",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Walk",
+            "duration": 1.0416666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "HumanArmature|Female_Idle",
+          "walk": "HumanArmature|Female_Walk",
+          "applaud": "HumanArmature|Female_Clapping"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "pedestrian-street",
+      "displayName": "Street Pedestrian",
+      "modelAssetId": "character.pedestrian-street.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/animated-women/street.glb",
+        "meshCount": 10,
+        "materialCount": 10,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.26063327466685016, -0.008834908180159327, -0.12467736844939031
+          ],
+          "max": [0.27181645486678907, 1.7592258964376024, 0.18483432408084335]
+        },
+        "calculatedHeight": 1.7680608046177617,
+        "lowestPoint": -0.008834908180159327,
+        "visualGroundOffset": 0.008834908180159327,
+        "scale": [0.38, 0.38, 0.38],
+        "skeletonCount": 10,
+        "animationClips": [
+          {
+            "name": "HumanArmature|Female_Clapping",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Death",
+            "duration": 2.0833332538604736
+          },
+          {
+            "name": "HumanArmature|Female_Idle",
+            "duration": 4.166666507720947
+          },
+          {
+            "name": "HumanArmature|Female_Jump",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Punch",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "HumanArmature|Female_Run",
+            "duration": 0.875
+          },
+          {
+            "name": "HumanArmature|Female_RunningJump",
+            "duration": 1.25
+          },
+          {
+            "name": "HumanArmature|Female_Sitting",
+            "duration": 8.333333015441895
+          },
+          {
+            "name": "HumanArmature|Female_Standing",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "HumanArmature|Female_SwordSlash",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Walk",
+            "duration": 1.0416666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "HumanArmature|Female_Idle",
+          "walk": "HumanArmature|Female_Walk",
+          "applaud": "HumanArmature|Female_Clapping"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "pedestrian-tank-top",
+      "displayName": "Tank Top Pedestrian",
+      "modelAssetId": "character.pedestrian-tank-top.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/animated-women/tank-top.glb",
+        "meshCount": 7,
+        "materialCount": 7,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.25975702007657353, -0.009873382480866333, -0.12588944184924675
+          ],
+          "max": [0.27181645486678907, 1.7589349913835541, 0.18483432422037158]
+        },
+        "calculatedHeight": 1.7688083738644205,
+        "lowestPoint": -0.009873382480866333,
+        "visualGroundOffset": 0.009873382480866333,
+        "scale": [0.38, 0.38, 0.38],
+        "skeletonCount": 7,
+        "animationClips": [
+          {
+            "name": "HumanArmature|Female_Clapping",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Death",
+            "duration": 2.0833332538604736
+          },
+          {
+            "name": "HumanArmature|Female_Idle",
+            "duration": 4.166666507720947
+          },
+          {
+            "name": "HumanArmature|Female_Jump",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Punch",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "HumanArmature|Female_Run",
+            "duration": 0.875
+          },
+          {
+            "name": "HumanArmature|Female_RunningJump",
+            "duration": 1.25
+          },
+          {
+            "name": "HumanArmature|Female_Sitting",
+            "duration": 8.333333015441895
+          },
+          {
+            "name": "HumanArmature|Female_Standing",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "HumanArmature|Female_SwordSlash",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Walk",
+            "duration": 1.0416666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "HumanArmature|Female_Idle",
+          "walk": "HumanArmature|Female_Walk",
+          "applaud": "HumanArmature|Female_Clapping"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "pedestrian-dress",
+      "displayName": "Dress Pedestrian",
+      "modelAssetId": "character.pedestrian-dress.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/animated-women/dress.glb",
+        "meshCount": 5,
+        "materialCount": 5,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.25975702007657353, -0.009873382480866333, -0.19658866835441813
+          ],
+          "max": [0.27181645486678907, 1.7589484343108845, 0.26609889686008437]
+        },
+        "calculatedHeight": 1.7688218167917509,
+        "lowestPoint": -0.009873382480866333,
+        "visualGroundOffset": 0.009873382480866333,
+        "scale": [0.38, 0.38, 0.38],
+        "skeletonCount": 5,
+        "animationClips": [
+          {
+            "name": "HumanArmature|Female_Clapping",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Death",
+            "duration": 2.0833332538604736
+          },
+          {
+            "name": "HumanArmature|Female_Idle",
+            "duration": 4.166666507720947
+          },
+          {
+            "name": "HumanArmature|Female_Jump",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Punch",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "HumanArmature|Female_Run",
+            "duration": 0.875
+          },
+          {
+            "name": "HumanArmature|Female_RunningJump",
+            "duration": 1.25
+          },
+          {
+            "name": "HumanArmature|Female_Sitting",
+            "duration": 8.333333015441895
+          },
+          {
+            "name": "HumanArmature|Female_Standing",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "HumanArmature|Female_SwordSlash",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "HumanArmature|Female_Walk",
+            "duration": 1.0416666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "HumanArmature|Female_Idle",
+          "walk": "HumanArmature|Female_Walk",
+          "applaud": "HumanArmature|Female_Clapping"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "cast-business",
+      "displayName": "Business Cast Member",
+      "modelAssetId": "character.cast-business.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/cc0-animated-cast/business-man.glb",
+        "meshCount": 10,
+        "materialCount": 9,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.26939704902035855, -0.001469367099284154, -0.16767468216456924
+          ],
+          "max": [0.3243244307410859, 1.7871385046659651, 0.46251241101600826]
+        },
+        "calculatedHeight": 1.7886078717652494,
+        "lowestPoint": -0.001469367099284154,
+        "visualGroundOffset": 0.001469367099284154,
+        "scale": [0.98, 0.98, 0.98],
+        "skeletonCount": 10,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "walk": "CharacterArmature|Walk",
+          "run": "CharacterArmature|Run",
+          "interact": "CharacterArmature|Interact",
+          "wave": "CharacterArmature|Wave"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "cast-beach",
+      "displayName": "Beach Cast Member",
+      "modelAssetId": "character.cast-beach.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/cc0-animated-cast/beach-character.glb",
+        "meshCount": 12,
+        "materialCount": 8,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2703337068446685, -0.006005742003018731, -0.16685351153082534
+          ],
+          "max": [0.320977176447446, 1.7949036396797327, 0.4612458409987562]
+        },
+        "calculatedHeight": 1.8009093816827513,
+        "lowestPoint": -0.006005742003018731,
+        "visualGroundOffset": 0.006005742003018731,
+        "scale": [0.98, 0.98, 0.98],
+        "skeletonCount": 12,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "walk": "CharacterArmature|Walk",
+          "run": "CharacterArmature|Run",
+          "interact": "CharacterArmature|Interact",
+          "wave": "CharacterArmature|Wave"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "cast-farmer",
+      "displayName": "Farmhand Cast Member",
+      "modelAssetId": "character.cast-farmer.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/cc0-animated-cast/farmer.glb",
+        "meshCount": 12,
+        "materialCount": 8,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2668819954352261, -0.0005698353263246676, -0.1623337769699755
+          ],
+          "max": [0.3243244303182188, 1.7864583436027153, 0.4625124123091493]
+        },
+        "calculatedHeight": 1.7870281789290399,
+        "lowestPoint": -0.0005698353263246676,
+        "visualGroundOffset": 0.0005698353263246676,
+        "scale": [0.98, 0.98, 0.98],
+        "skeletonCount": 12,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "walk": "CharacterArmature|Walk",
+          "run": "CharacterArmature|Run",
+          "interact": "CharacterArmature|Interact",
+          "wave": "CharacterArmature|Wave"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "cast-hoodie",
+      "displayName": "Hoodie Cast Member",
+      "modelAssetId": "character.cast-hoodie.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/cc0-animated-cast/hoodie-character.glb",
+        "meshCount": 10,
+        "materialCount": 7,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.27944943679328776, -0.004290460139823456, -0.16767289042512215
+          ],
+          "max": [0.3243244307410859, 1.7953498379238253, 0.4625124113950471]
+        },
+        "calculatedHeight": 1.7996402980636488,
+        "lowestPoint": -0.004290460139823456,
+        "visualGroundOffset": 0.004290460139823456,
+        "scale": [0.98, 0.98, 0.98],
+        "skeletonCount": 10,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "walk": "CharacterArmature|Walk",
+          "run": "CharacterArmature|Run",
+          "interact": "CharacterArmature|Interact",
+          "wave": "CharacterArmature|Wave"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "cast-worker",
+      "displayName": "Worker Cast Member",
+      "modelAssetId": "character.cast-worker.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/cc0-animated-cast/worker.glb",
+        "meshCount": 13,
+        "materialCount": 11,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2703337068446685, -0.0038015250265394708, -0.1627173629327416
+          ],
+          "max": [0.32432443046420867, 1.7935478566672431, 0.4625124122551883]
+        },
+        "calculatedHeight": 1.7973493816937827,
+        "lowestPoint": -0.0038015250265394708,
+        "visualGroundOffset": 0.0038015250265394708,
+        "scale": [0.98, 0.98, 0.98],
+        "skeletonCount": 13,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "walk": "CharacterArmature|Walk",
+          "run": "CharacterArmature|Run",
+          "interact": "CharacterArmature|Interact",
+          "wave": "CharacterArmature|Wave"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "cast-performer",
+      "displayName": "Venue Performer",
+      "modelAssetId": "character.cast-performer.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/universal-performer/superhero-female.glb",
+        "meshCount": 3,
+        "materialCount": 3,
+        "textureCount": 7,
+        "bounds": {
+          "min": [
+            -0.8344331101674881, -0.00840710894944254, -0.16246949431349073
+          ],
+          "max": [0.8344329878487169, 1.766643851798447, 0.14022762239328995]
+        },
+        "calculatedHeight": 1.7750509607478897,
+        "lowestPoint": -0.00840710894944254,
+        "visualGroundOffset": 0.00840710894944254,
+        "scale": [1, 1, 1],
+        "skeletonCount": 3,
+        "animationClips": [
+          {
+            "name": "A_TPose",
+            "duration": 2.5
+          },
+          {
+            "name": "Crouch_Fwd_Loop",
+            "duration": 2
+          },
+          {
+            "name": "Crouch_Idle_Loop",
+            "duration": 2.933333396911621
+          },
+          {
+            "name": "Dance_Loop",
+            "duration": 1
+          },
+          {
+            "name": "Death01",
+            "duration": 2.4000000953674316
+          },
+          {
+            "name": "Driving_Loop",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "Fixing_Kneeling",
+            "duration": 5.199999809265137
+          },
+          {
+            "name": "Hit_Chest",
+            "duration": 0.3333333432674408
+          },
+          {
+            "name": "Hit_Head",
+            "duration": 0.4333333373069763
+          },
+          {
+            "name": "Idle_Loop",
+            "duration": 2.5
+          },
+          {
+            "name": "Idle_Talking_Loop",
+            "duration": 2.933333396911621
+          },
+          {
+            "name": "Idle_Torch_Loop",
+            "duration": 1.2666666507720947
+          },
+          {
+            "name": "Interact",
+            "duration": 2
+          },
+          {
+            "name": "Jog_Fwd_Loop",
+            "duration": 0.9333333373069763
+          },
+          {
+            "name": "Jump_Land",
+            "duration": 1.2666666507720947
+          },
+          {
+            "name": "Jump_Loop",
+            "duration": 2.5
+          },
+          {
+            "name": "Jump_Start",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "PickUp_Table",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "Pistol_Aim_Down",
+            "duration": 0.1666666716337204
+          },
+          {
+            "name": "Pistol_Aim_Neutral",
+            "duration": 0.1666666716337204
+          },
+          {
+            "name": "Pistol_Aim_Up",
+            "duration": 0.1666666716337204
+          },
+          {
+            "name": "Pistol_Idle_Loop",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "Pistol_Reload",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "Pistol_Shoot",
+            "duration": 0.6333333253860474
+          },
+          {
+            "name": "Punch_Cross",
+            "duration": 1
+          },
+          {
+            "name": "Punch_Jab",
+            "duration": 0.8666666746139526
+          },
+          {
+            "name": "Push_Loop",
+            "duration": 2.6666667461395264
+          },
+          {
+            "name": "Roll",
+            "duration": 1.4666666984558105
+          },
+          {
+            "name": "Sitting_Enter",
+            "duration": 1.2999999523162842
+          },
+          {
+            "name": "Sitting_Exit",
+            "duration": 1.0333333015441895
+          },
+          {
+            "name": "Sitting_Idle_Loop",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "Sitting_Talking_Loop",
+            "duration": 2.933333396911621
+          },
+          {
+            "name": "Spell_Simple_Enter",
+            "duration": 0.5333333611488342
+          },
+          {
+            "name": "Spell_Simple_Exit",
+            "duration": 0.4333333373069763
+          },
+          {
+            "name": "Spell_Simple_Idle_Loop",
+            "duration": 2.0999999046325684
+          },
+          {
+            "name": "Spell_Simple_Shoot",
+            "duration": 0.5
+          },
+          {
+            "name": "Sprint_Loop",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "Swim_Fwd_Loop",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "Swim_Idle_Loop",
+            "duration": 3.3333332538604736
+          },
+          {
+            "name": "Sword_Attack",
+            "duration": 1.5333333015441895
+          },
+          {
+            "name": "Sword_Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "Walk_Formal_Loop",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "Walk_Loop",
+            "duration": 1.3333333730697632
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "Idle_Loop",
+          "walk": "Walk_Loop",
+          "run": "Jog_Fwd_Loop",
+          "dance": "Dance_Loop",
+          "sit": "Sitting_Enter",
+          "seatedHold": "Sitting_Idle_Loop",
+          "stand": "Sitting_Exit"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    },
+    {
+      "id": "debug-sparring-target",
+      "displayName": "Debug Sparring Target",
+      "modelAssetId": "character.casual.model",
+      "status": "passed",
+      "issues": [],
+      "metrics": {
+        "source": "asset",
+        "sourcePath": "public/assets/characters/ultimate-modular-men/casual-character.glb",
+        "meshCount": 10,
+        "materialCount": 9,
+        "textureCount": 0,
+        "bounds": {
+          "min": [
+            -0.2703337068446685, -0.0015725009556680982, -0.1672345555468885
+          ],
+          "max": [0.32432443036352604, 1.7854310281810652, 0.4625124122923654]
+        },
+        "calculatedHeight": 1.7870035291367334,
+        "lowestPoint": -0.0015725009556680982,
+        "visualGroundOffset": 0.0015725009556680982,
+        "scale": [0.98, 0.98, 0.98],
+        "skeletonCount": 10,
+        "animationClips": [
+          {
+            "name": "CharacterArmature|Death",
+            "duration": 1.0416666269302368
+          },
+          {
+            "name": "CharacterArmature|Gun_Shoot",
+            "duration": 0.5833333134651184
+          },
+          {
+            "name": "CharacterArmature|HitRecieve",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|HitRecieve_2",
+            "duration": 0.5416666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Pointing",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Gun_Shoot",
+            "duration": 0.6666666865348816
+          },
+          {
+            "name": "CharacterArmature|Idle_Neutral",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Idle_Sword",
+            "duration": 1.6666666269302368
+          },
+          {
+            "name": "CharacterArmature|Interact",
+            "duration": 1.25
+          },
+          {
+            "name": "CharacterArmature|Kick_Left",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Kick_Right",
+            "duration": 0.9166666865348816
+          },
+          {
+            "name": "CharacterArmature|Punch_Left",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Punch_Right",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Roll",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Run",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Back",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Run_Left",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Right",
+            "duration": 0.7916666865348816
+          },
+          {
+            "name": "CharacterArmature|Run_Shoot",
+            "duration": 0.8333333134651184
+          },
+          {
+            "name": "CharacterArmature|Sword_Slash",
+            "duration": 1
+          },
+          {
+            "name": "CharacterArmature|Walk",
+            "duration": 1.3333333730697632
+          },
+          {
+            "name": "CharacterArmature|Wave",
+            "duration": 1.6666666269302368
+          }
+        ],
+        "resolvedAnimations": {
+          "idle": "CharacterArmature|Idle",
+          "getHit": "CharacterArmature|HitRecieve",
+          "punchLeft": "CharacterArmature|Punch_Left",
+          "death": "CharacterArmature|Death"
+        },
+        "localResources": [],
+        "previewCycles": 3
+      }
+    }
+  ]
+}

@@ -326,6 +326,12 @@ function disposeSceneResources(scene: Object3D): void {
 }
 
 function installThreeNodePolyfills(): void {
+  if (!('self' in globalThis)) {
+    Object.defineProperty(globalThis, 'self', {
+      configurable: true,
+      value: globalThis,
+    });
+  }
   if (!('ProgressEvent' in globalThis)) {
     Object.defineProperty(globalThis, 'ProgressEvent', {
       configurable: true,

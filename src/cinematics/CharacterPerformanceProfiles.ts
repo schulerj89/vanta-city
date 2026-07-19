@@ -20,6 +20,39 @@ const sharedRigIntents = {
   Record<CinematicPerformanceIntent, CharacterPerformanceBinding>
 >;
 
+const ambientCastIntents = {
+  'neutral-hold': { animationId: 'idle', playback: 'loop' },
+  approach: {
+    animationId: 'walk',
+    playback: 'loop',
+    requiresMovementOwner: true,
+  },
+  indicate: { animationId: 'interact', playback: 'one-shot' },
+  acknowledge: { animationId: 'wave', playback: 'one-shot' },
+} as const satisfies Partial<
+  Record<CinematicPerformanceIntent, CharacterPerformanceBinding>
+>;
+
+const venuePerformerIntents = {
+  'neutral-hold': { animationId: 'idle', playback: 'loop' },
+  approach: {
+    animationId: 'walk',
+    playback: 'loop',
+    requiresMovementOwner: true,
+  },
+  sit: {
+    animationId: 'sit',
+    playback: 'transition-with-hold',
+    holdAtNormalizedTime: 0.98,
+    releaseAnimationId: 'stand',
+  },
+  'seated-hold': { animationId: 'seatedHold', playback: 'loop' },
+  stand: { animationId: 'stand', playback: 'one-shot' },
+  dance: { animationId: 'dance', playback: 'loop' },
+} as const satisfies Partial<
+  Record<CinematicPerformanceIntent, CharacterPerformanceBinding>
+>;
+
 export const characterPerformanceProfiles = Object.freeze([
   {
     profileId: 'performance.casual',
@@ -40,6 +73,22 @@ export const characterPerformanceProfiles = Object.freeze([
     characterId,
     intents: sharedRigIntents,
   })),
+  ...[
+    'cast-business',
+    'cast-beach',
+    'cast-farmer',
+    'cast-hoodie',
+    'cast-worker',
+  ].map((characterId) => ({
+    profileId: `performance.${characterId}`,
+    characterId,
+    intents: ambientCastIntents,
+  })),
+  {
+    profileId: 'performance.cast-performer',
+    characterId: 'cast-performer',
+    intents: venuePerformerIntents,
+  },
 ] satisfies readonly CharacterPerformanceProfile[]);
 
 export function getCharacterPerformanceProfile(

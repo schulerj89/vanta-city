@@ -52,6 +52,12 @@ test('switches every registered definition and safely disposes prior instances',
     'pedestrian-street',
     'pedestrian-tank-top',
     'pedestrian-dress',
+    'cast-business',
+    'cast-beach',
+    'cast-farmer',
+    'cast-hoodie',
+    'cast-worker',
+    'cast-performer',
     'debug-sparring-target',
   ];
   for (const id of ids) {
@@ -126,6 +132,89 @@ test('previews every production pedestrian locomotion and explicit applause @vis
       expect(snapshot.alignment?.simulationOrigin).toEqual([0, 0, 0]);
       expect(snapshot.alignment?.footPlane).toBe(0);
       await testInfo.attach(`${id}-${logical}.png`, {
+        body: await page.screenshot(),
+        contentType: 'image/png',
+      });
+    }
+  }
+});
+
+test('previews the unplaced CC0 cast locomotion and genuine venue performance @visual', async ({
+  page,
+}, testInfo) => {
+  const ambientIds = [
+    'cast-business',
+    'cast-beach',
+    'cast-farmer',
+    'cast-hoodie',
+    'cast-worker',
+  ];
+  for (const id of ambientIds) {
+    await page.evaluate(
+      async (modelId) => window.__VANTA_ANIMATION_LAB__!.selectModel(modelId),
+      id,
+    );
+    await waitForModel(page, id);
+    for (const logical of ['idle', 'walk', 'run']) {
+      expect(
+        await page.evaluate(
+          (selection) =>
+            window.__VANTA_ANIMATION_LAB__!.selectAnimation(selection),
+          `logical:${logical}`,
+        ),
+      ).toBe(true);
+    }
+    await page.evaluate(() => {
+      const lab = window.__VANTA_ANIMATION_LAB__!;
+      lab.setPlaying(false);
+      lab.setNormalizedTime(0.35);
+      lab.setView('front');
+      lab.setOverlay('bounds', true);
+      lab.setOverlay('alignment', true);
+    });
+    await waitForRenderedFrame(page);
+    await testInfo.attach(`${id}-run.png`, {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+  }
+
+  await page.evaluate(async () =>
+    window.__VANTA_ANIMATION_LAB__!.selectModel('cast-performer'),
+  );
+  await waitForModel(page, 'cast-performer');
+  const performer = await labSnapshot(page);
+  expect(performer.performanceIntents).toEqual(
+    expect.arrayContaining(['sit', 'seated-hold', 'stand', 'dance']),
+  );
+  expect(performer.logicalAnimations).not.toContain('applaud');
+  for (const logical of [
+    'idle',
+    'walk',
+    'run',
+    'sit',
+    'seatedHold',
+    'stand',
+    'dance',
+  ]) {
+    expect(
+      await page.evaluate(
+        (selection) =>
+          window.__VANTA_ANIMATION_LAB__!.selectAnimation(selection),
+        `logical:${logical}`,
+      ),
+    ).toBe(true);
+    await page.evaluate(() => {
+      const lab = window.__VANTA_ANIMATION_LAB__!;
+      lab.setPlaying(false);
+      lab.setNormalizedTime(0.55);
+      lab.setView('front');
+      lab.setOverlay('bounds', true);
+      lab.setOverlay('alignment', true);
+    });
+    await waitForRenderedFrame(page);
+    if (['sit', 'seatedHold', 'stand', 'dance'].includes(logical)) {
+      await testInfo.attach(`cast-performer-${logical}.png`, {
         body: await page.screenshot(),
         contentType: 'image/png',
       });
