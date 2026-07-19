@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { AudioPreferenceStore } from '../src/audio/AudioPreferences';
-import { TitleScreen } from '../src/ui/TitleScreen';
+import { TitleScreen, TitleScreenDisposedError } from '../src/ui/TitleScreen';
 
 class MemoryStorage implements Pick<Storage, 'getItem' | 'setItem'> {
   private readonly values = new Map<string, string>();
@@ -92,6 +92,39 @@ describe('TitleScreen', () => {
     await expect(first).resolves.toBeUndefined();
     expect(storage.getItem('vanta-city:title-started')).toBe('1');
     title.dispose();
+    await expect(title.waitForStart()).resolves.toBeUndefined();
+    mount.remove();
+  });
+
+  it('rejects a pending entry gate with typed cancellation on disposal', async () => {
+    const storage = new MemoryStorage();
+    const mount = document.createElement('main');
+    document.body.append(mount);
+    const title = new TitleScreen(
+      mount,
+      new AudioPreferenceStore(storage),
+      storage,
+    );
+    const waiting = title.waitForStart();
+    const rejection = expect(waiting).rejects.toMatchObject({
+      name: 'TitleScreenDisposedError',
+      code: 'title-screen-disposed',
+    });
+
+    title.dispose();
+
+    await rejection;
+    await expect(waiting).rejects.toBeInstanceOf(TitleScreenDisposedError);
+    await expect(title.waitForStart()).rejects.toMatchObject({
+      name: 'TitleScreenDisposedError',
+      code: 'title-screen-disposed',
+    });
+    expect(title.getSnapshot()).toMatchObject({
+      visible: false,
+      state: 'disposed',
+      connected: false,
+    });
+    expect(storage.getItem('vanta-city:title-started')).toBeNull();
     mount.remove();
   });
 });

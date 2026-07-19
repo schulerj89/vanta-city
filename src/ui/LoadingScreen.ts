@@ -1,5 +1,9 @@
 import type { AssetLoadStatus, GameAssetLoader } from '../assets/AssetLoader';
 
+type LoadingAssetStatusSource = Pick<GameAssetLoader, 'onStatus'>;
+
+const reloadPage = (): void => window.location.reload();
+
 export type LoadingReadiness = 'starting' | 'world' | 'character' | 'ready';
 
 export interface LoadingScreenSnapshot {
@@ -8,6 +12,7 @@ export interface LoadingScreenSnapshot {
   readonly fallbackAssetIds: readonly string[];
   readonly fatal: boolean;
   readonly disposed: boolean;
+  readonly elapsedClockActive: boolean;
   readonly slowElapsedSeconds: number | undefined;
   readonly durationsMs: {
     readonly preparingWorld: number | undefined;
@@ -43,27 +48,51 @@ export class LoadingScreen {
   private dismissButton: HTMLButtonElement | undefined;
   private assetsSubscribed = true;
 
+  /**
+   * Installs the canonical fatal startup alert before an asset loader exists.
+   * No status source or progress value is manufactured.
+   */
+  public static createFatal(
+    mount: HTMLElement,
+    error: unknown,
+    retryAction: () => void = reloadPage,
+  ): LoadingScreen {
+    const screen = new LoadingScreen(
+      mount,
+      undefined,
+      () => performance.now(),
+      retryAction,
+    );
+    screen.fail(error);
+    return screen;
+  }
+
   public constructor(
     private readonly mount: HTMLElement,
-    assets: GameAssetLoader,
+    assets: LoadingAssetStatusSource | undefined,
     private readonly now: () => number = () => performance.now(),
+    private readonly retryAction: () => void = reloadPage,
   ) {
     this.startedAt = this.now();
     this.element.className = 'loading-screen';
     this.element.dataset.testid = 'loading-screen';
     this.element.dataset.readiness = this.readiness;
-    this.element.setAttribute('role', 'status');
-    this.element.setAttribute('aria-live', 'polite');
-    this.element.setAttribute('aria-atomic', 'false');
+    this.element.setAttribute('role', 'region');
+    this.element.setAttribute('aria-labelledby', 'vanta-loading-title');
     const atmosphere = document.createElement('div');
     atmosphere.className = 'loading-screen__atmosphere';
     atmosphere.setAttribute('aria-hidden', 'true');
     this.content.className = 'loading-screen__content';
     this.phase.className = 'loading-screen__phase';
+    this.phase.setAttribute('role', 'status');
+    this.phase.setAttribute('aria-live', 'polite');
+    this.phase.setAttribute('aria-atomic', 'true');
     this.phase.textContent = 'Local startup · Preparing district';
+    this.title.id = 'vanta-loading-title';
     this.title.textContent = 'Entering Ashfall City';
     this.detail.className = 'loading-screen__detail';
     this.elapsed.className = 'loading-screen__elapsed';
+    this.elapsed.setAttribute('aria-hidden', 'true');
     this.elapsed.hidden = true;
     this.progress.max = 1;
     this.progress.removeAttribute('value');
@@ -79,7 +108,9 @@ export class LoadingScreen {
     );
     this.element.append(atmosphere, this.content);
     this.mount.append(this.element);
-    this.unsubscribeAssets = assets.onStatus(this.onAssetStatus);
+    this.unsubscribeAssets =
+      assets?.onStatus(this.onAssetStatus) ?? (() => undefined);
+    this.assetsSubscribed = assets !== undefined;
     this.elapsedTimer = setInterval(this.renderElapsed, 1_000);
     this.render();
   }
@@ -115,8 +146,7 @@ export class LoadingScreen {
     }
     this.element.classList.add('loading-screen--fallback');
     this.element.dataset.outcome = 'fallback';
-    this.element.setAttribute('role', 'status');
-    this.phase.textContent = 'Playable fallback';
+    this.setPhase('Playable fallback');
     this.title.textContent = 'Ashfall City is ready';
     this.detail.textContent = `${this.fallbackAssets.size} local asset ${this.fallbackAssets.size === 1 ? 'fallback is' : 'fallbacks are'} active. Gameplay is available.`;
     this.progressFrame.remove();
@@ -140,7 +170,9 @@ export class LoadingScreen {
     this.element.className = 'loading-screen loading-screen--error';
     this.element.dataset.outcome = 'fatal';
     this.element.setAttribute('role', 'alert');
-    this.element.removeAttribute('aria-live');
+    this.phase.removeAttribute('role');
+    this.phase.removeAttribute('aria-live');
+    this.phase.removeAttribute('aria-atomic');
     this.phase.textContent = 'Startup interrupted';
     this.title.textContent = 'Vanta City could not start';
     this.detail.textContent =
@@ -165,6 +197,7 @@ export class LoadingScreen {
       fallbackAssetIds: [...this.fallbackAssets],
       fatal: this.fatal,
       disposed: this.disposed,
+      elapsedClockActive: this.elapsedTimer !== undefined,
       slowElapsedSeconds: this.slowElapsedSeconds(),
       durationsMs: {
         preparingWorld:
@@ -222,21 +255,22 @@ export class LoadingScreen {
         currentAsset.progress > 0
           ? `Loading local asset ${currentAsset.id} · ${percent}%`
           : `Loading local asset ${currentAsset.id}…`;
-      this.phase.textContent = 'Local asset transfer';
+      this.setPhase('Local asset transfer');
       return;
     }
     if (this.fallbackAssets.size > 0) {
       this.detail.textContent =
         'An asset was unavailable. Preparing a safe gameplay fallback…';
-      this.phase.textContent = 'Local fallback check';
+      this.setPhase('Local fallback check');
       return;
     }
-    this.phase.textContent =
+    this.setPhase(
       this.readiness === 'starting'
         ? 'Preparing district · Indeterminate'
         : this.readiness === 'world'
           ? 'Preparing character · Indeterminate'
-          : 'Finalizing startup · Indeterminate';
+          : 'Finalizing startup · Indeterminate',
+    );
     this.detail.textContent =
       this.readiness === 'starting'
         ? 'Preparing the district…'
@@ -264,9 +298,13 @@ export class LoadingScreen {
       : Math.floor(elapsedMs / 1_000);
   }
 
-  private readonly retry = (): void => window.location.reload();
+  private readonly retry = (): void => this.retryAction();
 
   private readonly dismiss = (): void => this.dispose();
+
+  private setPhase(value: string): void {
+    if (this.phase.textContent !== value) this.phase.textContent = value;
+  }
 
   private stopElapsedTimer(): void {
     if (this.elapsedTimer !== undefined) clearInterval(this.elapsedTimer);

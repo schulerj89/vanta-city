@@ -30,11 +30,49 @@ in
   indeterminate.
 - The elapsed label appears after three seconds and reads elapsed time only. It
   cannot advance readiness, complete loading, or create a minimum display time.
+  It is visual-only (`aria-hidden`) so its once-per-second clock never floods the
+  polite live region. Only the deduplicated phase label is live; detail copy and
+  semantic progress remain accessible without turning every percentage into a
+  live-region announcement.
 - Playable fallback stays bounded and dismissible over gameplay. Fatal startup
   retains the real error, becomes an alert, and focuses a native Retry action.
 - Bootstrap presentation-zone wiring remains integrator-owned. This slice does
   not edit `main.ts` or take cinematic, camera, world, mission, input, or audio
   playback ownership.
+
+## Root integrator call contract
+
+`TitleScreen.waitForStart()` resolves only after the native Start/Continue
+action. If the root disposes the title while that promise is pending, the promise
+rejects exactly once with `TitleScreenDisposedError` and code
+`title-screen-disposed`; it never remains pending. Disposal after a successful
+Start is harmless because the resolve path clears its rejection handle first.
+The root must catch the typed cancellation and either ignore it for intentional
+page teardown or present the underlying bootstrap cancellation through its
+existing failure policy:
+
+```ts
+try {
+  await title.waitForStart();
+} catch (error) {
+  if (!(error instanceof TitleScreenDisposedError)) throw error;
+  // Intentional teardown may return. Unexpected cancellation may be presented.
+}
+```
+
+When startup fails before a real `GameAssetLoader` exists, the root installs the
+same loading failure component through the public factory—never a second fatal
+overlay or a fake loader/progress event:
+
+```ts
+const fatal = LoadingScreen.createFatal(presentationMount, error);
+```
+
+The factory synchronously creates the canonical alert, removes progress, keeps
+the real error copy, focuses Retry, starts no retained elapsed clock, and owns
+normal `dispose()` cleanup. Once a real loader exists, root continues using
+`new LoadingScreen(presentationMount, assets)` and `fail(error)` on that same
+instance.
 
 ## Presentation states
 
@@ -45,7 +83,7 @@ in
 | Title   | departing / disposed           | explicit dataset/snapshot state; listener and store subscription released once      |
 | Loading | measurable local asset         | logical asset ID, authoritative percentage, semantic progress value                 |
 | Loading | world / character / finalizing | named phase plus “Indeterminate”; no invented percent                               |
-| Loading | slow                           | elapsed seconds after bounded threshold; readiness remains unchanged                |
+| Loading | slow                           | visual-only elapsed seconds; bounded polite phase truth; readiness unchanged        |
 | Loading | playable fallback              | bounded status, fallback count, native Dismiss; gameplay remains available          |
 | Loading | fatal                          | alert with original error and initially focused native Retry                        |
 | Loading | ready / disposed / reentry     | no fake hold; timer, listener, buttons, active statuses, and root released          |

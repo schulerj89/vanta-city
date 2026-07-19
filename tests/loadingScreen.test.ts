@@ -134,6 +134,20 @@ describe('LoadingScreen', () => {
     const assets = new ObservableAssets();
     let now = 0;
     const screen = new LoadingScreen(mount, assets, () => now);
+    const status = mount.querySelector<HTMLElement>('[role="status"]')!;
+    const elapsed = mount.querySelector<HTMLElement>(
+      '.loading-screen__elapsed',
+    )!;
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    expect(status.getAttribute('aria-atomic')).toBe('true');
+    expect(status.contains(elapsed)).toBe(false);
+    expect(elapsed.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      mount
+        .querySelector('.loading-screen__phase')
+        ?.getAttribute('aria-hidden'),
+    ).not.toBe('true');
+    expect(mount.textContent).toContain('Preparing district · Indeterminate');
     expect(screen.getSnapshot().slowElapsedSeconds).toBeUndefined();
 
     now = 3_200;
@@ -141,6 +155,7 @@ describe('LoadingScreen', () => {
     expect(mount.textContent).toContain('3 seconds elapsed');
     expect(screen.getSnapshot()).toMatchObject({
       readiness: 'starting',
+      elapsedClockActive: true,
       slowElapsedSeconds: 3,
       disposed: false,
     });
@@ -148,8 +163,43 @@ describe('LoadingScreen', () => {
     screen.markWorldReady();
     expect(screen.getSnapshot().readiness).toBe('world');
     screen.dispose();
+    expect(screen.getSnapshot().elapsedClockActive).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
+  });
+
+  it('creates the canonical fatal alert before an asset loader exists', () => {
+    const mount = document.createElement('main');
+    document.body.append(mount);
+    const retry = vi.fn();
+    const screen = LoadingScreen.createFatal(
+      mount,
+      new Error('WebGL unavailable before asset setup'),
+      retry,
+    );
+
+    const alert = mount.querySelector<HTMLElement>('[role="alert"]')!;
+    const retryButton = mount.querySelector<HTMLButtonElement>(
+      '[data-testid="loading-retry"]',
+    )!;
+    expect(alert.textContent).toContain('Vanta City could not start');
+    expect(alert.textContent).toContain('WebGL unavailable before asset setup');
+    expect(alert.querySelector('[role="status"]')).toBeNull();
+    expect(mount.querySelector('progress')).toBeNull();
+    expect(screen.getSnapshot()).toMatchObject({
+      assetProgress: undefined,
+      fallbackAssetIds: [],
+      fatal: true,
+      disposed: false,
+    });
+    expect(retryButton).toBe(document.activeElement);
+    expect(screen.getSnapshot().elapsedClockActive).toBe(false);
+    retryButton.click();
+    expect(retry).toHaveBeenCalledOnce();
+
+    screen.dispose();
+    expect(mount.querySelector('.loading-screen')).toBeNull();
+    mount.remove();
   });
 
   it('supports clean disposal and reentry without retaining the old root', () => {

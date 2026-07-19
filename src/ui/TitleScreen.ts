@@ -2,6 +2,16 @@ import type { AudioPreferenceStore } from '../audio/AudioPreferences';
 
 const startedStorageKey = 'vanta-city:title-started';
 
+/** Typed cancellation emitted only when a pending title gate is disposed. */
+export class TitleScreenDisposedError extends Error {
+  public readonly code = 'title-screen-disposed';
+
+  public constructor() {
+    super('The title screen was disposed before Start or Continue was chosen.');
+    this.name = 'TitleScreenDisposedError';
+  }
+}
+
 export interface TitleScreenSnapshot {
   readonly visible: boolean;
   readonly startedBefore: boolean;
@@ -18,6 +28,7 @@ export class TitleScreen {
   private readonly startedBefore: boolean;
   private readonly unsubscribeAudio: () => void;
   private resolveStart: (() => void) | undefined;
+  private rejectStart: ((reason: TitleScreenDisposedError) => void) | undefined;
   private startPromise: Promise<void> | undefined;
   private started = false;
   private disposed = false;
@@ -88,10 +99,12 @@ export class TitleScreen {
 
   public waitForStart(): Promise<void> {
     if (this.started) return Promise.resolve();
+    if (this.disposed) return Promise.reject(new TitleScreenDisposedError());
     if (this.startPromise) return this.startPromise;
     this.startButton.focus({ preventScroll: true });
-    this.startPromise = new Promise((resolve) => {
+    this.startPromise = new Promise((resolve, reject) => {
       this.resolveStart = resolve;
+      this.rejectStart = reject;
     });
     return this.startPromise;
   }
@@ -125,8 +138,11 @@ export class TitleScreen {
     this.musicButton.removeEventListener('click', this.toggleMusic);
     this.unsubscribeAudio();
     this.element.remove();
+    const reject = this.rejectStart;
     this.resolveStart = undefined;
+    this.rejectStart = undefined;
     this.startPromise = undefined;
+    if (!this.started) reject?.(new TitleScreenDisposedError());
   }
 
   private readonly begin = (): void => {
@@ -139,6 +155,7 @@ export class TitleScreen {
     }
     const resolve = this.resolveStart;
     this.resolveStart = undefined;
+    this.rejectStart = undefined;
     this.element.dataset.state = 'departing';
     this.element.setAttribute('aria-hidden', 'true');
     resolve?.();

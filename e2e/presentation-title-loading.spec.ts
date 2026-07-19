@@ -101,6 +101,21 @@ test.describe('Vanta City loading presentation @visual', () => {
     await page.setViewportSize({ width: 1920, height: 800 });
     await openGameplay(page);
     await installLoadingFixture(page, 'slow');
+    await expect(page.getByTestId('loading-screen')).toHaveAttribute(
+      'role',
+      'region',
+    );
+    await expect(page.locator('.loading-screen__phase')).toHaveAttribute(
+      'aria-live',
+      'polite',
+    );
+    await expect(page.locator('.loading-screen__elapsed')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+    await expect(
+      page.getByText('Preparing district · Indeterminate'),
+    ).toBeVisible();
     await expect(
       page.getByText('Still working locally · 5 seconds elapsed'),
     ).toBeVisible();
@@ -172,6 +187,13 @@ async function installLoadingFixture(
       '[data-ui-zone="presentation"]',
     );
     if (!mount) throw new Error('Presentation mount unavailable');
+    if (fixtureMode === 'fatal') {
+      LoadingScreen.createFatal(
+        mount,
+        new Error('Renderer initialization failed: WebGL context unavailable'),
+      );
+      return;
+    }
     const listeners = new Set<(status: unknown) => void>();
     const assets = {
       onStatus(listener: (status: unknown) => void) {
@@ -187,10 +209,6 @@ async function installLoadingFixture(
         listener({ id: 'district.geometry', phase: 'loading', progress: 0.46 });
     } else if (fixtureMode === 'indeterminate') {
       screen.markWorldReady();
-    } else if (fixtureMode === 'fatal') {
-      screen.fail(
-        new Error('Renderer initialization failed: WebGL context unavailable'),
-      );
     } else if (fixtureMode === 'fallback') {
       for (const listener of listeners)
         listener({

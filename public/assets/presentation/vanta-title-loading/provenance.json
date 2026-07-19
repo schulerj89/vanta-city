@@ -5,7 +5,7 @@
     "provider": "OpenAI",
     "model": "gpt-image-2",
     "interface": "official Image API via explicit local CLI",
-    "script": "/Users/jschuler/.codex/skills/.system/imagegen/scripts/image_gen.py",
+    "script": "${CODEX_HOME}/skills/.system/imagegen/scripts/image_gen.py",
     "request": {
       "command": "generate",
       "size": "2048x1152",
