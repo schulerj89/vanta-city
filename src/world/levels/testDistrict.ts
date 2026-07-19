@@ -15,6 +15,7 @@ import {
   intersectionCornerSpawns,
   intersectionLandmarks,
   intersectionLayout,
+  intersectionTrafficControls,
 } from './intersectionLayout';
 import { splineRoadColliders } from './SplineRoadGeometry';
 import {
@@ -237,15 +238,19 @@ for (const offset of [-22, -16, 16, 22]) {
     ),
   );
 }
+for (const control of intersectionTrafficControls.approaches) {
+  markings.push(
+    box(
+      `v.marking-stop-line-${control.approach}`,
+      control.stopLine,
+      control.stopLineSize,
+      colors.marking,
+    ),
+  );
+}
 
 const props: EnvironmentVisualDefinition[] = [
   gltf('v.crosswalk', intersectionAssetIds.crosswalk, [0, 0.015, 0]),
-  gltf(
-    'v.traffic-light',
-    intersectionAssetIds.trafficLight,
-    intersectionLayout.trafficLight,
-    [0, Math.PI, 0],
-  ),
   gltf(
     'v.street-light-nw',
     intersectionAssetIds.streetLight,
@@ -297,6 +302,15 @@ const signalControllerCollider = collider(
   [0.8, 1.3, 0.8],
   ['obstacle', 'interaction'],
 );
+const signalPoleColliders = intersectionTrafficControls.approaches.map(
+  (control) =>
+    collider(
+      `c.traffic-signal-${control.approach}`,
+      [control.pole[0], 2.25, control.pole[2]],
+      [0.34, 4.1, 0.34],
+      ['obstacle', 'camera'],
+    ),
+);
 
 const environment = [
   ...paired.map(({ visual }) => visual),
@@ -321,12 +335,7 @@ const staticCollision = [
   ...splineRoadColliders(eastQuayCurvedRoad),
   ...buildingCollision,
   signalControllerCollider,
-  collider(
-    'c.traffic-light-pole',
-    [8.25, 2.55, 8.25],
-    [0.55, 4.7, 0.55],
-    ['obstacle', 'camera'],
-  ),
+  ...signalPoleColliders,
   collider(
     'c.street-light-nw',
     [-8.5, 3.5, 8.5],
@@ -643,10 +652,17 @@ export const testDistrict = {
       },
       {
         id: 'camera.signal-two-shot',
-        position: [14, 5, 14],
-        lookAt: [7, 1.5, 7],
-        fieldOfView: 48,
-        tags: ['interaction'],
+        position: [15, 4.8, 4],
+        lookAt: [6.8, 4.1, 4],
+        fieldOfView: 44,
+        tags: ['interaction', 'traffic-signal-review'],
+      },
+      {
+        id: 'camera.traffic-signal-north-review',
+        position: [-1.5, 4.8, 15],
+        lookAt: [-1.5, 4.1, 6.8],
+        fieldOfView: 44,
+        tags: ['debug', 'traffic-signal-review'],
       },
       {
         id: 'camera.east-quay-overhead',

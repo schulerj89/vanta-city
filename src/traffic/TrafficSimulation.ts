@@ -3,7 +3,17 @@ import {
   type TrafficVehicleDefinition,
   type TrafficVehicleId,
 } from './TrafficVehicleCatalog';
-import { eastQuayCurvedRoad } from '../world/levels/intersectionLayout';
+import {
+  TrafficSignalController,
+  defaultTrafficSignalConfig,
+  type TrafficSignalConfig,
+  type TrafficSignalGroup,
+  type TrafficSignalIndication,
+} from './TrafficSignalController';
+import {
+  eastQuayCurvedRoad,
+  intersectionTrafficControls,
+} from '../world/levels/intersectionLayout';
 import { world002APlan, world002BPlan } from '../world/levels/junctionGrowth';
 import {
   offsetSplineSamples,
@@ -13,13 +23,20 @@ import {
 } from '../world/levels/SplineRoadGeometry';
 
 export type TrafficApproach = 'north' | 'east' | 'south' | 'west';
-export type TrafficAxis = 'north-south' | 'east-west';
+export type TrafficAxis = TrafficSignalGroup;
 export type TrafficStopReason =
-  'vehicle-ahead' | 'player' | 'intersection' | 'static-world' | undefined;
+  | 'signal-red'
+  | 'signal-yellow'
+  | 'vehicle-ahead'
+  | 'player'
+  | 'blocked-intersection'
+  | 'static-world'
+  | undefined;
 
 export interface TrafficLane {
   readonly approach: TrafficApproach;
   readonly axis: TrafficAxis;
+  readonly signalGroup: TrafficSignalGroup;
   readonly startX: number;
   readonly startZ: number;
   readonly directionX: number;
@@ -27,6 +44,8 @@ export interface TrafficLane {
   readonly yaw: number;
   readonly length: number;
   readonly points: readonly TrafficLanePoint[];
+  readonly detectorStart: number;
+  readonly stopLine: number;
   readonly intersectionEntry: number;
   readonly intersectionExit: number;
 }
@@ -49,6 +68,9 @@ const westOutgoingCurve = trimLaneEnd(
   offsetSplineSamples(curvedCenterline, -1.5),
   trafficBoundaryInset,
 ).map(({ position }) => [position[0], position[2]] as const);
+const straightStopLine =
+  24.5 - intersectionTrafficControls.stopLineDistanceFromCenter;
+const curvedStopLine = polylineLength(eastIncomingCurve) + straightStopLine;
 
 export const ashfallTrafficLanes: readonly TrafficLane[] = [
   lane(
@@ -65,12 +87,14 @@ export const ashfallTrafficLanes: readonly TrafficLane[] = [
       ],
     ],
     26.7,
+    26.7,
     37.3,
   ),
   lane(
     'east',
     'east-west',
     [...eastIncomingCurve, [-24.5, 1.5]],
+    curvedStopLine,
     polylineLength(eastIncomingCurve) + 19.2,
     polylineLength(eastIncomingCurve) + 29.8,
   ),
@@ -88,6 +112,7 @@ export const ashfallTrafficLanes: readonly TrafficLane[] = [
       ],
     ],
     26.7,
+    26.7,
     37.3,
   ),
   lane(
@@ -98,14 +123,16 @@ export const ashfallTrafficLanes: readonly TrafficLane[] = [
       ...westOutgoingCurve,
     ],
     28,
+    28,
     38.6,
   ),
 ];
 
 function lane(
   approach: TrafficApproach,
-  axis: TrafficAxis,
+  signalGroup: TrafficSignalGroup,
   path: readonly (readonly [x: number, z: number])[],
+  stopLine: number,
   intersectionEntry: number,
   intersectionExit: number,
 ): TrafficLane {
@@ -116,7 +143,8 @@ function lane(
   const directionZ = (next.z - start.z) / (next.distance - start.distance);
   return {
     approach,
-    axis,
+    axis: signalGroup,
+    signalGroup,
     startX: start.x,
     startZ: start.z,
     directionX,
@@ -124,6 +152,11 @@ function lane(
     yaw: Math.atan2(directionX, directionZ),
     length: points.at(-1)!.distance,
     points,
+    detectorStart: Math.max(
+      0,
+      stopLine - intersectionTrafficControls.detectorLength,
+    ),
+    stopLine,
     intersectionEntry,
     intersectionExit,
   };
@@ -136,23 +169,33 @@ export interface TrafficConfig {
   readonly minimumSpacing: number;
   readonly detectionDistance: number;
   readonly spawnCadence: number;
+  readonly acceleration: number;
+  readonly braking: number;
+  readonly stopBuffer: number;
   readonly seed: number;
+  readonly signals: TrafficSignalConfig;
 }
 
 export const defaultTrafficConfig: TrafficConfig = {
   enabled: true,
-  maxPopulation: 6,
-  speed: 4.5,
+  maxPopulation: 8,
+  speed: 5.5,
   minimumSpacing: 2,
-  detectionDistance: 7,
-  spawnCadence: 4,
+  detectionDistance: 12,
+  spawnCadence: 1.5,
+  acceleration: 2.8,
+  braking: 5.5,
+  stopBuffer: 0.45,
   seed: 0x415348,
+  signals: defaultTrafficSignalConfig,
 };
 
 export interface TrafficVehicleSnapshot {
   readonly id: string;
   readonly approach: TrafficApproach;
   readonly axis: TrafficAxis;
+  readonly signalGroup: TrafficSignalGroup;
+  readonly signalIndication: TrafficSignalIndication;
   readonly x: number;
   readonly z: number;
   readonly yaw: number;
@@ -161,6 +204,10 @@ export interface TrafficVehicleSnapshot {
   readonly progress: number;
   readonly speed: number;
   readonly stoppingReason: TrafficStopReason;
+  readonly controlDistance: number;
+  readonly queuePosition: number;
+  readonly committedToIntersection: boolean;
+  readonly yellowDecision: 'stop' | 'go' | undefined;
   readonly vehicleType: TrafficVehicleId;
   readonly vehicleLength: number;
   readonly detectionLength: number;
@@ -173,6 +220,9 @@ interface MutableVehicle {
   progress: number;
   speed: number;
   stoppingReason: TrafficStopReason;
+  controlDistance: number;
+  committedToIntersection: boolean;
+  yellowDecision: 'stop' | 'go' | undefined;
 }
 
 export interface TrafficObstacleQueries {
@@ -180,8 +230,9 @@ export interface TrafficObstacleQueries {
   staticDistance?(vehicle: TrafficVehicleSnapshot): number | undefined;
 }
 
-/** Deterministic straight-lane traffic with bounded occupancy and no timers. */
+/** Deterministic lane, signal, queue, and vehicle-motion authority. */
 export class TrafficSimulation {
+  public readonly signals: TrafficSignalController;
   private readonly vehicles: MutableVehicle[] = [];
   private enabled: boolean;
   private spawnElapsed = 0;
@@ -197,8 +248,19 @@ export class TrafficSimulation {
     if (config.maxPopulation < 0 || !Number.isInteger(config.maxPopulation)) {
       throw new Error('Traffic maxPopulation must be a non-negative integer');
     }
+    for (const [label, value] of [
+      ['speed', config.speed],
+      ['acceleration', config.acceleration],
+      ['braking', config.braking],
+      ['minimumSpacing', config.minimumSpacing],
+    ] as const) {
+      if (!Number.isFinite(value) || value <= 0) {
+        throw new Error(`Traffic ${label} must be positive`);
+      }
+    }
     this.enabled = config.enabled;
     this.randomState = config.seed >>> 0;
+    this.signals = new TrafficSignalController(config.signals);
     if (catalog.length === 0) {
       throw new Error('TrafficSimulation requires a vehicle catalog');
     }
@@ -224,19 +286,7 @@ export class TrafficSimulation {
           vehicle.definition.presentation.length + this.config.minimumSpacing,
     );
     if (rearBlocked) return undefined;
-    const definition = this.nextAvailableDefinition();
-    if (!definition) return undefined;
-    const vehicle: MutableVehicle = {
-      id: `traffic-${this.nextId++}`,
-      lane,
-      definition,
-      progress: 0,
-      speed: 0,
-      stoppingReason: undefined,
-    };
-    this.spawned += 1;
-    this.vehicles.push(vehicle);
-    return snapshot(vehicle);
+    return this.createVehicle(lane, 0);
   }
 
   public spawnEachApproach(): number {
@@ -247,82 +297,81 @@ export class TrafficSimulation {
     return count;
   }
 
+  /** Seeds bounded, separated residents without advancing signal time. */
+  public populateResidents(target = this.config.maxPopulation): number {
+    const desired = Math.min(this.config.maxPopulation, Math.max(0, target));
+    if (this.vehicles.length > 0 || desired === 0) return 0;
+    const longest = Math.max(
+      ...this.catalog.map(({ presentation }) => presentation.length),
+    );
+    const separation = longest + this.config.minimumSpacing + 1;
+    const waves = Math.ceil(desired / ashfallTrafficLanes.length);
+    let created = 0;
+    for (let wave = waves - 1; wave >= 0; wave -= 1) {
+      for (const lane of ashfallTrafficLanes) {
+        if (created >= desired) return created;
+        if (this.createVehicle(lane, wave * separation)) created += 1;
+      }
+    }
+    return created;
+  }
+
   public update(delta: number, queries: TrafficObstacleQueries = {}): void {
-    if (!this.enabled || delta <= 0) return;
+    if (!this.enabled || !Number.isFinite(delta) || delta <= 0) return;
+    let remaining = delta;
+    while (remaining > 1e-8) {
+      const step = Math.min(0.05, remaining);
+      this.updateStep(step, queries);
+      remaining -= step;
+    }
+  }
+
+  public clear(): void {
+    this.vehicles.length = 0;
+    this.spawnElapsed = 0;
+    this.signals.reset();
+  }
+
+  public getSnapshot(): {
+    readonly enabled: boolean;
+    readonly count: number;
+    readonly maxPopulation: number;
+    readonly spawned: number;
+    readonly despawned: number;
+    readonly signal: ReturnType<TrafficSignalController['getSnapshot']>;
+    readonly vehicles: readonly TrafficVehicleSnapshot[];
+  } {
+    return {
+      enabled: this.enabled,
+      count: this.vehicles.length,
+      maxPopulation: this.config.maxPopulation,
+      spawned: this.spawned,
+      despawned: this.despawned,
+      signal: this.signals.getSnapshot(),
+      vehicles: this.vehicles.map((vehicle) => this.snapshot(vehicle)),
+    };
+  }
+
+  private updateStep(delta: number, queries: TrafficObstacleQueries): void {
+    this.signals.update(delta);
     this.spawnElapsed += delta;
     while (
       this.config.spawnCadence > 0 &&
       this.spawnElapsed >= this.config.spawnCadence
     ) {
       this.spawnElapsed -= this.config.spawnCadence;
-      const approach = ashfallTrafficLanes[this.nextRandom() % 4]!.approach;
-      this.spawn(approach);
+      const startIndex = this.nextRandom() % ashfallTrafficLanes.length;
+      for (let offset = 0; offset < ashfallTrafficLanes.length; offset += 1) {
+        const lane =
+          ashfallTrafficLanes[
+            (startIndex + offset) % ashfallTrafficLanes.length
+          ]!;
+        if (this.spawn(lane.approach)) break;
+      }
     }
 
-    const reservedAxis = this.resolveIntersectionReservation();
     const ordered = [...this.vehicles].sort((a, b) => b.progress - a.progress);
-    for (const vehicle of ordered) {
-      const view = snapshot(vehicle);
-      let allowed = this.config.speed * delta;
-      let reason: TrafficStopReason;
-      const ahead = this.vehicles
-        .filter(
-          (other) =>
-            other !== vehicle &&
-            other.lane === vehicle.lane &&
-            other.progress > vehicle.progress,
-        )
-        .sort((a, b) => a.progress - b.progress)[0];
-      if (ahead) {
-        const clearance =
-          ahead.progress -
-          vehicle.progress -
-          Math.max(
-            ahead.definition.presentation.length,
-            vehicle.definition.presentation.length,
-          ) -
-          this.config.minimumSpacing;
-        if (clearance < allowed) {
-          allowed = Math.max(0, clearance);
-          reason = 'vehicle-ahead';
-        }
-      }
-
-      const intersectionEntry = vehicle.lane.intersectionEntry;
-      if (
-        reservedAxis !== undefined &&
-        vehicle.lane.axis !== reservedAxis &&
-        vehicle.progress < intersectionEntry &&
-        vehicle.progress + allowed > intersectionEntry
-      ) {
-        allowed = Math.max(0, intersectionEntry - vehicle.progress);
-        reason = 'intersection';
-      }
-
-      for (const [obstacleReason, distance] of [
-        ['player', queries.playerDistance?.(view)],
-        ['static-world', queries.staticDistance?.(view)],
-      ] as const) {
-        if (
-          distance !== undefined &&
-          distance <
-            Math.min(
-              vehicle.definition.presentation.detectionLength,
-              this.config.detectionDistance,
-            )
-        ) {
-          const clearance = Math.max(0, distance - this.config.minimumSpacing);
-          if (clearance < allowed) {
-            allowed = clearance;
-            reason = obstacleReason;
-          }
-        }
-      }
-      vehicle.progress += allowed;
-      vehicle.speed = delta > 0 ? allowed / delta : 0;
-      vehicle.stoppingReason =
-        allowed + 1e-6 < this.config.speed * delta ? reason : undefined;
-    }
+    for (const vehicle of ordered) this.updateVehicle(vehicle, delta, queries);
 
     const before = this.vehicles.length;
     for (let index = this.vehicles.length - 1; index >= 0; index -= 1) {
@@ -333,54 +382,177 @@ export class TrafficSimulation {
     this.despawned += before - this.vehicles.length;
   }
 
-  public clear(): void {
-    this.vehicles.length = 0;
-    this.spawnElapsed = 0;
-  }
-
-  public getSnapshot(): {
-    readonly enabled: boolean;
-    readonly count: number;
-    readonly maxPopulation: number;
-    readonly spawned: number;
-    readonly despawned: number;
-    readonly vehicles: readonly TrafficVehicleSnapshot[];
-  } {
-    return {
-      enabled: this.enabled,
-      count: this.vehicles.length,
-      maxPopulation: this.config.maxPopulation,
-      spawned: this.spawned,
-      despawned: this.despawned,
-      vehicles: this.vehicles.map(snapshot),
-    };
-  }
-
-  private resolveIntersectionReservation(): TrafficAxis | undefined {
-    const inside = this.vehicles
+  private updateVehicle(
+    vehicle: MutableVehicle,
+    delta: number,
+    queries: TrafficObstacleQueries,
+  ): void {
+    const halfLength = vehicle.definition.presentation.length / 2;
+    let clearance = Number.POSITIVE_INFINITY;
+    let reason: TrafficStopReason;
+    const ahead = this.vehicles
       .filter(
-        ({ progress, lane }) =>
-          progress >= lane.intersectionEntry &&
-          progress <= lane.intersectionExit,
+        (other) =>
+          other !== vehicle &&
+          other.lane === vehicle.lane &&
+          other.progress > vehicle.progress,
       )
-      .sort((a, b) => a.id.localeCompare(b.id));
-    if (inside[0]) return inside[0].lane.axis;
-    const approaching = this.vehicles
-      .filter(({ progress, lane }) => progress < lane.intersectionEntry)
-      .sort((a, b) => {
-        const distance =
-          a.lane.intersectionEntry -
-          a.progress -
-          (b.lane.intersectionEntry - b.progress);
-        return distance || a.id.localeCompare(b.id);
-      });
-    return approaching[0]?.lane.axis;
+      .sort((a, b) => a.progress - b.progress)[0];
+    if (ahead) {
+      const followingClearance =
+        ahead.progress -
+        vehicle.progress -
+        ahead.definition.presentation.length / 2 -
+        halfLength -
+        this.config.minimumSpacing;
+      if (followingClearance < clearance) {
+        clearance = followingClearance;
+        reason = 'vehicle-ahead';
+      }
+    }
+
+    const frontProgress = vehicle.progress + halfLength;
+    const signalDistance =
+      vehicle.lane.stopLine - frontProgress - this.config.stopBuffer;
+    const indication = this.signals.indication(vehicle.lane.signalGroup);
+    if (
+      frontProgress < vehicle.lane.stopLine &&
+      !vehicle.committedToIntersection
+    ) {
+      if (indication === 'yellow') {
+        const stoppingDistance =
+          (vehicle.speed * vehicle.speed) / (2 * this.config.braking) +
+          vehicle.speed * 0.35;
+        vehicle.yellowDecision ??=
+          signalDistance <= stoppingDistance ? 'go' : 'stop';
+        if (vehicle.yellowDecision === 'go') {
+          vehicle.committedToIntersection = true;
+        } else if (signalDistance < clearance) {
+          clearance = signalDistance;
+          reason = 'signal-yellow';
+        }
+      } else if (indication === 'green') {
+        vehicle.yellowDecision = undefined;
+      } else if (indication === 'red' && signalDistance < clearance) {
+        clearance = signalDistance;
+        reason = 'signal-red';
+      }
+    }
+
+    const conflictingOccupant = this.vehicles.some(
+      (other) =>
+        other !== vehicle &&
+        other.lane.axis !== vehicle.lane.axis &&
+        other.progress >= other.lane.intersectionEntry &&
+        other.progress <= other.lane.intersectionExit,
+    );
+    if (
+      conflictingOccupant &&
+      frontProgress < vehicle.lane.intersectionEntry &&
+      !vehicle.committedToIntersection
+    ) {
+      const entryClearance =
+        vehicle.lane.stopLine - frontProgress - this.config.stopBuffer;
+      if (entryClearance < clearance) {
+        clearance = entryClearance;
+        reason = 'blocked-intersection';
+      }
+    }
+
+    const view = this.snapshot(vehicle);
+    for (const [obstacleReason, distance] of [
+      ['player', queries.playerDistance?.(view)],
+      ['static-world', queries.staticDistance?.(view)],
+    ] as const) {
+      if (distance !== undefined) {
+        const obstacleClearance = distance - this.config.minimumSpacing;
+        if (obstacleClearance < clearance) {
+          clearance = obstacleClearance;
+          reason = obstacleReason;
+        }
+      }
+    }
+
+    clearance = Math.max(0, clearance);
+    const targetSpeed = Number.isFinite(clearance)
+      ? Math.min(
+          this.config.speed,
+          Math.sqrt(2 * this.config.braking * clearance),
+        )
+      : this.config.speed;
+    const rate =
+      targetSpeed < vehicle.speed
+        ? this.config.braking
+        : this.config.acceleration;
+    vehicle.speed = moveToward(vehicle.speed, targetSpeed, rate * delta);
+    const movement = Math.min(vehicle.speed * delta, clearance);
+    vehicle.progress += movement;
+    vehicle.controlDistance = Number.isFinite(clearance) ? clearance : -1;
+    vehicle.stoppingReason = Number.isFinite(clearance) ? reason : undefined;
+    if (vehicle.progress > vehicle.lane.intersectionExit) {
+      vehicle.committedToIntersection = false;
+      vehicle.yellowDecision = undefined;
+    }
+  }
+
+  private snapshot(vehicle: MutableVehicle): TrafficVehicleSnapshot {
+    const point = pointAlongLane(vehicle.lane, vehicle.progress);
+    const queue = this.vehicles.filter(
+      (other) =>
+        other.lane === vehicle.lane &&
+        other.progress > vehicle.progress &&
+        other.progress < vehicle.lane.intersectionEntry,
+    ).length;
+    return {
+      id: vehicle.id,
+      approach: vehicle.lane.approach,
+      axis: vehicle.lane.axis,
+      signalGroup: vehicle.lane.signalGroup,
+      signalIndication: this.signals.indication(vehicle.lane.signalGroup),
+      x: point.x,
+      z: point.z,
+      yaw: Math.atan2(point.directionX, point.directionZ),
+      directionX: point.directionX,
+      directionZ: point.directionZ,
+      progress: vehicle.progress,
+      speed: vehicle.speed,
+      stoppingReason: vehicle.stoppingReason,
+      controlDistance: vehicle.controlDistance,
+      queuePosition: queue,
+      committedToIntersection: vehicle.committedToIntersection,
+      yellowDecision: vehicle.yellowDecision,
+      vehicleType: vehicle.definition.id,
+      vehicleLength: vehicle.definition.presentation.length,
+      detectionLength: vehicle.definition.presentation.detectionLength,
+    };
   }
 
   private nextRandom(): number {
     this.randomState =
       (Math.imul(this.randomState, 1_664_525) + 1_013_904_223) >>> 0;
     return this.randomState;
+  }
+
+  private createVehicle(
+    lane: TrafficLane,
+    progress: number,
+  ): TrafficVehicleSnapshot | undefined {
+    const definition = this.nextAvailableDefinition();
+    if (!definition) return undefined;
+    const vehicle: MutableVehicle = {
+      id: `traffic-${this.nextId++}`,
+      lane,
+      definition,
+      progress,
+      speed: 0,
+      stoppingReason: undefined,
+      controlDistance: Math.max(0, lane.stopLine - progress),
+      committedToIntersection: false,
+      yellowDecision: undefined,
+    };
+    this.spawned += 1;
+    this.vehicles.push(vehicle);
+    return this.snapshot(vehicle);
   }
 
   private nextAvailableDefinition(): TrafficVehicleDefinition | undefined {
@@ -401,32 +573,21 @@ export class TrafficSimulation {
   }
 }
 
+function moveToward(
+  value: number,
+  target: number,
+  maximumDelta: number,
+): number {
+  if (value < target) return Math.min(target, value + maximumDelta);
+  return Math.max(target, value - maximumDelta);
+}
+
 function slotCapacity(
   index: number,
   catalogSize: number,
   poolSize: number,
 ): number {
   return Math.max(0, Math.ceil((poolSize - index) / catalogSize));
-}
-
-function snapshot(vehicle: MutableVehicle): TrafficVehicleSnapshot {
-  const point = pointAlongLane(vehicle.lane, vehicle.progress);
-  return {
-    id: vehicle.id,
-    approach: vehicle.lane.approach,
-    axis: vehicle.lane.axis,
-    x: point.x,
-    z: point.z,
-    yaw: Math.atan2(point.directionX, point.directionZ),
-    directionX: point.directionX,
-    directionZ: point.directionZ,
-    progress: vehicle.progress,
-    speed: vehicle.speed,
-    stoppingReason: vehicle.stoppingReason,
-    vehicleType: vehicle.definition.id,
-    vehicleLength: vehicle.definition.presentation.length,
-    detectionLength: vehicle.definition.presentation.detectionLength,
-  };
 }
 
 function cumulativePoints(
