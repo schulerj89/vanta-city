@@ -13,6 +13,13 @@ import {
   measureModelBounds,
 } from '../characters/CharacterVisualAlignment';
 import type { CollisionWorld } from '../physics/CollisionWorld';
+import {
+  pedestrianCollisionRadius,
+  type PedestrianBoundaryEdge,
+  type PedestrianBoundaryLifecyclePolicy,
+  type PedestrianLifecycleReason,
+  type PedestrianRouteLifecycleState,
+} from './PedestrianBoundaryLifecyclePolicy';
 import type { PedestrianRouteDefinition } from './PedestrianRouteDefinition';
 
 export interface PedestrianCharacterLoader {
@@ -29,6 +36,12 @@ export interface PedestrianSnapshot {
   readonly segmentId: string;
   readonly targetNodeId: string;
   readonly state: PedestrianMovementState;
+  readonly lifecycleState: PedestrianRouteLifecycleState;
+  readonly lifecycleReason: PedestrianLifecycleReason | null;
+  readonly boundaryEdge: PedestrianBoundaryEdge | null;
+  readonly signedBoundaryDistance: number | null;
+  readonly visible: boolean;
+  readonly distanceTravelled: number;
   readonly speed: number;
   readonly modelId: string;
   readonly modelSource: LoadedCharacter['source'] | 'pending';
@@ -40,8 +53,17 @@ export interface PedestrianSnapshot {
   readonly mixerOwnerCount: number;
 }
 
+export interface PedestrianUpdateResult {
+  readonly shouldDespawn: boolean;
+  readonly reason: Extract<
+    PedestrianLifecycleReason,
+    'authored-boundary-exit'
+  > | null;
+  readonly edge: PedestrianBoundaryEdge | null;
+}
+
 const shape = {
-  radius: 0.3,
+  radius: pedestrianCollisionRadius,
   height: 1.78,
   stepHeight: 0.28,
   maxSlopeAngle: Math.PI / 4,
@@ -62,6 +84,12 @@ export class PedestrianEntity {
   private grounded = true;
   private groundColliderId: string;
   private active = true;
+  private visible = true;
+  private distanceTravelled = 0;
+  private lifecycleState: PedestrianRouteLifecycleState = 'resident';
+  private boundaryEdge: PedestrianBoundaryEdge | null = null;
+  private signedBoundaryDistance: number | null = null;
+  private disposed = false;
 
   public constructor(
     public readonly id: string,
@@ -72,6 +100,7 @@ export class PedestrianEntity {
     public readonly speed: number,
     startNodeIndex: number,
     private readonly pauseUnit: number,
+    private readonly boundaryLifecycle: PedestrianBoundaryLifecyclePolicy,
   ) {
     const node = route.nodes[startNodeIndex]!;
     this.targetNodeIndex = (startNodeIndex + 1) % route.nodes.length;
@@ -80,10 +109,15 @@ export class PedestrianEntity {
     this.groundColliderId = node.surfaceColliderId;
     this.visualRoot.name = `${id}:visual-alignment`;
     this.object3d.add(this.visualRoot);
+    this.evaluateLifecycle();
   }
 
   public async init(): Promise<void> {
     const loaded = await this.loader.instantiate(this.character);
+    if (this.disposed) {
+      loaded.dispose();
+      return;
+    }
     this.loaded = loaded;
     try {
       const bounds = measureModelBounds(loaded.root);
@@ -105,9 +139,11 @@ export class PedestrianEntity {
   }
 
   public setActive(active: boolean): void {
+    this.visible = active;
+    this.object3d.visible = active;
+    if (!this.route.loop) return;
     if (this.active === active) return;
     this.active = active;
-    this.object3d.visible = active;
     if (!active) {
       this.state = 'inactive';
       this.play('idle');
@@ -117,15 +153,20 @@ export class PedestrianEntity {
     }
   }
 
-  public update(delta: number, neighbors: readonly PedestrianEntity[]): void {
-    if (!this.active || !this.loaded) return;
+  public update(
+    delta: number,
+    neighbors: readonly PedestrianEntity[],
+  ): PedestrianUpdateResult {
+    const beforeMovement = this.evaluateLifecycle();
+    if (beforeMovement.shouldDespawn) return beforeMovement;
+    if (!this.active || !this.loaded) return noDespawn;
     const safeDelta = Math.max(0, delta);
     if (this.pauseRemaining > 0) {
       this.pauseRemaining = Math.max(0, this.pauseRemaining - safeDelta);
       this.state = 'idle';
       this.play('idle');
       this.updatePresentation(safeDelta);
-      return;
+      return this.evaluateLifecycle();
     }
 
     const targetNode = this.route.nodes[this.targetNodeIndex]!;
@@ -136,8 +177,12 @@ export class PedestrianEntity {
     if (distance <= 0.06) {
       this.object3d.position.set(...targetNode.position);
       const reachedIndex = this.targetNodeIndex;
-      this.targetNodeIndex =
-        (this.targetNodeIndex + 1) % this.route.nodes.length;
+      if (this.route.loop) {
+        this.targetNodeIndex =
+          (this.targetNodeIndex + 1) % this.route.nodes.length;
+      } else if (this.targetNodeIndex < this.route.nodes.length - 1) {
+        this.targetNodeIndex += 1;
+      }
       const pause = this.route.nodes[reachedIndex]?.pauseSeconds;
       if (pause) {
         this.pauseRemaining = MathUtils.lerp(
@@ -149,7 +194,7 @@ export class PedestrianEntity {
         this.play('idle');
       }
       this.updatePresentation(safeDelta);
-      return;
+      return this.evaluateLifecycle();
     }
 
     direction.normalize();
@@ -159,7 +204,7 @@ export class PedestrianEntity {
       this.state = 'idle';
       this.play('idle');
       this.updatePresentation(safeDelta);
-      return;
+      return this.evaluateLifecycle();
     }
     const displacement = direction.clone().multiplyScalar(travel);
     const dynamicHit = this.collision.castDynamicSegment?.(
@@ -172,7 +217,7 @@ export class PedestrianEntity {
       this.state = 'idle';
       this.play('idle');
       this.updatePresentation(safeDelta);
-      return;
+      return this.evaluateLifecycle();
     }
     const result = this.collision.moveCharacter(
       this.object3d.position,
@@ -180,7 +225,12 @@ export class PedestrianEntity {
       shape,
       this.grounded,
     );
+    const previousPosition = this.object3d.position.clone();
     this.object3d.position.copy(result.position);
+    this.distanceTravelled += Math.hypot(
+      this.object3d.position.x - previousPosition.x,
+      this.object3d.position.z - previousPosition.z,
+    );
     this.grounded = result.grounded;
     this.groundColliderId = result.groundColliderId;
     if (result.blocked) {
@@ -198,6 +248,23 @@ export class PedestrianEntity {
       this.play('walk');
     }
     this.updatePresentation(safeDelta);
+    return this.evaluateLifecycle();
+  }
+
+  private evaluateLifecycle(): PedestrianUpdateResult {
+    const decision = this.boundaryLifecycle.evaluate(
+      this.route,
+      this.object3d.position,
+      this.targetNodeIndex,
+    );
+    this.lifecycleState = decision.state;
+    this.boundaryEdge = decision.edge;
+    this.signedBoundaryDistance = decision.signedBoundaryDistance;
+    return {
+      shouldDespawn: decision.shouldDespawn,
+      reason: decision.reason,
+      edge: decision.edge,
+    };
   }
 
   private personalSpacingScale(
@@ -220,7 +287,7 @@ export class PedestrianEntity {
   }
 
   private updatePresentation(delta: number): void {
-    this.mixer?.update(delta);
+    if (this.visible) this.mixer?.update(delta);
     if (this.loaded) this.loaded.root.position.copy(this.modelOffset);
   }
 
@@ -239,9 +306,10 @@ export class PedestrianEntity {
   }
 
   public getSnapshot(): PedestrianSnapshot {
-    const previousIndex =
-      (this.targetNodeIndex - 1 + this.route.nodes.length) %
-      this.route.nodes.length;
+    const previousIndex = this.route.loop
+      ? (this.targetNodeIndex - 1 + this.route.nodes.length) %
+        this.route.nodes.length
+      : Math.max(0, this.targetNodeIndex - 1);
     return {
       id: this.id,
       routeId: this.route.id,
@@ -249,6 +317,12 @@ export class PedestrianEntity {
       segmentId: `${this.route.nodes[previousIndex]!.id}->${this.route.nodes[this.targetNodeIndex]!.id}`,
       targetNodeId: this.route.nodes[this.targetNodeIndex]!.id,
       state: this.state,
+      lifecycleState: this.lifecycleState,
+      lifecycleReason: null,
+      boundaryEdge: this.boundaryEdge,
+      signedBoundaryDistance: this.signedBoundaryDistance,
+      visible: this.visible,
+      distanceTravelled: this.distanceTravelled,
       speed: this.state === 'walking' ? this.speed : 0,
       modelId: this.character.id,
       modelSource: this.loaded?.source ?? 'pending',
@@ -262,6 +336,11 @@ export class PedestrianEntity {
   }
 
   public dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.active = false;
+    this.visible = false;
+    this.object3d.visible = false;
     this.action?.stop();
     if (this.mixer && this.loaded) {
       this.mixer.stopAllAction();
@@ -275,6 +354,12 @@ export class PedestrianEntity {
     this.object3d.clear();
   }
 }
+
+const noDespawn: PedestrianUpdateResult = {
+  shouldDespawn: false,
+  reason: null,
+  edge: null,
+};
 
 function smoothYaw(current: number, target: number, delta: number): number {
   const difference = Math.atan2(

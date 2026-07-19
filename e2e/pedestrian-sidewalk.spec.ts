@@ -5,7 +5,9 @@ import { join } from 'node:path';
 import type { BrowserTestSnapshot } from '../src/debug/BrowserTestBridge';
 
 const appUrl = '/?e2e=1&debug=0&skipPicker=1&cinematics=0&time=13';
-const outputDirectory = join(process.cwd(), 'docs/screenshots/pedestrian-002');
+const outputDirectory =
+  process.env.VANTA_PEDESTRIAN_EVIDENCE_DIR ??
+  join(process.cwd(), 'docs/screenshots/pedestrian-002');
 
 test('populates authored sidewalks, freezes cinematics, and captures visual evidence', async ({
   page,

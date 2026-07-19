@@ -1,5 +1,11 @@
 import type { LevelDefinition } from '../world/LevelDefinition';
 import type { Vector3Tuple } from '../world/Spatial';
+import {
+  getPedestrianRouteDistance,
+  getSignedPedestrianBoundaryDistance,
+  pedestrianCollisionRadius,
+  type PedestrianBoundaryEdge,
+} from './PedestrianBoundaryLifecyclePolicy';
 
 export interface PedestrianRouteNodeDefinition {
   readonly id: string;
@@ -10,14 +16,37 @@ export interface PedestrianRouteNodeDefinition {
   readonly pauseSeconds?: readonly [minimum: number, maximum: number];
 }
 
-export interface PedestrianRouteDefinition {
+interface PedestrianRouteBaseDefinition {
   readonly id: string;
   readonly sectorId: string;
   readonly nodes: readonly PedestrianRouteNodeDefinition[];
-  readonly loop: true;
   readonly population: number;
   readonly speed: readonly [minimum: number, maximum: number];
 }
+
+export interface PedestrianLoopRouteDefinition extends PedestrianRouteBaseDefinition {
+  readonly loop: true;
+  readonly exit?: never;
+}
+
+export interface PedestrianBoundaryExitDefinition {
+  /** The one authoritative map edge this route intentionally leaves. */
+  readonly edge: PedestrianBoundaryEdge;
+  /** Distance the foot origin travels beyond the map edge before disposal. */
+  readonly clearance: number;
+  /** Guards against tiny edge loops being presented as long traversal. */
+  readonly minimumTraversalDistance: number;
+  /** Exited residents return only after their owning sector unloads and reloads. */
+  readonly repopulation: 'sector-reload';
+}
+
+export interface PedestrianBoundaryExitRouteDefinition extends PedestrianRouteBaseDefinition {
+  readonly loop: false;
+  readonly exit: PedestrianBoundaryExitDefinition;
+}
+
+export type PedestrianRouteDefinition =
+  PedestrianLoopRouteDefinition | PedestrianBoundaryExitRouteDefinition;
 
 export interface PedestrianPopulationDefinition {
   readonly seed: number;
@@ -28,7 +57,10 @@ export interface PedestrianPopulationDefinition {
 }
 
 export function validatePedestrianPopulation(
-  level: Pick<LevelDefinition, 'staticCollision' | 'streaming'>,
+  level: Pick<
+    LevelDefinition,
+    'mapPresentation' | 'staticCollision' | 'streaming'
+  >,
   definition: PedestrianPopulationDefinition | undefined,
   issues: string[],
 ): void {
@@ -126,11 +158,118 @@ export function validatePedestrianPopulation(
       issues.push(
         `${route.id} crosses sidewalk surfaces; split it into curb-safe routes`,
       );
+    validateRouteLifecycle(level, route, issues);
   }
   if (population > definition.residentCap)
     issues.push(
       `pedestrians authored population ${population} exceeds residentCap ${definition.residentCap}`,
     );
+}
+
+function validateRouteLifecycle(
+  level: Pick<LevelDefinition, 'mapPresentation'>,
+  route: PedestrianRouteDefinition,
+  issues: string[],
+): void {
+  if (route.loop) return;
+  const bounds = level.mapPresentation?.bounds;
+  if (!bounds) {
+    issues.push(`${route.id} boundary exit requires mapPresentation.bounds`);
+    return;
+  }
+  if (route.population !== 1) {
+    issues.push(
+      `${route.id} boundary exit population must be 1 to prevent overlapping edge-route spawns`,
+    );
+  }
+  if (
+    !Number.isFinite(route.exit.clearance) ||
+    route.exit.clearance < pedestrianCollisionRadius
+  ) {
+    issues.push(
+      `${route.id}.exit.clearance must be at least the ${pedestrianCollisionRadius}m pedestrian radius`,
+    );
+  }
+  if (
+    !Number.isFinite(route.exit.minimumTraversalDistance) ||
+    route.exit.minimumTraversalDistance <= 0
+  ) {
+    issues.push(`${route.id}.exit.minimumTraversalDistance must be positive`);
+  } else {
+    const distance = getPedestrianRouteDistance(route);
+    if (distance + 1e-6 < route.exit.minimumTraversalDistance) {
+      issues.push(
+        `${route.id} traversal ${distance.toFixed(3)}m is shorter than required ${route.exit.minimumTraversalDistance.toFixed(3)}m`,
+      );
+    }
+  }
+
+  if (route.nodes.length < 2) return;
+
+  const lastIndex = route.nodes.length - 1;
+  const terminal = route.nodes[lastIndex]!;
+  const beforeTerminal = route.nodes[lastIndex - 1]!;
+  for (const node of route.nodes.slice(0, -1)) {
+    if (!pointInsideMapBounds(node.position, bounds)) {
+      issues.push(
+        `${route.id}.${node.id} must remain inside map bounds before the terminal edge node`,
+      );
+    }
+  }
+  if (
+    !pointInsideOrthogonalEdgeBounds(terminal.position, bounds, route.exit.edge)
+  ) {
+    issues.push(
+      `${route.id}.${terminal.id} must leave only the authored ${route.exit.edge} map edge`,
+    );
+  }
+  const beforeDistance = getSignedPedestrianBoundaryDistance(
+    beforeTerminal.position,
+    bounds,
+    route.exit.edge,
+  );
+  const terminalDistance = getSignedPedestrianBoundaryDistance(
+    terminal.position,
+    bounds,
+    route.exit.edge,
+  );
+  if (beforeDistance >= 0) {
+    issues.push(
+      `${route.id}.${beforeTerminal.id} must approach the ${route.exit.edge} edge from inside map bounds`,
+    );
+  }
+  if (terminalDistance + 1e-6 < route.exit.clearance) {
+    issues.push(
+      `${route.id}.${terminal.id} must extend at least ${route.exit.clearance.toFixed(3)}m beyond the ${route.exit.edge} map edge`,
+    );
+  }
+  if (terminalDistance <= beforeDistance) {
+    issues.push(
+      `${route.id} terminal segment must move outward through the ${route.exit.edge} map edge`,
+    );
+  }
+}
+
+function pointInsideMapBounds(
+  point: Vector3Tuple,
+  bounds: NonNullable<LevelDefinition['mapPresentation']>['bounds'],
+): boolean {
+  return (
+    point[0] >= bounds.minX - 1e-6 &&
+    point[0] <= bounds.maxX + 1e-6 &&
+    point[2] >= bounds.minZ - 1e-6 &&
+    point[2] <= bounds.maxZ + 1e-6
+  );
+}
+
+function pointInsideOrthogonalEdgeBounds(
+  point: Vector3Tuple,
+  bounds: NonNullable<LevelDefinition['mapPresentation']>['bounds'],
+  edge: PedestrianBoundaryEdge,
+): boolean {
+  return edge === 'east' || edge === 'west'
+    ? point[2] >= bounds.minZ - 1e-6 && point[2] <= bounds.maxZ + 1e-6
+    : point[0] >= bounds.minX - 1e-6 && point[0] <= bounds.maxX + 1e-6;
 }
 
 function pointInsideColliderXZ(
