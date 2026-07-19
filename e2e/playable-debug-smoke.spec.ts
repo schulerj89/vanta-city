@@ -1725,7 +1725,7 @@ test.describe('playable debug district', () => {
       speakerName: 'Mack',
       renderedText: 'You made the 5:42. Orin didn’t.',
     });
-    expect(first.dialogue.ui.portraitResolution).toContain('fallback');
+    expect(first.dialogue.ui.portraitResolution).toBe('none:line-hidden');
 
     const stoppedAt = first.player.position;
     await page.keyboard.down('w');
@@ -1748,7 +1748,7 @@ test.describe('playable debug district', () => {
     expect(rook.dialogue.ui).toMatchObject({
       speakerName: 'Rook',
       renderedText: 'How long?',
-      portraitResolution: 'fallback:player-identity-fallback',
+      portraitResolution: 'none:line-hidden',
     });
 
     await page.keyboard.press('Enter');

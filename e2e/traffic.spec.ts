@@ -51,7 +51,7 @@ test.describe('bounded autonomous traffic', () => {
     const failures = monitorFailures(page);
     await openReady(page);
     await command(page, 'runtime.pause-resume');
-    await command(page, 'player.teleport-position', '-1.5,0,17,0');
+    await command(page, 'player.teleport-position', '-1.5,0,24,0');
     await command(page, 'traffic.spawn-each-approach');
     await command(page, 'traffic.step', '0.5');
     expect(

@@ -117,7 +117,7 @@ describe('MissionSystem', () => {
       currentObjectiveId: 'ash-001-hear-mack-out',
       canCancel: true,
     });
-    expect(contentRequests).toEqual(['cinematic.ash-001.opening']);
+    expect(contentRequests).toEqual([]);
 
     completeDialogue(h.dialogue);
     expect(h.missions.getSnapshot().missions[0]).toMatchObject({
@@ -131,10 +131,7 @@ describe('MissionSystem', () => {
         referenceId: 'location.ash-001.contact-yard',
       },
     });
-    expect(contentRequests).toEqual([
-      'cinematic.ash-001.opening',
-      'cinematic.ash-001.destination-reveal',
-    ]);
+    expect(contentRequests).toEqual(['cinematic.ash-001.destination-reveal']);
 
     h.missions.dispatch({
       type: 'world-location-entered',
@@ -163,7 +160,7 @@ describe('MissionSystem', () => {
       locationId: 'location.ash-001.contact-yard',
     });
     expect(h.money.balance).toBe(575);
-    expect(contentRequests).toHaveLength(2);
+    expect(contentRequests).toHaveLength(1);
     h.missions.dispose();
   });
 

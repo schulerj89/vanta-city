@@ -29,7 +29,7 @@
       "Mission, cinematic-sequence, full-map, and single-vehicle control foundations exist. General persistence storage, scheduling, pathfinding, production combat AI, cinematic performance ownership, and cross-level cinematic transition remain unimplemented."
     ],
     "intentionalCorrections": [
-      "The first mission keeps cinematic.ash-001.opening as its required arrival presentation and requests cinematic.ash-001.destination-reveal after Mack's briefing; neither cinematic is an objective or may grant mission progress."
+      "The title and boot flow own cinematic.ash-001.opening before the first mission begins; the mission requests cinematic.ash-001.destination-reveal after Mack's briefing, and neither cinematic is an objective or may grant mission progress."
     ],
     "runtimeBoundary": "This bible is planning data only. It is not imported by runtime startup, does not register entities or listeners, and does not claim unimplemented systems."
   },

@@ -67,12 +67,6 @@ export const missionDefinitions = validateMissionDefinitions([
     contentRequests: [
       {
         kind: 'cinematic',
-        referenceId: 'cinematic.ash-001.opening',
-        optional: false,
-        phase: 'started',
-      },
-      {
-        kind: 'cinematic',
         referenceId: 'cinematic.ash-001.destination-reveal',
         optional: true,
         phase: 'objective-completed',

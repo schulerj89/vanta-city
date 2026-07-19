@@ -6,7 +6,7 @@
 
 MISSION-001 added one authoritative mission/objective runtime and the production skeleton for `ash-001-walk-the-block` (Walk the Block). The structured Ashfall story bible remains canon authority. MISSION-002 now uses `trigger.intersection-center`, public completion of `conversation.mack.introduction`, and WORLD-002's `location.ash-001.contact-yard`. It preserves Mack at `spawn.npc-mechanic` and Nox at `spawn.npc-alley` without changing their entity, speaker, conversation, character, or spawn IDs.
 
-No later mission, cinematic sequence, map system, dynamic route, loaded model, camera, DOM node, or browser listener belongs in mission definitions. The required `cinematic.ash-001.opening` and optional `cinematic.ash-001.destination-reveal` remain typed requests for CINEMATIC-001 and never advance objectives.
+No later mission, cinematic sequence, map system, dynamic route, loaded model, camera, DOM node, or browser listener belongs in mission definitions. The title/boot flow owns `cinematic.ash-001.opening`; the optional `cinematic.ash-001.destination-reveal` remains a typed mission request and never advances objectives.
 
 Integration visual review keeps `spawn.npc-mechanic` authoritative but places it at `[-12, 0.22, 9.5]`, west of `c.street-light-nw`. The prior position made a common east-side interaction straddle the pole, so no participant-relative camera profile could reliably show both speakers. The stable NPC, speaker, conversation, portrait, character, mission, and spawn IDs remain unchanged; the camera system still exclusively owns the active camera.
 

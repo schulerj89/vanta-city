@@ -337,6 +337,28 @@
       ]
     },
     {
+      "id": "WORLD-002A",
+      "title": "Expand Ashfall Junction on all four sides",
+      "status": "completed",
+      "dependencies": ["WORLD-001", "PERF-001"],
+      "owner": "world-worker",
+      "acceptance": [
+        "Increase the authored Junction footprint by 20–30 percent and keep roads, collision, traffic lanes, sidewalks, sectors, and maps on shared world definitions.",
+        "Add production buildings and textured street frontage with recorded day, night, street-level, and overhead visual evidence."
+      ]
+    },
+    {
+      "id": "WORLD-002B",
+      "title": "Complete the Junction growth and contact-yard destination",
+      "status": "completed",
+      "dependencies": ["WORLD-002A"],
+      "owner": "world-worker",
+      "acceptance": [
+        "Reach 6125 square metres of playable Junction area while preserving streaming, collision, camera recovery, and pedestrian clearance.",
+        "Author the first mission contact yard, cinematic camera anchor, additional textured buildings, and full-map representation through public world contracts."
+      ]
+    },
+    {
       "id": "NPC-001",
       "title": "Acquire and validate the first expanded pedestrian cast",
       "status": "completed",
@@ -346,6 +368,17 @@
         "Add at least four license-verified low-poly NPC models that fit Ashfall's art direction.",
         "Each NPC has production idle and interaction animation coverage, documented provenance, correct scale/forward direction, disposal tests, and animation-lab controls.",
         "No placeholder model is accepted as the completed visual."
+      ]
+    },
+    {
+      "id": "PEDESTRIAN-002",
+      "title": "Populate sidewalks with walking pedestrians",
+      "status": "completed",
+      "dependencies": ["NPC-001", "WORLD-002B"],
+      "owner": "pedestrian-worker",
+      "acceptance": [
+        "Pedestrians walk authored sidewalk routes, avoid nonwalkable space, pause and resume with game state, and retain deterministic lifecycle ownership.",
+        "Use production character assets and working locomotion or idle performances with desktop, narrow, day, night, and overhead evidence."
       ]
     },
     {
@@ -370,6 +403,18 @@
         "Use a production traffic vehicle asset for enter, seated ownership, acceleration, braking, reverse, steering, collision, camera, exit placement, pause, and recovery.",
         "Player simulation and vehicle simulation have explicit ownership transfer without duplicate input listeners.",
         "Driving is responsive and original, with genre-appropriate handling but no copied GTA values or UI."
+      ]
+    },
+    {
+      "id": "TRAFFIC-002",
+      "title": "Add signal-aware world-reactive traffic",
+      "status": "completed",
+      "dependencies": ["VEHICLE-001", "WORLD-002B"],
+      "owner": "traffic-worker",
+      "acceptance": [
+        "One authoritative signal controller cycles green, yellow, protected all-red, and opposing phases for the expanded intersection.",
+        "Traffic reacts deterministically to signal state, queues, releases, and player obstacles using shared expanded lane geometry and production traffic assets.",
+        "Provide unit, browser, console, day, night, narrow, overhead, queue, and yellow-decision evidence."
       ]
     },
     {
@@ -399,9 +444,21 @@
       ]
     },
     {
+      "id": "CINEMATIC-004",
+      "title": "Ship the authored Northbar opening and Ashfall title flow",
+      "status": "completed",
+      "dependencies": ["CINEMATIC-001", "STORY-001", "PRESENTATION-001"],
+      "owner": "cinematic-worker",
+      "skill": "vanta-cinematic-director",
+      "acceptance": [
+        "Open in a distinct Northbar location with intentional story blocking, working participant performances, authored close-ups, subtitles, and a cinematic transition into Ashfall Junction.",
+        "Preserve skip confirmation, responsive safe framing, exact gameplay restoration, title-screen ownership, local runtime assets, and browser-console visual evidence."
+      ]
+    },
+    {
       "id": "MISSION-002",
       "title": "Ship the first complete story mission",
-      "status": "ready",
+      "status": "completed",
       "dependencies": [
         "MISSION-001",
         "CINEMATIC-001",
@@ -419,7 +476,7 @@
     {
       "id": "PRESENTATION-001",
       "title": "Create the original 1990s title and loading presentation",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["STORY-001", "WORLD-001", "NPC-001"],
       "owner": "visual-worker",
       "acceptance": [
@@ -554,16 +611,18 @@
   ],
   "executionState": {
     "lastIntegratedTaskIds": [
-      "LEVEL-TRAVEL-002",
-      "NORTHBAR-002",
-      "BUILDINGS-002",
-      "NPC-PERFORMANCE-003",
-      "CINEMATIC-003"
+      "CINEMATIC-004",
+      "PRESENTATION-001",
+      "WORLD-002A",
+      "WORLD-002B",
+      "PEDESTRIAN-002",
+      "TRAFFIC-002",
+      "MISSION-002"
     ],
     "lastMapExpansion": {
-      "taskId": "WORLD-001",
-      "previousPlayableAreaSquareMetres": 3136,
-      "playableAreaSquareMetres": 3920,
+      "taskId": "WORLD-002B",
+      "previousPlayableAreaSquareMetres": 4900,
+      "playableAreaSquareMetres": 6125,
       "growthPercent": 25
     },
     "lastPerformanceReport": {

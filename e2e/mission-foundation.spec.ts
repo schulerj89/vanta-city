@@ -39,22 +39,18 @@ test('Walk the Block gives one briefing, reveals one destination, and rewards on
     missionId: 'ash-001-walk-the-block',
     objectiveId: 'ash-001-hear-mack-out',
   });
+  await completeMackConversation(page, testInfo);
+  await expect
+    .poll(async () => activeMission(await snapshot(page))?.currentObjectiveId)
+    .toBe('ash-001-meet-yard-contact');
   await expect
     .poll(async () => (await snapshot(page)).cinematic.cinematicId)
-    .toBe('cinematic.ash-001.opening');
+    .toBe('cinematic.ash-001.destination-reveal');
   await page.evaluate(() => window.__VANTA_TEST__!.requestCinematicSkip());
   await page.evaluate(() => window.__VANTA_TEST__!.confirmCinematicSkip());
   await expect
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('playing');
-  expect(activeMission(await snapshot(page))?.currentObjectiveId).toBe(
-    'ash-001-hear-mack-out',
-  );
-
-  await completeMackConversation(page, testInfo);
-  await expect
-    .poll(async () => activeMission(await snapshot(page))?.currentObjectiveId)
-    .toBe('ash-001-meet-yard-contact');
   state = await snapshot(page);
   expect(state.missions.runtime.highlights[0]).toMatchObject({
     channels: ['world', 'map'],
@@ -157,9 +153,6 @@ async function completeMackConversation(
     if (lineIndex === 5) await command(page, 'dialogue.advance');
     else await page.keyboard.press('Enter');
   }
-  await expect
-    .poll(async () => (await snapshot(page)).gameState)
-    .toBe('playing');
 }
 
 async function openReady(page: Page): Promise<void> {

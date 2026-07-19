@@ -80,7 +80,7 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
   ).toBe(true);
 
   const started = await page.evaluate(() =>
-    window.__VANTA_TEST__!.startCinematic('cinematic.ash-001.opening'),
+    window.__VANTA_TEST__!.startCinematic('cinematic.ash-001.legacy-opening'),
   );
   expect(started).toBe(true);
   await expect

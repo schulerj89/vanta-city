@@ -15,7 +15,7 @@ The dialogue preserves the 5:42 arrival, Orin's two-night absence, Rook's explic
 
 ## Mission and presentation contract
 
-- Entering `trigger.intersection-center` starts the mission and requests required presentation `cinematic.ash-001.opening`.
+- The title/boot presentation owns `cinematic.ash-001.opening` before the mission begins; entering `trigger.intersection-center` starts the mission without replaying the arrival.
 - Completing `conversation.mack.introduction` advances the first objective. The mission listens to the public `dialogue:completed` event rather than a line-specific hook.
 - That objective transition requests optional presentation `cinematic.ash-001.destination-reveal` exactly once for the completed attempt. It does not complete, replace, or duplicate the travel objective.
 - Entering `location.ash-001.contact-yard` completes the only travel/meeting objective and grants `reward.ash-001-walk-the-block` once.
