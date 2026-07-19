@@ -647,6 +647,7 @@ async function bootstrap(): Promise<void> {
     'mission:content-requested',
     (request) => {
       if (request.kind !== 'cinematic') return;
+      if (developmentParameters?.get('cinematics') === '0') return;
       const started = cinematics.start(request.referenceId);
       if (!started && !request.optional) {
         development?.errors.report(

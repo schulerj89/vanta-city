@@ -344,5 +344,5 @@ const unlockActions = [
   'interact',
   'pause',
   'toggleHelp',
-  'openMap',
+  'toggleMap',
 ] as const;

@@ -7,7 +7,8 @@ import type {
 } from '../src/debug/BrowserTestBridge';
 import { CameraPreferenceStore } from '../src/camera/CameraPreferences';
 
-const appUrl = '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1&sparringFixture=1';
+const appUrl =
+  '/?e2e=1&debug=1&skipPicker=1&npcFixtures=1&sparringFixture=1&cinematics=0';
 
 test.describe('playable debug district', () => {
   test('boots directly into gameplay as Casual without recreating the player simulation @smoke', async ({
@@ -152,6 +153,7 @@ test.describe('playable debug district', () => {
       'Combat',
       'Interactions',
       'Dialogue / Conversation',
+      'Mission / Objectives',
       'Assets',
       'Runtime / State',
     ];

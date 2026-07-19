@@ -553,7 +553,13 @@
     }
   ],
   "executionState": {
-    "lastIntegratedTaskIds": ["CINEMATIC-001", "AUDIO-001", "UI-TIGHTEN-001"],
+    "lastIntegratedTaskIds": [
+      "LEVEL-TRAVEL-002",
+      "NORTHBAR-002",
+      "BUILDINGS-002",
+      "NPC-PERFORMANCE-003",
+      "CINEMATIC-003"
+    ],
     "lastMapExpansion": {
       "taskId": "WORLD-001",
       "previousPlayableAreaSquareMetres": 3136,
