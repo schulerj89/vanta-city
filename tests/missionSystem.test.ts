@@ -68,29 +68,20 @@ function harness() {
   };
 }
 
-function emitHook(dialogue: EventBus<DialogueEvents>, hookId: string): void {
-  dialogue.emit('dialogue:hook', {
-    conversationId: 'conversation.mack.introduction',
-    lineId: 'conversation.mack.introduction.warning',
-    lineIndex: 3,
-    speakerId: 'mack',
-    phase: 'completion',
-    hook: { id: hookId },
-  });
-}
-
-function completeInteraction(
-  interactions: EventBus<InteractionEvents>,
-  id: string,
+function completeDialogue(
+  dialogue: EventBus<DialogueEvents>,
+  conversationId = 'conversation.mack.introduction',
 ): void {
-  interactions.emit('interaction:completed', {
-    target: { id, prompt: 'Test interaction' },
-  });
+  dialogue.emit('dialogue:completed', { conversationId });
 }
 
 describe('MissionSystem', () => {
   it('runs the canonical first mission through world and typed event hooks', () => {
     const h = harness();
+    const contentRequests: string[] = [];
+    h.missions.events.on('mission:content-requested', ({ referenceId }) =>
+      contentRequests.push(referenceId),
+    );
     const initial = h.missions.getSnapshot();
     expect(initial).toMatchObject({
       schemaVersion: 1,
@@ -99,6 +90,9 @@ describe('MissionSystem', () => {
         'orin-status': 'missing',
         'mack-trust': 'guarded',
         'pager-code-compromised': true,
+        'rook-arrived-in-ashfall': false,
+        'rook-accepted-orin-search': false,
+        'marrow-has-rook-arrival-time': false,
       },
     });
     expect(initial.missions[0]).toMatchObject({
@@ -120,41 +114,32 @@ describe('MissionSystem', () => {
     });
     expect(h.missions.getSnapshot().missions[0]).toMatchObject({
       status: 'active',
-      currentObjectiveId: 'ash-001-talk-to-mack',
+      currentObjectiveId: 'ash-001-hear-mack-out',
       canCancel: true,
     });
+    expect(contentRequests).toEqual(['cinematic.ash-001.opening']);
 
-    emitHook(h.dialogue, 'conversation.mack-introduction.completed');
+    completeDialogue(h.dialogue);
     expect(h.missions.getSnapshot().missions[0]).toMatchObject({
-      currentObjectiveId: 'ash-001-check-signal-corner',
+      currentObjectiveId: 'ash-001-meet-yard-contact',
       canCancel: false,
     });
     expect(h.missions.getSnapshot().highlights[0]).toMatchObject({
       channels: ['world', 'map'],
       target: {
-        kind: 'interaction',
-        referenceId: 'interaction.signal-controller',
+        kind: 'location',
+        referenceId: 'location.ash-001.contact-yard',
       },
     });
+    expect(contentRequests).toEqual([
+      'cinematic.ash-001.opening',
+      'cinematic.ash-001.destination-reveal',
+    ]);
 
-    completeInteraction(h.interactions, 'interaction.signal-controller');
-    expect(h.missions.getSnapshot().missions[0]?.currentObjectiveId).toBe(
-      'ash-001-walk-south-approach',
-    );
-    expect(h.missions.getSnapshot().highlights[0]).toMatchObject({
-      channels: ['map'],
-      target: {
-        kind: 'landmark',
-        referenceId: 'landmark.south-approach',
-      },
+    h.missions.dispatch({
+      type: 'world-location-entered',
+      locationId: 'location.ash-001.contact-yard',
     });
-
-    Object.assign(h.position, { x: 0, y: 0.22, z: -21 });
-    h.missions.update();
-    expect(h.missions.getSnapshot().missions[0]?.currentObjectiveId).toBe(
-      'ash-001-return-to-mack',
-    );
-    completeInteraction(h.interactions, 'interaction.npc.mack');
 
     const complete = h.missions.getSnapshot();
     expect(complete.activeMissionId).toBeUndefined();
@@ -165,13 +150,20 @@ describe('MissionSystem', () => {
     });
     expect(complete.facts).toMatchObject({
       'rook-arrived-in-ashfall': true,
-      'junction-surveillance-checked': true,
+      'rook-accepted-orin-search': true,
+      'marrow-has-rook-arrival-time': true,
+      'contact-yard-meeting-completed': true,
+      'orin-status': 'missing',
       'mack-trust': 'conditional',
     });
     expect(h.money.balance).toBe(575);
 
-    completeInteraction(h.interactions, 'interaction.npc.mack');
+    h.missions.dispatch({
+      type: 'world-location-entered',
+      locationId: 'location.ash-001.contact-yard',
+    });
     expect(h.money.balance).toBe(575);
+    expect(contentRequests).toHaveLength(2);
     h.missions.dispose();
   });
 
@@ -180,13 +172,12 @@ describe('MissionSystem', () => {
     expect(h.missions.start('ash-001-walk-the-block')).toBe(true);
     expect(h.missions.cancel()).toBe(true);
     expect(h.money.balance).toBe(500);
-    expect(h.missions.getSnapshot().facts).not.toHaveProperty(
-      'rook-arrived-in-ashfall',
+    expect(h.missions.getSnapshot().facts['rook-arrived-in-ashfall']).toBe(
+      false,
     );
 
     expect(h.missions.start('ash-001-walk-the-block')).toBe(true);
-    expect(h.missions.completeCurrentObjective()).toBe(true);
-    emitHook(h.dialogue, 'conversation.mack-introduction.completed');
+    completeDialogue(h.dialogue);
     expect(h.missions.cancel()).toBe(false);
     expect(h.missions.fail('ash-001-walk-the-block', 'player-depleted')).toBe(
       true,
@@ -200,8 +191,12 @@ describe('MissionSystem', () => {
     expect(h.missions.getSnapshot().missions[0]).toMatchObject({
       status: 'active',
       attempt: 3,
-      currentObjectiveId: 'ash-001-enter-junction',
+      currentObjectiveId: 'ash-001-hear-mack-out',
     });
+    completeDialogue(h.dialogue);
+    expect(h.missions.getSnapshot().missions[0]?.currentObjectiveId).toBe(
+      'ash-001-meet-yard-contact',
+    );
 
     const persistence = h.missions.getPersistenceSnapshot();
     expect(Object.isFrozen(persistence)).toBe(true);
@@ -244,6 +239,10 @@ describe('MissionSystem', () => {
         },
       },
     );
+    const restoredContentRequests: string[] = [];
+    fresh.events.on('mission:content-requested', ({ referenceId }) =>
+      restoredContentRequests.push(referenceId),
+    );
     fresh.restore(serialized);
     fresh.init();
     expect(fresh.getSnapshot()).toMatchObject({
@@ -253,8 +252,9 @@ describe('MissionSystem', () => {
     expect(fresh.getSnapshot().missions[0]).toMatchObject({
       status: 'active',
       attempt: 3,
-      currentObjectiveId: 'ash-001-enter-junction',
+      currentObjectiveId: 'ash-001-meet-yard-contact',
     });
+    expect(restoredContentRequests).toEqual([]);
     fresh.dispose();
     expect(() =>
       fresh.dispatch({

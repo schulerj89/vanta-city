@@ -21,6 +21,7 @@ export type MissionRuntimeEvent =
       readonly type: 'entity-interaction-completed';
       readonly entityId: string;
     }
+  | { readonly type: 'dialogue-completed'; readonly conversationId: string }
   | { readonly type: 'event-hook'; readonly hookId: string };
 
 export type MissionCondition =
@@ -34,6 +35,7 @@ export type MissionCondition =
       readonly type: 'entity-interaction-completed';
       readonly entityId: string;
     }
+  | { readonly type: 'dialogue-completed'; readonly conversationId: string }
   | { readonly type: 'event-hook'; readonly hookId: string };
 
 export interface MissionHighlightDefinition {
@@ -58,7 +60,8 @@ export interface MissionContentRequestDefinition {
   readonly kind: 'cinematic' | 'dialogue';
   readonly referenceId: string;
   readonly optional: boolean;
-  readonly phase: 'started' | 'completed';
+  readonly phase: 'started' | 'objective-completed' | 'completed';
+  readonly objectiveId?: string;
 }
 
 export interface MissionRewardDefinition {
@@ -163,6 +166,20 @@ export function validateMissionDefinitions(
     }
     for (const request of definition.contentRequests ?? []) {
       assertId(request.referenceId, `${request.kind} request`);
+      if (request.phase === 'objective-completed') {
+        if (
+          request.objectiveId === undefined ||
+          !localObjectives.has(request.objectiveId)
+        ) {
+          throw new Error(
+            `Mission "${definition.id}" content request references an unknown objective`,
+          );
+        }
+      } else if (request.objectiveId !== undefined) {
+        throw new Error(
+          `Mission "${definition.id}" content request has an unexpected objective`,
+        );
+      }
     }
   }
   for (const definition of definitions) {
@@ -194,6 +211,10 @@ export function missionConditionMatches(
       );
     case 'entity-interaction-completed':
       return condition.entityId === (event as typeof condition).entityId;
+    case 'dialogue-completed':
+      return (
+        condition.conversationId === (event as typeof condition).conversationId
+      );
     case 'event-hook':
       return condition.hookId === (event as typeof condition).hookId;
   }
@@ -209,7 +230,9 @@ function assertCondition(condition: MissionCondition): void {
           ? condition.interactionId
           : 'entityId' in condition
             ? condition.entityId
-            : condition.hookId;
+            : 'conversationId' in condition
+              ? condition.conversationId
+              : condition.hookId;
   assertId(referenceId, 'mission condition');
 }
 

@@ -92,7 +92,7 @@ test('records movement through dialogue restore, freezes, exports, and reads bac
     ),
   ).toBe(true);
   expect(trace.frames.at(-1)?.camera.owner).toBe('gameplay');
-  expect(serialized).not.toContain('You’re late.');
+  expect(serialized).not.toContain('You made the 5:42. Orin didn’t.');
   expect(summary).toMatchObject({
     frameCount: trace.frames.length,
     eventCount: trace.events.length,

@@ -214,6 +214,11 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
       this.dependencies.dialogue.on('dialogue:hook', ({ hook }) =>
         this.dispatch({ type: 'event-hook', hookId: hook.id }),
       ),
+      this.dependencies.dialogue.on(
+        'dialogue:completed',
+        ({ conversationId }) =>
+          this.dispatch({ type: 'dialogue-completed', conversationId }),
+      ),
       this.dependencies.health.on('depleted', () => {
         if (this.activeMissionId)
           this.fail(this.activeMissionId, 'player-depleted');
@@ -495,6 +500,7 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
         mission: this.snapshotFor(definition),
         objective: this.objectiveSnapshot(objective, 'completed'),
       });
+      this.emitContentRequests(definition, 'objective-completed', objective.id);
       return;
     }
     this.finish(definition, objective);
@@ -554,9 +560,15 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
   private emitContentRequests(
     definition: MissionDefinition,
     phase: MissionContentRequestDefinition['phase'],
+    objectiveId?: string,
   ): void {
     for (const request of definition.contentRequests ?? []) {
-      if (request.phase !== phase) continue;
+      if (
+        request.phase !== phase ||
+        (phase === 'objective-completed' && request.objectiveId !== objectiveId)
+      ) {
+        continue;
+      }
       this.events.emit('mission:content-requested', {
         missionId: definition.id,
         ...request,

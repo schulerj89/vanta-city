@@ -17,8 +17,9 @@ export interface PlayerPortraitIdentitySource {
 }
 
 export interface ResolvedDialoguePortrait {
-  readonly kind: 'image' | 'fallback';
+  readonly kind: 'image' | 'fallback' | 'none';
   readonly source:
+    | 'line-hidden'
     | 'line-override'
     | 'speaker'
     | 'player-identity'
@@ -52,6 +53,14 @@ export class DialoguePortraitResolver {
     const speaker = this.getSpeaker(line.speakerId);
     const speakerName = speaker?.displayName ?? 'Unknown speaker';
     const speakerInitials = initialsFor(speakerName);
+    if (line.portraitPresentation === 'none') {
+      return {
+        kind: 'none',
+        source: 'line-hidden',
+        alt: '',
+        initials: '',
+      };
+    }
     if (line.portraitOverride) {
       return {
         kind: 'image',

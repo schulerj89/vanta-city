@@ -12,6 +12,7 @@ export interface ConversationLine {
   readonly id: string;
   readonly speakerId: string;
   readonly text: string;
+  readonly portraitPresentation?: 'auto' | 'none';
   readonly portraitOverride?: DialoguePortraitOverride;
   readonly nextLine?: string;
   readonly onEnter?: DialogueEventHook;
@@ -51,6 +52,14 @@ export function validateConversationDefinitions(
         line.text.trim().length === 0
       ) {
         throw new Error(`Conversation "${definition.id}" has an invalid line`);
+      }
+      if (
+        line.portraitPresentation === 'none' &&
+        line.portraitOverride !== undefined
+      ) {
+        throw new Error(
+          `Dialogue line "${line.id}" cannot hide and override its portrait`,
+        );
       }
       if (lineIds.has(line.id)) {
         throw new Error(`Duplicate dialogue line id: ${line.id}`);

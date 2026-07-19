@@ -1844,6 +1844,10 @@ canvas {
   display: none;
 }
 
+.dialogue-box--without-portrait {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .dialogue-box__portrait {
   display: grid;
   place-items: center;
@@ -1945,6 +1949,10 @@ canvas {
     padding: 0.75rem;
   }
 
+  .dialogue-box--without-portrait {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .dialogue-box__content {
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
@@ -1969,6 +1977,11 @@ canvas {
   .dialogue-box__text {
     font-size: 0.95rem;
     line-height: 1.35;
+  }
+
+  .dialogue-box--without-portrait .dialogue-box__text {
+    font-size: 0.9rem;
+    line-height: 1.25;
   }
 
   .dialogue-box__controls {
@@ -2771,6 +2784,10 @@ canvas {
     linear-gradient(90deg, rgb(101 197 178 / 14%), transparent 35%),
     var(--ash-panel);
   box-shadow: 0.55rem 0.7rem 0 rgb(2 8 9 / 55%);
+}
+
+.ui-zone .dialogue-box--without-portrait {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .ui-zone .dialogue-box__speaker {

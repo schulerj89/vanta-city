@@ -128,8 +128,12 @@ export class DialogueUISystem implements GameSystem {
     this.portrait.replaceChildren();
     this.portrait.removeAttribute('role');
     this.portrait.removeAttribute('aria-label');
+    const hidden = resolution.kind === 'none';
+    this.portrait.hidden = hidden;
+    this.element.classList.toggle('dialogue-box--without-portrait', hidden);
     this.portraitResolution = `${resolution.kind}:${resolution.source}`;
     this.element.dataset.portraitResolution = this.portraitResolution;
+    if (hidden) return;
     if (resolution.kind === 'image' && resolution.src) {
       const image = document.createElement('img');
       image.src = resolution.src;
