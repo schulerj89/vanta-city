@@ -579,6 +579,98 @@
       ]
     },
     {
+      "id": "PEDESTRIAN-003",
+      "title": "Add long natural pedestrian traversals and edge exits",
+      "status": "completed",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "pedestrian-natural-traversal-edge-despawn",
+      "dependencies": ["PEDESTRIAN-002", "WORLD-002B"],
+      "owner": "pedestrian-worker",
+      "acceptance": [
+        "Support validated non-looping sidewalk routes that retire only after clearing an authored map edge and repopulate only after sector unload and reload.",
+        "Replace compact square patrols with long natural sidewalk traversals while preserving sidewalk grounding, deterministic population ownership, and player and vehicle boundary containment.",
+        "Prove three exit, retirement, unload, reload, and repopulation cycles with temporal browser evidence and no mixer, asset, scene, or renderer leaks."
+      ]
+    },
+    {
+      "id": "PERF-002",
+      "title": "Make sector streaming adaptive and mission-safe",
+      "status": "completed",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "adaptive-memory-proximity-mission-streaming",
+      "dependencies": ["PERF-001", "WORLD-002B"],
+      "owner": "performance-worker",
+      "acceptance": [
+        "Select sectors from player proximity, adjacency, travel direction, mission interest, hysteresis, and measured memory pressure through one adaptive policy.",
+        "Keep player-current and mission-critical coverage resident, reset safely after teleports, retry bounded failures, and dispose stale asynchronous builds.",
+        "Stay below the 650 MB preferred and 900 MB hard ceilings with three-cycle ownership and renderer evidence."
+      ]
+    },
+    {
+      "id": "PRESENTATION-002",
+      "title": "Redesign the Vanta City title and loading flow",
+      "status": "completed",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "vanta-city-title-loading-art-lifecycle",
+      "dependencies": ["PRESENTATION-001", "UI-SYSTEM-001"],
+      "owner": "visual-worker",
+      "skill": "vanta-ui-art-director",
+      "acceptance": [
+        "Present Vanta City as the game title and Ashfall as the opening city through an original responsive title and loading hierarchy.",
+        "Use locally stored GPT Image 2 artwork with complete generation provenance and no runtime network requests.",
+        "Mount presentation before fallible renderer work and provide one accessible fatal fallback without duplicate roots or lifecycle leaks."
+      ]
+    },
+    {
+      "id": "CINEMATIC-005",
+      "title": "Rebuild the Ashfall opening as an intentional performance",
+      "status": "completed",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "northbar-opening-performance-motion-landing",
+      "dependencies": ["CINEMATIC-004", "PERF-002"],
+      "owner": "cinematic-worker",
+      "skill": "vanta-cinematic-director",
+      "acceptance": [
+        "Tell the opening story through grounded visible participants, readable close compositions, verified idle and interaction performances, and authored prop and wagon motion.",
+        "Pin cinematic sectors through the adaptive streaming authority and make destination preparation, landing, cancellation, and rollback atomic.",
+        "Preserve camera, collision, game-state, input, HUD, and transform ownership with normal, narrow, ultrawide, repeated, failed, and cancelled browser evidence."
+      ]
+    },
+    {
+      "id": "WORLD-003",
+      "title": "Make the expanded Junction visibly continuous",
+      "status": "completed",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "junction-visible-continuity-streaming-natural-walks",
+      "dependencies": ["WORLD-002B", "PEDESTRIAN-003", "PERF-002"],
+      "owner": "world-worker",
+      "acceptance": [
+        "Fill visible expansion seams with textured buildings and street frontage while keeping the authoritative 6125 square metre bounds, collision, sectors, minimap, and full map coherent.",
+        "Use sector-owned texture views and dispose cloned skeleton resources without disposing loader-owned sources.",
+        "Prove natural pedestrian trajectories, mission destination residency, continuous collision, three streaming cycles, renderer stability, memory, FPS, and desktop and narrow visual evidence."
+      ]
+    },
+    {
+      "id": "TRAFFIC-003",
+      "title": "Expand civilian traffic with the Quaternius car bundle",
+      "status": "completed",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "traffic-quaternius-cc0-seven-car-variety",
+      "dependencies": ["TRAFFIC-002"],
+      "owner": "traffic-worker",
+      "acceptance": [
+        "Ship seven distinct local CC0 civilian vehicle models through the one authoritative traffic vehicle catalog without duplicating signal, driving, path, collision, or asset ownership.",
+        "Keep the eight-car population cap and deterministically represent every catalog model without starving a type.",
+        "Record immutable provenance, hashes, bounds, triangles, materials, textures, license text, validation, vehicle-lab screenshots, gameplay variety, console health, and performance."
+      ]
+    },
+    {
       "id": "QA-PLAYBOT-001",
       "title": "Build the local recorded playtest bot",
       "status": "completed",
@@ -617,7 +709,13 @@
       "WORLD-002B",
       "PEDESTRIAN-002",
       "TRAFFIC-002",
-      "MISSION-002"
+      "MISSION-002",
+      "PEDESTRIAN-003",
+      "PERF-002",
+      "PRESENTATION-002",
+      "CINEMATIC-005",
+      "WORLD-003",
+      "TRAFFIC-003"
     ],
     "lastMapExpansion": {
       "taskId": "WORLD-002B",
@@ -625,15 +723,22 @@
       "playableAreaSquareMetres": 6125,
       "growthPercent": 25
     },
+    "lastVisibleWorldRepair": {
+      "taskId": "WORLD-003",
+      "playableAreaSquareMetres": 6125,
+      "buildingCount": 25,
+      "naturalTraversalCount": 8,
+      "boundaryExitCount": 1
+    },
     "lastPerformanceReport": {
-      "taskId": "PERF-001",
+      "taskId": "WORLD-003",
       "referenceViewport": "1280x720",
-      "capture": "docs/screenshots/perf-001/performance-capture.json",
-      "leakEvidence": "docs/screenshots/perf-001/three-cycle-leak-evidence.json",
-      "averageFps": 738.1,
-      "onePercentLowFps": 370.4,
-      "frameTimeP95Ms": 2.7,
-      "peakJsHeapProxyMb": 44.7
+      "capture": "docs/screenshots/world-003/performance/performance-capture.json",
+      "leakEvidence": "docs/screenshots/world-003/performance/three-cycle-leak-evidence.json",
+      "averageFps": 326.89,
+      "onePercentLowFps": 102.04,
+      "frameTimeP95Ms": 8.3,
+      "peakJsHeapProxyMb": 23.1
     },
     "notes": [
       "The primary session must inspect live tasks, worktrees, branches, commits, and main before dispatching or integrating manual Codex workers.",
