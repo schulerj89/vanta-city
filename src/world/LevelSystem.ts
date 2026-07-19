@@ -131,7 +131,7 @@ export interface PreparedLevelTransition {
   readonly generation: number;
   readonly levelId: string;
   readonly spawn: SpawnPointDefinition;
-  commit(landing?: LevelLandingOperation): Promise<void>;
+  commit(landing?: LevelLandingOperation, signal?: AbortSignal): Promise<void>;
   cancel(): void;
 }
 
@@ -374,6 +374,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   public dispose(): void {
     this.unload();
+    this.visualPositionOverrides.clear();
   }
 
   public setDebugVisible(visible: boolean): void {
@@ -512,6 +513,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
     }
     const loaded = this.loaded;
     if (!loaded) throw new Error('No level is loaded');
+    if (new Set(request.visualIds).size !== request.visualIds.length) {
+      throw new Error('Visual path requests require unique visual IDs');
+    }
     const root = loaded.root;
     const generation = this.activeLevelGeneration;
     const sectorDefinitions = sectorsFor(
@@ -530,17 +534,17 @@ export class LevelSystem implements GameSystem, LevelLocations {
       }
       pinnedSectorIds.add(owners[0]!.id);
     }
+    const objects = request.visualIds.map((id) => {
+      const object = root.getObjectByName(`visual:${id}`);
+      if (!object) throw new Error(`Unknown level visual "${id}"`);
+      return { object, initial: object.position.clone() };
+    });
     for (const sectorId of pinnedSectorIds) {
       this.visualPathPins.set(
         sectorId,
         (this.visualPathPins.get(sectorId) ?? 0) + 1,
       );
     }
-    const objects = request.visualIds.map((id) => {
-      const object = root.getObjectByName(`visual:${id}`);
-      if (!object) throw new Error(`Unknown level visual "${id}"`);
-      return { object, initial: object.position.clone() };
-    });
     const origin = new Vector3(...request.points[0]!);
     const offsets = objects.map(({ initial }) => initial.clone().sub(origin));
     let elapsed = 0;
@@ -644,9 +648,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
       generation: ownership.generation,
       levelId: ownership.level.definition.id,
       spawn: ownership.spawn,
-      commit: async (landing) => {
+      commit: async (landing, signal) => {
         consume();
-        await this.commitPrepared(ownership, landing);
+        await this.commitPrepared(ownership, landing, signal);
       },
       cancel: () => {
         consume();
@@ -658,8 +662,13 @@ export class LevelSystem implements GameSystem, LevelLocations {
   private async commitPrepared(
     ownership: PreparedLevelOwnership,
     landing?: LevelLandingOperation,
+    signal?: AbortSignal,
   ): Promise<void> {
     this.requireCurrentPreparation(ownership);
+    if (signal?.aborted) {
+      this.cancelPrepared(ownership);
+      throw new Error('Prepared level transition was cancelled');
+    }
     const source = this.loaded;
     const destination = ownership.level;
     this.prepared = undefined;
@@ -675,6 +684,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
           spawn: ownership.spawn,
           onRollback: (operation) => restoration.push(operation),
         });
+        if (signal?.aborted) {
+          throw new Error('Prepared level transition was cancelled');
+        }
       } catch (error) {
         this.deactivateLevel(destination);
         disposeLevel(destination);

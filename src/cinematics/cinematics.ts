@@ -145,7 +145,7 @@ export const cinematicDefinitions = [
             'mark.northbar.della-counter',
           ),
         ],
-        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 50 },
+        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 100 },
       },
       {
         id: 'shot.ash-001.failed-pickup-two-shot',
@@ -191,7 +191,7 @@ export const cinematicDefinitions = [
             endSeconds: 5.05,
           },
         ],
-        safeFrame: { minSubjectMarginPercent: 10, narrowFieldOfView: 44 },
+        safeFrame: { minSubjectMarginPercent: 10, narrowFieldOfView: 80 },
       },
       {
         id: 'shot.ash-001.mack-missing-close',
@@ -221,7 +221,7 @@ export const cinematicDefinitions = [
             endSeconds: 3.75,
           },
         ],
-        safeFrame: { minSubjectMarginPercent: 13, narrowFieldOfView: 36 },
+        safeFrame: { minSubjectMarginPercent: 13, narrowFieldOfView: 72 },
       },
       {
         id: 'shot.ash-001.della-carbon-close',
@@ -268,7 +268,7 @@ export const cinematicDefinitions = [
             durationSeconds: 1.6,
           },
         ],
-        safeFrame: { minSubjectMarginPercent: 14, narrowFieldOfView: 34 },
+        safeFrame: { minSubjectMarginPercent: 14, narrowFieldOfView: 100 },
       },
       {
         id: 'shot.ash-001.della-intercepts',
@@ -312,7 +312,7 @@ export const cinematicDefinitions = [
             endSeconds: 4.1,
           },
         ],
-        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 48 },
+        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 100 },
       },
       {
         id: 'shot.ash-001.rook-decision-close',
@@ -334,7 +334,7 @@ export const cinematicDefinitions = [
             'della-voss',
           ),
         ],
-        safeFrame: { minSubjectMarginPercent: 14, narrowFieldOfView: 36 },
+        safeFrame: { minSubjectMarginPercent: 14, narrowFieldOfView: 72 },
       },
       {
         id: 'shot.ash-001.ticket-choice',
@@ -375,7 +375,7 @@ export const cinematicDefinitions = [
             endSeconds: 4.1,
           },
         ],
-        safeFrame: { minSubjectMarginPercent: 11, narrowFieldOfView: 40 },
+        safeFrame: { minSubjectMarginPercent: 11, narrowFieldOfView: 80 },
       },
       {
         id: 'shot.ash-001.wagon-entry',
@@ -408,7 +408,7 @@ export const cinematicDefinitions = [
               'v.service-wagon-wheel-front-right',
               'v.service-wagon-wheel-rear-left',
               'v.service-wagon-wheel-rear-right',
-              'service-wagon-body',
+              'v.service-wagon-body',
             ],
             pointIds: [
               'path.northbar.wagon-exit',
@@ -427,7 +427,7 @@ export const cinematicDefinitions = [
             endSeconds: 3.9,
           },
         ],
-        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 50 },
+        safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 90 },
       },
       {
         id: 'shot.ash-001.wagon-departure',
@@ -460,15 +460,14 @@ export const cinematicDefinitions = [
               'v.service-wagon-wheel-front-right',
               'v.service-wagon-wheel-rear-left',
               'v.service-wagon-wheel-rear-right',
-              'service-wagon-body',
+              'v.service-wagon-body',
             ],
             pointIds: [
               'path.northbar.wagon-exit-1',
               'path.northbar.wagon-exit-2',
-              'path.northbar.wagon-exit-3',
             ],
             startSeconds: 0,
-            durationSeconds: 5,
+            durationSeconds: 5.1,
           },
         ],
         subtitleCues: [
@@ -480,7 +479,7 @@ export const cinematicDefinitions = [
             endSeconds: 4.7,
           },
         ],
-        safeFrame: { minSubjectMarginPercent: 7, narrowFieldOfView: 52 },
+        safeFrame: { minSubjectMarginPercent: 7, narrowFieldOfView: 90 },
       },
     ],
     destinationShot: {
@@ -494,7 +493,7 @@ export const cinematicDefinitions = [
       obstructionPolicy: 'shared-camera-collision',
       participantIds: ['casual'],
       requiredSubjectIds: ['casual'],
-      safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 44 },
+      safeFrame: { minSubjectMarginPercent: 8, narrowFieldOfView: 80 },
     },
   },
   {

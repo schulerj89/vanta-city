@@ -680,13 +680,10 @@ export const northbarCoachDepot = {
         58,
         ['choice', 'safe'],
       ),
-      anchor(
-        'camera.northbar.wagon-entry',
-        [12, 2.45, -2.5],
-        [9.5, 1.15, -7.7],
-        50,
-        ['vehicle', 'entry'],
-      ),
+      anchor('camera.northbar.wagon-entry', [13, 3, -1], [9.5, 2.2, -7.7], 60, [
+        'vehicle',
+        'entry',
+      ]),
       anchor(
         'camera.northbar.wagon-departure',
         [13, 2.6, -2.5],

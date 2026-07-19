@@ -521,7 +521,12 @@ export class StaticCollisionWorld implements CollisionWorld {
     let height = this.floorHeight;
     let colliderId = 'world-floor';
     for (const box of this.boxes.values()) {
-      if (box.ramp || !pointInsideOrientedBox(x, z, box)) continue;
+      if (
+        box.ramp ||
+        box.tags.includes('roof') ||
+        !pointInsideOrientedBox(x, z, box)
+      )
+        continue;
       const top = box.center.y + box.halfSize.y;
       if (top >= height - EPSILON) {
         height = top;

@@ -151,6 +151,7 @@ export interface ThirdPersonCameraDebugSnapshot {
   readonly owner: string;
   readonly position: WorldPosition;
   readonly target: WorldPosition;
+  readonly fieldOfView: number;
   readonly yaw: number;
   readonly pitch: number;
   readonly desiredDistance: number;
@@ -438,6 +439,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
       owner: this.owner,
       position: vectorSnapshot(this.camera.position),
       target: vectorSnapshot(this.target),
+      fieldOfView: this.camera.fov,
       yaw: this.yaw,
       pitch: this.pitch,
       desiredDistance: this.resolveFollowDistance(),

@@ -199,6 +199,17 @@ export class CinematicCoordinator implements GameSystem {
       this.publishStartFailure(id, compositions);
       return false;
     }
+    const destinationComposition =
+      definition.destination && definition.destinationShot
+        ? this.adapters.composition?.preflightDestinationShot?.(
+            definition.destination,
+            definition.destinationShot,
+          )
+        : undefined;
+    if (destinationComposition && !destinationComposition.ready) {
+      this.publishStartFailure(id, destinationComposition.reason);
+      return false;
+    }
     const focus =
       typeof document !== 'undefined' &&
       typeof HTMLElement !== 'undefined' &&
@@ -225,6 +236,9 @@ export class CinematicCoordinator implements GameSystem {
       landingCommitted: false,
       landingShotStarted: false,
       landingShotElapsedSeconds: 0,
+      destinationComposition: destinationComposition?.ready
+        ? destinationComposition
+        : undefined,
     };
     try {
       for (const participantId of this.performanceParticipantIds(definition)) {
@@ -437,8 +451,23 @@ export class CinematicCoordinator implements GameSystem {
     this.releasePathHandles(active, 'landing');
     this.restorePerformances(active);
     try {
-      active.destination =
-        this.adapters.destination!.requestDestination(request);
+      active.destination = this.adapters.destination!.requestDestination(
+        request,
+        () => {
+          if (active.landingResult === 'failed') return;
+          const transaction = active.definition.landingTransaction!;
+          const commit = this.adapters.landing!.commitLanding(transaction, {
+            cinematicId: active.definition.id,
+            result: active.landingResult!,
+          });
+          if (!commit.committed) {
+            throw new Error(
+              commit.reason ?? 'Landing transaction was rejected',
+            );
+          }
+          active.landingCommitted = true;
+        },
+      );
     } catch (error) {
       this.finish('failed', `Destination request failed: ${errorText(error)}`);
       return;

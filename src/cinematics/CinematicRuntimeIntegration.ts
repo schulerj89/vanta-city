@@ -52,7 +52,10 @@ export function createCinematicRuntimeAdapters(dependencies: {
       dependencies.npcs,
       dependencies.levels,
     ),
-    composition: new AuthoredCompositionAdapter(dependencies.levels),
+    composition: new AuthoredCompositionAdapter(
+      dependencies.levels,
+      dependencies.registry,
+    ),
     scene: new LevelSceneAdapter(dependencies.levels),
     destination: new LevelDestinationAdapter(
       dependencies.levels,
@@ -141,7 +144,10 @@ class ParticipantStagingAdapter implements CinematicStagingAdapter {
 }
 
 class AuthoredCompositionAdapter implements CinematicCompositionAdapter {
-  public constructor(private readonly levels: LevelSystem) {}
+  public constructor(
+    private readonly levels: LevelSystem,
+    private readonly registry: LevelRegistry,
+  ) {}
 
   public preflightShot(
     shot: Parameters<CinematicCompositionAdapter['preflightShot']>[0],
@@ -244,6 +250,69 @@ class AuthoredCompositionAdapter implements CinematicCompositionAdapter {
       ready: false as const,
       reason: `No safe composition for "${shot.id}" (${failures.join(', ')})`,
     };
+  }
+
+  public preflightDestinationShot(
+    destination: Parameters<
+      NonNullable<CinematicCompositionAdapter['preflightDestinationShot']>
+    >[0],
+    shot: Parameters<
+      NonNullable<CinematicCompositionAdapter['preflightDestinationShot']>
+    >[1],
+  ) {
+    try {
+      const definition = this.registry.get(destination.levelId);
+      const locations = new DefinitionLevelLocations(definition);
+      const spawn = locations.getSpawn(destination.spawnId);
+      const anchor = locations.getCinematicAnchor(shot.cameraAnchorId);
+      const collision = new StaticCollisionWorld();
+      collision.addDefinitions(definition.staticCollision);
+      const selectedFieldOfView =
+        viewportAspect() < 1 && shot.safeFrame.narrowFieldOfView
+          ? shot.safeFrame.narrowFieldOfView
+          : (anchor.fieldOfView ?? 50);
+      const [x, y, z] = spawn.position;
+      const subjects = (shot.requiredSubjectIds ?? []).map((participantId) =>
+        projectSubject(
+          participantId,
+          { x, y, z },
+          anchor,
+          selectedFieldOfView,
+          collision,
+        ),
+      );
+      const requiredMargin = Math.max(
+        shot.safeFrame.minSubjectMarginPercent,
+        viewportAspect() >= 2.1 ? 15 : 0,
+      );
+      const invalid = subjects.find(
+        ({ inFront, occluded, marginPercent, headScreenY, screenY }) =>
+          !inFront ||
+          occluded ||
+          marginPercent + 1e-6 < requiredMargin ||
+          headScreenY < 0 ||
+          screenY > 0.66,
+      );
+      if (invalid) {
+        return {
+          ready: false as const,
+          reason: `No safe destination composition for "${shot.id}"`,
+        };
+      }
+      return {
+        ready: true as const,
+        selectedCameraAnchorId: anchor.id,
+        selectedFieldOfView,
+        usedAlternate: false,
+        subjects,
+        visuals: [],
+      };
+    } catch (error) {
+      return {
+        ready: false as const,
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 }
 
@@ -440,12 +509,15 @@ class LevelDestinationAdapter implements CinematicDestinationAdapter {
 
   public requestDestination(
     request: Parameters<CinematicDestinationAdapter['requestDestination']>[0],
+    commitLanding?: () => void,
   ): CinematicDestinationHandle {
     let state: ReturnType<CinematicDestinationHandle['getReadiness']> = {
       state: 'pending',
     };
     let prepared: PreparedLevelTransition | undefined;
     let cancelled = false;
+    let committing = false;
+    const abort = new AbortController();
     void this.levels
       .prepare(request.levelId, request.spawnId)
       .then(async (handle) => {
@@ -454,8 +526,10 @@ class LevelDestinationAdapter implements CinematicDestinationAdapter {
           handle.cancel();
           return;
         }
-        const commit = handle.commit.bind(handle);
-        await commit((context) => {
+        committing = true;
+        await handle.commit((context) => {
+          if (cancelled)
+            throw new Error('Destination transition was cancelled');
           const { spawn } = context;
           const current = this.player.getPlayerPosition();
           const prior = new Vector3(current.x, current.y, current.z);
@@ -465,10 +539,13 @@ class LevelDestinationAdapter implements CinematicDestinationAdapter {
             new Vector3(...spawn.position),
             spawn.rotation?.[1] ?? 0,
           );
-        });
+          commitLanding?.();
+        }, abort.signal);
+        committing = false;
         if (!cancelled) state = { state: 'ready' };
       })
       .catch((error: unknown) => {
+        committing = false;
         if (!cancelled)
           state = {
             state: 'failed',
@@ -480,11 +557,29 @@ class LevelDestinationAdapter implements CinematicDestinationAdapter {
       pause: () => undefined,
       resume: () => undefined,
       cancel: () => {
+        if (cancelled) return;
         cancelled = true;
-        if (this.levels.getPreparationSnapshot().state === 'ready')
-          prepared?.cancel();
+        abort.abort();
+        if (prepared && !committing) {
+          try {
+            prepared.cancel();
+          } catch {
+            // A concurrent commit owns rollback from this point.
+          }
+        }
       },
-      dispose: () => undefined,
+      dispose: () => {
+        if (cancelled) return;
+        cancelled = true;
+        abort.abort();
+        if (prepared && !committing) {
+          try {
+            prepared.cancel();
+          } catch {
+            // A concurrent commit owns rollback from this point.
+          }
+        }
+      },
     };
   }
 }

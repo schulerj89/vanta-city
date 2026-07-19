@@ -114,6 +114,10 @@ export interface CinematicCompositionAdapter {
     shot: CinematicShotDefinition,
     resolved: readonly CinematicResolvedBlocking[],
   ): CinematicCompositionPreflight;
+  preflightDestinationShot?(
+    destination: CinematicDestinationRequest,
+    shot: CinematicShotDefinition,
+  ): CinematicCompositionPreflight;
 }
 
 export interface CinematicPathHandle {
@@ -148,6 +152,7 @@ export interface CinematicDestinationAdapter {
   ): CinematicPreflightResult;
   requestDestination(
     request: CinematicDestinationRequest,
+    commitLanding?: () => void,
   ): CinematicDestinationHandle;
 }
 

@@ -132,7 +132,7 @@ for (const viewport of [
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await openOpening(page);
-    await advance(page, 5.1);
+    await advance(page, 5.5);
     const cinematic = (await snapshot(page)).cinematic;
     expect(cinematic.shotId).toBe('shot.ash-001.failed-pickup-two-shot');
     for (const subject of cinematic.compositionSubjects) {
@@ -142,6 +142,10 @@ for (const viewport of [
       );
     }
     await capture(page, testInfo, `responsive-${viewport.name}`);
+    expect((await snapshot(page)).camera.fieldOfView).toBeCloseTo(
+      viewport.name === 'narrow' ? 80 : 48,
+      1,
+    );
   });
 }
 
