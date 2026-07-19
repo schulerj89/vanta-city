@@ -61,14 +61,8 @@ test.describe('Vanta City title presentation @visual', () => {
     page,
   }) => {
     await page.addInitScript(() => {
-      const original = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function (
-        this: HTMLCanvasElement,
-        contextId: string,
-        ...args: unknown[]
-      ) {
-        if (contextId.startsWith('webgl')) return null;
-        return Reflect.apply(original, this, [contextId, ...args]);
+      HTMLCanvasElement.prototype.getContext = function () {
+        return null;
       } as typeof HTMLCanvasElement.prototype.getContext;
     });
     await page.goto('/?e2e=1&title=1&traffic=0');
