@@ -1,6 +1,5 @@
 import type {
   BoxVisualDefinition,
-  BuildingVisualDefinition,
   EnvironmentVisualDefinition,
   LevelModule,
   Vector3Tuple,
@@ -21,8 +20,14 @@ import { splineRoadColliders } from './SplineRoadGeometry';
 import {
   ashfallBuildingAssets,
   ashfallBuildingTextureIds,
-  getAshfallBuildingVariant,
 } from '../buildings/AshfallBuildingKit';
+import {
+  createAshfallBuildingPlacement,
+  world002ABuildingPlacements,
+  world002APlan,
+  world002ASidewalks,
+  world002AWestRoad,
+} from './junctionGrowth';
 
 const colors = {
   asphalt: 0x24282b,
@@ -90,65 +95,71 @@ for (const [id, x, z] of [
 }
 
 export const ashfallBuildingPlacements = [
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'northwest-north',
     'foundry-long',
     [-18, 0.2, 24],
     0,
     'c.ruin-northwest',
   ),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'northwest-west',
     'canal-workshop',
     [-24.5, 0.2, 15],
     Math.PI / 2,
   ),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'northeast-north',
     'channel-house',
     [17.5, 0.2, 24],
     Math.PI / 2,
     'c.ruin-northeast',
   ),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'northeast-east',
     'canal-workshop',
     [24.5, 0.2, 15],
     Math.PI / 2,
   ),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'southwest-south',
     'foundry-long',
     [-18, 0.2, -24],
     0,
     'c.ruin-southwest',
   ),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'southwest-west',
     'canal-workshop',
     [-24.5, 0.2, -15],
     Math.PI / 2,
   ),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'southeast-south',
     'harbor-row',
     [18, 0.2, -24.5],
     Math.PI / 2,
     'c.ruin-southeast',
   ),
-  buildingPlacement('southeast-east', 'beacon-works', [22.5, 0.2, -15.5], 0),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
+    'southeast-east',
+    'beacon-works',
+    [22.5, 0.2, -15.5],
+    0,
+  ),
+  createAshfallBuildingPlacement(
     'east-quay-north',
     'canal-workshop',
     [38.5, -0.05, 23],
     Math.PI / 2,
   ),
-  buildingPlacement(
+  createAshfallBuildingPlacement(
     'east-quay-south',
     'freight-annex',
     [37.5, -0.05, -18.5],
     Math.PI / 2,
   ),
+  ...world002ABuildingPlacements,
 ] as const;
 
 const buildings = ashfallBuildingPlacements.map(({ visual }) => visual);
@@ -187,10 +198,10 @@ for (const [id, signX, signZ] of [
 
 // Visible, collidable termination at every road end and around the outer corners.
 for (const [id, position, size] of [
-  ['boundary-north', [7, 0.65, 27.5], [70, 1.3, 1]],
-  ['boundary-south', [7, 0.65, -27.5], [70, 1.3, 1]],
-  ['boundary-east', [41.5, 0.65, 0], [1, 1.3, 56]],
-  ['boundary-west', [-27.5, 0.65, 0], [1, 1.3, 56]],
+  ['boundary-north', [7, 0.65, 27.5], [87.5, 1.3, 1]],
+  ['boundary-south', [7, 0.65, -27.5], [87.5, 1.3, 1]],
+  ['boundary-east', [50.25, 0.65, 0], [1, 1.3, 56]],
+  ['boundary-west', [-36.25, 0.65, 0], [1, 1.3, 56]],
 ] as const)
   surface(id, position, size, colors.boundary, ['boundary']);
 
@@ -278,6 +289,8 @@ const signalControllerCollider = collider(
 
 const environment = [
   ...paired.map(({ visual }) => visual),
+  world002AWestRoad.visual,
+  ...world002ASidewalks.map(({ visual }) => visual),
   eastQuayCurvedRoad,
   ...markings,
   ...curbs,
@@ -288,6 +301,8 @@ const environment = [
 
 const staticCollision = [
   ...paired.map(({ collider: definition }) => definition),
+  world002AWestRoad.collider,
+  ...world002ASidewalks.map(({ collider: definition }) => definition),
   ...splineRoadColliders(eastQuayCurvedRoad),
   ...buildingCollision,
   signalControllerCollider,
@@ -314,28 +329,52 @@ const staticCollision = [
 ] as const;
 
 const streamableEntries = [...environment, ...staticCollision];
+const world002AEntryIds = new Set([
+  world002AWestRoad.visual.id,
+  world002AWestRoad.collider.id,
+  ...world002ASidewalks.flatMap(({ visual, collider: definition }) => [
+    visual.id,
+    definition.id,
+  ]),
+  ...world002ABuildingPlacements.flatMap(({ visual, collider: definition }) => [
+    visual.id,
+    definition.id,
+  ]),
+  'v.boundary-west',
+  'c.boundary-west',
+  'v.boundary-east',
+  'c.boundary-east',
+]);
 const coreEntryIds = streamableEntries
   .filter(
     ({ id }) =>
+      !world002AEntryIds.has(id) &&
       !id.includes('east-quay') &&
       /road-|marking-|crosswalk|traffic-light|signal-controller/.test(id),
   )
   .map(({ id }) => id);
 const eastQuayEntryIds = streamableEntries
-  .filter(
-    ({ id }) =>
-      id.includes('east-quay') ||
-      id === 'v.boundary-east' ||
-      id === 'c.boundary-east',
-  )
+  .filter(({ id }) => !world002AEntryIds.has(id) && id.includes('east-quay'))
   .map(({ id }) => id);
 const quadrantEntries = streamableEntries.filter(
-  ({ id }) => !coreEntryIds.includes(id) && !eastQuayEntryIds.includes(id),
+  ({ id }) =>
+    !world002AEntryIds.has(id) &&
+    !coreEntryIds.includes(id) &&
+    !eastQuayEntryIds.includes(id),
 );
 const quadrantIds = (east: boolean, north: boolean): string[] =>
   quadrantEntries
     .filter(
       ({ position }) => position[0] >= 0 === east && position[2] >= 0 === north,
+    )
+    .map(({ id }) => id);
+const rimIds = (east: boolean, north: boolean): string[] =>
+  streamableEntries
+    .filter(
+      ({ id, position }) =>
+        world002AEntryIds.has(id) &&
+        position[0] >= 7 === east &&
+        position[2] >= 0 === north,
     )
     .map(({ id }) => id);
 
@@ -470,7 +509,7 @@ export const testDistrict = {
         id: 'zone.ashfall-junction',
         name: 'Ashfall Junction',
         position: [7, 3, 0],
-        size: [70, 10, 56],
+        size: [87.5, 10, 56],
       },
     ],
     landmarks: intersectionLandmarks.map(({ id, name, position }, index) => ({
@@ -567,12 +606,13 @@ export const testDistrict = {
     mapPresentation: {
       orientation: 'north-up',
       bounds: {
-        ...ashfallExpansionPlan.bounds,
+        ...world002APlan.bounds,
       },
       geometry: [
         { entryId: 'v.road-east-west', layer: 'roads' },
         { entryId: 'v.road-north-south', layer: 'roads' },
         { entryId: eastQuayCurvedRoad.id, layer: 'roads' },
+        { entryId: world002AWestRoad.visual.id, layer: 'roads' },
         ...ashfallBuildingPlacements.map(({ visual }) => ({
           entryId: visual.id,
           layer: 'structures' as const,
@@ -628,6 +668,20 @@ export const testDistrict = {
           unloadDistance: 32,
           entryIds: eastQuayEntryIds,
         },
+        ...(
+          [
+            ['sector.west-rim-north', false, true, -32.375, 17],
+            ['sector.west-rim-south', false, false, -32.375, -17],
+            ['sector.east-rim-north', true, true, 46.375, 17],
+            ['sector.east-rim-south', true, false, 46.375, -17],
+          ] as const
+        ).map(([id, east, north, x, z]) => ({
+          id,
+          center: [x, z] as const,
+          loadDistance: 26,
+          unloadDistance: 32,
+          entryIds: rimIds(east, north),
+        })),
       ],
     },
   },
@@ -668,36 +722,4 @@ function collider(
   tags: readonly string[],
 ): StaticColliderDefinition {
   return { id, position, size, tags };
-}
-
-function buildingPlacement(
-  id: string,
-  variantId: string,
-  position: Vector3Tuple,
-  yaw = 0,
-  colliderId = `c.building-${id}`,
-): {
-  readonly visual: BuildingVisualDefinition;
-  readonly collider: StaticColliderDefinition;
-} {
-  const definition = getAshfallBuildingVariant(variantId);
-  const [width, depth] = definition.footprint;
-  const quarterTurn = Math.abs(Math.sin(yaw)) > 0.5;
-  const collisionWidth = quarterTurn ? depth : width;
-  const collisionDepth = quarterTurn ? width : depth;
-  return {
-    visual: {
-      id: `v.building-${id}`,
-      kind: 'building',
-      variantId,
-      position,
-      rotation: [0, yaw, 0],
-    },
-    collider: {
-      id: colliderId,
-      position: [position[0], position[1] + definition.height / 2, position[2]],
-      size: [collisionWidth, definition.height, collisionDepth],
-      tags: ['obstacle', 'camera', 'building'],
-    },
-  };
 }

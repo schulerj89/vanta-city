@@ -43,9 +43,9 @@ export const eastQuayCurvedRoad = {
   position: [0, 0, 0],
   controlPoints: [
     [24, 0.025, 0],
-    [30, 0.025, 0],
-    [36, 0.025, 8],
-    [42, 0.025, 8],
+    [32, 0.025, 0],
+    [42.75, 0.025, 8],
+    [50.75, 0.025, 8],
   ],
   width: intersectionLayout.roadWidth,
   thickness: 0.4,

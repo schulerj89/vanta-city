@@ -9,11 +9,20 @@ import {
   sparringTargetArea,
 } from '../../src/world/levels/intersectionLayout';
 import {
+  world002ABuildingPlacements,
+  world002APlan,
+  world002ASidewalks,
+  world002AWestRoad,
+} from '../../src/world/levels/junctionGrowth';
+import {
   offsetSplineSamples,
   sampleSplineRoad,
   splineRoadColliders,
 } from '../../src/world/levels/SplineRoadGeometry';
-import { testDistrict } from '../../src/world/levels/testDistrict';
+import {
+  ashfallBuildingPlacements,
+  testDistrict,
+} from '../../src/world/levels/testDistrict';
 
 const approaches = [
   'spawn.approach-north',
@@ -51,7 +60,7 @@ describe('Ashfall Junction intersection', () => {
           id.startsWith('c.east-quay-ground') ||
           id.startsWith('c.boundary-')),
     );
-    expect(structural).toHaveLength(11);
+    expect(structural).toHaveLength(16);
     for (const definition of structural) {
       const visual = visuals.get(definition.id.replace(/^c\./, 'v.'));
       expect(visual, definition.id).toBeDefined();
@@ -66,8 +75,8 @@ describe('Ashfall Junction intersection', () => {
     for (const [from, to, expected] of [
       [[30, 1, 25], [30, 1, 30], 'c.boundary-north'],
       [[30, 1, -25], [30, 1, -30], 'c.boundary-south'],
-      [[39, 1, 0], [44, 1, 0], 'c.boundary-east'],
-      [[-25, 1, 0], [-30, 1, 0], 'c.boundary-west'],
+      [[48, 1, 0], [52, 1, 0], 'c.boundary-east'],
+      [[-34, 1, 0], [-38, 1, 0], 'c.boundary-west'],
     ] as const) {
       expect(
         collision.castSegment(new Vector3(...from), new Vector3(...to))
@@ -81,7 +90,7 @@ describe('Ashfall Junction intersection', () => {
       expect.objectContaining({
         id: 'zone.ashfall-junction',
         position: [7, 3, 0],
-        size: [70, 10, intersectionLayout.footprint],
+        size: [world002APlan.widthMetres, 10, intersectionLayout.footprint],
       }),
     );
     expect(testDistrict.definition.environment).toContainEqual(
@@ -105,7 +114,39 @@ describe('Ashfall Junction intersection', () => {
         ashfallExpansionPlan.baselineAreaSquareMetres) *
         100,
     ).toBe(25);
+    expect(testDistrict.definition.mapPresentation.bounds).not.toEqual(bounds);
+  });
+
+  it('records WORLD-002A as a separately measured exact 25 percent milestone', () => {
+    const baselineArea =
+      (world002ABaselineBounds.maxX - world002ABaselineBounds.minX) *
+      (world002ABaselineBounds.maxZ - world002ABaselineBounds.minZ);
+    const { bounds } = world002APlan;
+    const measuredArea =
+      (bounds.maxX - bounds.minX) * (bounds.maxZ - bounds.minZ);
+    expect(baselineArea).toBe(3920);
+    expect(measuredArea).toBe(4900);
+    expect(((measuredArea - baselineArea) / baselineArea) * 100).toBe(25);
     expect(testDistrict.definition.mapPresentation.bounds).toEqual(bounds);
+    expect(ashfallBuildingPlacements).toHaveLength(16);
+    expect(testDistrict.definition.streaming.sectors).toHaveLength(10);
+    expect(
+      testDistrict.definition.streaming.sectors.map(({ id }) => id),
+    ).toEqual(expect.arrayContaining([...world002APlan.addedSectorIds]));
+  });
+
+  it('authors populated, collidable WORLD-002A sidewalks and west road', () => {
+    for (const pair of [world002AWestRoad, ...world002ASidewalks]) {
+      expect(testDistrict.definition.environment).toContainEqual(pair.visual);
+      expect(testDistrict.definition.staticCollision).toContainEqual(
+        pair.collider,
+      );
+    }
+    expect(world002ABuildingPlacements).toHaveLength(6);
+    expect(
+      new Set(world002ABuildingPlacements.map(({ visual }) => visual.variantId))
+        .size,
+    ).toBeGreaterThanOrEqual(3);
   });
 
   it('derives curved-road collision and sector ownership from the authored spline', () => {
@@ -131,7 +172,9 @@ describe('Ashfall Junction intersection', () => {
         false,
       );
       expect(grounded.grounded).toBe(true);
-      expect(grounded.groundColliderId).toBe(collider.id);
+      expect(grounded.groundColliderId).toMatch(
+        /c\.(?:road-east-quay-curve|sidewalk-east-rim)/,
+      );
     }
   });
 
@@ -142,14 +185,10 @@ describe('Ashfall Junction intersection', () => {
       ...offsetSplineSamples(center, -eastQuayCurvedRoad.width / 2),
     ];
     for (const { position } of edges) {
-      expect(position[0]).toBeGreaterThanOrEqual(
-        ashfallExpansionPlan.bounds.minX,
-      );
-      expect(position[0]).toBeLessThanOrEqual(ashfallExpansionPlan.bounds.maxX);
-      expect(position[2]).toBeGreaterThanOrEqual(
-        ashfallExpansionPlan.bounds.minZ,
-      );
-      expect(position[2]).toBeLessThanOrEqual(ashfallExpansionPlan.bounds.maxZ);
+      expect(position[0]).toBeGreaterThanOrEqual(world002APlan.bounds.minX);
+      expect(position[0]).toBeLessThanOrEqual(world002APlan.bounds.maxX);
+      expect(position[2]).toBeGreaterThanOrEqual(world002APlan.bounds.minZ);
+      expect(position[2]).toBeLessThanOrEqual(world002APlan.bounds.maxZ);
     }
     expect(center[0]!.tangent).toEqual([1, 0]);
     expect(center.at(-1)!.tangent).toEqual([1, 0]);
@@ -195,3 +234,10 @@ describe('Ashfall Junction intersection', () => {
     }
   });
 });
+
+const world002ABaselineBounds = {
+  minX: -28,
+  maxX: 42,
+  minZ: -28,
+  maxZ: 28,
+} as const;

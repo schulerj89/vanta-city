@@ -4,6 +4,7 @@ import {
   type TrafficVehicleId,
 } from './TrafficVehicleCatalog';
 import { eastQuayCurvedRoad } from '../world/levels/intersectionLayout';
+import { world002APlan } from '../world/levels/junctionGrowth';
 import {
   offsetSplineSamples,
   pointAlongSamples,
@@ -37,7 +38,7 @@ export interface TrafficLanePoint {
 }
 
 const curvedCenterline = sampleSplineRoad(eastQuayCurvedRoad);
-const trafficBoundaryInset = 3;
+const trafficBoundaryInset = world002APlan.trafficEndpointInsetMetres;
 const eastIncomingCurve = trimLaneEnd(
   offsetSplineSamples(curvedCenterline, 1.5),
   trafficBoundaryInset,
@@ -77,7 +78,16 @@ export const ashfallTrafficLanes: readonly TrafficLane[] = [
     19.2,
     29.8,
   ),
-  lane('west', 'east-west', [[-24.5, -1.5], ...westOutgoingCurve], 19.2, 29.8),
+  lane(
+    'west',
+    'east-west',
+    [
+      [world002APlan.bounds.minX + trafficBoundaryInset, -1.5],
+      ...westOutgoingCurve,
+    ],
+    28,
+    38.6,
+  ),
 ];
 
 function lane(

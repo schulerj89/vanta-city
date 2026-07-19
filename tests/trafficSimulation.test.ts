@@ -67,8 +67,12 @@ describe('TrafficSimulation', () => {
 
   it('serializes perpendicular intersection occupancy deterministically', () => {
     const traffic = new TrafficSimulation(config({ maxPopulation: 4 }));
-    traffic.spawn('north');
     traffic.spawn('east');
+    const eastLane = ashfallTrafficLanes.find(
+      ({ approach }) => approach === 'east',
+    )!;
+    traffic.update((eastLane.intersectionEntry - 19.2) / 4.5);
+    traffic.spawn('north');
 
     traffic.update(5);
     const north = traffic
@@ -77,26 +81,17 @@ describe('TrafficSimulation', () => {
     const east = traffic
       .getSnapshot()
       .vehicles.find(({ approach }) => approach === 'east')!;
-    expect(north.progress).toBeGreaterThan(19.2);
-    expect(east.progress).toBe(22.5);
+    expect(north.progress).toBe(19.2);
+    expect(north.stoppingReason).toBe('intersection');
+    expect(east.progress).toBeGreaterThan(eastLane.intersectionEntry);
+    expect(east.progress).toBeLessThanOrEqual(eastLane.intersectionExit);
 
     traffic.update(4);
-    const eastAtIntersection = traffic
+    const resumedNorth = traffic
       .getSnapshot()
-      .vehicles.find(({ approach }) => approach === 'east')!;
-    expect(eastAtIntersection.progress).toBe(
-      ashfallTrafficLanes.find(({ approach }) => approach === 'east')!
-        .intersectionEntry,
-    );
-    expect(eastAtIntersection.stoppingReason).toBe('intersection');
-
-    traffic.update(3);
-    traffic.update(1);
-    expect(
-      traffic
-        .getSnapshot()
-        .vehicles.find(({ approach }) => approach === 'east')!.progress,
-    ).toBeGreaterThan(19.2);
+      .vehicles.find(({ approach }) => approach === 'north')!;
+    expect(resumedNorth.progress).toBeGreaterThan(19.2);
+    expect(resumedNorth.stoppingReason).toBeUndefined();
   });
 
   it('follows the spline-derived east and west lane paths through the expansion', () => {
@@ -108,11 +103,12 @@ describe('TrafficSimulation', () => {
     )!;
     expect(east.points.length).toBeGreaterThan(3);
     expect(west.points.length).toBeGreaterThan(3);
-    expect(east.startX).toBeGreaterThan(38);
-    expect(east.startX).toBeLessThan(40);
+    expect(east.startX).toBeGreaterThan(47);
+    expect(east.startX).toBeLessThan(48);
     expect(east.startZ).toBeGreaterThan(8);
-    expect(west.points.at(-1)!.x).toBeGreaterThan(39);
-    expect(west.points.at(-1)!.x).toBeLessThan(40);
+    expect(west.startX).toBe(-33.75);
+    expect(west.points.at(-1)!.x).toBeGreaterThan(47);
+    expect(west.points.at(-1)!.x).toBeLessThan(48.2);
     expect(west.points.at(-1)!.z).toBeLessThan(8);
 
     const traffic = new TrafficSimulation(config({ speed: 8 }));
