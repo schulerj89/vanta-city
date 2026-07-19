@@ -115,6 +115,8 @@ export interface CameraControlRequest {
   readonly anchor?: CameraAnchor;
   readonly conversationProfile?: ConversationCameraProfile;
   readonly priority?: number;
+  /** Per-owner handoff duration. Zero snaps on the first applied pose. */
+  readonly transitionDurationSeconds?: number;
 }
 
 export interface CameraControlHandle {
@@ -149,6 +151,7 @@ export interface ThirdPersonCameraDebugSnapshot {
   readonly owner: string;
   readonly position: WorldPosition;
   readonly target: WorldPosition;
+  readonly fieldOfView: number;
   readonly yaw: number;
   readonly pitch: number;
   readonly desiredDistance: number;
@@ -326,6 +329,15 @@ export class ThirdPersonCameraSystem implements GameSystem {
     if (request.owner.trim().length === 0) {
       throw new CameraOwnershipError('Camera requests require a named owner');
     }
+    if (
+      request.transitionDurationSeconds !== undefined &&
+      (!Number.isFinite(request.transitionDurationSeconds) ||
+        request.transitionDurationSeconds < 0)
+    ) {
+      throw new CameraOwnershipError(
+        'Camera transition duration must be finite and non-negative',
+      );
+    }
     const priority = request.priority ?? cameraControlPriorities[request.mode];
     const active = this.activeRequest;
     if (
@@ -427,6 +439,7 @@ export class ThirdPersonCameraSystem implements GameSystem {
       owner: this.owner,
       position: vectorSnapshot(this.camera.position),
       target: vectorSnapshot(this.target),
+      fieldOfView: this.camera.fov,
       yaw: this.yaw,
       pitch: this.pitch,
       desiredDistance: this.resolveFollowDistance(),
@@ -960,26 +973,36 @@ export class ThirdPersonCameraSystem implements GameSystem {
       return;
     }
     if (this.transitionProgress < 1) {
-      this.transitionProgress = Math.min(
-        1,
-        this.transitionProgress + delta / this.config.modeTransitionDuration,
-      );
-      const amount = smoothStep(this.transitionProgress);
-      this.camera.position.lerpVectors(
-        this.transitionStartPosition,
-        desiredPosition,
-        amount,
-      );
-      this.target.lerpVectors(
-        this.transitionStartTarget,
-        desiredTarget,
-        amount,
-      );
-      this.camera.fov = MathUtils.lerp(
-        this.transitionStartFov,
-        desiredFov,
-        amount,
-      );
+      const transitionDuration =
+        this.activeRequest?.transitionDurationSeconds ??
+        this.config.modeTransitionDuration;
+      if (transitionDuration === 0) {
+        this.transitionProgress = 1;
+        this.camera.position.copy(desiredPosition);
+        this.target.copy(desiredTarget);
+        this.camera.fov = desiredFov;
+      } else {
+        this.transitionProgress = Math.min(
+          1,
+          this.transitionProgress + delta / transitionDuration,
+        );
+        const amount = smoothStep(this.transitionProgress);
+        this.camera.position.lerpVectors(
+          this.transitionStartPosition,
+          desiredPosition,
+          amount,
+        );
+        this.target.lerpVectors(
+          this.transitionStartTarget,
+          desiredTarget,
+          amount,
+        );
+        this.camera.fov = MathUtils.lerp(
+          this.transitionStartFov,
+          desiredFov,
+          amount,
+        );
+      }
     } else {
       const amount = smoothingFactor(sharpness, delta);
       this.camera.position.lerp(desiredPosition, amount);

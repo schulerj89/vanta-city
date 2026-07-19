@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  Box3,
   BoxGeometry,
   ConeGeometry,
   EdgesGeometry,
@@ -93,6 +94,8 @@ export interface SectorStreamingSnapshot {
   readonly colliders: number;
   readonly lodHiddenObjects: number;
   readonly transitionsPending: boolean;
+  readonly pinnedSectors?: readonly string[];
+  readonly visualPathPinCount?: number;
   readonly lastError: string | undefined;
   readonly policy: AdaptiveSectorStreamingSnapshot;
   readonly attempts: Readonly<Record<string, number>>;
@@ -128,8 +131,25 @@ export interface PreparedLevelTransition {
   readonly generation: number;
   readonly levelId: string;
   readonly spawn: SpawnPointDefinition;
-  commit(landing?: LevelLandingOperation): Promise<void>;
+  commit(landing?: LevelLandingOperation, signal?: AbortSignal): Promise<void>;
   cancel(): void;
+}
+
+export interface LevelVisualPathRequest {
+  readonly owner: string;
+  readonly visualIds: readonly string[];
+  readonly points: readonly Vector3Tuple[];
+  readonly startSeconds: number;
+  readonly durationSeconds: number;
+}
+
+export interface LevelVisualPathHandle {
+  update(deltaSeconds: number): void;
+  pause(): void;
+  resume(): void;
+  release(
+    reason: 'shot-completed' | 'landing' | 'cancelled' | 'failed' | 'disposed',
+  ): void;
 }
 
 export class StaleLevelPreparationError extends Error {
@@ -175,6 +195,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
   private loadCount = 0;
   private unloadCount = 0;
   private lastError: string | undefined;
+  private activeLevelGeneration = 0;
+  private readonly visualPathPins = new Map<string, number>();
+  private readonly visualPositionOverrides = new Map<
+    string,
+    Map<string, Vector3Tuple>
+  >();
   private previousStreamingPosition: WorldPosition | undefined;
   private streamingEvaluation = 0;
   private streamingInterestSource: (() => readonly WorldPosition[]) | undefined;
@@ -334,6 +360,8 @@ export class LevelSystem implements GameSystem, LevelLocations {
     this.disposePrepared();
     const current = this.loaded;
     if (!current) return;
+    this.activeLevelGeneration += 1;
+    this.visualPathPins.clear();
     for (const sectorId of [...current.sectors.keys()].sort()) {
       this.unloadSector(current, sectorId);
     }
@@ -346,6 +374,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   public dispose(): void {
     this.unload();
+    this.visualPositionOverrides.clear();
   }
 
   public setDebugVisible(visible: boolean): void {
@@ -410,6 +439,11 @@ export class LevelSystem implements GameSystem, LevelLocations {
         0,
       ),
       transitionsPending: this.transition !== undefined,
+      pinnedSectors: [...this.visualPathPins.keys()].sort(),
+      visualPathPinCount: [...this.visualPathPins.values()].reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
       lastError: this.lastError,
       policy: this.lastPolicySnapshot,
       attempts: loaded
@@ -442,6 +476,161 @@ export class LevelSystem implements GameSystem, LevelLocations {
     return this.requireLocations().getStaticColliders();
   }
 
+  public hasVisual(id: string): boolean {
+    return this.loaded?.root.getObjectByName(`visual:${id}`) !== undefined;
+  }
+
+  public getVisualPosition(id: string): WorldPosition {
+    const object = this.loaded?.root.getObjectByName(`visual:${id}`);
+    if (!object) throw new Error(`Unknown level visual "${id}"`);
+    return { x: object.position.x, y: object.position.y, z: object.position.z };
+  }
+
+  public getVisualBounds(id: string): {
+    readonly center: WorldPosition;
+    readonly size: WorldPosition;
+  } {
+    const object = this.loaded?.root.getObjectByName(`visual:${id}`);
+    if (!object) throw new Error(`Unknown level visual "${id}"`);
+    const bounds = new Box3().setFromObject(object);
+    const center = bounds.getCenter(new Vector3());
+    const size = bounds.getSize(new Vector3());
+    return {
+      center: { x: center.x, y: center.y, z: center.z },
+      size: { x: size.x, y: size.y, z: size.z },
+    };
+  }
+
+  /** Level-owned movement for code-native cinematic exterior visuals. */
+  public requestVisualPath(
+    request: LevelVisualPathRequest,
+  ): LevelVisualPathHandle {
+    if (!request.owner.trim() || request.visualIds.length === 0) {
+      throw new Error('Visual path requests require an owner and visuals');
+    }
+    if (request.points.length < 2 || request.durationSeconds <= 0) {
+      throw new Error('Visual path requests require two points and a duration');
+    }
+    const loaded = this.loaded;
+    if (!loaded) throw new Error('No level is loaded');
+    if (new Set(request.visualIds).size !== request.visualIds.length) {
+      throw new Error('Visual path requests require unique visual IDs');
+    }
+    const root = loaded.root;
+    const generation = this.activeLevelGeneration;
+    const sectorDefinitions = sectorsFor(
+      loaded.definition,
+      this.streamingEnabled,
+    );
+    const pinnedSectorIds = new Set<string>();
+    for (const visualId of request.visualIds) {
+      const owners = sectorDefinitions.filter(({ entryIds }) =>
+        entryIds.includes(visualId),
+      );
+      if (owners.length !== 1) {
+        throw new Error(
+          `Cinematic visual "${visualId}" requires unique sector ownership`,
+        );
+      }
+      pinnedSectorIds.add(owners[0]!.id);
+    }
+    const objects = request.visualIds.map((id) => {
+      const object = root.getObjectByName(`visual:${id}`);
+      if (!object) throw new Error(`Unknown level visual "${id}"`);
+      return { object, initial: object.position.clone() };
+    });
+    for (const sectorId of pinnedSectorIds) {
+      this.visualPathPins.set(
+        sectorId,
+        (this.visualPathPins.get(sectorId) ?? 0) + 1,
+      );
+    }
+    const origin = new Vector3(...request.points[0]!);
+    const offsets = objects.map(({ initial }) => initial.clone().sub(origin));
+    let elapsed = 0;
+    let completed = false;
+    let paused = false;
+    let released = false;
+    let pinsReleased = false;
+    const isCurrent = () =>
+      this.loaded === loaded && this.activeLevelGeneration === generation;
+    const releasePins = (): void => {
+      if (pinsReleased) return;
+      pinsReleased = true;
+      if (!isCurrent()) return;
+      for (const sectorId of pinnedSectorIds) {
+        const count = this.visualPathPins.get(sectorId) ?? 0;
+        if (count <= 1) this.visualPathPins.delete(sectorId);
+        else this.visualPathPins.set(sectorId, count - 1);
+      }
+    };
+    const update = (): void => {
+      const progress = Math.min(
+        1,
+        Math.max(0, elapsed - request.startSeconds) / request.durationSeconds,
+      );
+      const scaled = progress * (request.points.length - 1);
+      const index = Math.min(request.points.length - 2, Math.floor(scaled));
+      const local = smoothPathProgress(scaled - index);
+      const from = new Vector3(...request.points[index]!);
+      const to = new Vector3(...request.points[index + 1]!);
+      const position = from.lerp(to, local);
+      objects.forEach(({ object }, objectIndex) => {
+        object.position.copy(position).add(offsets[objectIndex]!);
+      });
+    };
+    update();
+    return {
+      update: (deltaSeconds) => {
+        if (!isCurrent()) {
+          released = true;
+          releasePins();
+          return;
+        }
+        if (released || completed || paused) return;
+        elapsed += Math.max(0, deltaSeconds);
+        update();
+      },
+      pause: () => {
+        paused = true;
+      },
+      resume: () => {
+        paused = false;
+      },
+      release: (reason) => {
+        if (released) return;
+        if (reason === 'shot-completed') {
+          completed = true;
+          return;
+        }
+        released = true;
+        if (isCurrent() && reason === 'landing') {
+          let overrides = this.visualPositionOverrides.get(
+            loaded.definition.id,
+          );
+          if (!overrides) {
+            overrides = new Map();
+            this.visualPositionOverrides.set(loaded.definition.id, overrides);
+          }
+          for (const [index, visualId] of request.visualIds.entries()) {
+            const position = objects[index]!.object.position;
+            overrides.set(visualId, [position.x, position.y, position.z]);
+          }
+        }
+        if (
+          reason === 'cancelled' ||
+          reason === 'failed' ||
+          reason === 'disposed'
+        ) {
+          objects.forEach(({ object, initial }) =>
+            object.position.copy(initial),
+          );
+        }
+        releasePins();
+      },
+    };
+  }
+
   public resolveLocation(position: WorldPosition): ResolvedLevelLocation {
     return this.requireLocations().resolveLocation(position);
   }
@@ -459,9 +648,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
       generation: ownership.generation,
       levelId: ownership.level.definition.id,
       spawn: ownership.spawn,
-      commit: async (landing) => {
+      commit: async (landing, signal) => {
         consume();
-        await this.commitPrepared(ownership, landing);
+        await this.commitPrepared(ownership, landing, signal);
       },
       cancel: () => {
         consume();
@@ -473,8 +662,13 @@ export class LevelSystem implements GameSystem, LevelLocations {
   private async commitPrepared(
     ownership: PreparedLevelOwnership,
     landing?: LevelLandingOperation,
+    signal?: AbortSignal,
   ): Promise<void> {
     this.requireCurrentPreparation(ownership);
+    if (signal?.aborted) {
+      this.cancelPrepared(ownership);
+      throw new Error('Prepared level transition was cancelled');
+    }
     const source = this.loaded;
     const destination = ownership.level;
     this.prepared = undefined;
@@ -490,6 +684,9 @@ export class LevelSystem implements GameSystem, LevelLocations {
           spawn: ownership.spawn,
           onRollback: (operation) => restoration.push(operation),
         });
+        if (signal?.aborted) {
+          throw new Error('Prepared level transition was cancelled');
+        }
       } catch (error) {
         this.deactivateLevel(destination);
         disposeLevel(destination);
@@ -548,6 +745,8 @@ export class LevelSystem implements GameSystem, LevelLocations {
 
   private deactivateLevel(level: LoadedLevel): void {
     if (this.loaded !== level) return;
+    this.activeLevelGeneration += 1;
+    this.visualPathPins.clear();
     for (const sectorId of activeSectorIds(level)) {
       this.events.emit('sector:unloaded', {
         levelId: level.definition.id,
@@ -566,6 +765,8 @@ export class LevelSystem implements GameSystem, LevelLocations {
         `Cannot activate level "${level.definition.id}" while "${this.loaded.definition.id}" is active`,
       );
     }
+    this.activeLevelGeneration += 1;
+    this.visualPathPins.clear();
     this.loaded = level;
     this.lastPolicySnapshot = level.policySnapshot;
     this.scene.add(level.root);
@@ -664,6 +865,13 @@ export class LevelSystem implements GameSystem, LevelLocations {
         (result) => (result as PromiseFulfilledResult<Object3D>).value,
       );
       visuals.add(...objects);
+      const overrides = this.visualPositionOverrides.get(definition.id);
+      if (overrides) {
+        for (const [visualId, position] of overrides) {
+          const object = root.getObjectByName(`visual:${visualId}`);
+          if (object) object.position.set(...position);
+        }
+      }
       buildDebug(sectorDefinition, debug, resources);
       return {
         definition: sector,
@@ -767,8 +975,16 @@ export class LevelSystem implements GameSystem, LevelLocations {
     const loaded = this.loaded;
     if (!loaded) return;
     this.streamingEvaluation += 1;
-    const desired = this.selectSectors(loaded.definition, position).desired;
+    const desired = [
+      ...this.selectSectors(loaded.definition, position).desired,
+    ];
     const desiredIds = new Set(desired.map(({ id }) => id));
+    for (const sector of sectorsFor(loaded.definition, this.streamingEnabled)) {
+      if (this.visualPathPins.has(sector.id) && !desiredIds.has(sector.id)) {
+        desired.push(sector);
+        desiredIds.add(sector.id);
+      }
+    }
     for (const [sectorId, state] of loaded.states) {
       if (state === 'failed' && !desiredIds.has(sectorId)) {
         loaded.states.set(sectorId, 'inactive');
@@ -904,6 +1120,10 @@ export class LevelSystem implements GameSystem, LevelLocations {
     const desiredIds = new Set(selection.desiredSectorIds);
     return { desired: sectors.filter(({ id }) => desiredIds.has(id)) };
   }
+}
+
+function smoothPathProgress(value: number): number {
+  return value * value * (3 - 2 * value);
 }
 
 export function createSplineRoadGeometry(

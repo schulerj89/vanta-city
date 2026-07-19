@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Group, Scene, Texture } from 'three';
+import { Group, Scene, Texture, Vector3 } from 'three';
 import type { GameAssetLoader } from '../../src/assets/AssetLoader';
 import { EventBus } from '../../src/core/events';
+import { StaticCollisionWorld } from '../../src/physics/CollisionWorld';
+import { defaultPlayerMovementConfig } from '../../src/player/PlayerMovement';
 import { validateLevelDefinition } from '../../src/world/LevelDefinition';
 import { LevelRegistry } from '../../src/world/LevelRegistry';
 import { LevelSystem } from '../../src/world/LevelSystem';
@@ -37,6 +39,14 @@ describe('Northbar Coach Depot level', () => {
   });
 
   it('keeps one continuous collidable slab under every staging mark and path point', () => {
+    const colliderIds = new Set(definition.staticCollision.map(({ id }) => id));
+    for (const id of [
+      'c.waiting-room-roof',
+      'c.transfer-canopy',
+      'c.service-wagon-body',
+    ]) {
+      expect(colliderIds.has(id), id).toBe(true);
+    }
     const ground = definition.staticCollision.find(
       ({ id }) => id === 'c.northbar-ground',
     )!;
@@ -50,6 +60,29 @@ describe('Northbar Coach Depot level', () => {
       expect(x).toBeLessThanOrEqual(ground.position[0] + ground.size[0] / 2);
       expect(z).toBeGreaterThanOrEqual(ground.position[2] - ground.size[2] / 2);
       expect(z).toBeLessThanOrEqual(ground.position[2] + ground.size[2] / 2);
+    }
+  });
+
+  it('settles every cinematic blocking capsule authoritatively within 0.20 metres', () => {
+    const collision = new StaticCollisionWorld(-100);
+    definition.staticCollision.forEach((entry) =>
+      collision.addDefinition(entry),
+    );
+    for (const mark of [
+      northbarCoachDepotLayout.marks.rookCurb,
+      northbarCoachDepotLayout.marks.mackPillar,
+      northbarCoachDepotLayout.marks.dellaCounter,
+    ]) {
+      const requested = new Vector3(...mark);
+      const settled = collision.moveCharacter(
+        requested,
+        new Vector3(0, -defaultPlayerMovementConfig.groundSnapDistance, 0),
+        defaultPlayerMovementConfig,
+        true,
+      );
+      expect(settled.grounded).toBe(true);
+      expect(settled.position.distanceTo(requested)).toBeLessThanOrEqual(0.2);
+      expect(settled.groundColliderId).toMatch(/^c\.northbar-/);
     }
   });
 
@@ -172,6 +205,51 @@ describe('Northbar Coach Depot level', () => {
     const baseline = system.getStreamingSnapshot();
     expect(baseline.active).toHaveLength(3);
 
+    const wagon = scene.getObjectByName('visual:vehicle.mack.service-wagon')!;
+    const wagonOrigin = wagon.position.clone();
+    const path = system.requestVisualPath({
+      owner: 'test:cinematic-wagon',
+      visualIds: ['vehicle.mack.service-wagon'],
+      points: northbarVehiclePaths.wagonExit.slice(0, 2),
+      startSeconds: 0,
+      durationSeconds: 2,
+    });
+    path.update(1);
+    expect(wagon.position.x).toBeGreaterThan(wagonOrigin.x);
+    expect(system.getStreamingSnapshot()).toMatchObject({
+      pinnedSectors: ['sector.northbar.departure'],
+      visualPathPinCount: 1,
+    });
+    await system.refreshStreaming({ x: -80, y: 0, z: 80 });
+    expect(system.getStreamingSnapshot().active).toContain(
+      'sector.northbar.departure',
+    );
+    const pausedAt = wagon.position.clone();
+    path.pause();
+    path.update(1);
+    expect(wagon.position).toEqual(pausedAt);
+    path.resume();
+    path.update(1);
+    expect(wagon.position.x).toBeCloseTo(northbarVehiclePaths.wagonExit[1][0]);
+    path.release('cancelled');
+    expect(wagon.position).toEqual(wagonOrigin);
+    expect(system.getStreamingSnapshot().visualPathPinCount).toBe(0);
+
+    scene
+      .getObjectByName('visual:prop.northbar.arrival-manifest')!
+      .removeFromParent();
+    expect(system.hasVisual('prop.northbar.arrival-manifest')).toBe(false);
+    expect(() =>
+      system.requestVisualPath({
+        owner: 'test:missing',
+        visualIds: ['prop.northbar.arrival-manifest'],
+        points: northbarVehiclePaths.wagonExit.slice(0, 2),
+        startSeconds: 0,
+        durationSeconds: 1,
+      }),
+    ).toThrow();
+    expect(system.getStreamingSnapshot().visualPathPinCount).toBe(0);
+
     for (let cycle = 0; cycle < 3; cycle += 1) {
       await system.refreshStreaming({ x: 80, y: 0, z: 80 });
       expect(system.getStreamingSnapshot().active).toEqual([
@@ -190,5 +268,57 @@ describe('Northbar Coach Depot level', () => {
 
     system.dispose();
     expect(scene.children).toHaveLength(0);
+  });
+
+  it('persists intentional landing transforms across reload and bounds them to the level owner', async () => {
+    const assets: GameAssetLoader = {
+      loadTexture: () => Promise.resolve(new Texture()),
+      loadGltf: () =>
+        Promise.resolve({ scene: new Group(), animations: [] } as never),
+      instantiateModel: (assetId) =>
+        Promise.resolve({
+          assetId,
+          scene: new Group(),
+          animations: [],
+          dispose: vi.fn(),
+        }),
+      getStatus: (id) => ({ id, phase: 'idle', progress: 0 }),
+      onStatus: () => () => undefined,
+      dispose: () => undefined,
+    };
+    const registry = new LevelRegistry([northbarCoachDepot]);
+    const createSystem = () =>
+      new LevelSystem(
+        new Scene(),
+        assets,
+        registry,
+        definition.id,
+        new EventBus<WorldEvents>(),
+      );
+    const system = createSystem();
+    await system.init();
+    const path = system.requestVisualPath({
+      owner: 'test:landing-persistence',
+      visualIds: ['vehicle.mack.service-wagon'],
+      points: northbarVehiclePaths.wagonExit.slice(0, 2),
+      startSeconds: 0,
+      durationSeconds: 1,
+    });
+    path.update(1);
+    path.release('landing');
+    const endpoint = system.getVisualPosition('vehicle.mack.service-wagon');
+    await system.load(definition.id);
+    expect(system.getVisualPosition('vehicle.mack.service-wagon')).toEqual(
+      endpoint,
+    );
+    expect(system.getStreamingSnapshot().visualPathPinCount).toBe(0);
+    system.dispose();
+
+    const fresh = createSystem();
+    await fresh.init();
+    expect(fresh.getVisualPosition('vehicle.mack.service-wagon').x).toBe(
+      northbarVehiclePaths.wagonExit[0][0],
+    );
+    fresh.dispose();
   });
 });

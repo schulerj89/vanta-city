@@ -330,6 +330,46 @@ describe('ThirdPersonCameraSystem', () => {
     expect(harness.system.mode).toBe('gameplay');
   });
 
+  it('honors per-request cut and ease durations without changing caller defaults', () => {
+    const harness = createHarness();
+    harness.system.requestCamera({
+      owner: 'story-cinematic',
+      mode: 'cinematic',
+      anchor: {
+        id: 'camera.cut',
+        position: { x: 4, y: 3, z: 2 },
+        lookAt: { x: 0, y: 1, z: 0 },
+        fieldOfView: 42,
+      },
+      transitionDurationSeconds: 0,
+    });
+    update(harness);
+    expect(harness.system.getDebugSnapshot()).toMatchObject({
+      activeAnchorId: 'camera.cut',
+      transitionProgress: 1,
+    });
+    expectVectorClose(harness.camera.position, { x: 4, y: 3, z: 2 });
+    expect(harness.camera.fov).toBeCloseTo(42);
+
+    harness.system.requestCamera({
+      owner: 'story-cinematic',
+      mode: 'cinematic',
+      anchor: {
+        id: 'camera.ease',
+        position: { x: -4, y: 2, z: 1 },
+        lookAt: { x: 0, y: 1, z: 0 },
+        fieldOfView: 50,
+      },
+      transitionDurationSeconds: 0.2,
+    });
+    update(harness, 6);
+    expect(harness.system.getDebugSnapshot().transitionProgress).toBeCloseTo(
+      0.5,
+    );
+    update(harness, 6);
+    expect(harness.system.getDebugSnapshot().transitionProgress).toBe(1);
+  });
+
   it('transitions into dialogue and restores the exact gameplay view on release', () => {
     const harness = createHarness();
     harness.input.pointerLocked = true;

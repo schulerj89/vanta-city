@@ -601,6 +601,41 @@ describe('LevelSystem', () => {
     system.dispose();
   });
 
+  it('aborts during an awaited landing and rolls back before source disposal', async () => {
+    const source = travelLevel('source-level', 'model.source', [0, 0, 0]);
+    const destination = travelLevel(
+      'destination-level',
+      'model.destination',
+      [7, 0.02, 9],
+    );
+    const system = new LevelSystem(
+      new Scene(),
+      unusedAssets,
+      new LevelRegistry([source, destination]),
+      source.definition.id,
+      new EventBus<WorldEvents>(),
+    );
+    await system.init();
+    const prepared = await system.prepare(destination.definition.id);
+    const landingGate = deferred<void>();
+    const abort = new AbortController();
+    let playerPosition = 'source';
+    const commit = prepared.commit(async ({ onRollback }) => {
+      onRollback(() => {
+        playerPosition = 'source';
+      });
+      playerPosition = 'destination';
+      await landingGate.promise;
+    }, abort.signal);
+    await vi.waitFor(() => expect(playerPosition).toBe('destination'));
+    abort.abort();
+    landingGate.resolve(undefined);
+    await expect(commit).rejects.toThrow('cancelled');
+    expect(playerPosition).toBe('source');
+    expect(system.activeLevel?.id).toBe(source.definition.id);
+    system.dispose();
+  });
+
   it('retains the source after prepare failure, rejects stale async work, and retries', async () => {
     const source = travelLevel('source-level', 'model.source', [0, 0, 0]);
     const slow = travelLevel('slow-level', 'model.slow', [1, 0, 1]);

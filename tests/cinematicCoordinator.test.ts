@@ -54,6 +54,7 @@ function harness() {
   let mackAvailable = true;
   let activeCameraOwner: string | undefined;
   const releases: string[] = [];
+  const cameraTransitions: Array<number | undefined> = [];
   const coordinator = new CinematicCoordinator(
     new CinematicCatalog([localDefinition]),
     state,
@@ -77,6 +78,7 @@ function harness() {
     },
     {
       requestCamera: (request) => {
+        cameraTransitions.push(request.transitionDurationSeconds);
         activeCameraOwner = request.owner;
         const owner = request.owner;
         return {
@@ -128,6 +130,7 @@ function harness() {
     activeCameraOwner: () => activeCameraOwner,
     pointerLocked: () => pointerLocked,
     releases,
+    cameraTransitions,
     removeMack: () => {
       mackAvailable = false;
     },
@@ -163,6 +166,7 @@ describe('CinematicCoordinator', () => {
     expect(h.controls()).toBe(true);
     expect(h.activeCameraOwner()).toBeUndefined();
     expect(h.pointerLocked()).toBe(true);
+    expect(h.cameraTransitions).toEqual([0.3, 0.3, 0.3]);
   });
 
   it('restores through cancellation and disposal without a second completion boundary', () => {
