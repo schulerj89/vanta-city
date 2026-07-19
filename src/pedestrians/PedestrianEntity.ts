@@ -120,6 +120,12 @@ export class PedestrianEntity {
     }
     this.loaded = loaded;
     try {
+      // Population visibility is bounded at the entity level. Initializing all
+      // geometry of a visible resident avoids camera-frustum timing changing
+      // renderer ownership across otherwise identical sector reload cycles.
+      loaded.root.traverse((object) => {
+        object.frustumCulled = false;
+      });
       const bounds = measureModelBounds(loaded.root);
       const alignment = calculateCharacterVisualAlignment(
         { minY: bounds.min.y, maxY: bounds.max.y },
@@ -226,14 +232,24 @@ export class PedestrianEntity {
       this.grounded,
     );
     const previousPosition = this.object3d.position.clone();
-    this.object3d.position.copy(result.position);
+    const crossesExitBoundary = this.crossesAuthoredExitBoundary(
+      result.blockedColliderIds,
+    );
+    if (crossesExitBoundary) {
+      this.object3d.position
+        .copy(previousPosition)
+        .add(displacement)
+        .setY(result.position.y);
+    } else {
+      this.object3d.position.copy(result.position);
+    }
     this.distanceTravelled += Math.hypot(
       this.object3d.position.x - previousPosition.x,
       this.object3d.position.z - previousPosition.z,
     );
     this.grounded = result.grounded;
     this.groundColliderId = result.groundColliderId;
-    if (result.blocked) {
+    if (result.blocked && !crossesExitBoundary) {
       this.pauseRemaining = 0.4 + this.pauseUnit * 0.35;
       this.state = 'idle';
       this.play('idle');
@@ -249,6 +265,25 @@ export class PedestrianEntity {
     }
     this.updatePresentation(safeDelta);
     return this.evaluateLifecycle();
+  }
+
+  /**
+   * Boundary exits are lifecycle terminals, not holes in world containment.
+   * Only a non-looping pedestrian on its final authored segment may pass the
+   * matching outer-wall collider; players and vehicles keep the full wall.
+   */
+  private crossesAuthoredExitBoundary(
+    blockedColliderIds: readonly string[],
+  ): boolean {
+    if (
+      this.route.loop ||
+      this.targetNodeIndex !== this.route.nodes.length - 1 ||
+      blockedColliderIds.length === 0
+    ) {
+      return false;
+    }
+    const boundaryPrefix = `c.boundary-${this.route.exit.edge}`;
+    return blockedColliderIds.every((id) => id.startsWith(boundaryPrefix));
   }
 
   private evaluateLifecycle(): PedestrianUpdateResult {

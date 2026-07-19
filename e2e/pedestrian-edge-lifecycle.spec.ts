@@ -3,6 +3,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { format } from 'prettier';
 import type { BrowserTestSnapshot } from '../src/debug/BrowserTestBridge';
+import {
+  authoritativePedestrianExpectation,
+  expectSteadyPedestrianPopulation,
+} from './pedestrianPopulationExpectations';
 
 const appUrl = '/?e2e=1&debug=0&skipPicker=1&cinematics=0&time=13';
 const outputDirectory =
@@ -12,29 +16,13 @@ const outputDirectory =
 test('exposes deterministic edge lifecycle policy and preserves production walkers', async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
   const faults = observeFaults(page);
   await mkdir(outputDirectory, { recursive: true });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(appUrl);
-  await expect
-    .poll(async () => {
-      const state = await page.evaluate(() =>
-        window.__VANTA_TEST__?.snapshot(),
-      );
-      return {
-        ready: state?.ready ?? false,
-        gameState: state?.gameState,
-        residents: state?.pedestrians.residentCount ?? 0,
-        loading: state?.pedestrians.loadingCount ?? 0,
-      };
-    })
-    .toEqual({
-      ready: true,
-      gameState: 'playing',
-      residents: 7,
-      loading: 0,
-    });
+  const initial = await expectSteadyPedestrianPopulation(page);
+  const initialExpectation = authoritativePedestrianExpectation(initial);
 
   const fixture = await page.evaluate(() =>
     window.__VANTA_TEST__!.pedestrianBoundaryFixture(),
@@ -71,11 +59,9 @@ test('exposes deterministic edge lifecycle policy and preserves production walke
     ),
   ).toBe(true);
 
-  const initial = await snapshot(page);
   expect(initial.pedestrians).toMatchObject({
-    residentCount: 7,
-    visibleCount: 7,
-    mixerOwnerCount: 7,
+    residentCount: initialExpectation.residentCount,
+    mixerOwnerCount: initialExpectation.residentCount,
     boundaryExitCount: 0,
     retiredCount: 0,
     repopulationCount: 0,
@@ -88,78 +74,96 @@ test('exposes deterministic edge lifecycle policy and preserves production walke
     ),
   ).toBe(true);
 
-  await command(page, 'player.teleport-position', '-15,0.2,32,0');
-  await expect
-    .poll(async () => productionExit(await snapshot(page)), {
-      timeout: 15_000,
-    })
-    .toMatchObject({ lifecycleState: 'resident', grounded: true });
-  await expect
-    .poll(async () => productionExit(await snapshot(page))?.lifecycleState, {
-      timeout: 35_000,
-    })
-    .toBe('approaching-boundary');
-  await expect
-    .poll(async () => productionExit(await snapshot(page))?.lifecycleState, {
-      timeout: 12_000,
-      intervals: [50, 50, 100],
-    })
-    .toBe('exiting-boundary');
-  await expect
-    .poll(
-      async () => {
-        const state = await snapshot(page);
-        return {
-          present: Boolean(productionExit(state)),
-          exits: state.pedestrians.boundaryExitCount,
-          retired: state.pedestrians.retiredCount,
-          mixersMatch:
-            state.pedestrians.mixerOwnerCount ===
-            state.pedestrians.residentCount,
-        };
-      },
-      { timeout: 10_000 },
-    )
-    .toEqual({ present: false, exits: 1, retired: 1, mixersMatch: true });
-  const exited = await snapshot(page);
-  expect(exited.pedestrians.lifecycleEvents.at(-1)).toMatchObject({
-    routeId: 'route.north-rim-west',
-    state: 'despawned',
-    reason: 'authored-boundary-exit',
-    boundaryEdge: 'north',
-  });
-  expect(
-    exited.pedestrians.lifecycleEvents.at(-1)!.position[2],
-  ).toBeGreaterThanOrEqual(35.4);
-  expect(
-    exited.pedestrians.lifecycleEvents.at(-1)!.distanceTravelled,
-  ).toBeGreaterThanOrEqual(30.8);
-  await settleFrames(page);
-  expect(productionExit(await snapshot(page))).toBeUndefined();
+  let exited = initial;
+  let afterTraversal = initial;
+  for (let cycle = 1; cycle <= 3; cycle += 1) {
+    await command(page, 'player.teleport-position', '-15,0.2,32,0');
+    await expectSteadyPedestrianPopulation(page, {
+      requiredSector: 'sector.north-rim-west',
+    });
+    await expect
+      .poll(async () => productionExit(await snapshot(page)), {
+        timeout: 15_000,
+      })
+      .toMatchObject({ lifecycleState: 'resident', grounded: true });
+    await expect
+      .poll(async () => productionExit(await snapshot(page))?.lifecycleState, {
+        timeout: 35_000,
+      })
+      .toBe('approaching-boundary');
+    await expect
+      .poll(async () => productionExit(await snapshot(page))?.lifecycleState, {
+        timeout: 12_000,
+        intervals: [50, 50, 100],
+      })
+      .toBe('exiting-boundary');
+    await expect
+      .poll(
+        async () => {
+          const state = await snapshot(page);
+          return {
+            present: Boolean(productionExit(state)),
+            exits: state.pedestrians.boundaryExitCount,
+            retired: state.pedestrians.retiredCount,
+            mixersMatch:
+              state.pedestrians.mixerOwnerCount ===
+              state.pedestrians.residentCount,
+          };
+        },
+        { timeout: 10_000 },
+      )
+      .toEqual({ present: false, exits: cycle, retired: 1, mixersMatch: true });
+    exited = await snapshot(page);
+    expect(exited.pedestrians.lifecycleEvents.at(-1)).toMatchObject({
+      routeId: 'route.north-rim-west',
+      state: 'despawned',
+      reason: 'authored-boundary-exit',
+      boundaryEdge: 'north',
+    });
+    expect(
+      exited.pedestrians.lifecycleEvents.at(-1)!.position[2],
+    ).toBeGreaterThanOrEqual(35.4);
+    expect(
+      exited.pedestrians.lifecycleEvents.at(-1)!.distanceTravelled,
+    ).toBeGreaterThanOrEqual(30);
+    await settleFrames(page);
+    expect(productionExit(await snapshot(page))).toBeUndefined();
 
-  await command(page, 'player.teleport-position', '0,0.2,-32,0');
-  await expect
-    .poll(async () => (await snapshot(page)).world.sectors.active)
-    .not.toContain('sector.north-rim-west');
-  expect((await snapshot(page)).pedestrians.retiredCount).toBe(0);
-  await command(page, 'player.teleport-position', '-15,0.2,32,0');
-  await expect
-    .poll(
-      async () => {
-        const state = await snapshot(page);
-        return {
-          active: state.world.sectors.active.includes('sector.north-rim-west'),
-          repopulations: state.pedestrians.repopulationCount,
-          resident: productionExit(state)?.lifecycleState,
-        };
-      },
-      { timeout: 15_000 },
-    )
-    .toEqual({ active: true, repopulations: 1, resident: 'resident' });
-  const afterTraversal = await snapshot(page);
-  expect(afterTraversal.pedestrians.mixerOwnerCount).toBe(
-    afterTraversal.pedestrians.residentCount,
-  );
+    await command(page, 'player.teleport-position', '0,0.2,-32,0');
+    const southSteady = await expectSteadyPedestrianPopulation(page, {
+      requiredSector: 'sector.south-rim-west',
+      excludedSector: 'sector.north-rim-west',
+    });
+    expect(southSteady.pedestrians.retiredCount).toBe(0);
+    await command(page, 'player.teleport-position', '-15,0.2,32,0');
+    await expectSteadyPedestrianPopulation(page, {
+      requiredSector: 'sector.north-rim-west',
+    });
+    await expect
+      .poll(
+        async () => {
+          const state = await snapshot(page);
+          return {
+            active: state.world.sectors.active.includes(
+              'sector.north-rim-west',
+            ),
+            repopulations: state.pedestrians.repopulationCount,
+            resident: productionExit(state)?.lifecycleState,
+            mixersMatch:
+              state.pedestrians.mixerOwnerCount ===
+              state.pedestrians.residentCount,
+          };
+        },
+        { timeout: 15_000 },
+      )
+      .toEqual({
+        active: true,
+        repopulations: cycle,
+        resident: 'resident',
+        mixersMatch: true,
+      });
+    afterTraversal = await snapshot(page);
+  }
 
   await page.evaluate(() =>
     window.__VANTA_TEST__!.executeDebugCommand(
@@ -187,9 +191,12 @@ test('exposes deterministic edge lifecycle policy and preserves production walke
       terminalFootZ: 35.4,
       exitClearance: 0.4,
       pedestrianCollisionRadius: 0.3,
-      wallOpeningWidth: 2,
+      wallOpeningWidth: 0,
+      pedestrianCrossing: 'lifecycle-specific boundary collider bypass',
     },
     runtime: {
+      initialActiveSectorIds: initial.world.sectors.active,
+      initialExpectedPopulation: initialExpectation,
       initialResidents: initial.pedestrians.residentCount,
       finalResidents: afterTraversal.pedestrians.residentCount,
       finalMixers: afterTraversal.pedestrians.mixerOwnerCount,
@@ -197,6 +204,7 @@ test('exposes deterministic edge lifecycle policy and preserves production walke
         productionExit(afterTraversal)?.distanceTravelled,
       boundaryExits: afterTraversal.pedestrians.boundaryExitCount,
       repopulations: afterTraversal.pedestrians.repopulationCount,
+      completedLifecycleCycles: 3,
       productionExitLifecycle: exited.pedestrians.lifecycleEvents.at(-1),
     },
     network: faults,

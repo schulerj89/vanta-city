@@ -36,6 +36,7 @@ export interface PedestrianPopulationSnapshot {
   readonly mixerOwnerCount: number;
   readonly routeCount: number;
   readonly sectorCounts: Readonly<Record<string, number>>;
+  readonly plan: PedestrianPopulationPlanSnapshot;
   readonly spawnCount: number;
   readonly disposeCount: number;
   readonly boundaryExitCount: number;
@@ -44,6 +45,14 @@ export interface PedestrianPopulationSnapshot {
   readonly loadCancellationCount: number;
   readonly lifecycleEvents: readonly PedestrianLifecycleRecord[];
   readonly pedestrians: readonly PedestrianSnapshot[];
+}
+
+export interface PedestrianPopulationPlanSnapshot {
+  readonly residentCount: number;
+  readonly routeCount: number;
+  readonly routeIds: readonly string[];
+  readonly routeCounts: Readonly<Record<string, number>>;
+  readonly sectorCounts: Readonly<Record<string, number>>;
 }
 
 export interface PedestrianLifecycleRecord {
@@ -184,6 +193,7 @@ export class PedestrianSystem implements GameSystem {
       ),
       routeCount: new Set(pedestrians.map(({ routeId }) => routeId)).size,
       sectorCounts,
+      plan: this.getPopulationPlan(),
       spawnCount: this.spawnCount,
       disposeCount: this.disposeCount,
       boundaryExitCount: this.boundaryExitCount,
@@ -192,6 +202,38 @@ export class PedestrianSystem implements GameSystem {
       loadCancellationCount: this.loadCancellationCount,
       lifecycleEvents: [...this.lifecycleEvents],
       pedestrians,
+    };
+  }
+
+  /** Authoritative cap-aware allocation for the currently resident sectors. */
+  public getPopulationPlan(): PedestrianPopulationPlanSnapshot {
+    const population = this.levels.activeLevel?.pedestrians;
+    if (!population) return emptyPopulationPlan;
+    const active = new Set(this.levels.getStreamingSnapshot().active);
+    const routeCounts: Record<string, number> = {};
+    const sectorCounts: Record<string, number> = {};
+    let ordinal = 0;
+    for (const route of population.routes) {
+      const available = Math.max(
+        0,
+        Math.min(route.population, population.residentCap - ordinal),
+      );
+      ordinal += route.population;
+      if (!active.has(route.sectorId) || available === 0) continue;
+      routeCounts[route.id] = available;
+      sectorCounts[route.sectorId] =
+        (sectorCounts[route.sectorId] ?? 0) + available;
+    }
+    const routeIds = Object.keys(routeCounts).sort();
+    return {
+      residentCount: Object.values(routeCounts).reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+      routeCount: routeIds.length,
+      routeIds,
+      routeCounts,
+      sectorCounts,
     };
   }
 
@@ -396,6 +438,14 @@ export class PedestrianSystem implements GameSystem {
     return record;
   }
 }
+
+const emptyPopulationPlan: PedestrianPopulationPlanSnapshot = {
+  residentCount: 0,
+  routeCount: 0,
+  routeIds: [],
+  routeCounts: {},
+  sectorCounts: {},
+};
 
 function seededUnit(seed: number, ordinal: number): number {
   let value = (seed ^ Math.imul(ordinal + 1, 0x45d9f3b)) >>> 0;

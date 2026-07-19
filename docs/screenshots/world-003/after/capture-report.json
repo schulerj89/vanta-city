@@ -26,16 +26,41 @@
     "modelInstances": 8,
     "colliders": 69,
     "lodHiddenObjects": 80,
-    "transitionsPending": false
+    "transitionsPending": false,
+    "policy": {
+      "pressure": "low",
+      "memory": {
+        "pressure": "low",
+        "source": "heap-and-proxy",
+        "estimatedWorkingSetBytes": 167630624,
+        "estimatedWorkingSetMb": 159.86502075195312,
+        "preferredCeilingMb": 650,
+        "hardCeilingMb": 900,
+        "overHardCeiling": false
+      },
+      "teleported": false,
+      "desiredSectorIds": ["legacy-full-level"],
+      "decisions": {
+        "legacy-full-level": {
+          "sectorId": "legacy-full-level",
+          "disposition": "retained",
+          "reason": "always-loaded",
+          "playerDistance": 40.09438863482021,
+          "missionDistance": 40.09438863482021,
+          "protected": true
+        }
+      }
+    },
+    "attempts": {}
   },
   "renderer": {
     "frameTime": {
       "enabled": true,
       "samples": 120,
-      "minMs": 0.29999998211860657,
-      "averageMs": 0.6025000013411045,
-      "maxMs": 1.600000023841858,
-      "p95Ms": 1.0999999940395355
+      "minMs": 0.30000001192092896,
+      "averageMs": 0.6049999999503295,
+      "maxMs": 1.5,
+      "p95Ms": 1
     },
     "drawCalls": 27,
     "triangles": 5984,

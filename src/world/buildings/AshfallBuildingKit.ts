@@ -9,6 +9,7 @@ import {
 import type { BufferGeometry, Material, Texture } from 'three';
 import type { GameAssetLoader } from '../../assets/AssetLoader';
 import type { BuildingVisualDefinition } from '../LevelDefinition';
+import { cloneSectorOwnedTexture } from '../SectorTextureOwnership';
 
 export type AshfallWallMaterial =
   | 'concrete-deco'
@@ -389,6 +390,7 @@ export class AshfallBuildingRenderer {
   public constructor(
     private readonly assets: GameAssetLoader,
     private readonly resources: Set<BufferGeometry | Material>,
+    private readonly ownedTextures: Set<Texture>,
   ) {}
 
   public async create(visual: BuildingVisualDefinition): Promise<Group> {
@@ -534,8 +536,10 @@ export class AshfallBuildingRenderer {
   ): Promise<MeshStandardMaterial> {
     let pending = this.materials.get(key);
     if (!pending) {
-      pending = this.assets.loadTexture(textureId).then((texture) => {
+      pending = this.assets.loadTexture(textureId).then((sourceTexture) => {
+        const texture = cloneSectorOwnedTexture(sourceTexture);
         configureAshfallTexture(texture);
+        this.ownedTextures.add(texture);
         return this.own(
           new MeshStandardMaterial({
             map: texture,

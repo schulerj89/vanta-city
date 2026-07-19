@@ -223,7 +223,8 @@ describe('Ashfall building kit', () => {
       dispose: () => undefined,
     };
     const resources = new Set<BufferGeometry | Material>();
-    const renderer = new AshfallBuildingRenderer(assets, resources);
+    const textures = new Set<Texture>();
+    const renderer = new AshfallBuildingRenderer(assets, resources, textures);
     const groups = await Promise.all(
       ashfallBuildingVariants.map((definition) =>
         renderer.create({
@@ -235,6 +236,7 @@ describe('Ashfall building kit', () => {
       ),
     );
     expect(loadTexture).toHaveBeenCalledTimes(9);
+    expect(textures.size).toBe(9);
     for (const [index, group] of groups.entries()) {
       expect(group.userData.buildingVariantId).toBe(
         ashfallBuildingVariants[index]!.id,

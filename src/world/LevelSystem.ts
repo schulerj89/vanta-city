@@ -44,6 +44,7 @@ import type { WorldEvents } from './WorldEvents';
 import type { WorldPosition } from './Spatial';
 import type { ResolvedLevelLocation } from './LocationResolver';
 import { AshfallBuildingRenderer } from './buildings/AshfallBuildingKit';
+import { cloneSectorOwnedTexture } from './SectorTextureOwnership';
 import {
   AdaptiveSectorStreamingPolicy,
   type AdaptiveSectorStreamingSnapshot,
@@ -75,6 +76,8 @@ interface LoadedSector {
   readonly debug: Group;
   readonly ownedResources: Set<BufferGeometry | Material>;
   readonly modelInstances: Set<ModelInstance>;
+  /** Texture clones created for and owned exclusively by this sector. */
+  readonly ownedTextures: Set<Texture>;
 }
 
 export type SectorLifecycleState =
@@ -834,6 +837,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
     const debug = namedGroup('debug-helpers');
     const resources = new Set<BufferGeometry | Material>();
     const modelInstances = new Set<ModelInstance>();
+    const ownedTextures = new Set<Texture>();
     root.add(visuals, debug);
     const entries = new Set(sector.entryIds);
     const sectorDefinition = filterDefinition(definition, entries);
@@ -842,6 +846,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
       const buildingRenderer = new AshfallBuildingRenderer(
         this.assets,
         resources,
+        ownedTextures,
       );
       const surfaceMaterials = new Map<string, Promise<MeshStandardMaterial>>();
       const results = await Promise.allSettled(
@@ -853,6 +858,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
                 resources,
                 surfaceMaterials,
                 modelInstances,
+                ownedTextures,
               ),
         ),
       );
@@ -879,9 +885,11 @@ export class LevelSystem implements GameSystem, LevelLocations {
         debug,
         ownedResources: resources,
         modelInstances,
+        ownedTextures,
       };
     } catch (error) {
       for (const instance of modelInstances) instance.dispose();
+      for (const texture of ownedTextures) texture.dispose();
       for (const resource of resources) resource.dispose();
       root.clear();
       throw error;
@@ -893,6 +901,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
     resources: Set<BufferGeometry | Material>,
     surfaceMaterials: Map<string, Promise<MeshStandardMaterial>>,
     modelInstances: Set<ModelInstance>,
+    ownedTextures: Set<Texture>,
   ): Promise<Object3D> {
     if (visual.kind === 'gltf') {
       const instance = await this.assets.instantiateModel(visual.assetId);
@@ -926,7 +935,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
       scaleBoxUvs(geometry, visual.size, visual.uvMetersPerRepeat);
     }
     const material = visual.textureAssetId
-      ? await this.texturedBoxMaterial(visual, resources, surfaceMaterials)
+      ? await this.texturedBoxMaterial(
+          visual,
+          resources,
+          surfaceMaterials,
+          ownedTextures,
+        )
       : own(
           resources,
           new MeshStandardMaterial({
@@ -947,12 +961,15 @@ export class LevelSystem implements GameSystem, LevelLocations {
     visual: BoxVisualDefinition,
     resources: Set<BufferGeometry | Material>,
     surfaceMaterials: Map<string, Promise<MeshStandardMaterial>>,
+    ownedTextures: Set<Texture>,
   ): Promise<MeshStandardMaterial> {
     const assetId = visual.textureAssetId!;
     let pending = surfaceMaterials.get(assetId);
     if (!pending) {
-      pending = this.assets.loadTexture(assetId).then((texture) => {
+      pending = this.assets.loadTexture(assetId).then((sourceTexture) => {
+        const texture = cloneSectorOwnedTexture(sourceTexture);
         configureSurfaceTexture(texture);
+        ownedTextures.add(texture);
         return own(
           resources,
           new MeshStandardMaterial({
@@ -1368,9 +1385,11 @@ function disposeSector(sector: LoadedSector): void {
   sector.root.removeFromParent();
   for (const instance of sector.modelInstances) instance.dispose();
   sector.modelInstances.clear();
-  sector.root.clear();
   for (const resource of sector.ownedResources) resource.dispose();
   sector.ownedResources.clear();
+  for (const texture of sector.ownedTextures) texture.dispose();
+  sector.ownedTextures.clear();
+  sector.root.clear();
 }
 
 function disposeLevel(level: LoadedLevel): void {

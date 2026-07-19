@@ -1,4 +1,12 @@
-import { Group, Texture } from 'three';
+import {
+  Bone,
+  BoxGeometry,
+  Group,
+  MeshBasicMaterial,
+  Skeleton,
+  SkinnedMesh,
+  Texture,
+} from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { AssetCatalog } from '../src/assets/AssetCatalog';
 import {
@@ -32,6 +40,54 @@ function createBackend(overrides: Partial<AssetBackend> = {}): AssetBackend {
 }
 
 describe('ThreeAssetLoader', () => {
+  it('disposes each cloned skeleton once without touching the source skeleton', async () => {
+    const scene = new Group();
+    const bone = new Bone();
+    const sourceSkeleton = new Skeleton([bone]);
+    const sourceDispose = vi.spyOn(sourceSkeleton, 'dispose');
+    const mesh = new SkinnedMesh(new BoxGeometry(), new MeshBasicMaterial());
+    mesh.add(bone);
+    mesh.bind(sourceSkeleton);
+    const secondMesh = new SkinnedMesh(
+      new BoxGeometry(),
+      new MeshBasicMaterial(),
+    );
+    secondMesh.bind(sourceSkeleton);
+    scene.add(mesh, secondMesh);
+    const backend = createBackend({
+      loadGltf: vi.fn(async () => ({ ...createGltf(), scene })),
+    });
+    const loader = new ThreeAssetLoader(
+      { hero: { type: 'model', url: '/hero.glb' } },
+      backend,
+    );
+    const first = await loader.instantiateModel('hero');
+    const second = await loader.instantiateModel('hero');
+    const skeletonsByInstance = [first, second].map((instance) => {
+      const skeletons = new Set<Skeleton>();
+      instance.scene.traverse((object) => {
+        if (object instanceof SkinnedMesh) skeletons.add(object.skeleton);
+      });
+      return [...skeletons];
+    });
+    expect(skeletonsByInstance.map(({ length }) => length)).toEqual([2, 2]);
+    const clonedSkeletons = skeletonsByInstance.flat();
+    expect(new Set(clonedSkeletons).size).toBe(4);
+    expect(clonedSkeletons).not.toContain(sourceSkeleton);
+    const clonedDisposals = clonedSkeletons.map((skeleton) =>
+      vi.spyOn(skeleton, 'dispose'),
+    );
+
+    first.dispose();
+    first.dispose();
+    second.dispose();
+
+    for (const dispose of clonedDisposals)
+      expect(dispose).toHaveBeenCalledOnce();
+    expect(sourceDispose).not.toHaveBeenCalled();
+    loader.dispose();
+  });
+
   it('deduplicates source loads while returning independent model instances', async () => {
     const backend = createBackend();
     const loader = new ThreeAssetLoader(

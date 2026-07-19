@@ -1,4 +1,11 @@
-import { Group, Scene, Texture } from 'three';
+import {
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Scene,
+  Texture,
+} from 'three';
 import type {
   GameAssetLoader,
   ModelInstance,
@@ -138,6 +145,83 @@ function concurrencyLevel(): LevelModule {
   };
 }
 
+function textureOwnershipLevel(): LevelModule {
+  return {
+    assets: {
+      'model.shared': { type: 'model', url: '/shared.glb' },
+      'texture.surface': { type: 'texture', url: '/surface.webp' },
+    },
+    definition: {
+      id: 'texture-ownership-level',
+      name: 'Texture ownership level',
+      environment: [
+        {
+          id: 'visual.core',
+          kind: 'box',
+          position: [0, 0, 0],
+          size: [1, 1, 1],
+          color: 0xffffff,
+        },
+        {
+          id: 'visual.shared-model',
+          kind: 'gltf',
+          assetId: 'model.shared',
+          position: [0, 0, 0],
+        },
+        {
+          id: 'visual.streamed-surface',
+          kind: 'box',
+          position: [100, 0, 0],
+          size: [2, 2, 2],
+          color: 0xffffff,
+          textureAssetId: 'texture.surface',
+          uvMetersPerRepeat: 2,
+        },
+      ],
+      staticCollision: [],
+      spawns: [
+        {
+          id: 'spawn.player-default',
+          kind: 'player',
+          default: true,
+          position: [0, 0, 0],
+        },
+      ],
+      locations: [],
+      zones: [],
+      landmarks: [],
+      triggers: [],
+      cinematicAnchors: [],
+      streaming: {
+        sectors: [
+          {
+            id: 'sector.core',
+            center: [0, 0],
+            loadDistance: 1,
+            unloadDistance: 2,
+            alwaysLoaded: true,
+            entryIds: ['visual.core'],
+          },
+          {
+            id: 'sector.home',
+            center: [0, 0],
+            loadDistance: 2,
+            unloadDistance: 4,
+            entryIds: ['visual.shared-model'],
+          },
+          {
+            id: 'sector.streamed',
+            center: [100, 0],
+            loadDistance: 2,
+            unloadDistance: 4,
+            entryIds: ['visual.streamed-surface'],
+          },
+        ],
+      },
+    },
+  };
+}
+
 function deferred<T>(): {
   readonly promise: Promise<T>;
   readonly resolve: (value: T) => void;
@@ -152,6 +236,75 @@ function deferred<T>(): {
 }
 
 describe('LevelSystem', () => {
+  it('disposes only sector-owned texture clones across repeated reloads', async () => {
+    const sourceTexture = new Texture();
+    const sourceDispose = vi.spyOn(sourceTexture, 'dispose');
+    const ownedTextures: Texture[] = [];
+    const cloneSourceTexture = sourceTexture.clone.bind(sourceTexture);
+    vi.spyOn(sourceTexture, 'clone').mockImplementation(() => {
+      const clone = cloneSourceTexture();
+      vi.spyOn(clone, 'dispose');
+      ownedTextures.push(clone);
+      return clone;
+    });
+    const sharedGltfTexture = new Texture();
+    const sharedGltfDispose = vi.spyOn(sharedGltfTexture, 'dispose');
+    const assets: GameAssetLoader = {
+      loadTexture: () => Promise.resolve(sourceTexture),
+      loadGltf: () => Promise.reject(new Error('Unexpected GLTF load')),
+      instantiateModel: (assetId) => {
+        const scene = new Group();
+        scene.add(
+          new Mesh(
+            new BoxGeometry(1, 1, 1),
+            new MeshStandardMaterial({ map: sharedGltfTexture }),
+          ),
+        );
+        return Promise.resolve({
+          assetId,
+          scene,
+          animations: [],
+          dispose: vi.fn(),
+        });
+      },
+      getStatus: (id) => ({ id, phase: 'idle', progress: 0 }),
+      onStatus: () => () => undefined,
+      dispose: () => undefined,
+    };
+    const system = new LevelSystem(
+      new Scene(),
+      assets,
+      new LevelRegistry([textureOwnershipLevel()]),
+      'texture-ownership-level',
+      new EventBus<WorldEvents>(),
+    );
+
+    await system.init();
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      await system.refreshStreaming({ x: 100, y: 0, z: 0 });
+      expect(ownedTextures).toHaveLength(cycle + 1);
+      expect(ownedTextures.at(-1)!.source).toBe(sourceTexture.source);
+      expect(
+        ownedTextures.filter(
+          (texture) => vi.mocked(texture.dispose).mock.calls.length === 0,
+        ),
+      ).toHaveLength(1);
+      await system.refreshStreaming({ x: 0, y: 0, z: 0 });
+      expect(system.getStreamingSnapshot().active).not.toContain(
+        'sector.streamed',
+      );
+      expect(
+        ownedTextures.map(
+          (texture) => vi.mocked(texture.dispose).mock.calls.length,
+        ),
+      ).toEqual(Array(cycle + 1).fill(1));
+    }
+    system.dispose();
+
+    expect(sourceDispose).not.toHaveBeenCalled();
+    expect(sharedGltfDispose).not.toHaveBeenCalled();
+  });
+
   it('builds the spline road with upward-facing render normals', () => {
     const geometry = createSplineRoadGeometry(eastQuayCurvedRoad);
     const normals = geometry.getAttribute('normal');

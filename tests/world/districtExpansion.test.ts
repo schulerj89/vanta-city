@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import { StaticCollisionWorld } from '../../src/physics/CollisionWorld';
 import { defaultPlayerMovementConfig } from '../../src/player/PlayerMovement';
 import { pedestrianCollisionRadius } from '../../src/pedestrians/PedestrianBoundaryLifecyclePolicy';
+import { getPedestrianRouteDistance } from '../../src/pedestrians/PedestrianBoundaryLifecyclePolicy';
 import { findSpawn } from '../../src/world/LevelQueries';
 import {
   ashfallExpansionPlan,
@@ -46,6 +47,26 @@ const approaches = [
 ] as const;
 
 describe('Ashfall Junction intersection', () => {
+  it('uses long out-and-back traversals instead of compact box patrols', () => {
+    const looping = testDistrict.definition.pedestrians.routes.filter(
+      ({ loop }) => loop,
+    );
+    expect(looping).toHaveLength(7);
+    for (const route of looping) {
+      const points = route.nodes.map(({ position }) => position);
+      const compactRectangle =
+        points.length === 4 &&
+        new Set(points.map(([x, , z]) => `${x},${z}`)).size === 4 &&
+        new Set(points.map(([x]) => x)).size === 2 &&
+        new Set(points.map(([, , z]) => z)).size === 2;
+      expect(compactRectangle, route.id).toBe(false);
+      expect(
+        getPedestrianRouteDistance(route),
+        route.id,
+      ).toBeGreaterThanOrEqual(20);
+    }
+  });
+
   it('grounds every named approach on authoritative road collision', () => {
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
@@ -98,8 +119,13 @@ describe('Ashfall Junction intersection', () => {
       ).toBe(expected);
     }
     expect(
-      collision.castSegment(new Vector3(-15, 1, 34), new Vector3(-15, 1, 36)),
-    ).toMatchObject({ obstructed: false, colliderId: undefined });
+      collision.castSegment(new Vector3(-15, 1, 32), new Vector3(-15, 1, 36), {
+        radius: defaultPlayerMovementConfig.radius,
+      }),
+    ).toMatchObject({
+      obstructed: true,
+      colliderId: 'c.boundary-north-west',
+    });
   });
 
   it('keeps level bounds, zone, stop lines, and signal poles on shared constants', () => {
@@ -359,7 +385,7 @@ describe('Ashfall Junction intersection', () => {
       northWalls[1]!.position[0] -
       northWalls[1]!.size[0] / 2 -
       (northWalls[0]!.position[0] + northWalls[0]!.size[0] / 2);
-    expect(openingWidth).toBeGreaterThan(pedestrianCollisionRadius * 2);
+    expect(openingWidth).toBeCloseTo(0, 5);
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
     const groundedTerminal = collision.moveCharacter(

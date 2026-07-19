@@ -1,5 +1,5 @@
 import { Texture, TextureLoader } from 'three';
-import type { AnimationClip, Material, Object3D } from 'three';
+import type { AnimationClip, Material, Object3D, Skeleton } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
@@ -208,6 +208,7 @@ export class ThreeAssetLoader implements GameAssetLoader {
       dispose: () => {
         if (instanceDisposed) return;
         scene.removeFromParent();
+        disposeInstanceSkeletons(scene);
         scene.clear();
         instanceDisposed = true;
         this.activeInstances -= 1;
@@ -322,6 +323,21 @@ export class ThreeAssetLoader implements GameAssetLoader {
   private assertActive(): void {
     if (this.disposed) throw new Error('Asset loader has been disposed');
   }
+}
+
+/** SkeletonUtils creates instance-owned Skeleton/boneTexture objects. */
+function disposeInstanceSkeletons(root: Object3D): void {
+  const skeletons = new Set<Skeleton>();
+  root.traverse((object) => {
+    if (isSkinnedMesh(object)) skeletons.add(object.skeleton);
+  });
+  for (const skeleton of skeletons) skeleton.dispose();
+}
+
+function isSkinnedMesh(
+  object: Object3D,
+): object is Object3D & { readonly skeleton: Skeleton } {
+  return 'isSkinnedMesh' in object && object.isSkinnedMesh === true;
 }
 
 function toProgress(event: ProgressEvent<EventTarget>): number {

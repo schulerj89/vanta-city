@@ -15,7 +15,7 @@ import {
   MeshStandardMaterial,
   Vector3,
 } from 'three';
-import type { BufferGeometry, Material, Object3D } from 'three';
+import type { BufferGeometry, Material, Object3D, Texture } from 'three';
 import type { GameSystem } from '../../core/lifecycle';
 import type { SandboxContext, SandboxScenario } from '../SandboxScenario';
 import {
@@ -104,6 +104,7 @@ class BuildingVisualLabSystem implements GameSystem {
 
   private readonly stage = new Group();
   private readonly resources = new Set<BufferGeometry | Material>();
+  private readonly ownedTextures = new Set<Texture>();
   private readonly renderer: AshfallBuildingRenderer;
   private readonly panel = document.createElement('aside');
   private readonly records: BuildingLabVariantSnapshot[] = [];
@@ -119,7 +120,11 @@ class BuildingVisualLabSystem implements GameSystem {
   private collisionVisible = true;
 
   public constructor(private readonly context: SandboxContext) {
-    this.renderer = new AshfallBuildingRenderer(context.assets, this.resources);
+    this.renderer = new AshfallBuildingRenderer(
+      context.assets,
+      this.resources,
+      this.ownedTextures,
+    );
     this.stage.name = 'Ashfall building visual lab';
   }
 
@@ -196,6 +201,8 @@ class BuildingVisualLabSystem implements GameSystem {
     this.buildings.clear();
     for (const resource of this.resources) resource.dispose();
     this.resources.clear();
+    for (const texture of this.ownedTextures) texture.dispose();
+    this.ownedTextures.clear();
     this.stage.clear();
   }
 

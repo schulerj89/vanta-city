@@ -244,6 +244,7 @@ function createHarness() {
       policy: new AdaptiveSectorStreamingPolicy().evaluate({
         sectors: testDistrict.definition.streaming.sectors,
         playerPosition: { x: 0, y: 0, z: 0 },
+        activeSectorIds: new Set(active),
       }),
       attempts: {},
     }),

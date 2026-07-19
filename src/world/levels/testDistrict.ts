@@ -216,7 +216,7 @@ for (const [id, signX, signZ] of [
 
 // Visible, collidable termination at every road end and around the outer corners.
 for (const [id, position, size] of [
-  ['boundary-north-west', [-26.375, 0.65, 34.5], [20.75, 1.3, 1]],
+  ['boundary-north-west', [-25.375, 0.65, 34.5], [22.75, 1.3, 1]],
   ['boundary-north-east', [18.375, 0.65, 34.5], [64.75, 1.3, 1]],
   ['boundary-south', [7, 0.65, -34.5], [87.5, 1.3, 1]],
   ['boundary-east', [50.25, 0.65, 0], [1, 1.3, 70]],
@@ -745,7 +745,7 @@ export const testDistrict = {
       },
       {
         id: 'camera.world-002b.overhead',
-        position: [7, 100, 0],
+        position: [7, 160, 0],
         // Aim above the floor to keep camera obstruction from collapsing the view.
         lookAt: [7, 5, 0.1],
         fieldOfView: 60,
@@ -767,9 +767,9 @@ export const testDistrict = {
       },
       {
         id: 'camera.world-002b.south-rim',
-        position: [30, 5, -22],
-        lookAt: [30, 2, -32],
-        fieldOfView: 52,
+        position: [0, 7, -17],
+        lookAt: [0, 1.5, -31.5],
+        fieldOfView: 58,
         tags: ['debug', 'world-002b', 'street', 'south-rim'],
       },
     ],
@@ -914,35 +914,38 @@ export const testDistrict = {
           [-9.5, 0.2, 11.5],
           [-9.5, 0.2, 18],
           [-15, 0.2, 18],
-          [-15, 0.2, 11.5],
+          [-9.5, 0.2, 18],
+          [-9.5, 0.2, 11.5],
         ]),
         sidewalkLoop('route.northeast', 'sector.northeast', 'northeast', [
           [9.5, 0.2, 11.5],
           [15, 0.2, 11.5],
           [15, 0.2, 18],
-          [9.5, 0.2, 18],
+          [15, 0.2, 11.5],
+          [9.5, 0.2, 11.5],
         ]),
         sidewalkLoop('route.southwest', 'sector.southwest', 'southwest', [
           [-9.5, 0.2, -11.5],
           [-15, 0.2, -11.5],
           [-15, 0.2, -18],
-          [-9.5, 0.2, -18],
+          [-15, 0.2, -11.5],
+          [-9.5, 0.2, -11.5],
         ]),
         sidewalkLoop('route.southeast', 'sector.southeast', 'southeast', [
           [9.5, 0.2, -11.5],
           [9.5, 0.2, -18],
           [15, 0.2, -18],
-          [15, 0.2, -11.5],
+          [9.5, 0.2, -18],
+          [9.5, 0.2, -11.5],
         ]),
         sidewalkLoop(
           'route.west-rim-north',
           'sector.west-rim-north',
           'west-rim-north',
           [
-            [-28.9, 0.2, 7.5],
-            [-28.3, 0.2, 7.5],
-            [-28.3, 0.2, 26],
-            [-28.9, 0.2, 26],
+            [-28.6, 0.2, 7.5],
+            [-28.6, 0.2, 26],
+            [-28.6, 0.2, 7.5],
           ],
           1,
         ),
@@ -951,10 +954,9 @@ export const testDistrict = {
           'sector.east-rim-north',
           'east-rim-north',
           [
-            [42.9, 0.2, 15.5],
-            [43.8, 0.2, 15.5],
-            [43.8, 0.2, 26],
-            [42.9, 0.2, 26],
+            [43.35, 0.2, 15.5],
+            [43.35, 0.2, 26],
+            [43.35, 0.2, 15.5],
           ],
           1,
         ),
@@ -963,10 +965,9 @@ export const testDistrict = {
           'sector.east-rim-south',
           'east-rim-south',
           [
-            [42.9, 0.2, -26],
-            [43.8, 0.2, -26],
-            [43.8, 0.2, -8],
-            [42.9, 0.2, -8],
+            [43.35, 0.2, -26],
+            [43.35, 0.2, -8],
+            [43.35, 0.2, -26],
           ],
           1,
         ),
@@ -1004,7 +1005,7 @@ function sidewalkLoop(
       id: `${id}.node-${index + 1}`,
       position,
       surfaceColliderId: `c.sidewalk-${surface}`,
-      ...(index === 0 || index === 2
+      ...(index === 0 || index === positions.length - 1
         ? { pauseSeconds: [0.65, 1.8] as const }
         : {}),
     })),

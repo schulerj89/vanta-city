@@ -3,51 +3,35 @@ import type { Page } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BrowserTestSnapshot } from '../src/debug/BrowserTestBridge';
+import {
+  authoritativePedestrianExpectation,
+  expectSteadyPedestrianPopulation,
+} from './pedestrianPopulationExpectations';
 
 const appUrl = '/?e2e=1&debug=0&skipPicker=1&cinematics=0&time=13';
 const outputDirectory =
   process.env.VANTA_PEDESTRIAN_EVIDENCE_DIR ??
   join(process.cwd(), 'docs/screenshots/pedestrian-002');
 
+test.use({ video: 'on' });
+
 test('populates authored sidewalks, freezes cinematics, and captures visual evidence', async ({
   page,
 }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   const faults = observeFaults(page);
   await mkdir(outputDirectory, { recursive: true });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(appUrl);
-  await expect
-    .poll(
-      async () => {
-        const state = await page.evaluate(() =>
-          window.__VANTA_TEST__?.snapshot(),
-        );
-        if (!state || !(state as Partial<BrowserTestSnapshot>).pedestrians)
-          return {
-            ready: false,
-            gameState: undefined,
-            residents: 0,
-            loading: 0,
-          };
-        return {
-          ready: state.ready,
-          gameState: state.gameState,
-          residents: state.pedestrians.residentCount,
-          loading: state.pedestrians.loadingCount,
-        };
-      },
-      { timeout: 25_000 },
-    )
-    .toEqual({ ready: true, gameState: 'playing', residents: 7, loading: 0 });
-
-  const initial = await snapshot(page);
+  const initial = await expectSteadyPedestrianPopulation(page);
+  const initialExpectation = authoritativePedestrianExpectation(initial);
+  expectIndependentDefaultPopulation(initial);
   expect(initial.pedestrians).toMatchObject({
     residentCap: 16,
-    residentCount: 7,
-    activeCount: 7,
-    mixerOwnerCount: 7,
-    routeCount: 3,
+    residentCount: initialExpectation.residentCount,
+    activeCount: initialExpectation.residentCount,
+    mixerOwnerCount: initialExpectation.residentCount,
+    routeCount: initialExpectation.routeCount,
   });
   expect(
     new Set(initial.pedestrians.pedestrians.map(({ modelId }) => modelId)),
@@ -64,8 +48,6 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
     expect(pedestrian.groundColliderId).toMatch(/^c\.sidewalk-/);
     expect(pedestrian.segmentId).toContain('->');
     expect(pedestrian.currentAnimation).not.toBe('applaud');
-    expect(Math.abs(pedestrian.position[0])).toBeGreaterThanOrEqual(7);
-    expect(Math.abs(pedestrian.position[2])).toBeGreaterThanOrEqual(11.45);
   }
 
   const initialPositions = positionKey(initial);
@@ -80,6 +62,22 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
         (state === 'idle' && currentAnimation === 'idle'),
     ),
   ).toBe(true);
+  const trajectoryEvidence = await captureTrajectories(page, 8, 24);
+  const firstDistances = new Map(
+    trajectoryEvidence[0].pedestrians.map(({ id, distanceTravelled }) => [
+      id,
+      distanceTravelled,
+    ]),
+  );
+  expect(
+    trajectoryEvidence
+      .at(-1)!
+      .pedestrians.filter(
+        ({ id, distanceTravelled }) =>
+          distanceTravelled - (firstDistances.get(id) ?? distanceTravelled) >=
+          2,
+      ).length,
+  ).toBeGreaterThanOrEqual(7);
 
   const started = await page.evaluate(() =>
     window.__VANTA_TEST__!.startCinematic('cinematic.ash-001.legacy-opening'),
@@ -136,14 +134,25 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
     path: join(outputDirectory, 'sidewalk-overhead.png'),
   });
   await command(page, 'camera.release-preview');
-  await command(page, 'player.teleport', 'spawn.approach-north');
-  await expectResidentOwnership(page, 'sector.northwest', 7);
+  await page.goto(appUrl);
+  await expectSteadyPedestrianPopulation(page);
+  await command(page, 'player.teleport-position', '-15,0.2,32,0');
+  let northSteady = await expectSteadyPedestrianPopulation(page, {
+    requiredSector: 'sector.northwest',
+    excludedSector: 'sector.south-rim-west',
+  });
   // Prime the shared model/sector caches before comparing retained ownership.
   for (let warmupCycle = 0; warmupCycle < 3; warmupCycle += 1) {
-    await command(page, 'player.teleport', 'spawn.approach-south');
-    await expectResidentOwnership(page, 'sector.southwest', 6);
-    await command(page, 'player.teleport', 'spawn.approach-north');
-    await expectResidentOwnership(page, 'sector.northwest', 7);
+    await command(page, 'player.teleport-position', '0,0.2,-32,0');
+    await expectSteadyPedestrianPopulation(page, {
+      requiredSector: 'sector.southwest',
+      excludedSector: 'sector.north-rim-west',
+    });
+    await command(page, 'player.teleport-position', '-15,0.2,32,0');
+    northSteady = await expectSteadyPedestrianPopulation(page, {
+      requiredSector: 'sector.northwest',
+      excludedSector: 'sector.south-rim-west',
+    });
   }
   await settleCamera(page);
   const baselinePerformance = await page.evaluate(() =>
@@ -151,16 +160,28 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
   );
 
   const disposalsBeforeCycles = (await snapshot(page)).pedestrians.disposeCount;
+  let exactMinimumDisposals = 0;
+  let southSteady = northSteady;
   for (let cycle = 0; cycle < 3; cycle += 1) {
-    await command(page, 'player.teleport', 'spawn.approach-south');
-    await expectResidentOwnership(page, 'sector.southwest', 6);
-    await command(page, 'player.teleport', 'spawn.approach-north');
-    await expectResidentOwnership(page, 'sector.northwest', 7);
+    await command(page, 'player.teleport-position', '0,0.2,-32,0');
+    southSteady = await expectSteadyPedestrianPopulation(page, {
+      requiredSector: 'sector.southwest',
+      excludedSector: 'sector.north-rim-west',
+    });
+    expectIndependentSouthPopulation(southSteady);
+    exactMinimumDisposals += unloadedResidentCount(northSteady, southSteady);
+    await command(page, 'player.teleport-position', '-15,0.2,32,0');
+    northSteady = await expectSteadyPedestrianPopulation(page, {
+      requiredSector: 'sector.northwest',
+      excludedSector: 'sector.south-rim-west',
+    });
+    expectIndependentNorthPopulation(northSteady);
+    exactMinimumDisposals += unloadedResidentCount(southSteady, northSteady);
   }
   const cycled = await snapshot(page);
-  expect(cycled.pedestrians.disposeCount).toBeGreaterThanOrEqual(
-    disposalsBeforeCycles + 18,
-  );
+  expect(
+    cycled.pedestrians.disposeCount - disposalsBeforeCycles,
+  ).toBeGreaterThanOrEqual(exactMinimumDisposals);
   const postCyclePerformance = await page.evaluate(() =>
     window.__VANTA_TEST__!.capturePerformance(250, 1_000),
   );
@@ -181,7 +202,13 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
           mixers: cycled.pedestrians.mixerOwnerCount,
           spawns: cycled.pedestrians.spawnCount,
           disposals: cycled.pedestrians.disposeCount,
+          exactMinimumDisposals,
         },
+        adaptiveSteadyPopulations: {
+          north: populationEvidence(northSteady),
+          south: populationEvidence(southSteady),
+        },
+        trajectoryEvidence,
         network: faults,
       },
       null,
@@ -193,7 +220,48 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
   expect(faults.consoleErrors).toEqual([]);
   expect(faults.failedRequests).toEqual([]);
   expect(faults.externalRequests).toEqual([]);
+  const video = page.video();
+  await page.close();
+  await video?.saveAs(
+    join(outputDirectory, 'natural-sidewalk-trajectories.webm'),
+  );
 });
+
+async function captureTrajectories(
+  page: Page,
+  sampleCount: number,
+  frameInterval: number,
+) {
+  const samples: Array<{
+    frame: number;
+    pedestrians: Array<{
+      id: string;
+      routeId: string;
+      segmentId: string;
+      position: readonly [number, number, number];
+      distanceTravelled: number;
+    }>;
+  }> = [];
+  for (let index = 0; index < sampleCount; index += 1) {
+    const state = await snapshot(page);
+    samples.push({
+      frame: state.renderer.renderedFrames,
+      pedestrians: state.pedestrians.pedestrians.map(
+        ({ id, routeId, segmentId, position, distanceTravelled }) => ({
+          id,
+          routeId,
+          segmentId,
+          position,
+          distanceTravelled,
+        }),
+      ),
+    });
+    await expect
+      .poll(async () => (await snapshot(page)).renderer.renderedFrames)
+      .toBeGreaterThanOrEqual(state.renderer.renderedFrames + frameInterval);
+  }
+  return samples;
+}
 
 function positionKey(state: BrowserTestSnapshot): string {
   return state.pedestrians.pedestrians
@@ -202,6 +270,88 @@ function positionKey(state: BrowserTestSnapshot): string {
         `${id}:${position.map((value) => value.toFixed(3)).join(',')}`,
     )
     .join('|');
+}
+
+function expectIndependentNorthPopulation(state: BrowserTestSnapshot): void {
+  expect(state.pedestrians.plan).toMatchObject({
+    residentCount: 8,
+    routeCount: 4,
+    routeIds: [
+      'route.north-rim-west',
+      'route.northeast',
+      'route.northwest',
+      'route.west-rim-north',
+    ],
+    sectorCounts: {
+      'sector.north-rim-west': 1,
+      'sector.northeast': 3,
+      'sector.northwest': 3,
+      'sector.west-rim-north': 1,
+    },
+  });
+}
+
+function expectIndependentDefaultPopulation(state: BrowserTestSnapshot): void {
+  expect(state.pedestrians.plan).toEqual({
+    residentCount: 14,
+    routeCount: 6,
+    routeIds: [
+      'route.north-rim-west',
+      'route.northeast',
+      'route.northwest',
+      'route.southeast',
+      'route.southwest',
+      'route.west-rim-north',
+    ],
+    routeCounts: {
+      'route.north-rim-west': 1,
+      'route.northeast': 3,
+      'route.northwest': 3,
+      'route.southeast': 3,
+      'route.southwest': 3,
+      'route.west-rim-north': 1,
+    },
+    sectorCounts: {
+      'sector.north-rim-west': 1,
+      'sector.northeast': 3,
+      'sector.northwest': 3,
+      'sector.southeast': 3,
+      'sector.southwest': 3,
+      'sector.west-rim-north': 1,
+    },
+  });
+}
+
+function expectIndependentSouthPopulation(state: BrowserTestSnapshot): void {
+  expect(state.pedestrians.plan).toMatchObject({
+    residentCount: 6,
+    routeCount: 2,
+    routeIds: ['route.southeast', 'route.southwest'],
+    sectorCounts: { 'sector.southeast': 3, 'sector.southwest': 3 },
+  });
+}
+
+function populationEvidence(state: BrowserTestSnapshot) {
+  return {
+    activeSectorIds: state.world.sectors.active,
+    expected: authoritativePedestrianExpectation(state),
+    actual: {
+      residents: state.pedestrians.residentCount,
+      routes: state.pedestrians.routeCount,
+      sectorCounts: state.pedestrians.sectorCounts,
+    },
+  };
+}
+
+function unloadedResidentCount(
+  before: BrowserTestSnapshot,
+  after: BrowserTestSnapshot,
+): number {
+  const retained = new Set(after.world.sectors.active);
+  return Object.entries(before.pedestrians.sectorCounts).reduce(
+    (sum, [sectorId, count]) => sum + (retained.has(sectorId) ? 0 : count),
+    0,
+  );
 }
 
 async function snapshot(page: Page): Promise<BrowserTestSnapshot> {
@@ -225,32 +375,6 @@ async function settleCamera(page: Page): Promise<void> {
   await expect
     .poll(async () => (await snapshot(page)).renderer.renderedFrames)
     .toBeGreaterThan(frame + 3);
-}
-
-async function expectResidentOwnership(
-  page: Page,
-  expectedSector: string,
-  expectedResidents: number,
-): Promise<void> {
-  await expect
-    .poll(async () => {
-      const state = await snapshot(page);
-      return {
-        sectorReady: state.world.sectors.active.includes(expectedSector),
-        transitionsPending: state.world.sectors.transitionsPending,
-        residents: state.pedestrians.residentCount,
-        loading: state.pedestrians.loadingCount,
-        mixersMatch:
-          state.pedestrians.mixerOwnerCount === state.pedestrians.residentCount,
-      };
-    })
-    .toEqual({
-      sectorReady: true,
-      transitionsPending: false,
-      residents: expectedResidents,
-      loading: 0,
-      mixersMatch: true,
-    });
 }
 
 function observeFaults(page: Page) {

@@ -25,17 +25,16 @@ test('streams three deterministic cycles without retained ownership growth', asy
   await page.goto(base);
   await waitForReady(page);
 
-  // Prime both sides so the shared source cache reaches its intentional stable set.
-  for (let warmupCycle = 0; warmupCycle < 3; warmupCycle += 1) {
-    await moveAndWait(page, 'spawn.approach-south', 'sector.southwest');
-    await moveAndWait(page, 'spawn.approach-north', 'sector.northwest');
-  }
+  // Prime both sides until lazy GPU uploads reach their intentional stable set.
+  await primeRendererOwnership(page);
+  await waitForRendererOwnershipPlateau(page);
   const baseline = await snapshot(page);
   const evidence: BrowserTestSnapshot[] = [];
 
   for (let cycle = 0; cycle < 3; cycle += 1) {
     await moveAndWait(page, 'spawn.approach-south', 'sector.southwest');
     await moveAndWait(page, 'spawn.approach-north', 'sector.northwest');
+    await waitForRendererOwnershipPlateau(page);
     const current = await snapshot(page);
     evidence.push(current);
     expect(ownership(current)).toEqual(ownership(baseline));
@@ -108,8 +107,8 @@ test('traverses every Junction seam with protected geometry resident', async ({
     ['southeast-east-rim', 35, -14],
     ['northwest-north-rim', -18, 25],
     ['northeast-north-contact', 22, 25],
-    ['southwest-south-rim', -18, -25],
-    ['southeast-south-rim', 22, -25],
+    ['southwest-south-rim', -22, -29],
+    ['southeast-south-rim', 22, -29],
   ] as const;
 
   for (const [name, x, z] of seams) {
@@ -128,11 +127,18 @@ test('traverses every Junction seam with protected geometry resident', async ({
         };
       })
       .toEqual({ pending: [], missing: [] });
-    const current = await snapshot(page);
-    expect(current.player.grounded).toBe(true);
-    expect(current.world.initializedColliderCount).toBe(
-      current.world.activeDeclaredColliderCount,
-    );
+    await expect
+      .poll(async () => {
+        const current = await snapshot(page);
+        return {
+          seam: name,
+          grounded: current.player.grounded,
+          colliderDelta:
+            current.world.initializedColliderCount -
+            current.world.activeDeclaredColliderCount,
+        };
+      })
+      .toEqual({ seam: name, grounded: true, colliderDelta: 0 });
     await waitForFrames(page, 2);
     if (['core', 'east-quay-east-rim', 'northwest-north-rim'].includes(name)) {
       await page.screenshot({
@@ -241,15 +247,73 @@ async function moveAndWait(
     { spawnId },
   );
   await expect
-    .poll(async () => (await snapshot(page)).world.sectors)
-    .toMatchObject({
-      active: expect.arrayContaining([expectedSector]),
+    .poll(async () => {
+      const state = await snapshot(page);
+      const oppositeRim = expectedSector.includes('south')
+        ? 'sector.north-rim-west'
+        : 'sector.south-rim-west';
+      return {
+        sectorReady: state.world.sectors.active.includes(expectedSector),
+        oppositeRimGone: !state.world.sectors.active.includes(oppositeRim),
+        pending: state.world.sectors.pending,
+        transitionsPending: state.world.sectors.transitionsPending,
+        pedestrianLoads: state.pedestrians.loadingCount,
+        assetLoads: state.performance.assets.inFlight,
+      };
+    })
+    .toEqual({
+      sectorReady: true,
+      oppositeRimGone: true,
       pending: [],
+      transitionsPending: false,
+      pedestrianLoads: 0,
+      assetLoads: 0,
     });
   const renderedFrames = (await snapshot(page)).renderer.renderedFrames;
   await expect
     .poll(async () => (await snapshot(page)).renderer.renderedFrames)
     .toBeGreaterThan(renderedFrames + 2);
+}
+
+async function primeRendererOwnership(page: Page): Promise<void> {
+  let previous: ReturnType<typeof rendererOwnership> | undefined;
+  let stableCycles = 0;
+  const samples: unknown[] = [];
+  for (let cycle = 0; cycle < 12; cycle += 1) {
+    await moveAndWait(page, 'spawn.approach-south', 'sector.southwest');
+    await moveAndWait(page, 'spawn.approach-north', 'sector.northwest');
+    await waitForRendererOwnershipPlateau(page);
+    const current = rendererOwnership(await snapshot(page));
+    samples.push(current);
+    stableCycles =
+      previous &&
+      current.geometries === previous.geometries &&
+      current.textures === previous.textures
+        ? stableCycles + 1
+        : 0;
+    previous = current;
+    if (cycle >= 2 && stableCycles >= 2) return;
+  }
+  throw new Error(
+    `Renderer ownership did not plateau during cache priming: ${JSON.stringify(samples)}`,
+  );
+}
+
+async function waitForRendererOwnershipPlateau(page: Page): Promise<void> {
+  let previous = '';
+  let stableSamples = 0;
+  await expect
+    .poll(
+      async () => {
+        const state = await snapshot(page);
+        const current = JSON.stringify(rendererOwnership(state));
+        stableSamples = current === previous ? stableSamples + 1 : 0;
+        previous = current;
+        return stableSamples;
+      },
+      { timeout: 15_000, intervals: [100, 150, 250] },
+    )
+    .toBeGreaterThanOrEqual(2);
 }
 
 async function waitForReady(page: Page): Promise<void> {
