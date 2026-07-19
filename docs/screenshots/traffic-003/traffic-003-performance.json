@@ -1,24 +1,24 @@
 {
   "warmupMs": 2000,
   "measurementMs": 5000,
-  "frames": 1965,
-  "averageFps": 392.67015706806285,
-  "onePercentLowFps": 106.38297872340837,
-  "frameTimeP95Ms": 7.800000000000182,
-  "frameTimeMaxMs": 10.5,
+  "frames": 1769,
+  "averageFps": 353.7434010558311,
+  "onePercentLowFps": 103.09278350515658,
+  "frameTimeP95Ms": 8.399999999999636,
+  "frameTimeMaxMs": 10.599999999999454,
   "renderer": {
     "frameTime": {
       "enabled": true,
       "samples": 120,
-      "minMs": 0.29999998211860657,
-      "averageMs": 2.159166666616996,
-      "maxMs": 8.199999988079071,
-      "p95Ms": 7.0999999940395355
+      "minMs": 0.4000000059604645,
+      "averageMs": 2.6966666668653487,
+      "maxMs": 9.699999988079071,
+      "p95Ms": 8.200000017881393
     },
-    "drawCalls": 149,
-    "triangles": 35755,
-    "geometries": 174,
-    "textures": 120,
+    "drawCalls": 208,
+    "triangles": 51528,
+    "geometries": 179,
+    "textures": 135,
     "pixelRatio": 1,
     "viewport": {
       "cssWidth": 1280,
@@ -60,19 +60,21 @@
     },
     "loadCount": 9,
     "unloadCount": 0,
-    "sceneObjects": 268,
-    "ownedResources": 290,
+    "sceneObjects": 284,
+    "ownedResources": 315,
     "modelInstances": 8,
-    "colliders": 43,
-    "lodHiddenObjects": 43,
+    "colliders": 46,
+    "lodHiddenObjects": 47,
     "transitionsPending": false,
+    "pinnedSectors": [],
+    "visualPathPinCount": 0,
     "policy": {
       "pressure": "low",
       "memory": {
         "pressure": "low",
         "source": "heap-and-proxy",
-        "estimatedWorkingSetBytes": 280614688,
-        "estimatedWorkingSetMb": 267.6150207519531,
+        "estimatedWorkingSetBytes": 93706016,
+        "estimatedWorkingSetMb": 89.36502075195312,
         "preferredCeilingMb": 650,
         "hardCeilingMb": 900,
         "overHardCeiling": false
@@ -99,7 +101,7 @@
         },
         "sector.east-quay": {
           "sectorId": "sector.east-quay",
-          "disposition": "retained",
+          "disposition": "desired",
           "reason": "proximity-prefetch",
           "playerDistance": 36.68787265568829,
           "protected": false
@@ -120,7 +122,7 @@
         },
         "sector.north-rim-east": {
           "sectorId": "sector.north-rim-east",
-          "disposition": "retained",
+          "disposition": "desired",
           "reason": "proximity-prefetch",
           "playerDistance": 31.006299763112654,
           "protected": false
@@ -162,21 +164,21 @@
         },
         "sector.southeast": {
           "sectorId": "sector.southeast",
-          "disposition": "retained",
+          "disposition": "desired",
           "reason": "proximity-prefetch",
           "playerDistance": 35.84689665786984,
           "protected": false
         },
         "sector.southwest": {
           "sectorId": "sector.southwest",
-          "disposition": "retained",
+          "disposition": "desired",
           "reason": "proximity-prefetch",
           "playerDistance": 35.84689665786984,
           "protected": false
         },
         "sector.west-rim-north": {
           "sectorId": "sector.west-rim-north",
-          "disposition": "retained",
+          "disposition": "desired",
           "reason": "proximity-prefetch",
           "playerDistance": 32.436717235256715,
           "protected": false
@@ -195,8 +197,8 @@
   "assets": {
     "cacheEntries": 26,
     "sourceReferences": 26,
-    "instanceReferences": 35,
-    "instancesCreated": 35,
+    "instanceReferences": 33,
+    "instancesCreated": 33,
     "instancesDisposed": 0,
     "loaded": 26,
     "inFlight": 0,
@@ -210,5 +212,32 @@
     "jsHeapSizeLimit": 3760000000,
     "peakUsedJsHeapSize": 24500000
   },
-  "trafficUpdateP95Ms": 0.10000002384185791
+  "trafficUpdateP95Ms": 0.09999999403953552,
+  "trafficRenderCost": {
+    "worldOnlyRenderer": {
+      "frameTime": {
+        "enabled": true,
+        "samples": 120,
+        "minMs": 0.3999999761581421,
+        "averageMs": 2.7891666675607363,
+        "maxMs": 9.800000011920929,
+        "p95Ms": 8.900000005960464
+      },
+      "drawCalls": 190,
+      "triangles": 39086,
+      "geometries": 179,
+      "textures": 135,
+      "pixelRatio": 1,
+      "viewport": {
+        "cssWidth": 1280,
+        "cssHeight": 720,
+        "bufferWidth": 1280,
+        "bufferHeight": 720
+      }
+    },
+    "delta": {
+      "drawCalls": 18,
+      "triangles": 12442
+    }
+  }
 }

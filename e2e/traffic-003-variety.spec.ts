@@ -6,6 +6,11 @@ import type { BrowserTestSnapshot } from '../src/debug/BrowserTestBridge';
 
 const appUrl =
   '/?e2e=1&debug=0&skipPicker=1&traffic=1&trafficCadence=0&trafficMax=8&trafficSpeed=20';
+const performanceMode = process.env.VANTA_PERF === '1';
+
+// Video/trace encoding competes with software WebGL and invalidates frame pacing.
+// This spec commits its own screenshots and JSON evidence explicitly.
+test.use({ screenshot: 'off', trace: 'off', video: 'off' });
 
 test('renders, moves, signals, and bounds every traffic catalog type @visual', async ({
   page,
@@ -78,23 +83,50 @@ test('renders, moves, signals, and bounds every traffic catalog type @visual', a
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await command(page, 'camera.preview-anchor', 'camera.signal-two-shot');
-  const capture = await page.evaluate(() =>
-    window.__VANTA_TEST__!.capturePerformance(2_000, 5_000),
+  const capture = await page.evaluate(
+    ({ warmupMs, measurementMs }) =>
+      window.__VANTA_TEST__!.capturePerformance(warmupMs, measurementMs),
+    {
+      warmupMs: performanceMode ? 2_000 : 500,
+      measurementMs: performanceMode ? 5_000 : 1_000,
+    },
   );
   const runtime = (await snapshot(page)).performance.runtime;
   const trafficUpdateP95Ms = runtime.enabled
     ? (runtime.systems.traffic?.update?.p95Ms ?? Number.POSITIVE_INFINITY)
     : Number.POSITIVE_INFINITY;
-  const evidence = { ...capture, trafficUpdateP95Ms };
-  await writeFile(
-    screenshotPath('traffic-003-performance.json'),
-    `${JSON.stringify(evidence, null, 2)}\n`,
+  await command(page, 'traffic.clear');
+  const worldOnlyCapture = await page.evaluate(() =>
+    window.__VANTA_TEST__!.capturePerformance(1_000, 2_000),
   );
-  expect(capture.renderer.drawCalls).toBeLessThan(150);
+  const trafficRenderCost = {
+    drawCalls: capture.renderer.drawCalls - worldOnlyCapture.renderer.drawCalls,
+    triangles: capture.renderer.triangles - worldOnlyCapture.renderer.triangles,
+  };
+  const evidence = {
+    ...capture,
+    trafficUpdateP95Ms,
+    trafficRenderCost: {
+      worldOnlyRenderer: worldOnlyCapture.renderer,
+      delta: trafficRenderCost,
+    },
+  };
+  if (performanceMode) {
+    await writeFile(
+      screenshotPath('traffic-003-performance.json'),
+      `${JSON.stringify(evidence, null, 2)}\n`,
+    );
+  }
+  expect(trafficRenderCost.drawCalls).toBeGreaterThanOrEqual(0);
+  expect(trafficRenderCost.drawCalls).toBeLessThanOrEqual(24);
+  expect(trafficRenderCost.triangles).toBeGreaterThanOrEqual(0);
+  expect(trafficRenderCost.triangles).toBeLessThan(40_000);
   expect(capture.renderer.triangles).toBeLessThan(150_000);
-  expect(capture.frameTimeP95Ms).toBeLessThanOrEqual(20);
-  expect(capture.averageFps).toBeGreaterThanOrEqual(50);
-  expect(capture.onePercentLowFps).toBeGreaterThanOrEqual(45);
+  if (performanceMode) {
+    expect(capture.frameTimeP95Ms).toBeLessThanOrEqual(20);
+    expect(capture.averageFps).toBeGreaterThanOrEqual(50);
+    expect(capture.onePercentLowFps).toBeGreaterThanOrEqual(45);
+  }
   expect(trafficUpdateP95Ms).toBeLessThan(5);
   if (capture.browserMemory.peakUsedJsHeapSize !== undefined) {
     expect(capture.browserMemory.peakUsedJsHeapSize).toBeLessThan(

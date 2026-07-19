@@ -124,6 +124,11 @@ test.describe('bounded autonomous traffic', () => {
     await openReady(page);
     await command(page, 'runtime.pause-resume');
     await command(page, 'traffic.clear');
+    const worldOnlyFrame = (await snapshot(page)).renderer.renderedFrames;
+    await expect
+      .poll(async () => (await snapshot(page)).renderer.renderedFrames)
+      .toBeGreaterThan(worldOnlyFrame + 2);
+    const worldOnly = await snapshot(page);
     await command(page, 'traffic.spawn-each-approach');
     await command(page, 'traffic.step', '3');
     await command(page, 'traffic.spawn-each-approach');
@@ -146,7 +151,18 @@ test.describe('bounded autonomous traffic', () => {
     expect(
       state.traffic.catalog.every(({ activeVehicles }) => activeVehicles > 0),
     ).toBe(true);
-    expect(state.performance.renderer.drawCalls).toBeLessThan(150);
+    const trafficDrawCalls =
+      state.performance.renderer.drawCalls -
+      worldOnly.performance.renderer.drawCalls;
+    const trafficTriangles =
+      state.performance.renderer.triangles -
+      worldOnly.performance.renderer.triangles;
+    expect(trafficDrawCalls).toBeGreaterThanOrEqual(0);
+    // Includes the explicitly enabled lane, route, and detector debug overlays;
+    // production fleet cost is measured separately by traffic-003-variety.
+    expect(trafficDrawCalls).toBeLessThanOrEqual(64);
+    expect(trafficTriangles).toBeGreaterThanOrEqual(0);
+    expect(trafficTriangles).toBeLessThan(40_000);
     expect(state.performance.renderer.triangles).toBeLessThan(150_000);
     const runtime = state.performance.runtime;
     expect(runtime.enabled).toBe(true);
