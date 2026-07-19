@@ -86,7 +86,7 @@ test('switches every registered definition and safely disposes prior instances',
   expect((await labSnapshot(page)).disposalCount).toBe(ids.length);
 });
 
-test('previews every production pedestrian neutral and explicit applause @visual', async ({
+test('previews every production pedestrian locomotion and explicit applause @visual', async ({
   page,
 }, testInfo) => {
   const ids = [
@@ -102,7 +102,7 @@ test('previews every production pedestrian neutral and explicit applause @visual
       id,
     );
     await waitForModel(page, id);
-    for (const logical of ['idle', 'applaud']) {
+    for (const logical of ['idle', 'walk', 'applaud']) {
       expect(
         await page.evaluate(
           (selection) =>

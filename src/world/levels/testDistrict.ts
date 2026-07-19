@@ -99,7 +99,7 @@ for (const [id, x, z] of [
     [x, 0.1, z],
     [22, 0.2, 22],
     colors.sidewalk,
-    ['walkable'],
+    ['walkable', 'sidewalk'],
     ashfallBuildingTextureIds.sidewalkConcrete,
     6,
   );
@@ -843,8 +843,63 @@ export const testDistrict = {
         })),
       ],
     },
+    pedestrians: {
+      seed: 0x415348,
+      residentCap: 16,
+      activationDistance: 38,
+      visibilityDistance: 46,
+      routes: [
+        sidewalkLoop('route.northwest', 'sector.northwest', 'northwest', [
+          [-9.5, 0.2, 11.5],
+          [-9.5, 0.2, 18],
+          [-15, 0.2, 18],
+          [-15, 0.2, 11.5],
+        ]),
+        sidewalkLoop('route.northeast', 'sector.northeast', 'northeast', [
+          [9.5, 0.2, 11.5],
+          [15, 0.2, 11.5],
+          [15, 0.2, 18],
+          [9.5, 0.2, 18],
+        ]),
+        sidewalkLoop('route.southwest', 'sector.southwest', 'southwest', [
+          [-9.5, 0.2, -11.5],
+          [-15, 0.2, -11.5],
+          [-15, 0.2, -18],
+          [-9.5, 0.2, -18],
+        ]),
+        sidewalkLoop('route.southeast', 'sector.southeast', 'southeast', [
+          [9.5, 0.2, -11.5],
+          [9.5, 0.2, -18],
+          [15, 0.2, -18],
+          [15, 0.2, -11.5],
+        ]),
+      ],
+    },
   },
 } as const satisfies LevelModule;
+
+function sidewalkLoop(
+  id: string,
+  sectorId: string,
+  surface: string,
+  positions: readonly Vector3Tuple[],
+) {
+  return {
+    id,
+    sectorId,
+    loop: true as const,
+    population: 4,
+    speed: [1.15, 1.48] as const,
+    nodes: positions.map((position, index) => ({
+      id: `${id}.node-${index + 1}`,
+      position,
+      surfaceColliderId: `c.sidewalk-${surface}`,
+      ...(index === 0 || index === 2
+        ? { pauseSeconds: [0.65, 1.8] as const }
+        : {}),
+    })),
+  };
+}
 
 function box(
   id: string,

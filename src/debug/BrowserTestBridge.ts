@@ -6,6 +6,7 @@ import type { GameRuntime } from '../game/GameRuntime';
 import type { InteractionSystem } from '../interactions/InteractionSystem';
 import type { ConversationCoordinator } from '../conversations/ConversationCoordinator';
 import type { NpcSystem } from '../npcs/NpcSystem';
+import type { PedestrianSystem } from '../pedestrians/PedestrianSystem';
 import type { npcDefinitions } from '../npcs/npcs';
 import type { StaticCollisionWorld } from '../physics/CollisionWorld';
 import type { CharacterPlayerVisual } from '../player/CharacterPlayerVisual';
@@ -155,6 +156,7 @@ export interface BrowserTestSnapshot {
       ReturnType<NpcSystem['getDebugSnapshot']>
     >[];
   };
+  readonly pedestrians: ReturnType<PedestrianSystem['getSnapshot']>;
   readonly sparringTarget: ReturnType<SparringTargetSystem['getSnapshot']>;
   readonly healthHud: ReturnType<HealthHudSystem['getSnapshot']>;
   readonly quickbar: ReturnType<QuickbarSystem['getSnapshot']>;
@@ -293,6 +295,7 @@ export interface BrowserTestBridgeDependencies {
   readonly weaponCombat: WeaponCombatSystem;
   readonly interactions: InteractionSystem;
   readonly npcs: NpcSystem;
+  readonly pedestrians: PedestrianSystem;
   readonly npcDefinitions: typeof npcDefinitions;
   readonly sparringTarget: SparringTargetSystem;
   readonly healthHud: HealthHudSystem;
@@ -586,6 +589,7 @@ function createSnapshot(
         return snapshot ? [snapshot] : [];
       }),
     },
+    pedestrians: dependencies.pedestrians.getSnapshot(),
     sparringTarget: dependencies.sparringTarget.getSnapshot(),
     healthHud: dependencies.healthHud.getSnapshot(),
     quickbar: dependencies.quickbar.getSnapshot(),
