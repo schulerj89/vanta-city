@@ -6,6 +6,7 @@ import {
   ashfallExpansionPlan,
   eastQuayCurvedRoad,
   intersectionLayout,
+  intersectionTrafficControls,
   sparringTargetArea,
 } from '../../src/world/levels/intersectionLayout';
 import {
@@ -76,7 +77,7 @@ describe('Ashfall Junction intersection', () => {
     }
   });
 
-  it('keeps level bounds, zone, and traffic-light transform on shared constants', () => {
+  it('keeps level bounds, zone, stop lines, and signal poles on shared constants', () => {
     expect(testDistrict.definition.zones).toContainEqual(
       expect.objectContaining({
         id: 'zone.ashfall-junction',
@@ -84,12 +85,21 @@ describe('Ashfall Junction intersection', () => {
         size: [70, 10, intersectionLayout.footprint],
       }),
     );
-    expect(testDistrict.definition.environment).toContainEqual(
-      expect.objectContaining({
-        id: 'v.traffic-light',
-        position: intersectionLayout.trafficLight,
-      }),
-    );
+    for (const control of intersectionTrafficControls.approaches) {
+      expect(testDistrict.definition.environment).toContainEqual(
+        expect.objectContaining({
+          id: `v.marking-stop-line-${control.approach}`,
+          position: control.stopLine,
+          size: control.stopLineSize,
+        }),
+      );
+      expect(testDistrict.definition.staticCollision).toContainEqual(
+        expect.objectContaining({
+          id: `c.traffic-signal-${control.approach}`,
+          position: [control.pole[0], 2.25, control.pole[2]],
+        }),
+      );
+    }
   });
 
   it('records an exact 25 percent playable-area expansion inside the milestone gate', () => {

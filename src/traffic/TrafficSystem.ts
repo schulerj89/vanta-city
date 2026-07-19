@@ -2,11 +2,14 @@ import {
   Box3,
   BoxGeometry,
   BufferGeometry,
+  CylinderGeometry,
   Group,
   Line,
   LineBasicMaterial,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
+  SphereGeometry,
   Vector3,
 } from 'three';
 import type { Material, Object3D, Scene } from 'three';
@@ -35,6 +38,11 @@ import {
   type TrafficVehicleId,
   type VehicleForwardAxis,
 } from './TrafficVehicleCatalog';
+import type {
+  TrafficSignalGroup,
+  TrafficSignalIndication,
+} from './TrafficSignalController';
+import { intersectionTrafficControls } from '../world/levels/intersectionLayout';
 
 interface VehicleSlot {
   readonly instance: ModelInstance;
@@ -42,6 +50,12 @@ interface VehicleSlot {
   readonly vehicleType: TrafficVehicleId;
   readonly detection: Mesh;
   vehicleId?: string;
+}
+
+interface SignalLens {
+  readonly group: TrafficSignalGroup;
+  readonly indication: TrafficSignalIndication;
+  readonly material: MeshStandardMaterial;
 }
 
 /** Scene adapter for the deterministic, deliberately small traffic simulation. */
@@ -52,6 +66,7 @@ export class TrafficSystem implements GameSystem {
   private readonly debugRoot = new Group();
   private readonly slots: VehicleSlot[] = [];
   private readonly debugResources = new Set<BufferGeometry | Material>();
+  private readonly signalLenses: SignalLens[] = [];
   private readonly unregisterDebug: DebugUnregister[] = [];
   private initialized = false;
   private state: GameContext['state'] | undefined;
@@ -74,6 +89,7 @@ export class TrafficSystem implements GameSystem {
     try {
       this.state = context?.state;
       this.buildPathDebug();
+      this.buildSignalFixtures();
       for (
         let index = 0;
         index < this.simulation.config.maxPopulation;
@@ -86,7 +102,11 @@ export class TrafficSystem implements GameSystem {
       }
       this.scene.add(this.root);
       this.registerDevelopmentControls();
+      if (this.simulation.config.spawnCadence > 0) {
+        this.simulation.populateResidents();
+      }
       this.initialized = true;
+      this.syncScene();
     } catch (error) {
       this.dispose();
       throw error;
@@ -162,6 +182,7 @@ export class TrafficSystem implements GameSystem {
     this.root.clear();
     for (const resource of this.debugResources) resource.dispose();
     this.debugResources.clear();
+    this.signalLenses.length = 0;
     this.initialized = false;
     this.state = undefined;
   }
@@ -212,7 +233,13 @@ export class TrafficSystem implements GameSystem {
 
   private syncScene(): void {
     if (!this.initialized) return;
-    const vehicles = this.simulation.getSnapshot().vehicles;
+    const snapshot = this.simulation.getSnapshot();
+    const vehicles = snapshot.vehicles;
+    for (const lens of this.signalLenses) {
+      const active = snapshot.signal.groups[lens.group] === lens.indication;
+      lens.material.emissiveIntensity = active ? 3.2 : 0.04;
+      lens.material.opacity = active ? 1 : 0.34;
+    }
     const activeIds = new Set(vehicles.map(({ id }) => id));
     for (const slot of this.slots) {
       if (slot.vehicleId && !activeIds.has(slot.vehicleId)) {
@@ -316,6 +343,104 @@ export class TrafficSystem implements GameSystem {
     }
   }
 
+  private buildSignalFixtures(): void {
+    const signalRoot = new Group();
+    signalRoot.name = 'traffic-signal-fixtures';
+    this.root.add(signalRoot);
+    const metal = own(
+      this.debugResources,
+      new MeshStandardMaterial({ color: 0x243536, roughness: 0.72 }),
+    );
+    const housing = own(
+      this.debugResources,
+      new MeshStandardMaterial({ color: 0x10191a, roughness: 0.82 }),
+    );
+    const poleGeometry = own(
+      this.debugResources,
+      new CylinderGeometry(0.11, 0.15, 4.1, 8),
+    );
+    const lensGeometry = own(
+      this.debugResources,
+      new SphereGeometry(0.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    );
+    for (const control of intersectionTrafficControls.approaches) {
+      const assembly = new Group();
+      assembly.name = `traffic-signal:${control.approach}`;
+      const pole = new Mesh(poleGeometry, metal);
+      pole.position.set(control.pole[0], 2.25, control.pole[2]);
+      pole.castShadow = true;
+      assembly.add(pole);
+      const overhead = control.heads[1];
+      const armLength = Math.hypot(
+        overhead[0] - control.pole[0],
+        overhead[2] - control.pole[2],
+      );
+      const arm = new Mesh(
+        own(
+          this.debugResources,
+          new CylinderGeometry(0.08, 0.08, armLength, 8),
+        ),
+        metal,
+      );
+      arm.position.set(
+        (overhead[0] + control.pole[0]) / 2,
+        overhead[1] + 0.42,
+        (overhead[2] + control.pole[2]) / 2,
+      );
+      arm.rotation.z = Math.PI / 2;
+      if (
+        Math.abs(overhead[2] - control.pole[2]) >
+        Math.abs(overhead[0] - control.pole[0])
+      ) {
+        arm.rotation.y = Math.PI / 2;
+      }
+      assembly.add(arm);
+      for (const [headIndex, position] of control.heads.entries()) {
+        const head = new Group();
+        head.name = `traffic-signal-head:${control.approach}:${headIndex}`;
+        head.position.set(position[0], position[1], position[2]);
+        head.rotation.y = control.headYaw;
+        const caseMesh = new Mesh(
+          own(this.debugResources, new BoxGeometry(0.52, 1.42, 0.32)),
+          housing,
+        );
+        caseMesh.castShadow = true;
+        head.add(caseMesh);
+        for (const [index, indication] of (
+          ['red', 'yellow', 'green'] as const
+        ).entries()) {
+          const color = {
+            red: 0xff2d2d,
+            yellow: 0xffc629,
+            green: 0x38e36b,
+          }[indication];
+          const material = own(
+            this.debugResources,
+            new MeshStandardMaterial({
+              color,
+              emissive: color,
+              emissiveIntensity: 0.04,
+              transparent: true,
+              opacity: 0.34,
+              roughness: 0.28,
+            }),
+          );
+          const lens = new Mesh(lensGeometry, material);
+          lens.position.set(0, 0.43 - index * 0.43, 0.17);
+          lens.rotation.x = Math.PI / 2;
+          head.add(lens);
+          this.signalLenses.push({
+            group: control.signalGroup,
+            indication,
+            material,
+          });
+        }
+        assembly.add(head);
+      }
+      signalRoot.add(assembly);
+    }
+  }
+
   private registerDevelopmentControls(): void {
     if (!this.debug) return;
     this.unregisterDebug.push(
@@ -363,6 +488,15 @@ export class TrafficSystem implements GameSystem {
         },
       }),
       this.debug.registerValue({
+        id: 'traffic.signal',
+        label: 'Signal phase / remaining',
+        group: debugSections.traffic,
+        read: () => {
+          const signal = this.simulation.getSnapshot().signal;
+          return `${signal.phase} · ${signal.remaining.toFixed(1)}s · NS ${signal.groups['north-south']} / EW ${signal.groups['east-west']}`;
+        },
+      }),
+      this.debug.registerValue({
         id: 'traffic.vehicles',
         label: 'Lane / occupancy / stop / speed',
         group: debugSections.collision,
@@ -379,8 +513,10 @@ export class TrafficSystem implements GameSystem {
                     progress,
                     speed,
                     stoppingReason,
+                    controlDistance,
+                    queuePosition,
                   }) =>
-                    `${id}[${vehicleType}]:${approach}@${progress.toFixed(1)}m ${speed.toFixed(1)}m/s ${stoppingReason ?? 'moving'}`,
+                    `${id}[${vehicleType}]:${approach}@${progress.toFixed(1)}m ${speed.toFixed(1)}m/s ${stoppingReason ?? 'moving'} d=${controlDistance.toFixed(1)} q=${queuePosition}`,
                 )
                 .join(' | ');
         },

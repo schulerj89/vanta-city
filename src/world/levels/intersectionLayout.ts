@@ -19,6 +19,62 @@ export const intersectionLayout = {
   signalController: [10.2, 0.65, 8.5] as Vector3Tuple,
 } as const;
 
+/** Authoritative controls for the four approaches at Ashfall Crossing. */
+export const intersectionTrafficControls = {
+  stopLineDistanceFromCenter: 6.5,
+  detectorLength: 12,
+  approaches: [
+    {
+      approach: 'north',
+      signalGroup: 'north-south',
+      stopLine: [0, 0.025, 6.5],
+      stopLineSize: [5.6, 0.035, 0.28],
+      pole: [-6.8, 0.2, 6.8],
+      headYaw: 0,
+      heads: [
+        [-5.95, 4.25, 6.8],
+        [-1.5, 4.25, 6.8],
+      ],
+    },
+    {
+      approach: 'east',
+      signalGroup: 'east-west',
+      stopLine: [6.5, 0.025, 0],
+      stopLineSize: [0.28, 0.035, 5.6],
+      pole: [6.8, 0.2, 6.8],
+      headYaw: Math.PI / 2,
+      heads: [
+        [6.8, 4.25, 5.95],
+        [6.8, 4.25, 1.5],
+      ],
+    },
+    {
+      approach: 'south',
+      signalGroup: 'north-south',
+      stopLine: [0, 0.025, -6.5],
+      stopLineSize: [5.6, 0.035, 0.28],
+      pole: [6.8, 0.2, -6.8],
+      headYaw: Math.PI,
+      heads: [
+        [5.95, 4.25, -6.8],
+        [1.5, 4.25, -6.8],
+      ],
+    },
+    {
+      approach: 'west',
+      signalGroup: 'east-west',
+      stopLine: [-6.5, 0.025, 0],
+      stopLineSize: [0.28, 0.035, 5.6],
+      pole: [-6.8, 0.2, -6.8],
+      headYaw: -Math.PI / 2,
+      heads: [
+        [-6.8, 4.25, -5.95],
+        [-6.8, 4.25, -1.5],
+      ],
+    },
+  ],
+} as const;
+
 /** WORLD-001 machine-readable growth and construction record. */
 export const ashfallExpansionPlan = {
   id: 'world-001-east-canal-curve',

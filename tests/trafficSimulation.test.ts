@@ -11,6 +11,10 @@ import {
   defaultTrafficConfig,
 } from '../src/traffic/TrafficSimulation';
 import { trafficVehicleCatalog } from '../src/traffic/TrafficVehicleCatalog';
+import {
+  TrafficSignalController,
+  defaultTrafficSignalConfig,
+} from '../src/traffic/TrafficSignalController';
 
 const config = (overrides: Partial<typeof defaultTrafficConfig> = {}) => ({
   ...defaultTrafficConfig,
@@ -20,10 +24,16 @@ const config = (overrides: Partial<typeof defaultTrafficConfig> = {}) => ({
 
 describe('TrafficSimulation', () => {
   it('drives a spawned vehicle straight through and despawns at the opposite edge', () => {
-    const traffic = new TrafficSimulation(config({ speed: 10 }));
+    const traffic = new TrafficSimulation(
+      config({
+        speed: 10,
+        acceleration: 100,
+        signals: { ...defaultTrafficSignalConfig, greenDuration: 30 },
+      }),
+    );
     expect(traffic.spawn('north')).toMatchObject({ x: -1.5, z: 24.5 });
 
-    traffic.update(5);
+    traffic.update(6);
 
     expect(traffic.getSnapshot()).toMatchObject({
       count: 0,
@@ -38,12 +48,13 @@ describe('TrafficSimulation', () => {
 
     traffic.update(1, { playerDistance: () => 3 });
     const stopped = traffic.getSnapshot().vehicles[0]!;
-    expect(stopped.progress).toBe(1);
+    expect(stopped.progress).toBeGreaterThan(0);
+    expect(stopped.progress).toBeLessThanOrEqual(1.5);
     expect(stopped.stoppingReason).toBe('player');
 
     traffic.update(1);
     const resumed = traffic.getSnapshot().vehicles[0]!;
-    expect(resumed.progress).toBe(5.5);
+    expect(resumed.progress).toBeGreaterThan(stopped.progress);
     expect(resumed.stoppingReason).toBeUndefined();
   });
 
@@ -65,38 +76,74 @@ describe('TrafficSimulation', () => {
     }
   });
 
-  it('serializes perpendicular intersection occupancy deterministically', () => {
+  it('stops red approaches before their authored lines and releases them on green', () => {
     const traffic = new TrafficSimulation(config({ maxPopulation: 4 }));
     traffic.spawn('north');
-    traffic.spawn('east');
+    traffic.spawn('west');
 
-    traffic.update(5);
+    traffic.update(8);
     const north = traffic
       .getSnapshot()
       .vehicles.find(({ approach }) => approach === 'north')!;
-    const east = traffic
+    const west = traffic
       .getSnapshot()
-      .vehicles.find(({ approach }) => approach === 'east')!;
-    expect(north.progress).toBeGreaterThan(19.2);
-    expect(east.progress).toBe(22.5);
-
-    traffic.update(4);
-    const eastAtIntersection = traffic
-      .getSnapshot()
-      .vehicles.find(({ approach }) => approach === 'east')!;
-    expect(eastAtIntersection.progress).toBe(
-      ashfallTrafficLanes.find(({ approach }) => approach === 'east')!
-        .intersectionEntry,
+      .vehicles.find(({ approach }) => approach === 'west')!;
+    const westLane = ashfallTrafficLanes.find(
+      ({ approach }) => approach === 'west',
+    )!;
+    expect(north.progress).toBeGreaterThan(
+      ashfallTrafficLanes.find(({ approach }) => approach === 'north')!
+        .intersectionExit,
     );
-    expect(eastAtIntersection.stoppingReason).toBe('intersection');
+    expect(west.progress + west.vehicleLength / 2).toBeLessThan(
+      westLane.stopLine,
+    );
+    expect(west.stoppingReason).toBe('signal-red');
 
-    traffic.update(3);
-    traffic.update(1);
-    expect(
-      traffic
-        .getSnapshot()
-        .vehicles.find(({ approach }) => approach === 'east')!.progress,
-    ).toBeGreaterThan(19.2);
+    traffic.update(10);
+    const released = traffic
+      .getSnapshot()
+      .vehicles.find(({ approach }) => approach === 'west')!;
+    expect(traffic.getSnapshot().signal.groups['east-west']).toBe('green');
+    expect(released.progress).toBeGreaterThan(west.progress);
+    expect(released.stoppingReason).toBeUndefined();
+  });
+
+  it('makes a deterministic safe yellow decision from stopping distance', () => {
+    const traffic = new TrafficSimulation(
+      config({
+        speed: 8,
+        acceleration: 100,
+        signals: {
+          greenDuration: 1.7,
+          yellowDuration: 3,
+          allRedDuration: 1,
+        },
+      }),
+    );
+    traffic.spawn('north');
+    traffic.update(1.8);
+    const committed = traffic.getSnapshot().vehicles[0]!;
+    expect(committed.signalIndication).toBe('yellow');
+    expect(committed.committedToIntersection).toBe(true);
+    expect(committed.yellowDecision).toBe('go');
+    expect(committed.stoppingReason).not.toBe('signal-yellow');
+
+    const cautious = new TrafficSimulation(
+      config({
+        signals: {
+          greenDuration: 0.1,
+          yellowDuration: 3,
+          allRedDuration: 1,
+        },
+      }),
+    );
+    cautious.spawn('north');
+    cautious.update(1);
+    expect(cautious.getSnapshot().vehicles[0]!.stoppingReason).toBe(
+      'signal-yellow',
+    );
+    expect(cautious.getSnapshot().vehicles[0]!.yellowDecision).toBe('stop');
   });
 
   it('follows the spline-derived east and west lane paths through the expansion', () => {
@@ -149,6 +196,57 @@ describe('TrafficSimulation', () => {
     ).toEqual(['pickup-truck', 'sports-car', 'pickup-truck', 'sports-car']);
     for (let index = 0; index < 4; index += 1) traffic.update(11);
     expect(traffic.getSnapshot()).toMatchObject({ count: 0, despawned: 4 });
+  });
+
+  it('seeds eight separated residents without advancing the signal cycle', () => {
+    const traffic = new TrafficSimulation(config({ maxPopulation: 8 }));
+    expect(traffic.populateResidents()).toBe(8);
+    const snapshot = traffic.getSnapshot();
+    expect(snapshot.count).toBe(8);
+    expect(snapshot.signal).toMatchObject({
+      phase: 'north-south-green',
+      remaining: defaultTrafficSignalConfig.greenDuration,
+    });
+    for (const approach of ['north', 'east', 'south', 'west'] as const) {
+      const lane = snapshot.vehicles
+        .filter((vehicle) => vehicle.approach === approach)
+        .sort((a, b) => a.progress - b.progress);
+      expect(lane).toHaveLength(2);
+      expect(lane[1]!.progress - lane[0]!.progress).toBeGreaterThanOrEqual(7.4);
+    }
+  });
+});
+
+describe('TrafficSignalController', () => {
+  it('cycles green, yellow, all-red, opposing green without conflicting greens', () => {
+    const signals = new TrafficSignalController({
+      greenDuration: 4,
+      yellowDuration: 2,
+      allRedDuration: 1,
+    });
+    const phases = [signals.getSnapshot()];
+    for (const duration of [4, 2, 1, 4, 2, 1]) {
+      signals.update(duration);
+      phases.push(signals.getSnapshot());
+    }
+    expect(phases.map(({ phase }) => phase)).toEqual([
+      'north-south-green',
+      'north-south-yellow',
+      'all-red-to-east-west',
+      'east-west-green',
+      'east-west-yellow',
+      'all-red-to-north-south',
+      'north-south-green',
+    ]);
+    expect(
+      phases.every(
+        ({ groups }) =>
+          !(
+            groups['north-south'] === 'green' && groups['east-west'] === 'green'
+          ),
+      ),
+    ).toBe(true);
+    expect(phases.at(-1)!.cycle).toBe(1);
   });
 });
 
@@ -238,5 +336,37 @@ describe('TrafficSystem lifecycle', () => {
     expect(
       collision.castDynamicSegment?.(new Vector3(), new Vector3(0, 0, 7)),
     ).toMatchObject({ colliderId: 'dynamic.player' });
+  });
+
+  it('rebuilds three times without retaining pooled models or signal roots', async () => {
+    const scene = new Scene();
+    const disposals: ReturnType<typeof vi.fn>[] = [];
+    const loader = {
+      instantiateModel: vi.fn(
+        async (assetId: string): Promise<ModelInstance> => {
+          const dispose = vi.fn();
+          disposals.push(dispose);
+          return { assetId, scene: new Group(), animations: [], dispose };
+        },
+      ),
+    } as unknown as GameAssetLoader;
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      const system = new TrafficSystem(
+        scene,
+        loader,
+        new StaticCollisionWorld(),
+        undefined,
+        config({ maxPopulation: 8 }),
+      );
+      await system.init();
+      expect(scene.getObjectByName('traffic-signal-fixtures')).toBeDefined();
+      expect(system.getSnapshot().pooledModels).toBe(8);
+      system.dispose();
+      expect(scene.getObjectByName('traffic-vehicles')).toBeUndefined();
+    }
+    expect(disposals).toHaveLength(24);
+    expect(disposals.every((dispose) => dispose.mock.calls.length === 1)).toBe(
+      true,
+    );
   });
 });
