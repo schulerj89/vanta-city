@@ -86,9 +86,27 @@ export const world002BContact = {
   spawnId: 'spawn.ash-001.contact',
   cameraAnchorId: 'camera.ash-001.contact-reveal',
   position: [30, 0.22, 31] as Vector3Tuple,
-  cameraPosition: [35, 7.5, 25.5] as Vector3Tuple,
-  cameraLookAt: [30, 1.2, 31] as Vector3Tuple,
+  cameraPosition: [24, 4.5, 24] as Vector3Tuple,
+  cameraLookAt: [30, 1.8, 31] as Vector3Tuple,
 } as const;
+
+export const world002BRimSpawns = [
+  {
+    id: 'spawn.rim-west',
+    position: [-33, 0.02, 0] as Vector3Tuple,
+    yaw: Math.PI / 2,
+  },
+  {
+    id: 'spawn.rim-east',
+    position: [46, 0.22, 10] as Vector3Tuple,
+    yaw: -Math.PI / 2,
+  },
+  {
+    id: 'spawn.rim-south',
+    position: [30, 0.22, -30] as Vector3Tuple,
+    yaw: 0,
+  },
+] as const;
 
 export const world002AWestRoad = surfacePair(
   'road-west-rim',

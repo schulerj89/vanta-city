@@ -36,6 +36,7 @@
     },
     {
       "id": "WORLD-002B",
+      "commit": "a53db5d",
       "boundsMetres": {
         "minX": -36.75,
         "maxX": 50.75,
@@ -69,11 +70,26 @@
   "constructionAuthority": "src/world/levels/junctionGrowth.ts",
   "mapAuthority": "testDistrict.definition.mapPresentation",
   "streamingProfile": {
-    "selection": "baseline-pending-final-profile-evidence",
+    "selection": "baseline-26-32-24",
     "loadDistanceMetres": 26,
     "unloadDistanceMetres": 32,
     "detailDistanceMetres": 24,
-    "reason": "No farther profile is shipped without measured visual and performance evidence."
+    "reason": "Final-map baseline passed all budgets and sector-center/split ownership removed observed continuity pops; no farther candidate had evidence of additional visible benefit."
+  },
+  "performance": {
+    "referenceViewport": "1280x720",
+    "warmupSeconds": 20,
+    "measurementSeconds": 60,
+    "averageFps": 704.17,
+    "onePercentLowFps": 357.14,
+    "frameTimeP95Ms": 2.7,
+    "drawCalls": 38,
+    "triangles": 12891,
+    "peakUsedJsHeapProxyMb": 42.1,
+    "processWorkingSetAvailable": false,
+    "threeCycleOwnershipStable": true,
+    "artifact": "docs/screenshots/world-002ab/performance-capture.json",
+    "leakArtifact": "docs/screenshots/world-002ab/three-cycle-leak-evidence.json"
   },
   "missionIntegrationEntries": {
     "locationId": "location.ash-001.contact-yard",

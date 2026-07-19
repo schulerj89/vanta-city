@@ -29,9 +29,12 @@ is acceptance evidence, not a second runtime definition.
 - All 12 new shells use approved variants from the 26-entry catalog, catalog
   frontage details, shared local textures, full rotated footprint collision,
   and `obstacle`, `camera`, and `building` tags.
-- The baseline 26m load / 32m unload / 24m detail policy remains authored. A
-  farther profile is not selected without final-map evidence that it improves
-  visible approaches and passes the established budgets.
+- The baseline 26m load / 32m unload / 24m detail policy remains authored.
+  Visual profiling found an inherited East Quay continuity pop at the final
+  north/south approaches; splitting the long ground ownership between the rim
+  sectors and moving the curve sector center removed it without increasing
+  distance. No farther profile demonstrated additional visible benefit, so no
+  distance increase is shipped.
 
 ## Map and UI design brief
 
@@ -60,3 +63,15 @@ Final screenshot and performance artifact paths are recorded under
 authoritative map bounds, roads, structures, sectors, and Contact Yard place
 are intentionally expanded. Process memory is reported separately from the
 browser JS-heap proxy when available.
+
+The 1280×720 hardware lane used a 20-second warmup and 60-second measurement.
+The streamed final map recorded 704.17 average FPS capacity, 357.14 FPS 1% low,
+2.7ms frame-time p95, 38 draw calls, 12,891 triangles, and a 42.1MB peak browser
+JS-heap proxy. These are uncapped capacity values, not display refresh. The
+full-level comparison recorded 72 draw calls and 17,581 triangles. Three
+south/north load cycles returned exactly 119 scene objects, 119 owned
+resources, 5 sector model instances, 17 source references, and 8 asset instance
+references at the same final pose. Console errors, page errors, failed requests,
+and external requests were empty. Chromium did not expose full process working
+set through the browser bridge, so the 42.1MB value is not represented as proof
+of total process RSS; the tested proxy remains far below the 900MB ceiling.

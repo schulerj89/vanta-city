@@ -29,6 +29,7 @@ import {
   world002BBuildingPlacements,
   world002BContact,
   world002BPlan,
+  world002BRimSpawns,
   world002BRoads,
   world002BSidewalks,
 } from './junctionGrowth';
@@ -71,15 +72,20 @@ function surface(
 
 surface('road-east-west', [0, -0.2, 0], [56, 0.4, 12], colors.asphalt);
 surface('road-north-south', [0, -0.2, 0], [12, 0.4, 56], colors.asphalt);
-surface(
-  'east-quay-ground',
-  [35, -0.225, 0],
-  [14, 0.35, 56],
-  colors.sidewalk,
-  ['walkable'],
-  ashfallBuildingTextureIds.sidewalkConcrete,
-  6,
-);
+for (const [id, z] of [
+  ['east-quay-ground-north', 14],
+  ['east-quay-ground-south', -14],
+] as const) {
+  surface(
+    id,
+    [35, -0.225, z],
+    [14, 0.35, 28],
+    colors.sidewalk,
+    ['walkable'],
+    ashfallBuildingTextureIds.sidewalkConcrete,
+    6,
+  );
+}
 
 for (const [id, x, z] of [
   ['northwest', -17, 17],
@@ -349,6 +355,12 @@ const world002AEntryIds = new Set([
     visual.id,
     definition.id,
   ]),
+  ...streamableEntries
+    .filter(
+      ({ id }) =>
+        id.includes('east-quay-ground') || id.includes('building-east-quay'),
+    )
+    .map(({ id }) => id),
   'v.boundary-west',
   'c.boundary-west',
   'v.boundary-east',
@@ -537,6 +549,13 @@ export const testDistrict = {
         rotation: [0, Math.PI, 0],
         tags: ['ash-001', 'contact-yard', 'approach'],
       },
+      ...world002BRimSpawns.map(({ id, position, yaw }) => ({
+        id,
+        kind: 'player' as const,
+        position,
+        rotation: [0, yaw, 0] as Vector3Tuple,
+        tags: ['world-002b', 'outer-rim'],
+      })),
     ],
     locations: [
       {
@@ -650,6 +669,35 @@ export const testDistrict = {
         fieldOfView: 50,
         tags: ['cinematic', 'ash-001', 'contact-yard', 'destination-reveal'],
       },
+      {
+        id: 'camera.world-002b.overhead',
+        position: [7, 100, 0],
+        // Aim above the floor to keep camera obstruction from collapsing the view.
+        lookAt: [7, 5, 0.1],
+        fieldOfView: 60,
+        tags: ['debug', 'world-002b', 'bounds'],
+      },
+      {
+        id: 'camera.world-002b.west-rim',
+        position: [-24, 7, -8],
+        lookAt: [-34, 2, 0],
+        fieldOfView: 52,
+        tags: ['debug', 'world-002b', 'street', 'west-rim'],
+      },
+      {
+        id: 'camera.world-002b.east-rim',
+        position: [35, 25, -15],
+        lookAt: [44, 5, 5],
+        fieldOfView: 46,
+        tags: ['debug', 'world-002b', 'street', 'east-rim', 'curve'],
+      },
+      {
+        id: 'camera.world-002b.south-rim',
+        position: [30, 5, -22],
+        lookAt: [30, 2, -32],
+        fieldOfView: 52,
+        tags: ['debug', 'world-002b', 'street', 'south-rim'],
+      },
     ],
     lighting: {
       lamps: [
@@ -711,6 +759,10 @@ export const testDistrict = {
           entryId: world002BContact.spawnId,
           layer: 'spawns',
         },
+        ...world002BRimSpawns.map(({ id }) => ({
+          entryId: id,
+          layer: 'spawns' as const,
+        })),
       ],
     },
     streaming: {
@@ -739,7 +791,8 @@ export const testDistrict = {
         })),
         {
           id: ashfallExpansionPlan.addedSectorId,
-          center: [35, 4],
+          // Keep East Quay continuity resident from the final north contact yard.
+          center: [35, 8],
           loadDistance: 26,
           unloadDistance: 32,
           entryIds: eastQuayEntryIds,

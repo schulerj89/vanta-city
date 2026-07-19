@@ -16,6 +16,7 @@ import {
   world002BBuildingPlacements,
   world002BContact,
   world002BPlan,
+  world002BRimSpawns,
   world002BRoads,
   world002BSidewalks,
 } from '../../src/world/levels/junctionGrowth';
@@ -65,7 +66,7 @@ describe('Ashfall Junction intersection', () => {
           id.startsWith('c.east-quay-ground') ||
           id.startsWith('c.boundary-')),
     );
-    expect(structural).toHaveLength(22);
+    expect(structural).toHaveLength(23);
     for (const definition of structural) {
       const visual = visuals.get(definition.id.replace(/^c\./, 'v.'));
       expect(visual, definition.id).toBeDefined();
@@ -191,6 +192,20 @@ describe('Ashfall Junction intersection', () => {
     expect(testDistrict.definition.cinematicAnchors).toContainEqual(
       expect.objectContaining({ id: world002BContact.cameraAnchorId }),
     );
+  });
+
+  it('grounds authored visual-review spawns on every final outer direction', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addDefinitions(testDistrict.definition.staticCollision);
+    for (const { id, position } of world002BRimSpawns) {
+      const grounded = collision.moveCharacter(
+        new Vector3(...position),
+        new Vector3(0, -1, 0),
+        defaultPlayerMovementConfig,
+        false,
+      );
+      expect(grounded.grounded, id).toBe(true);
+    }
   });
 
   it('authors populated, collidable WORLD-002A sidewalks and west road', () => {
