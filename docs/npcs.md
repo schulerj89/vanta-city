@@ -25,11 +25,11 @@ hashes, complete animation inventory, forward axis, transforms, and
 modifications are committed beside the assets in
 `public/assets/characters/animated-women/README.md`.
 
-These definitions are ready for an ambient pedestrian spawner to select, but
-this task intentionally does not add AI, pathing, dialogue, missions, new
-spawns, or a default runtime roster. Consequently the production/default
-Ashfall startup remains empty until a later gameplay system owns pedestrian
-placement and behavior. The development Talk fixtures below remain separate.
+These definitions are selected by the separate authoritative `PedestrianSystem`
+for deterministic, sector-resident sidewalk walkers. They remain outside the
+conversation NPC roster and never receive Talk, mission, cinematic-performance,
+or applause-fallback behavior. See [Sidewalk pedestrian population](pedestrians.md).
+The development Talk fixtures below remain separate.
 
 ## Development fixture roster
 

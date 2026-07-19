@@ -1,6 +1,8 @@
 import type { AssetManifest } from '../assets/AssetLoader';
 import type { StaticColliderDefinition } from '../physics/StaticCollider';
 import type { Vector3Tuple } from './Spatial';
+import type { PedestrianPopulationDefinition } from '../pedestrians/PedestrianRouteDefinition';
+import { validatePedestrianPopulation } from '../pedestrians/PedestrianRouteDefinition';
 
 export type { Vector3Tuple } from './Spatial';
 
@@ -183,6 +185,8 @@ export interface LevelDefinition {
   readonly lighting?: LevelLightingDefinition;
   readonly mapPresentation?: LevelMapPresentationDefinition;
   readonly streaming?: LevelStreamingDefinition;
+  /** Sidewalk navigation facts; road geometry remains owned by environment data. */
+  readonly pedestrians?: PedestrianPopulationDefinition;
 }
 
 export interface LevelModule {
@@ -337,6 +341,7 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
 
   validateMapPresentation(definition, issues);
   validateStreaming(definition, issues);
+  validatePedestrianPopulation(definition, definition.pedestrians, issues);
 
   const defaultPlayers = definition.spawns.filter(
     (spawn) => spawn.kind === 'player' && spawn.default,

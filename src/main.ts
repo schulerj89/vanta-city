@@ -35,8 +35,10 @@ import { NpcSystem } from './npcs/NpcSystem';
 import {
   npcCharacterDefinitions,
   npcDefinitions,
+  pedestrianCharacterDefinitions,
   productionNpcDefinitions,
 } from './npcs/npcs';
+import { PedestrianSystem } from './pedestrians/PedestrianSystem';
 import { StaticCollisionWorld } from './physics/CollisionWorld';
 import { WorldCollisionSystem } from './physics/WorldCollisionSystem';
 import { CharacterPlayerVisual } from './player/CharacterPlayerVisual';
@@ -444,6 +446,16 @@ async function bootstrap(): Promise<void> {
     worldEvents,
     assets,
   );
+  const pedestrians = new PedestrianSystem(
+    pedestrianCharacterDefinitions,
+    new CharacterLoader(assets),
+    render.scene,
+    collision,
+    player,
+    levelSystem,
+    worldEvents,
+    runtime.state,
+  );
   let sparringTarget: SparringTargetSystem | undefined;
   if (development) {
     const { SparringTargetSystem } =
@@ -780,6 +792,7 @@ async function bootstrap(): Promise<void> {
     .register(interactions)
     .register(conversations)
     .register(npcs)
+    .register(pedestrians)
     .register(missions)
     .register(cinematics)
     .register(cinematicPresentation)
@@ -838,6 +851,7 @@ async function bootstrap(): Promise<void> {
           weaponCombat,
           interactions,
           npcs,
+          pedestrians,
           npcDefinitions: activeNpcDefinitions,
           sparringTarget,
           healthHud,

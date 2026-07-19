@@ -28,6 +28,10 @@ const animatedWomenPedestrianAnimations = {
     clipNames: ['HumanArmature|Female_Idle'],
     required: true,
   },
+  walk: {
+    clipNames: ['HumanArmature|Female_Walk'],
+    required: true,
+  },
   applaud: {
     clipNames: ['HumanArmature|Female_Clapping'],
     required: true,

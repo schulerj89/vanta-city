@@ -1,0 +1,153 @@
+{
+  "baseline": {
+    "warmupMs": 250,
+    "measurementMs": 1000,
+    "frames": 13,
+    "averageFps": 12.211159120796559,
+    "onePercentLowFps": 8.568980291345277,
+    "frameTimeP95Ms": 116.70000000000073,
+    "frameTimeMaxMs": 116.70000000000073,
+    "renderer": {
+      "frameTime": {
+        "enabled": true,
+        "samples": 108,
+        "minMs": 0.3999999761581421,
+        "averageMs": 1.8907407398025196,
+        "maxMs": 74.7999999821186,
+        "p95Ms": 2
+      },
+      "drawCalls": 67,
+      "triangles": 20636,
+      "geometries": 95,
+      "textures": 271,
+      "pixelRatio": 1,
+      "viewport": {
+        "cssWidth": 1280,
+        "cssHeight": 720,
+        "bufferWidth": 1280,
+        "bufferHeight": 720
+      }
+    },
+    "sectors": {
+      "levelId": "test-district",
+      "authored": 6,
+      "active": ["sector.core", "sector.northeast", "sector.northwest"],
+      "pending": [],
+      "states": {
+        "sector.core": "active",
+        "sector.east-quay": "inactive",
+        "sector.northeast": "active",
+        "sector.northwest": "active",
+        "sector.southeast": "inactive",
+        "sector.southwest": "inactive"
+      },
+      "loadCount": 17,
+      "unloadCount": 14,
+      "sceneObjects": 104,
+      "ownedResources": 109,
+      "modelInstances": 5,
+      "colliders": 14,
+      "lodHiddenObjects": 8,
+      "transitionsPending": false
+    },
+    "assets": {
+      "cacheEntries": 21,
+      "sourceReferences": 21,
+      "instanceReferences": 16,
+      "instancesCreated": 97,
+      "instancesDisposed": 81,
+      "loaded": 21,
+      "inFlight": 0,
+      "failures": 0,
+      "disposed": false
+    },
+    "browserMemory": {
+      "supported": true,
+      "usedJsHeapSize": 44700000,
+      "totalJsHeapSize": 60300000,
+      "jsHeapSizeLimit": 3760000000,
+      "peakUsedJsHeapSize": 44700000
+    }
+  },
+  "afterThreeRespawnCycles": {
+    "warmupMs": 250,
+    "measurementMs": 1000,
+    "frames": 11,
+    "averageFps": 10.645504693699804,
+    "onePercentLowFps": 8.547008547008547,
+    "frameTimeP95Ms": 117,
+    "frameTimeMaxMs": 117,
+    "renderer": {
+      "frameTime": {
+        "enabled": true,
+        "samples": 120,
+        "minMs": 0.3999999761581421,
+        "averageMs": 1.3224999994039535,
+        "maxMs": 16.19999998807907,
+        "p95Ms": 2
+      },
+      "drawCalls": 64,
+      "triangles": 20098,
+      "geometries": 81,
+      "textures": 321,
+      "pixelRatio": 1,
+      "viewport": {
+        "cssWidth": 1280,
+        "cssHeight": 720,
+        "bufferWidth": 1280,
+        "bufferHeight": 720
+      }
+    },
+    "sectors": {
+      "levelId": "test-district",
+      "authored": 6,
+      "active": ["sector.core", "sector.northeast", "sector.northwest"],
+      "pending": [],
+      "states": {
+        "sector.core": "active",
+        "sector.east-quay": "inactive",
+        "sector.northeast": "active",
+        "sector.northwest": "active",
+        "sector.southeast": "inactive",
+        "sector.southwest": "inactive"
+      },
+      "loadCount": 29,
+      "unloadCount": 26,
+      "sceneObjects": 104,
+      "ownedResources": 109,
+      "modelInstances": 5,
+      "colliders": 14,
+      "lodHiddenObjects": 8,
+      "transitionsPending": false
+    },
+    "assets": {
+      "cacheEntries": 21,
+      "sourceReferences": 21,
+      "instanceReferences": 16,
+      "instancesCreated": 166,
+      "instancesDisposed": 150,
+      "loaded": 21,
+      "inFlight": 0,
+      "failures": 0,
+      "disposed": false
+    },
+    "browserMemory": {
+      "supported": true,
+      "usedJsHeapSize": 44700000,
+      "totalJsHeapSize": 60300000,
+      "jsHeapSizeLimit": 3760000000,
+      "peakUsedJsHeapSize": 44700000
+    }
+  },
+  "pedestrianOwnership": {
+    "residents": 8,
+    "mixers": 8,
+    "spawns": 112,
+    "disposals": 104
+  },
+  "network": {
+    "consoleErrors": [],
+    "failedRequests": [],
+    "externalRequests": []
+  }
+}
