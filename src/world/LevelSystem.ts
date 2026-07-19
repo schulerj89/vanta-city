@@ -84,6 +84,53 @@ export interface SectorStreamingSnapshot {
   readonly lastError: string | undefined;
 }
 
+export type LevelPreparationState =
+  'idle' | 'preparing' | 'ready' | 'committing' | 'failed';
+
+export interface LevelPreparationSnapshot {
+  readonly generation: number;
+  readonly state: LevelPreparationState;
+  readonly sourceLevelId: string | undefined;
+  readonly destinationLevelId: string | undefined;
+  readonly spawnId: string | undefined;
+  readonly initialSectorIds: readonly string[];
+  readonly error: string | undefined;
+}
+
+export interface LevelCommitContext {
+  readonly level: LevelDefinition;
+  readonly spawn: SpawnPointDefinition;
+  /** Register external-owner restoration before mutating that owner. */
+  onRollback(operation: LevelRestorationOperation): void;
+}
+
+export type LevelRestorationOperation = () => void | Promise<void>;
+
+export type LevelLandingOperation = (
+  context: LevelCommitContext,
+) => void | Promise<void>;
+
+export interface PreparedLevelTransition {
+  readonly generation: number;
+  readonly levelId: string;
+  readonly spawn: SpawnPointDefinition;
+  commit(landing?: LevelLandingOperation): Promise<void>;
+  cancel(): void;
+}
+
+export class StaleLevelPreparationError extends Error {
+  public constructor(levelId: string) {
+    super(`Prepared level "${levelId}" was superseded by a newer request`);
+    this.name = 'StaleLevelPreparationError';
+  }
+}
+
+interface PreparedLevelOwnership {
+  readonly generation: number;
+  readonly level: LoadedLevel;
+  readonly spawn: SpawnPointDefinition;
+}
+
 export type LevelDebugGroup =
   'collision' | 'spawns' | 'triggers' | 'locations' | 'anchors';
 
@@ -103,6 +150,14 @@ export class LevelSystem implements GameSystem, LevelLocations {
   private readonly debugGroups = new Map<LevelDebugGroup, boolean>();
   private positionSource: (() => WorldPosition) | undefined;
   private transition: Promise<void> | undefined;
+  private prepared: PreparedLevelOwnership | undefined;
+  private preparationGeneration = 0;
+  private preparationState: LevelPreparationState = 'idle';
+  private preparationSourceLevelId: string | undefined;
+  private preparationDestinationLevelId: string | undefined;
+  private preparationSpawnId: string | undefined;
+  private preparationSectorIds: readonly string[] = [];
+  private preparationError: string | undefined;
   private loadCount = 0;
   private unloadCount = 0;
   private lastError: string | undefined;
@@ -158,28 +213,79 @@ export class LevelSystem implements GameSystem, LevelLocations {
   }
 
   public async load(levelId: string): Promise<void> {
-    const definition = this.registry.get(levelId);
-    validateLevelDefinition(definition);
+    const prepared = await this.prepare(levelId);
+    await prepared.commit();
+  }
+
+  /** Builds a destination completely off-scene and publishes no lifecycle events. */
+  public async prepare(
+    levelId: string,
+    spawnId?: string,
+  ): Promise<PreparedLevelTransition> {
+    const generation = ++this.preparationGeneration;
+    this.disposePrepared();
+    this.preparationState = 'preparing';
+    this.preparationSourceLevelId = this.loaded?.definition.id;
+    this.preparationDestinationLevelId = levelId;
+    this.preparationSpawnId = spawnId;
+    this.preparationSectorIds = [];
+    this.preparationError = undefined;
     this.lastError = undefined;
-    const next = this.createLevel(definition);
-    this.unload();
-    this.loaded = next;
-    this.scene.add(next.root);
+    let next: LoadedLevel | undefined;
+
     try {
-      await this.reconcile(
-        this.positionSource?.() ??
-          toWorldPosition(findDefaultSpawn(definition)),
-        true,
-      );
+      const definition = this.registry.get(levelId);
+      validateLevelDefinition(definition);
+      const locations = new DefinitionLevelLocations(definition);
+      const spawn = locations.getSpawn(spawnId);
+      next = this.createLevel(definition);
+      const focus = toWorldPosition(spawn.position);
+      const desired = desiredSectors(definition, focus, this.streamingEnabled);
+      this.preparationSpawnId = spawn.id;
+      this.preparationSectorIds = desired.map(({ id }) => id);
+      for (const sector of desired) {
+        const built = await this.buildSector(definition, sector);
+        if (generation !== this.preparationGeneration) {
+          disposeSector(built);
+          throw new StaleLevelPreparationError(definition.id);
+        }
+        next.sectors.set(sector.id, built);
+        next.states.set(sector.id, 'active');
+        next.root.add(built.root);
+      }
+      if (generation !== this.preparationGeneration) {
+        throw new StaleLevelPreparationError(definition.id);
+      }
+      this.prepared = { generation, level: next, spawn };
+      this.preparationState = 'ready';
+      return this.createPreparedHandle(this.prepared);
     } catch (error) {
-      this.unload();
+      if (next) disposeLevel(next);
+      if (generation === this.preparationGeneration) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.preparationState = 'failed';
+        this.preparationError = message;
+        this.lastError = message;
+      }
       throw error;
     }
-    this.applyDebugVisibility();
-    this.events.emit('level:loaded', { level: definition });
+  }
+
+  public getPreparationSnapshot(): LevelPreparationSnapshot {
+    return {
+      generation: this.preparationGeneration,
+      state: this.preparationState,
+      sourceLevelId: this.preparationSourceLevelId,
+      destinationLevelId: this.preparationDestinationLevelId,
+      spawnId: this.preparationSpawnId,
+      initialSectorIds: [...this.preparationSectorIds],
+      error: this.preparationError,
+    };
   }
 
   public unload(): void {
+    ++this.preparationGeneration;
+    this.disposePrepared();
     const current = this.loaded;
     if (!current) return;
     for (const sectorId of [...current.sectors.keys()].sort()) {
@@ -285,6 +391,144 @@ export class LevelSystem implements GameSystem, LevelLocations {
     return this.requireLocations().resolveLocation(position);
   }
 
+  private createPreparedHandle(
+    ownership: PreparedLevelOwnership,
+  ): PreparedLevelTransition {
+    let consumed = false;
+    const consume = (): void => {
+      if (consumed)
+        throw new Error('Prepared level transition was already used');
+      consumed = true;
+    };
+    return {
+      generation: ownership.generation,
+      levelId: ownership.level.definition.id,
+      spawn: ownership.spawn,
+      commit: async (landing) => {
+        consume();
+        await this.commitPrepared(ownership, landing);
+      },
+      cancel: () => {
+        consume();
+        this.cancelPrepared(ownership);
+      },
+    };
+  }
+
+  private async commitPrepared(
+    ownership: PreparedLevelOwnership,
+    landing?: LevelLandingOperation,
+  ): Promise<void> {
+    this.requireCurrentPreparation(ownership);
+    const source = this.loaded;
+    const destination = ownership.level;
+    this.prepared = undefined;
+    this.preparationState = 'committing';
+
+    const pending = (async () => {
+      const restoration: LevelRestorationOperation[] = [];
+      if (source) this.deactivateLevel(source);
+      this.activateLevel(destination);
+      try {
+        await landing?.({
+          level: destination.definition,
+          spawn: ownership.spawn,
+          onRollback: (operation) => restoration.push(operation),
+        });
+      } catch (error) {
+        this.deactivateLevel(destination);
+        disposeLevel(destination);
+        if (source) this.activateLevel(source);
+        const restorationErrors: unknown[] = [];
+        for (const operation of restoration.reverse()) {
+          try {
+            await operation();
+          } catch (restorationError) {
+            restorationErrors.push(restorationError);
+          }
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        this.preparationState = 'failed';
+        this.preparationError =
+          restorationErrors.length === 0
+            ? message
+            : `${message} (${restorationErrors.length} restoration operation(s) failed)`;
+        this.lastError = this.preparationError;
+        throw error;
+      }
+      if (source) disposeLevel(source);
+      this.preparationState = 'idle';
+      this.preparationError = undefined;
+      this.lastError = undefined;
+    })();
+    this.transition = pending;
+    try {
+      await pending;
+    } finally {
+      if (this.transition === pending) this.transition = undefined;
+    }
+  }
+
+  private cancelPrepared(ownership: PreparedLevelOwnership): void {
+    this.requireCurrentPreparation(ownership);
+    this.prepared = undefined;
+    disposeLevel(ownership.level);
+    this.preparationState = 'idle';
+    this.preparationError = undefined;
+  }
+
+  private requireCurrentPreparation(ownership: PreparedLevelOwnership): void {
+    if (
+      this.prepared !== ownership ||
+      ownership.generation !== this.preparationGeneration
+    ) {
+      throw new StaleLevelPreparationError(ownership.level.definition.id);
+    }
+  }
+
+  private disposePrepared(): void {
+    if (this.prepared) disposeLevel(this.prepared.level);
+    this.prepared = undefined;
+  }
+
+  private deactivateLevel(level: LoadedLevel): void {
+    if (this.loaded !== level) return;
+    for (const sectorId of activeSectorIds(level)) {
+      this.events.emit('sector:unloaded', {
+        levelId: level.definition.id,
+        sectorId,
+      });
+      this.unloadCount += 1;
+    }
+    this.scene.remove(level.root);
+    this.loaded = undefined;
+    this.events.emit('level:unloaded', { levelId: level.definition.id });
+  }
+
+  private activateLevel(level: LoadedLevel): void {
+    if (this.loaded) {
+      throw new Error(
+        `Cannot activate level "${level.definition.id}" while "${this.loaded.definition.id}" is active`,
+      );
+    }
+    this.loaded = level;
+    this.scene.add(level.root);
+    this.applyDebugVisibility();
+    for (const sectorId of activeSectorIds(level)) {
+      const sector = level.sectors.get(sectorId)!;
+      this.loadCount += 1;
+      this.events.emit('sector:loaded', {
+        levelId: level.definition.id,
+        sectorId,
+        colliders: filterDefinition(
+          level.definition,
+          new Set(sector.definition.entryIds),
+        ).staticCollision,
+      });
+    }
+    this.events.emit('level:loaded', { level: level.definition });
+  }
+
   private requireLocations(): DefinitionLevelLocations {
     if (!this.loaded) throw new Error('No level is loaded');
     return this.loaded.locations;
@@ -337,7 +581,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
         resources,
       );
       const surfaceMaterials = new Map<string, Promise<MeshStandardMaterial>>();
-      const objects = await Promise.all(
+      const results = await Promise.allSettled(
         sectorDefinition.environment.map((visual) =>
           visual.kind === 'building'
             ? buildingRenderer.create(visual)
@@ -348,6 +592,14 @@ export class LevelSystem implements GameSystem, LevelLocations {
                 modelInstances,
               ),
         ),
+      );
+      const failure = results.find(
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected',
+      );
+      if (failure) throw failure.reason;
+      const objects = results.map(
+        (result) => (result as PromiseFulfilledResult<Object3D>).value,
       );
       visuals.add(...objects);
       buildDebug(sectorDefinition, debug, resources);
@@ -452,16 +704,12 @@ export class LevelSystem implements GameSystem, LevelLocations {
   ): Promise<void> {
     const loaded = this.loaded;
     if (!loaded) return;
-    const definitions = sectorsFor(loaded.definition, this.streamingEnabled);
-    const desired = definitions.filter((sector) => {
-      if (sector.alwaysLoaded) return true;
-      const active = loaded.sectors.has(sector.id);
-      const distance = Math.hypot(
-        position.x - sector.center[0],
-        position.z - sector.center[1],
-      );
-      return distance <= (active ? sector.unloadDistance : sector.loadDistance);
-    });
+    const desired = desiredSectors(
+      loaded.definition,
+      position,
+      this.streamingEnabled,
+      loaded.sectors,
+    );
     const desiredIds = new Set(desired.map(({ id }) => id));
     for (const [sectorId, state] of loaded.states) {
       if (state === 'failed' && !desiredIds.has(sectorId)) {
@@ -754,6 +1002,28 @@ function sectorsFor(
   );
 }
 
+function desiredSectors(
+  definition: LevelDefinition,
+  position: WorldPosition,
+  streamingEnabled: boolean,
+  activeSectors?: ReadonlyMap<string, LoadedSector>,
+): readonly WorldSectorDefinition[] {
+  return sectorsFor(definition, streamingEnabled).filter((sector) => {
+    if (sector.alwaysLoaded) return true;
+    const active = activeSectors?.has(sector.id) ?? false;
+    const distance = Math.hypot(
+      position.x - sector.center[0],
+      position.z - sector.center[1],
+    );
+    return distance <= (active ? sector.unloadDistance : sector.loadDistance);
+  });
+}
+
+function activeSectorIds(level: LoadedLevel): readonly string[] {
+  const active = new Set(level.sectors.keys());
+  return [...level.states.keys()].filter((id) => active.has(id));
+}
+
 function filterDefinition(
   definition: LevelDefinition,
   entryIds: ReadonlySet<string>,
@@ -776,13 +1046,6 @@ function filterDefinition(
   };
 }
 
-function findDefaultSpawn(definition: LevelDefinition): Vector3Tuple {
-  return (
-    definition.spawns.find((spawn) => spawn.kind === 'player' && spawn.default)
-      ?.position ?? [0, 0, 0]
-  );
-}
-
 function toWorldPosition(position: Vector3Tuple): WorldPosition {
   return { x: position[0], y: position[1], z: position[2] };
 }
@@ -794,6 +1057,16 @@ function disposeSector(sector: LoadedSector): void {
   sector.root.clear();
   for (const resource of sector.ownedResources) resource.dispose();
   sector.ownedResources.clear();
+}
+
+function disposeLevel(level: LoadedLevel): void {
+  level.root.removeFromParent();
+  for (const sectorId of [...level.sectors.keys()].sort()) {
+    const sector = level.sectors.get(sectorId);
+    if (sector) disposeSector(sector);
+  }
+  level.sectors.clear();
+  level.root.clear();
 }
 
 function countObjects(root: Object3D): number {

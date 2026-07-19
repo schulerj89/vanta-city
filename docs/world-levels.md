@@ -45,6 +45,28 @@ Future districts opt in by supplying `orientation: 'north-up'`, finite ordered `
 
 Runtime consumers use `LevelLocations` methods (`getSpawn`, `getLocation`, `getTrigger`, `getCinematicAnchor`, `getStaticColliders`, and `resolveLocation`) instead of searching the Three.js scene. `level:loaded` and `level:unloaded` events publish lifecycle facts. Loading remains a direct command on the owning system.
 
+## Cross-level replacement
+
+`LevelSystem` stages and commits registered destinations without exposing partial ownership:
+
+```ts
+const travel = await levels.prepare('test-district', 'spawn.player-default');
+
+await travel.commit(async ({ level, spawn, onRollback }) => {
+  // Existing owners perform grounding and destination readiness here.
+  const priorPose = player.getWorldPose();
+  onRollback(() => player.teleport(priorPose.position, priorPose.yaw));
+  player.teleport(new Vector3(...spawn.position), spawn.rotation?.[1]);
+  await destinationReadiness(level.id);
+});
+```
+
+Preparation builds the destination's initially desired sector set at the named spawn under a detached root. Until commit, `activeLevel`, `LevelLocations`, scene roots, collision, sector/level events, lighting, maps, NPCs, and traffic remain source-owned. `cancel()` disposes staged models and generated resources without events. A handle is single-use; concurrent newer preparation makes older asynchronous work stale and disposes it when it resolves.
+
+Commit event order is source `sector:unloaded` in authored order, source `level:unloaded`, destination `sector:loaded` in authored order, then destination `level:loaded`. Source colliders are therefore gone before destination colliders publish, and only the destination root is attached. The optional landing callback receives immutable authored level/spawn data rather than roots. It registers external-owner restoration through `onRollback` before mutating player, camera, mission, or other state; these operations run in reverse order after the source world is restored. If player grounding or any later required readiness step throws, the inverse lifecycle runs and the source root, sectors, collision, semantic consumers, and registered external state are restored. On success the retained source resources are finalized and disposed.
+
+`getPreparationSnapshot()` exposes only stable diagnostic facts (`generation`, lifecycle state, source/destination/spawn IDs, initial sector IDs, and error). A failed destination prepare or landing can be retried with a new `prepare` call. Normal completion, confirmed skip, and cinematic failure should all call this same public transaction; skip cancellation before commit calls `cancel()`.
+
 `resolveLocation(position)` applies deterministic metadata rules: a containing landmark wins first, followed by a containing zone, a landmark within the 10m nearby threshold, then the level name. Landmark ties use priority, distance, and logical ID. Zone ties use priority, smaller volume, and logical ID. Boundaries are inclusive. This resolver powers the location HUD and is available to mission, interaction, and dialogue systems without UI or scene-graph knowledge.
 
 `staticCollision` is deliberately plain data. The game-owned adapter converts each box's `position`, supported rotation, and `size` into the authoritative query model. Ordinary boxes may be axis-aligned or yaw-rotated; tagged ramps may use pitch but not yaw or roll. Validation rejects other combinations so rendering and collision cannot silently disagree. Movement, grounding, step/head probes, interaction visibility, and gameplay/directed camera obstruction consume the same loaded shapes. Camera casts use the full oriented thickness of pitched ramps rather than omitting them. Static conversation NPCs may use small `npc-occupancy` boxes at their authored spawns; those shapes block movement and camera but are ignored as visibility occluders so their own Talk target remains reachable. Unloading clears every representation together.
