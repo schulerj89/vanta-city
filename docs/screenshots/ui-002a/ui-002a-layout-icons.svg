@@ -1,0 +1,246 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1600"
+  height="1000"
+  viewBox="0 0 1600 1000"
+  role="img"
+  aria-labelledby="title description"
+>
+  <title id="title">UI-002A Ashfall survey kit construction sheet</title>
+  <desc id="description">
+    Proposed objective sounding sight, folded map tab, handgun and rigging knife
+    issue-card silhouettes, and assigned HUD zones at desktop, narrow, and
+    ultrawide sizes.
+  </desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101b24" />
+      <stop offset="1" stop-color="#071017" />
+    </linearGradient>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#24404d" stroke-width="1" />
+    </pattern>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <style>
+      .panel {
+        fill: #0c1820;
+        stroke: #416575;
+        stroke-width: 2;
+      }
+      .rule {
+        fill: none;
+        stroke: #5f8897;
+        stroke-width: 2;
+      }
+      .hairline {
+        fill: none;
+        stroke: #416575;
+        stroke-width: 1;
+      }
+      .cyan {
+        fill: none;
+        stroke: #73e7ee;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3;
+      }
+      .brass {
+        fill: none;
+        stroke: #d4a856;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3;
+      }
+      .muted {
+        fill: #75909b;
+        font-family: ui-monospace, monospace;
+        font-size: 16px;
+        letter-spacing: 1px;
+      }
+      .label {
+        fill: #d9eef1;
+        font-family: ui-monospace, monospace;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 2px;
+      }
+      .small {
+        fill: #a9c2ca;
+        font-family: ui-monospace, monospace;
+        font-size: 14px;
+        letter-spacing: 1px;
+      }
+      .zone {
+        fill: #14313a;
+        fill-opacity: 0.68;
+        stroke: #5f8897;
+        stroke-dasharray: 5 5;
+      }
+      .focus {
+        fill: none;
+        stroke: #f6e6a8;
+        stroke-width: 3;
+      }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#paper)" />
+  <rect width="1600" height="1000" fill="url(#grid)" opacity="0.45" />
+  <path d="M52 84H1548M52 950H1548" class="rule" />
+  <text x="52" y="58" class="label">UI-002A / ASHFALL HARBOR SURVEY KIT</text>
+  <text x="1548" y="58" class="muted" text-anchor="end">CONSTRUCTION / NOT SHIP ART</text>
+
+  <!-- Objective instrument -->
+  <g transform="translate(52 116)">
+    <rect width="704" height="330" rx="6" class="panel" />
+    <text x="26" y="38" class="label">01 / OBJECTIVE SOUNDING</text>
+    <text x="678" y="38" class="muted" text-anchor="end">WORLD-INDICATOR ZONE</text>
+    <path d="M26 55H678" class="hairline" />
+
+    <g transform="translate(110 101)" filter="url(#glow)">
+      <path d="M0 68H36M164 68H200M100 0V30M100 106V136" class="cyan" />
+      <path d="M50 20H28V46M150 20H172V46M50 116H28V90M150 116H172V90" class="cyan" />
+      <path d="M72 68H128M100 40V96" class="brass" />
+      <path d="M82 12L100 0L118 12" class="brass" />
+      <circle cx="100" cy="68" r="8" fill="#73e7ee" />
+      <path d="M55 127H145" class="hairline" />
+      <path d="M60 123V131M75 125V129M90 123V131M110 123V131M125 125V129M140 123V131" class="hairline" />
+    </g>
+    <text x="400" y="119" class="small">ACQUIRE / ONE APPEARANCE CUE</text>
+    <text x="400" y="155" class="label">N 032°</text>
+    <text x="400" y="188" class="label" fill="#d4a856">245 m</text>
+    <text x="400" y="224" class="small">EDGE = CLAMP + INWARD VANE</text>
+    <text x="400" y="251" class="small">BEHIND = LOWER-EDGE REVERSAL</text>
+    <text x="400" y="278" class="small">SCREENED = DASHED / LABELLED</text>
+    <text x="400" y="305" class="small">ARRIVED = ≤ 7 m / EXIT ≥ 10 m</text>
+  </g>
+
+  <!-- Map tab -->
+  <g transform="translate(788 116)">
+    <rect width="760" height="330" rx="6" class="panel" />
+    <text x="26" y="38" class="label">02 / FOLDED-SURVEY MAP TAB</text>
+    <text x="734" y="38" class="muted" text-anchor="end">NAVIGATION ZONE</text>
+    <path d="M26 55H734" class="hairline" />
+    <g transform="translate(62 104)">
+      <rect width="270" height="82" rx="3" fill="#11242c" stroke="#73e7ee" stroke-width="2" />
+      <path d="M18 17L49 10L81 20L114 11V65L81 74L49 64L18 72Z" class="cyan" />
+      <path d="M49 10V64M81 20V74" class="hairline" />
+      <text x="137" y="35" class="label">MAP</text>
+      <text x="137" y="61" class="small">M / LT</text>
+    </g>
+    <rect x="54" y="96" width="286" height="98" rx="8" class="focus" />
+    <text x="62" y="233" class="small">48 PX MINIMUM POINTER TARGET</text>
+    <text x="62" y="260" class="small">SAME NAMED ACTION AS M / GAMEPAD LT</text>
+    <text x="62" y="287" class="small">ONE MAP OWNER / EXACT RETURN STATE</text>
+    <g transform="translate(455 94)">
+      <path d="M0 112L42 56L84 92L127 14L170 70L212 30" class="brass" />
+      <path d="M0 127H230M0 0V127" class="rule" />
+      <path d="M42 120V134M84 120V134M127 120V134M170 120V134M212 120V134" class="hairline" />
+      <text x="0" y="168" class="small">NO SECOND MAP STATE</text>
+      <text x="0" y="195" class="small">NO GLOBAL LISTENER</text>
+    </g>
+  </g>
+
+  <!-- Loadout silhouettes -->
+  <g transform="translate(52 478)">
+    <rect width="928" height="300" rx="6" class="panel" />
+    <text x="26" y="38" class="label">03 / ETCHED ISSUE CARDS</text>
+    <text x="902" y="38" class="muted" text-anchor="end">LOADOUT ZONE</text>
+    <path d="M26 55H902" class="hairline" />
+
+    <g transform="translate(36 83)">
+      <rect width="394" height="154" rx="5" fill="#101f27" stroke="#416575" stroke-width="2" />
+      <path d="M47 53H211L239 66L207 79H148L137 121H91L105 79H47Z" class="cyan" />
+      <path d="M154 79L182 112H218" class="hairline" />
+      <path d="M58 47V86M225 56V87" class="brass" />
+      <text x="263" y="50" class="label">01</text>
+      <text x="263" y="82" class="small">HANDGUN</text>
+      <text x="263" y="112" class="small">LOCKED</text>
+      <path d="M263 127H357" class="rule" />
+    </g>
+
+    <g transform="translate(462 83)">
+      <rect width="394" height="154" rx="5" fill="#101f27" stroke="#416575" stroke-width="2" />
+      <path d="M47 85C108 75 172 52 225 24C210 64 170 95 91 116Z" class="cyan" />
+      <path d="M86 102L58 134M101 97L73 129M53 119L79 145" class="brass" />
+      <path d="M121 86L138 105" class="hairline" />
+      <text x="263" y="50" class="label">02</text>
+      <text x="263" y="82" class="small">RIG KNIFE</text>
+      <text x="263" y="112" class="small">LOCKED</text>
+      <path d="M263 127H357" class="rule" />
+    </g>
+    <text x="36" y="272" class="small">FRESH SAVE: BOTH LOCKED / STATE FROM CHARACTER EQUIPMENT ONLY</text>
+  </g>
+
+  <!-- Responsive zone map -->
+  <g transform="translate(1012 478)">
+    <rect width="536" height="460" rx="6" class="panel" />
+    <text x="26" y="38" class="label">04 / ZONE ASSIGNMENT</text>
+    <path d="M26 55H510" class="hairline" />
+
+    <g transform="translate(30 84)">
+      <text x="0" y="0" class="muted">1280×720</text>
+      <rect y="17" width="300" height="169" class="rule" />
+      <rect x="6" y="25" width="71" height="32" class="zone" />
+      <rect x="221" y="25" width="71" height="32" class="zone" />
+      <rect x="85" y="64" width="130" height="31" class="zone" />
+      <rect x="95" y="105" width="110" height="42" class="zone" />
+      <rect x="191" y="151" width="101" height="27" class="zone" />
+      <text x="11" y="46" class="small">STATUS</text>
+      <text x="230" y="46" class="small">NAV</text>
+      <text x="111" y="85" class="small">OBJECTIVE</text>
+      <text x="109" y="131" class="small">SOUNDING</text>
+      <text x="211" y="170" class="small">LOADOUT</text>
+    </g>
+
+    <g transform="translate(358 84)">
+      <text x="0" y="0" class="muted">390×844</text>
+      <rect y="17" width="105" height="227" class="rule" />
+      <rect x="5" y="25" width="42" height="31" class="zone" />
+      <rect x="58" y="25" width="42" height="31" class="zone" />
+      <rect x="8" y="69" width="89" height="35" class="zone" />
+      <rect x="17" y="116" width="71" height="35" class="zone" />
+      <rect x="15" y="208" width="75" height="28" class="zone" />
+      <text x="20" y="47" class="small">S</text>
+      <text x="73" y="47" class="small">N</text>
+      <text x="22" y="92" class="small">OBJECTIVE</text>
+      <text x="21" y="139" class="small">SOUNDING</text>
+      <text x="25" y="228" class="small">LOADOUT</text>
+    </g>
+
+    <g transform="translate(30 342)">
+      <text x="0" y="0" class="muted">1920×800 / CAP CONTENT, KEEP EDGE ANCHORS</text>
+      <path d="M0 23H476" class="rule" />
+      <path d="M0 16V30M476 16V30M115 18V28M361 18V28" class="hairline" />
+      <rect x="147" y="44" width="182" height="42" class="zone" />
+      <text x="173" y="70" class="small">CENTER INSTRUMENT</text>
+    </g>
+    <text x="30" y="438" class="small">SCREEN SPACE LAYOUT IS THE SOLE ZONE OWNER</text>
+  </g>
+
+  <g transform="translate(52 820)">
+    <text x="0" y="0" class="label">STATE MARKS</text>
+    <path d="M0 21H928" class="hairline" />
+    <g transform="translate(0 52)">
+      <circle cx="12" cy="12" r="9" class="cyan" />
+      <text x="36" y="18" class="small">OWNED</text>
+      <path d="M146 3L164 21M164 3L146 21" class="brass" />
+      <text x="180" y="18" class="small">LOCKED</text>
+      <path d="M301 12H339" class="cyan" />
+      <text x="355" y="18" class="small">EQUIPPED RULE</text>
+      <path d="M539 12H577" class="rule" stroke-dasharray="4 5" />
+      <text x="593" y="18" class="small">EMPTY / SCREENED</text>
+      <path d="M787 22L799 2L811 22" class="brass" />
+      <text x="827" y="18" class="small">NEW</text>
+    </g>
+  </g>
+
+  <text x="52" y="978" class="muted">ATLANTIC NEON-DECO / WEATHERED MUNICIPAL / ORIGINAL GEOMETRY</text>
+  <text x="1548" y="978" class="muted" text-anchor="end">NO RASTER ASSET DEPENDENCY</text>
+</svg>
