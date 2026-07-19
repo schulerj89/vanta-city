@@ -173,19 +173,18 @@ test('character picker through repeatable Mack conversation', async ({
   expect(first.dialogue.ui).toMatchObject({
     visible: true,
     speakerName: 'Mack',
-    renderedText: 'You’re late.',
+    renderedText: 'You made the 5:42. Orin didn’t.',
   });
   await expect(page.getByTestId('dialogue-box')).toBeVisible();
-  await expect(page.locator('.dialogue-box__portrait')).toBeVisible();
+  await expect(page.locator('.dialogue-box__portrait')).toBeHidden();
 
   const expected = [
-    ['mack', 'You’re late.'],
-    ['rook', 'Your nephew was supposed to meet me.'],
-    ['mack', 'Then he’s later.'],
-    [
-      'mack',
-      'Walk around the block. If anyone follows you, don’t bring them back here.',
-    ],
+    ['mack', 'You made the 5:42. Orin didn’t.'],
+    ['rook', 'How long?'],
+    ['mack', 'Two nights. He left one yard address and no explanation.'],
+    ['rook', 'Marrow took the manifest carbon. They have my arrival time.'],
+    ['mack', 'Time and wagon. Not your name. Nox is holding the east yard.'],
+    ['rook', 'I’m finding Orin. Give me the long road.'],
   ] as const;
   for (let index = 0; index < expected.length; index += 1) {
     const [speakerId, text] = expected[index];
@@ -195,12 +194,9 @@ test('character picker through repeatable Mack conversation', async ({
     const state = await snapshot(page);
     expect(state.dialogue.session.speakerId).toBe(speakerId);
     expect(state.dialogue.ui.renderedText).toBe(text);
-    if (speakerId === 'rook') {
+    expect(state.dialogue.ui.portraitResolution).toBe('none:line-hidden');
+    if (speakerId === 'rook')
       expect(state.dialogue.ui.speakerName).toBe('Rook');
-      expect(state.dialogue.ui.portraitResolution).toMatch(
-        /player-identity|image-error/,
-      );
-    }
     if (index === expected.length - 1) {
       const dialogue = page.locator(
         '[data-debug-section="Dialogue / Conversation"]',
@@ -376,7 +372,9 @@ test('Nox and Raze complete and repeat their registered Talk conversations', asy
       displayName: 'Nox',
       spawnId: 'spawn.player-talk-nox',
       conversationId: 'conversation.nox.check-in',
-      text: 'Alley’s clear. Keep moving.',
+      text: 'East gate stayed clear. You took the long road.',
+      lineCount: 3,
+      portraitResolution: 'none:line-hidden',
     },
     {
       id: 'raze',
@@ -384,6 +382,8 @@ test('Nox and Raze complete and repeat their registered Talk conversations', asy
       spawnId: 'spawn.player-talk-raze',
       conversationId: 'conversation.raze.check-in',
       text: 'Deck’s quiet. Don’t make it loud.',
+      lineCount: 1,
+      portraitResolution: undefined,
     },
   ]) {
     await command(page, 'player.teleport', npc.spawnId);
@@ -413,17 +413,25 @@ test('Nox and Raze complete and repeat their registered Talk conversations', asy
       speakerName: npc.displayName,
       renderedText: npc.text,
     });
-    expect([
-      'image:speaker',
-      'fallback:speaker-fallback',
-      'fallback:image-error',
-    ]).toContain(talking.dialogue.ui.portraitResolution);
+    if (npc.portraitResolution) {
+      expect(talking.dialogue.ui.portraitResolution).toBe(
+        npc.portraitResolution,
+      );
+    } else {
+      expect([
+        'image:speaker',
+        'fallback:speaker-fallback',
+        'fallback:image-error',
+      ]).toContain(talking.dialogue.ui.portraitResolution);
+    }
     expect(talking.camera).toMatchObject({
       mode: 'conversation',
       owner: `dialogue:${npc.conversationId}`,
     });
 
-    await page.getByRole('button', { name: 'Continue dialogue' }).click();
+    for (let index = 0; index < npc.lineCount; index += 1) {
+      await page.getByRole('button', { name: 'Continue dialogue' }).click();
+    }
     await expect
       .poll(async () => (await snapshot(page)).gameState)
       .toBe('playing');
@@ -476,7 +484,7 @@ test('Nox and Raze complete and repeat their registered Talk conversations', asy
   ).toEqual([]);
 });
 
-test('dialogue panel remains stable and portraits stay clear responsively', async ({
+test('dialogue panel remains stable without fake portraits responsively', async ({
   page,
 }, testInfo) => {
   const consoleIssues = monitorConsoleIssues(page);
@@ -507,9 +515,7 @@ test('dialogue panel remains stable and portraits stay clear responsively', asyn
       .poll(async () => (await snapshot(page)).camera.transitionProgress)
       .toBe(1);
     await expect(page.getByTestId('dialogue-box')).toBeVisible();
-    await expect(
-      page.getByRole('img', { name: 'Mack portrait fallback' }),
-    ).toBeVisible();
+    await expect(page.locator('.dialogue-box__portrait')).toBeHidden();
 
     const layouts = [await dialogueLayout(page)];
     await command(page, 'dialogue.set-typewriter', 'off');
@@ -518,19 +524,12 @@ test('dialogue panel remains stable and portraits stay clear responsively', asyn
       .toBe('ready');
     layouts.push(await dialogueLayout(page));
 
-    for (let lineIndex = 1; lineIndex < 4; lineIndex += 1) {
+    for (let lineIndex = 1; lineIndex < 6; lineIndex += 1) {
       await command(page, 'dialogue.advance');
       await expect
         .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
         .toBe(lineIndex);
-      if (lineIndex === 1) {
-        await expect(
-          page.getByRole('img', { name: 'Rook portrait fallback' }),
-        ).toBeVisible();
-        await expect(
-          page.locator('.dialogue-box__portrait-fallback'),
-        ).toHaveText(presentation.character === 'punk' ? 'P' : 'C');
-      }
+      await expect(page.locator('.dialogue-box__portrait')).toBeHidden();
       layouts.push(await dialogueLayout(page));
     }
 

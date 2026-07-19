@@ -1711,19 +1711,19 @@ test.describe('playable debug district', () => {
       .toBe('ready');
     await expect
       .poll(async () => (await snapshot(page)).dialogue.ui.renderedText)
-      .toBe('You’re late.');
+      .toBe('You made the 5:42. Orin didn’t.');
     const first = await snapshot(page);
     expect(first.gameState).toBe('dialogue');
     expect(first.dialogue.session).toMatchObject({
       conversationId: 'conversation.mack.introduction',
       lineIndex: 0,
       speakerId: 'mack',
-      fullText: 'You’re late.',
+      fullText: 'You made the 5:42. Orin didn’t.',
     });
     expect(first.dialogue.ui).toMatchObject({
       visible: true,
       speakerName: 'Mack',
-      renderedText: 'You’re late.',
+      renderedText: 'You made the 5:42. Orin didn’t.',
     });
     expect(first.dialogue.ui.portraitResolution).toContain('fallback');
 
@@ -1743,11 +1743,11 @@ test.describe('playable debug district', () => {
       .toBe(1);
     await expect
       .poll(async () => (await snapshot(page)).dialogue.ui.renderedText)
-      .toBe('Your nephew was supposed to meet me.');
+      .toBe('How long?');
     const rook = await snapshot(page);
     expect(rook.dialogue.ui).toMatchObject({
       speakerName: 'Rook',
-      renderedText: 'Your nephew was supposed to meet me.',
+      renderedText: 'How long?',
       portraitResolution: 'fallback:player-identity-fallback',
     });
 
@@ -1759,14 +1759,20 @@ test.describe('playable debug district', () => {
     await expect
       .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
       .toBe(3);
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+      .toBe(4);
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+      .toBe(5);
     await expect
       .poll(async () => (await snapshot(page)).dialogue.ui.renderedText)
-      .toBe(
-        'Walk around the block. If anyone follows you, don’t bring them back here.',
-      );
+      .toBe('I’m finding Orin. Give me the long road.');
     const warning = await snapshot(page);
     expect(warning.dialogue.ui.renderedText).toBe(
-      'Walk around the block. If anyone follows you, don’t bring them back here.',
+      'I’m finding Orin. Give me the long road.',
     );
     await attachScreenshot(page, testInfo, 'mack-dialogue');
 

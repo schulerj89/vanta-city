@@ -1,20 +1,22 @@
 # Mission runtime foundation
 
+> MISSION-002 supersedes the five-step example below with the two-objective direct-meeting slice documented in [mission-002-direct-meeting.md](mission-002-direct-meeting.md). The lifecycle and ownership contracts in this document remain authoritative.
+
 ## Scope and canon
 
-MISSION-001 adds one authoritative mission/objective runtime and the production skeleton for `ash-001-walk-the-block` (Walk the Block). The structured Ashfall story bible remains canon authority. This slice uses only existing feasible Ashfall Junction hooks: `trigger.intersection-center`, `conversation.mack-introduction.completed`, `interaction.signal-controller`, `landmark.south-approach`, and entity `mack`. It promotes Mack's existing production-ready definition at `spawn.npc-mechanic` without changing the entity, speaker, conversation, portrait, character, or spawn IDs.
+MISSION-001 added one authoritative mission/objective runtime and the production skeleton for `ash-001-walk-the-block` (Walk the Block). The structured Ashfall story bible remains canon authority. MISSION-002 now uses `trigger.intersection-center`, public completion of `conversation.mack.introduction`, and WORLD-002's `location.ash-001.contact-yard`. It preserves Mack at `spawn.npc-mechanic` and Nox at `spawn.npc-alley` without changing their entity, speaker, conversation, character, or spawn IDs.
 
-No later mission, cinematic sequence, map system, dynamic route, new dialogue, placeholder prose, loaded model, camera, DOM node, or browser listener belongs in mission definitions. The optional references `cinematic.ash-001.opening` and `cinematic.ash-001.mack-return` remain typed requests for CINEMATIC-001 and never advance objectives.
+No later mission, cinematic sequence, map system, dynamic route, loaded model, camera, DOM node, or browser listener belongs in mission definitions. The required `cinematic.ash-001.opening` and optional `cinematic.ash-001.destination-reveal` remain typed requests for CINEMATIC-001 and never advance objectives.
 
 Integration visual review keeps `spawn.npc-mechanic` authoritative but places it at `[-12, 0.22, 9.5]`, west of `c.street-light-nw`. The prior position made a common east-side interaction straddle the pole, so no participant-relative camera profile could reliably show both speakers. The stable NPC, speaker, conversation, portrait, character, mission, and spawn IDs remain unchanged; the camera system still exclusively owns the active camera.
 
 ## Authority and lifecycle
 
 - `MissionSystem` is the sole owner of prerequisites, active mission, ordered objective transitions, attempt state, world facts, cancellation, failure, retry, completion, rewards, and highlight requests.
-- Definitions contain stable IDs and typed conditions only. Runtime adapters translate existing world, interaction, dialogue-hook, health, money, and equipment surfaces into mission events or reward operations.
+- Definitions contain stable IDs and typed conditions only. Runtime adapters translate existing world, interaction, public dialogue-completion, dialogue-hook, health, money, and equipment surfaces into mission events or reward operations.
 - The system samples authored trigger volumes and resolved landmarks through public level/player APIs. It subscribes to existing event buses once during initialization and releases every subscription during disposal.
 - Public snapshots are immutable, serializable, schema-versioned, and contain no runtime objects. A persistence snapshot can be JSON-round-tripped and restored against the same validated definition catalog.
-- Cancellation is available only before Mack's first conversation completes. Failure creates a retry-ready attempt without granting facts or rewards. Retry restarts the ordered objectives from the mission-start state. Completion grants exactly `reward.ash-001-walk-the-block` (75 units) and facts `rook-arrived-in-ashfall=true`, `junction-surveillance-checked=true`, and `mack-trust=conditional` once.
+- Cancellation is available only before Mack's briefing completes. Failure creates a retry-ready attempt without granting facts or rewards. Retry restarts the ordered objectives from the mission-start state. Completion grants exactly `reward.ash-001-walk-the-block` (75 units) and facts `rook-arrived-in-ashfall=true`, `rook-accepted-orin-search=true`, `marrow-has-rook-arrival-time=true`, `contact-yard-meeting-completed=true`, and `mack-trust=conditional` once while preserving `orin-status=missing`.
 
 ## Public observation and highlights
 

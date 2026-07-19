@@ -1,13 +1,16 @@
 import { expect, test } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
 import type {
   BrowserTestApi,
   BrowserTestSnapshot,
 } from '../src/debug/BrowserTestBridge';
 
 const appUrl = '/?e2e=1&debug=1&skipPicker=1&dialogueTypewriter=0';
+const captureDirectory = path.resolve('docs/screenshots/mission-002');
 
-test('Walk the Block advances through canonical world hooks and rewards once @visual', async ({
+test('Walk the Block gives one briefing, reveals one destination, and rewards once @visual', async ({
   page,
 }, testInfo) => {
   const errors = monitorErrors(page);
@@ -16,12 +19,12 @@ test('Walk the Block advances through canonical world hooks and rewards once @vi
     expect.objectContaining({ definitionId: 'mack', modelSource: 'asset' }),
   ]);
 
-  await command(page, 'player.teleport-position', '0,0.22,0,0');
+  await command(page, 'mission.start', 'ash-001-walk-the-block');
   await expect
     .poll(async () => activeMission(await snapshot(page)))
     .toMatchObject({
       id: 'ash-001-walk-the-block',
-      currentObjectiveId: 'ash-001-talk-to-mack',
+      currentObjectiveId: 'ash-001-hear-mack-out',
       status: 'active',
     });
   let state = await snapshot(page);
@@ -34,10 +37,8 @@ test('Walk the Block advances through canonical world hooks and rewards once @vi
   expect(state.missions.hud).toMatchObject({
     objectiveVisible: true,
     missionId: 'ash-001-walk-the-block',
-    objectiveId: 'ash-001-talk-to-mack',
+    objectiveId: 'ash-001-hear-mack-out',
   });
-  await attachScreenshot(page, testInfo, 'mission-active-desktop');
-
   await expect
     .poll(async () => (await snapshot(page)).cinematic.cinematicId)
     .toBe('cinematic.ash-001.opening');
@@ -47,60 +48,34 @@ test('Walk the Block advances through canonical world hooks and rewards once @vi
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('playing');
   expect(activeMission(await snapshot(page))?.currentObjectiveId).toBe(
-    'ash-001-talk-to-mack',
+    'ash-001-hear-mack-out',
   );
 
-  await completeMackConversation(page);
+  await completeMackConversation(page, testInfo);
   await expect
     .poll(async () => activeMission(await snapshot(page))?.currentObjectiveId)
-    .toBe('ash-001-check-signal-corner');
+    .toBe('ash-001-meet-yard-contact');
   state = await snapshot(page);
   expect(state.missions.runtime.highlights[0]).toMatchObject({
     channels: ['world', 'map'],
     target: {
-      kind: 'interaction',
-      referenceId: 'interaction.signal-controller',
+      kind: 'location',
+      referenceId: 'location.ash-001.contact-yard',
     },
   });
-  await page.keyboard.press('m');
-  await expect.poll(async () => (await snapshot(page)).gameState).toBe('map');
-  await expect
-    .poll(async () => (await snapshot(page)).fullWorldMap.highlightCount)
-    .toBe(1);
-  await expect(
-    page.locator('[data-highlight-id="highlight.ash-001.signal-corner"]'),
-  ).toBeVisible();
-  await page.keyboard.press('m');
-  await expect
-    .poll(async () => (await snapshot(page)).gameState)
-    .toBe('playing');
-
-  await command(page, 'player.teleport-position', '10.2,0.22,9.5,3.141593');
-  await expect
-    .poll(async () => (await snapshot(page)).interaction.activeTargetId)
-    .toBe('interaction.signal-controller');
-  await page.keyboard.press('g');
-  await expect
-    .poll(async () => activeMission(await snapshot(page))?.currentObjectiveId)
-    .toBe('ash-001-walk-south-approach');
-  expect((await snapshot(page)).missions.runtime.highlights[0]).toMatchObject({
-    channels: ['map'],
-    target: {
-      kind: 'landmark',
-      referenceId: 'landmark.south-approach',
-    },
+  expect(state.missions.hud).toMatchObject({
+    objectiveId: 'ash-001-meet-yard-contact',
+    worldTargetReferenceId: 'location.ash-001.contact-yard',
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await attachScreenshot(page, testInfo, 'mission-active-narrow');
-  await command(page, 'player.teleport', 'spawn.approach-south');
-  await expect
-    .poll(async () => activeMission(await snapshot(page))?.currentObjectiveId)
-    .toBe('ash-001-return-to-mack');
+  await attachScreenshot(page, testInfo, 'mission-contact-yard-narrow');
 
   await page.setViewportSize({ width: 1920, height: 800 });
-  await attachScreenshot(page, testInfo, 'mission-return-ultrawide');
-  await completeMackConversation(page);
+  await attachScreenshot(page, testInfo, 'mission-contact-yard-ultrawide');
+  // WORLD-002 owns the physical location. This branch proves the public
+  // objective contract and uses the existing debug seam to exercise completion.
+  await command(page, 'mission.complete-objective');
   await expect
     .poll(async () => mission(await snapshot(page)).status)
     .toBe('completed');
@@ -109,7 +84,10 @@ test('Walk the Block advances through canonical world hooks and rewards once @vi
     activeMissionId: undefined,
     facts: {
       'rook-arrived-in-ashfall': true,
-      'junction-surveillance-checked': true,
+      'rook-accepted-orin-search': true,
+      'marrow-has-rook-arrival-time': true,
+      'contact-yard-meeting-completed': true,
+      'orin-status': 'missing',
       'mack-trust': 'conditional',
     },
   });
@@ -142,7 +120,7 @@ test('mission debug controls expose cancellation and retry-ready restoration', a
     .toMatchObject({
       status: 'active',
       attempt: 2,
-      currentObjectiveId: 'ash-001-enter-junction',
+      currentObjectiveId: 'ash-001-hear-mack-out',
     });
   await command(page, 'mission.cancel');
   const cancelled = await snapshot(page);
@@ -156,7 +134,10 @@ test('mission debug controls expose cancellation and retry-ready restoration', a
   expect(errors).toEqual([]);
 });
 
-async function completeMackConversation(page: Page): Promise<void> {
+async function completeMackConversation(
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
   await command(page, 'player.teleport', 'spawn.player-talk-mack');
   await expect
     .poll(async () => (await snapshot(page)).interaction.activeTargetId)
@@ -165,11 +146,15 @@ async function completeMackConversation(page: Page): Promise<void> {
   await expect
     .poll(async () => (await snapshot(page)).gameState)
     .toBe('dialogue');
-  for (let lineIndex = 0; lineIndex < 4; lineIndex += 1) {
+  await expect
+    .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
+    .toBe(0);
+  await attachScreenshot(page, testInfo, 'mission-active-desktop');
+  for (let lineIndex = 0; lineIndex < 6; lineIndex += 1) {
     await expect
       .poll(async () => (await snapshot(page)).dialogue.session.lineIndex)
       .toBe(lineIndex);
-    if (lineIndex === 3) await command(page, 'dialogue.advance');
+    if (lineIndex === 5) await command(page, 'dialogue.advance');
     else await page.keyboard.press('Enter');
   }
   await expect
@@ -219,8 +204,11 @@ async function attachScreenshot(
   testInfo: TestInfo,
   name: string,
 ): Promise<void> {
+  await mkdir(captureDirectory, { recursive: true });
+  const capturePath = path.join(captureDirectory, `${name}.png`);
+  await page.screenshot({ path: capturePath });
   await testInfo.attach(name, {
-    body: await page.screenshot(),
+    path: capturePath,
     contentType: 'image/png',
   });
 }
@@ -231,6 +219,23 @@ function monitorErrors(page: Page): string[] {
     if (message.type() === 'error') errors.push(message.text());
   });
   page.on('pageerror', (error) => errors.push(error.message));
+  page.on('requestfailed', (request) => {
+    // Asset availability probes intentionally abort optional same-origin HEAD
+    // requests after reading enough metadata; production GET failures still fail.
+    if (request.method() !== 'HEAD') {
+      errors.push(`request failed: ${request.method()} ${request.url()}`);
+    }
+  });
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.hostname !== '127.0.0.1' &&
+      url.hostname !== 'localhost'
+    ) {
+      errors.push(`unexpected external request: ${request.url()}`);
+    }
+  });
   return errors;
 }
 

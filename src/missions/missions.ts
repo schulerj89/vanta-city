@@ -7,6 +7,9 @@ export const ashfallInitialMissionFacts: Readonly<
   'orin-status': 'missing',
   'mack-trust': 'guarded',
   'pager-code-compromised': true,
+  'rook-arrived-in-ashfall': false,
+  'rook-accepted-orin-search': false,
+  'marrow-has-rook-arrival-time': false,
 });
 
 export const missionDefinitions = validateMissionDefinitions([
@@ -14,7 +17,7 @@ export const missionDefinitions = validateMissionDefinitions([
     id: 'ash-001-walk-the-block',
     title: 'Walk the Block',
     narrativePurpose:
-      'Introduce Rook through behavior, preserve Mack’s existing conversation, establish Orin’s absence, and teach that observing a route is more valuable than rushing to a marker.',
+      'Turn Rook’s arrival into a chosen search for Orin, establish Marrow’s paper trail, and send Rook across Ashfall for one consequential meeting instead of a chain of errands.',
     prerequisiteMissionIds: [],
     prerequisiteFacts: [],
     startCondition: {
@@ -24,86 +27,38 @@ export const missionDefinitions = validateMissionDefinitions([
     startLocationId: 'mission.intersection-center',
     objectives: [
       {
-        id: 'ash-001-enter-junction',
-        summary:
-          'Enter Ashfall Junction and let the district/location state resolve.',
+        id: 'ash-001-hear-mack-out',
+        summary: 'Speak with Mack about Orin’s missed pickup.',
         condition: {
-          type: 'world-trigger-entered',
-          triggerId: 'trigger.intersection-center',
-        },
-      },
-      {
-        id: 'ash-001-talk-to-mack',
-        summary: 'Speak with Mack and complete his existing introduction.',
-        condition: {
-          type: 'event-hook',
-          hookId: 'conversation.mack-introduction.completed',
+          type: 'dialogue-completed',
+          conversationId: 'conversation.mack.introduction',
         },
         highlights: [
           {
             id: 'highlight.ash-001.mack-introduction',
             channels: ['world'],
             target: { kind: 'spawn', referenceId: 'spawn.npc-mechanic' },
-            label: 'Speak with Mack',
+            label: 'Hear Mack out',
             priority: 'primary',
           },
         ],
       },
       {
-        id: 'ash-001-check-signal-corner',
-        summary: 'Inspect Signal Corner for a watcher and the first Orin clue.',
-        condition: {
-          type: 'interaction-completed',
-          interactionId: 'interaction.signal-controller',
-        },
-        highlights: [
-          {
-            id: 'highlight.ash-001.signal-corner',
-            channels: ['world', 'map'],
-            target: {
-              kind: 'interaction',
-              referenceId: 'interaction.signal-controller',
-            },
-            label: 'Inspect Signal Corner',
-            priority: 'primary',
-          },
-        ],
-      },
-      {
-        id: 'ash-001-walk-south-approach',
-        summary:
-          'Cross the south approach to test whether the same vehicle circles back.',
+        id: 'ash-001-meet-yard-contact',
+        summary: 'Take the long road east and meet Nox at the contact yard.',
         condition: {
           type: 'world-location-entered',
-          locationId: 'landmark.south-approach',
+          locationId: 'location.ash-001.contact-yard',
         },
         highlights: [
           {
-            id: 'highlight.ash-001.south-approach',
-            channels: ['map'],
+            id: 'highlight.ash-001.contact-yard',
+            channels: ['world', 'map'],
             target: {
-              kind: 'landmark',
-              referenceId: 'landmark.south-approach',
+              kind: 'location',
+              referenceId: 'location.ash-001.contact-yard',
             },
-            label: 'Cross the south approach',
-            priority: 'primary',
-          },
-        ],
-      },
-      {
-        id: 'ash-001-return-to-mack',
-        summary:
-          'Return to Mack and report the observed plate color and route.',
-        condition: {
-          type: 'entity-interaction-completed',
-          entityId: 'mack',
-        },
-        highlights: [
-          {
-            id: 'highlight.ash-001.mack-return',
-            channels: ['world'],
-            target: { kind: 'spawn', referenceId: 'spawn.npc-mechanic' },
-            label: 'Return to Mack',
+            label: 'Meet Nox at the contact yard',
             priority: 'primary',
           },
         ],
@@ -113,30 +68,35 @@ export const missionDefinitions = validateMissionDefinitions([
       {
         kind: 'cinematic',
         referenceId: 'cinematic.ash-001.opening',
-        optional: true,
+        optional: false,
         phase: 'started',
       },
       {
         kind: 'cinematic',
-        referenceId: 'cinematic.ash-001.mack-return',
+        referenceId: 'cinematic.ash-001.destination-reveal',
         optional: true,
-        phase: 'completed',
+        phase: 'objective-completed',
+        objectiveId: 'ash-001-hear-mack-out',
       },
     ],
-    cancellationUntilObjectiveId: 'ash-001-talk-to-mack',
+    cancellationUntilObjectiveId: 'ash-001-hear-mack-out',
     reward: {
       id: 'reward.ash-001-walk-the-block',
       moneyAmount: 75,
       equipmentIds: [],
       factChanges: {
         'rook-arrived-in-ashfall': true,
-        'junction-surveillance-checked': true,
+        'rook-accepted-orin-search': true,
+        'marrow-has-rook-arrival-time': true,
+        'contact-yard-meeting-completed': true,
         'mack-trust': 'conditional',
       },
     },
     persistentFactIds: [
       'rook-arrived-in-ashfall',
-      'junction-surveillance-checked',
+      'rook-accepted-orin-search',
+      'marrow-has-rook-arrival-time',
+      'contact-yard-meeting-completed',
       'mack-trust',
     ],
   },

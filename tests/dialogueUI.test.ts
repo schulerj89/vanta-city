@@ -104,6 +104,41 @@ describe('DialogueUISystem', () => {
     );
   });
 
+  it('omits unverified portrait substitutes when the line requests none', () => {
+    const definition: ConversationDefinition = {
+      id: 'test.no-portrait',
+      lines: [
+        {
+          id: 'test.no-portrait.line',
+          speakerId: 'mack',
+          text: 'No substitute.',
+          portraitPresentation: 'none',
+        },
+      ],
+    };
+    const { conversations, session } = harness(definition);
+    const mount = document.createElement('main');
+    const ui = new DialogueUISystem(
+      mount,
+      session,
+      new DialoguePortraitResolver([{ id: 'mack', displayName: 'Mack' }]),
+    );
+    ui.init();
+    conversations.start(definition.id, 'mack');
+    ui.update();
+
+    expect(mount.querySelector('.dialogue-box__portrait')).toHaveProperty(
+      'hidden',
+      true,
+    );
+    expect(
+      mount
+        .querySelector('.dialogue-box')
+        ?.classList.contains('dialogue-box--without-portrait'),
+    ).toBe(true);
+    expect(ui.getDebugSnapshot().portraitResolution).toBe('none:line-hidden');
+  });
+
   it('provides isolated controls to reveal, advance, and cancel', () => {
     const definition: ConversationDefinition = {
       id: 'test.controls',

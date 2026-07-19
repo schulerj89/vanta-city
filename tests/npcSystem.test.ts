@@ -265,7 +265,7 @@ describe('NPC foundation', () => {
       {
         npcId: 'nox',
         conversationId: 'conversation.nox.check-in',
-        text: 'Alley’s clear. Keep moving.',
+        text: 'East gate stayed clear. You took the long road.',
       },
       {
         npcId: 'raze',
@@ -291,13 +291,11 @@ describe('NPC foundation', () => {
         npcId: expected.npcId,
         definition: {
           id: expected.conversationId,
-          lines: [
-            expect.objectContaining({
-              speakerId: expected.npcId,
-              text: expected.text,
-            }),
-          ],
         },
+      });
+      expect(conversations.active?.definition.lines[0]).toMatchObject({
+        speakerId: expected.npcId,
+        text: expected.text,
       });
       expect(state.current).toBe('dialogue');
       expect(system.getDebugSnapshot(expected.npcId)).toMatchObject({
