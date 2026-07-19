@@ -4,7 +4,7 @@ import type { EventBus } from '../core/events';
 import type { GameSystem } from '../core/lifecycle';
 import type { GameObjectWorld } from '../entities/GameObjectWorld';
 import type { Interactable } from '../interactions/Interactable';
-import type { WorldPoseSource } from '../world/Spatial';
+import type { WorldPoseSource, WorldPosition } from '../world/Spatial';
 import type { LevelDefinition } from '../world/LevelDefinition';
 import type { WorldEvents } from '../world/WorldEvents';
 import type { NpcDebugSnapshot } from './NpcEntity';
@@ -81,6 +81,13 @@ export class NpcSystem implements GameSystem {
     return this.spawned.get(id)?.entity;
   }
 
+  public setPerformancePosition(id: string, position: WorldPosition): boolean {
+    const entity = this.spawned.get(id)?.entity;
+    if (!entity) return false;
+    entity.setPerformancePosition(position);
+    return true;
+  }
+
   /** Applause is never a Talk fallback; callers must request it explicitly. */
   public requestApplause(id: string, source = 'explicit-applause'): boolean {
     return this.spawned.get(id)?.entity.triggerApplause(source) ?? false;
@@ -119,35 +126,44 @@ export class NpcSystem implements GameSystem {
     let entities: NpcEntity[];
     try {
       entities = await Promise.all(
-        this.definitions.map(async (definition) => {
-          const character = this.characters.get(definition.characterId);
-          if (!character) {
-            throw new Error(
-              `NPC "${definition.id}" references unknown character "${definition.characterId}"`,
-            );
-          }
-          const spawn = level.spawns.find(
-            (candidate) =>
-              candidate.id === definition.spawnId && candidate.kind === 'npc',
-          );
-          if (!spawn) {
-            throw new Error(
-              `NPC "${definition.id}" references missing NPC spawn "${definition.spawnId}"`,
-            );
-          }
-          const entity = new NpcEntity(
-            definition,
-            spawn,
-            character,
-            this.loader,
-            this.conversations,
-            this.player,
-            this.assets,
-          );
-          constructing.push(entity);
-          await entity.init();
-          return entity;
-        }),
+        this.definitions
+          .flatMap((definition) => {
+            const mappedSpawn = definition.levelSpawnIds?.[level.id];
+            if (mappedSpawn === null) return [];
+            const spawnId = mappedSpawn ?? definition.spawnId;
+            return [
+              async () => {
+                const character = this.characters.get(definition.characterId);
+                if (!character) {
+                  throw new Error(
+                    `NPC "${definition.id}" references unknown character "${definition.characterId}"`,
+                  );
+                }
+                const spawn = level.spawns.find(
+                  (candidate) =>
+                    candidate.id === spawnId && candidate.kind === 'npc',
+                );
+                if (!spawn) {
+                  throw new Error(
+                    `NPC "${definition.id}" references missing NPC spawn "${spawnId}"`,
+                  );
+                }
+                const entity = new NpcEntity(
+                  definition,
+                  spawn,
+                  character,
+                  this.loader,
+                  this.conversations,
+                  this.player,
+                  this.assets,
+                );
+                constructing.push(entity);
+                await entity.init();
+                return entity;
+              },
+            ];
+          })
+          .map((create) => create()),
       );
     } catch (error) {
       for (const entity of constructing) entity.dispose();

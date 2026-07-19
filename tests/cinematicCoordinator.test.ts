@@ -1,9 +1,48 @@
 import { EventBus } from '../src/core/events';
 import { GameStateMachine, type StateEvents } from '../src/core/gameState';
 import { CinematicCatalog } from '../src/cinematics/CinematicDefinition';
-import { cinematicDefinitions } from '../src/cinematics/cinematics';
+import type { CinematicDefinition } from '../src/cinematics/CinematicDefinition';
 import { CinematicCoordinator } from '../src/cinematics/CinematicCoordinator';
 import { testDistrict } from '../src/world/levels/testDistrict';
+
+const localDefinition: CinematicDefinition = {
+  id: 'cinematic.test.local',
+  storyBeatId: 'story.test.local',
+  missionId: 'mission.test.local',
+  participantIds: ['casual', 'mack'],
+  speakerIds: ['rook', 'mack'],
+  entryEventId: 'cinematic.test.local.entered',
+  completionEventId: 'cinematic.test.local.completed',
+  skipPolicy: 'confirm',
+  dependencies: {
+    levelId: 'test-district',
+    locationId: 'landmark.north-approach',
+    cameraAnchorIds: [
+      'camera.ash-001.north-arrival',
+      'camera.ash-001.junction-watch',
+      'camera.ash-001.mack-position',
+    ],
+    assetIds: [],
+    animationIds: [],
+    worldFactIds: [],
+  },
+  restorationPolicy: 'exact-prior-gameplay',
+  shots: [
+    ['shot.test.arrival', 'camera.ash-001.north-arrival', 3.4],
+    ['shot.test.junction', 'camera.ash-001.junction-watch', 3.2],
+    ['shot.test.mack', 'camera.ash-001.mack-position', 3.5],
+  ].map(([id, cameraAnchorId, durationSeconds]) => ({
+    id: id as string,
+    purpose: 'Exercise generic ordered cinematic ownership.',
+    cameraAnchorId: cameraAnchorId as string,
+    durationSeconds: durationSeconds as number,
+    transition: 'ease' as const,
+    transitionSeconds: 0.3,
+    obstructionPolicy: 'shared-camera-collision' as const,
+    participantIds: ['casual', 'mack'],
+    safeFrame: { minSubjectMarginPercent: 8 },
+  })),
+};
 
 function harness() {
   const events = new EventBus<StateEvents>();
@@ -16,7 +55,7 @@ function harness() {
   let activeCameraOwner: string | undefined;
   const releases: string[] = [];
   const coordinator = new CinematicCoordinator(
-    new CinematicCatalog(cinematicDefinitions),
+    new CinematicCatalog([localDefinition]),
     state,
     events,
     {
@@ -98,30 +137,26 @@ function harness() {
 describe('CinematicCoordinator', () => {
   it('validates and completes ordered shots through one camera owner', () => {
     const h = harness();
-    expect(h.coordinator.start('cinematic.ash-001.opening')).toBe(true);
+    expect(h.coordinator.start(localDefinition.id)).toBe(true);
     expect(h.state.current).toBe('cinematic');
     expect(h.controls()).toBe(false);
     expect(h.coordinator.getSnapshot()).toMatchObject({
-      shotId: 'shot.ash-001.north-arrival',
+      shotId: 'shot.test.arrival',
       playbackSequence: 1,
     });
 
     h.update(3.5);
-    expect(h.coordinator.getSnapshot().shotId).toBe(
-      'shot.ash-001.junction-watch',
-    );
+    expect(h.coordinator.getSnapshot().shotId).toBe('shot.test.junction');
     h.update(3.3);
-    expect(h.coordinator.getSnapshot().shotId).toBe(
-      'shot.ash-001.mack-position',
-    );
+    expect(h.coordinator.getSnapshot().shotId).toBe('shot.test.mack');
     h.update(3.6);
 
     expect(h.coordinator.getSnapshot()).toMatchObject({
       state: 'idle',
       lastResult: 'completed',
       emittedEventIds: [
-        'cinematic.ash-001.opening.entered',
-        'cinematic.ash-001.opening.completed',
+        'cinematic.test.local.entered',
+        'cinematic.test.local.completed',
       ],
     });
     expect(h.state.current).toBe('playing');
@@ -132,14 +167,14 @@ describe('CinematicCoordinator', () => {
 
   it('restores through cancellation and disposal without a second completion boundary', () => {
     const h = harness();
-    expect(h.coordinator.start('cinematic.ash-001.opening')).toBe(true);
+    expect(h.coordinator.start(localDefinition.id)).toBe(true);
     expect(h.coordinator.cancel()).toBe(true);
     expect(h.coordinator.getSnapshot().lastResult).toBe('cancelled');
     expect(h.state.current).toBe('playing');
     expect(h.controls()).toBe(true);
     expect(h.pointerLocked()).toBe(true);
 
-    expect(h.coordinator.start('cinematic.ash-001.opening')).toBe(true);
+    expect(h.coordinator.start(localDefinition.id)).toBe(true);
     h.coordinator.dispose();
     expect(h.state.current).toBe('playing');
     expect(h.controls()).toBe(true);
@@ -148,7 +183,7 @@ describe('CinematicCoordinator', () => {
 
   it('pauses for skip confirmation and cancel resumes the exact shot clock', () => {
     const h = harness();
-    h.coordinator.start('cinematic.ash-001.opening');
+    h.coordinator.start(localDefinition.id);
     h.update(1.25);
     h.coordinator.requestSkip();
     const before = h.coordinator.getSnapshot();
@@ -166,13 +201,13 @@ describe('CinematicCoordinator', () => {
 
   it('uses normal cleanup for confirmed skip, failure, and repeated playback', () => {
     const h = harness();
-    h.coordinator.start('cinematic.ash-001.opening');
+    h.coordinator.start(localDefinition.id);
     h.coordinator.requestSkip();
     expect(h.coordinator.confirmSkip()).toBe(true);
     expect(h.coordinator.getSnapshot().lastResult).toBe('skipped');
     expect(h.controls()).toBe(true);
 
-    expect(h.coordinator.start('cinematic.ash-001.opening')).toBe(true);
+    expect(h.coordinator.start(localDefinition.id)).toBe(true);
     h.removeMack();
     h.update(0.1);
     expect(h.coordinator.getSnapshot()).toMatchObject({

@@ -43,7 +43,7 @@ export class LoadingScreen {
     this.element.setAttribute('role', 'status');
     this.element.setAttribute('aria-live', 'polite');
     this.element.setAttribute('aria-atomic', 'true');
-    this.title.textContent = 'Entering Vanta City';
+    this.title.textContent = 'Entering Ashfall';
     this.progress.max = 1;
     this.progress.removeAttribute('value');
     this.progress.setAttribute('aria-label', 'Startup progress');
@@ -79,7 +79,7 @@ export class LoadingScreen {
     }
     this.element.classList.add('loading-screen--fallback');
     this.element.setAttribute('role', 'status');
-    this.title.textContent = 'Vanta City is ready';
+    this.title.textContent = 'Ashfall is ready';
     this.detail.textContent = `${this.fallbackAssets.size} local asset ${this.fallbackAssets.size === 1 ? 'fallback is' : 'fallbacks are'} active. Gameplay is available.`;
     this.progress.remove();
     const dismiss = document.createElement('button');
@@ -95,7 +95,7 @@ export class LoadingScreen {
     this.fatal = true;
     this.element.className = 'loading-screen loading-screen--error';
     this.element.setAttribute('role', 'alert');
-    this.title.textContent = 'Vanta City could not start';
+    this.title.textContent = 'Ashfall could not start';
     this.detail.textContent =
       error instanceof Error ? error.message : String(error);
     this.progress.remove();

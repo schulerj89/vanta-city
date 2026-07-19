@@ -12,6 +12,8 @@ export interface NpcDefinition {
   /** Explicit celebratory action. Never used as Talk or missing-action fallback. */
   readonly applauseAnimation?: string;
   readonly spawnId: string;
+  /** Optional per-level spawn authority. A null entry makes the NPC absent. */
+  readonly levelSpawnIds?: Readonly<Record<string, string | null>>;
   readonly interactionLabel: string;
   readonly conversationId: string;
   /** Optional Talk surface-gap override; omit for the shared Talk profile. */
@@ -51,6 +53,18 @@ export function validateNpcDefinitions(
     ] as const) {
       if (!idPattern.test(value)) {
         throw new Error(`NPC "${definition.id}" has invalid ${label} id`);
+      }
+    }
+    for (const [levelId, spawnId] of Object.entries(
+      definition.levelSpawnIds ?? {},
+    )) {
+      if (
+        !idPattern.test(levelId) ||
+        (spawnId !== null && !idPattern.test(spawnId))
+      ) {
+        throw new Error(
+          `NPC "${definition.id}" has invalid level spawn mapping`,
+        );
       }
     }
     if (definition.defaultAnimation.trim().length === 0) {

@@ -67,6 +67,7 @@ import { LevelSystem } from './world/LevelSystem';
 import { TimeOfDayLightingSystem } from './world/TimeOfDayLightingSystem';
 import type { WorldEvents } from './world/WorldEvents';
 import { testDistrict } from './world/levels/testDistrict';
+import { northbarCoachDepot } from './world/levels/northbarCoachDepot';
 import { AccessibilityPreferenceStore } from './accessibility/AccessibilityPreferences';
 import type { DiagnosticRecorder } from './debug/DiagnosticRecorder';
 import { CharacterEquipment } from './equipment/CharacterEquipment';
@@ -100,6 +101,8 @@ import { CinematicCatalog } from './cinematics/CinematicDefinition';
 import { cinematicDefinitions } from './cinematics/cinematics';
 import { CinematicCoordinator } from './cinematics/CinematicCoordinator';
 import { CinematicPresentationSystem } from './cinematics/CinematicPresentationSystem';
+import { createCinematicRuntimeAdapters } from './cinematics/CinematicRuntimeIntegration';
+import { TitleScreen } from './ui/TitleScreen';
 
 let activeLoadingScreen: LoadingScreen | undefined;
 
@@ -107,10 +110,22 @@ async function bootstrap(): Promise<void> {
   const mount = document.querySelector<HTMLElement>('#game');
   if (!mount) throw new Error('Game mount element was not found');
 
+  const pageParameters = new URLSearchParams(window.location.search);
+  const audioPreferences = new AudioPreferenceStore(window.localStorage);
+  const title = new TitleScreen(mount, audioPreferences, window.localStorage);
+  if (
+    (pageParameters.get('e2e') !== '1' ||
+      pageParameters.get('title') === '1') &&
+    !pageParameters.has('sandbox') &&
+    pageParameters.get('skipTitle') !== '1'
+  ) {
+    await title.waitForStart();
+  }
+  title.dispose();
+
   const input = new InputSystem(defaultBindings);
   const render = new RenderSystem(mount);
   const uiLayout = new ScreenSpaceLayoutSystem(mount);
-  const pageParameters = new URLSearchParams(window.location.search);
   let assetFaults:
     import('./debug/DevelopmentAssetFaults').DevelopmentAssetFaults | undefined;
   if (import.meta.env.DEV) {
@@ -118,8 +133,14 @@ async function bootstrap(): Promise<void> {
       await import('./debug/DevelopmentAssetFaults');
     assetFaults = DevelopmentAssetFaults.from(pageParameters);
   }
-  const levels = new LevelRegistry([testDistrict]);
-  const initialLevelId = 'test-district';
+  const levels = new LevelRegistry([testDistrict, northbarCoachDepot]);
+  const authoredOpening =
+    (pageParameters.get('e2e') !== '1' ||
+      pageParameters.get('opening') === '1') &&
+    !pageParameters.has('sandbox');
+  const initialLevelId = authoredOpening
+    ? 'northbar-coach-depot'
+    : 'test-district';
   const initialLevel = levels.get(initialLevelId);
   const assetCatalog = new AssetCatalog({
     ...assetManifest,
@@ -227,7 +248,9 @@ async function bootstrap(): Promise<void> {
     development?.debug,
     pageParameters.has('time') && Number.isFinite(requestedHour)
       ? requestedHour
-      : 13,
+      : authoredOpening
+        ? 5.7
+        : 13,
   );
   const collision = new StaticCollisionWorld();
   const worldCollision = new WorldCollisionSystem(collision, worldEvents);
@@ -377,7 +400,6 @@ async function bootstrap(): Promise<void> {
     vehicle,
     quickbar,
   );
-  const audioPreferences = new AudioPreferenceStore(window.localStorage);
   const failedAudioUrl =
     import.meta.env.DEV && pageParameters.get('audioFail') === '1'
       ? audioCatalog.first('theme')?.url
@@ -648,6 +670,14 @@ async function bootstrap(): Promise<void> {
         (id === 'casual' || npcs.getWorldPoseSource(id) !== undefined),
     },
     player,
+    createCinematicRuntimeAdapters({
+      levels: levelSystem,
+      registry: levels,
+      player,
+      playerVisual: characterVisual,
+      npcs,
+      missions,
+    }),
   );
   const cinematicPresentation = new CinematicPresentationSystem(
     uiLayout.zone('presentation'),
@@ -675,6 +705,9 @@ async function bootstrap(): Promise<void> {
     id: 'interaction.signal-controller',
     prompt: 'Inspect signal controller',
     location: () => {
+      if (levelSystem.activeLevel?.id !== 'test-district') {
+        return { x: 1_000_000, y: 0, z: 1_000_000 };
+      }
       const [x, y, z] = levelSystem.getLocation(
         'interaction.signal-controller',
       ).position;
@@ -891,6 +924,18 @@ async function bootstrap(): Promise<void> {
         })
       : undefined;
 
+  if (authoredOpening) {
+    const started = cinematics.start('cinematic.ash-001.opening');
+    if (!started) {
+      development?.errors.report(
+        'authored opening start',
+        new Error(
+          cinematics.getSnapshot().lastFailure ??
+            'The authored opening could not start',
+        ),
+      );
+    }
+  }
   loading.complete();
 
   installHotDisposal(runtime, assets, development, () => {
