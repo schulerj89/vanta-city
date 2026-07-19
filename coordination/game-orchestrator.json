@@ -72,7 +72,7 @@
     }
   },
   "worldGrowth": {
-    "measurement": "walkable-playable-area-square-metres",
+    "measurement": "linear-half-extent-growth-on-all-four-sides-and-walkable-playable-area-square-metres",
     "growthTargetPercent": 25,
     "allowedGrowthPercent": {
       "minimum": 20,
@@ -81,18 +81,39 @@
     "baseline": {
       "mapId": "ashfall-junction",
       "boundsMetres": {
-        "minX": -28,
-        "maxX": 28,
-        "minZ": -28,
-        "maxZ": 28
+        "minX": -36.75,
+        "maxX": 50.75,
+        "minZ": -35,
+        "maxZ": 35
       },
-      "playableAreaSquareMetres": 3136,
-      "buildingCount": 8
+      "widthMetres": 87.5,
+      "depthMetres": 70,
+      "playableAreaSquareMetres": 6125,
+      "buildingCount": 25
     },
     "nextExpansionTarget": {
-      "minimumAreaSquareMetres": 3763,
-      "targetAreaSquareMetres": 3920,
-      "maximumAreaSquareMetres": 4077
+      "interpretation": "Grow each current half-extent from the map centre by 20–30 percent so all four boundaries move outward; target 25 percent per linear dimension, not merely 25 percent total area.",
+      "minimumBoundsMetres": {
+        "minX": -45.5,
+        "maxX": 59.5,
+        "minZ": -42,
+        "maxZ": 42
+      },
+      "targetBoundsMetres": {
+        "minX": -47.6875,
+        "maxX": 61.6875,
+        "minZ": -43.75,
+        "maxZ": 43.75
+      },
+      "maximumBoundsMetres": {
+        "minX": -49.875,
+        "maxX": 63.875,
+        "minZ": -45.5,
+        "maxZ": 45.5
+      },
+      "minimumAreaSquareMetres": 8820,
+      "targetAreaSquareMetres": 9570.3125,
+      "maximumAreaSquareMetres": 10351.25
     },
     "rules": [
       "Apply the growth percentage once per map-expansion milestone, not once per unrelated feature run.",
@@ -698,6 +719,236 @@
         "Profile current unit and browser suites before editing.",
         "Keep unit runtime below ten seconds and targeted browser validation below three minutes without deleting meaningful regression coverage.",
         "Separate deterministic state tests, smoke paths, visual labs, and release-only full E2E coverage."
+      ]
+    },
+    {
+      "id": "WORLD-004",
+      "title": "Expand Ashfall on every side and author two enterable interiors",
+      "status": "ready",
+      "priority": "critical",
+      "source": "explicit-user-request",
+      "duplicateKey": "ashfall-four-side-linear-growth-textured-interiors",
+      "dependencies": ["WORLD-003", "PERF-002", "MAP-001"],
+      "owner": "world-interior-worker",
+      "skill": "imagegen",
+      "acceptance": [
+        "Author a machine-readable plan that grows each current map half-extent by 20–30 percent, targets 25 percent, moves all four boundaries outward, and records the resulting linear dimensions and total area.",
+        "Extend roads, sidewalks, collision, sectors, adaptive streaming, traffic-safe clearances, minimap data, and full-map data through shared world definitions with no near-player holes or visual-only geometry.",
+        "Add at least twelve intentional building placements and at least two new local texture families through the existing building kit and asset lifecycle, with complete license or original-generation provenance and no runtime network loading.",
+        "Build two enterable, collidable, streamed interiors in the active Ashfall level: a night venue at location.ashfall.night-venue and Rook's home at location.ashfall.rook-home, including camera-safe entrances, readable furnishing blocks, authored lighting, and stable generic cinematic anchors.",
+        "Add spawn.player.home and a safe spawn.player.clinic fallback, and place interior occupants only through an existing character/pedestrian/performance authority using verified idle, sitting, standing, or walking intent; applause must never substitute for ambient or dance performance.",
+        "Pass world/building/intersection validators, focused unit and browser coverage, desktop/narrow day/night visual review, full-map evidence, console/network inspection, three streaming cycles, and recorded FPS, frame-time, memory, draw-call, triangle, and ownership budgets."
+      ]
+    },
+    {
+      "id": "NPC-002",
+      "title": "Acquire a second unique CC0 animated NPC cast",
+      "status": "ready",
+      "priority": "critical",
+      "source": "explicit-user-request",
+      "duplicateKey": "cc0-unique-animated-npc-venue-cast",
+      "dependencies": ["NPC-001", "PERF-002"],
+      "owner": "animated-character-asset-worker",
+      "acceptance": [
+        "Acquire at least five distinct production-intended low-poly character models from verified CC0 or public-domain source records, stored locally with source URL, creator, license, retrieval date, archive and file hashes, scale, forward axis, bounds, materials, triangles, skeleton, and exact clip inventory.",
+        "Every accepted character maps a verified idle and locomotion clip, and the cast includes verified seated/standing coverage plus at least one genuine dance or rhythmic venue-performance clip; clapping is never relabeled as dance, talk, listening, or generic interaction.",
+        "Register assets and character definitions through the existing AssetCatalog, CharacterLoader, validation, and animation-lab authorities without adding world placement, mission logic, dialogue, AI, or a second animation runtime.",
+        "Use source assets before considering conversion; do not call a paid generation service or install Blender merely to fill the quota. If a required CC0 asset cannot be verified, block that candidate and document the exact gap instead of shipping a placeholder.",
+        "Pass character validation, clone/disposal tests, animation-lab browser checks, desktop/narrow screenshots for every accepted model and required clip class, console/network inspection, production build, and bundle-size review."
+      ]
+    },
+    {
+      "id": "SAVE-001",
+      "title": "Create authoritative campaign persistence and safe respawn",
+      "status": "ready",
+      "priority": "critical",
+      "source": "explicit-user-request",
+      "duplicateKey": "versioned-campaign-save-reset-respawn-empty-loadout",
+      "dependencies": ["MISSION-001", "MISSION-002", "WORLD-003"],
+      "owner": "persistence-gameplay-worker",
+      "acceptance": [
+        "Implement one versioned, validated campaign-save authority for mission persistence, facts, money, owned/equipped equipment and ammunition, current level or safe spawn metadata, and schema migration or deterministic fallback for malformed/incompatible data.",
+        "Restore campaign data before dependent systems initialize, save only on meaningful authoritative events, survive reload without duplicate rewards or transactions, and expose a public has-save, snapshot, save, restore, and reset contract without leaking private runtime objects.",
+        "New games start with neither handgun nor knife owned or equipped; the existing store and mission reward APIs remain the only acquisition paths, and locked definitions remain available for UI projection.",
+        "Resolve death respawn through stable world spawn IDs, preferring spawn.player.home only when unlocked, otherwise spawn.player.clinic, with the current default player spawn as a safe fallback; preserve completed missions, money, and owned equipment across death.",
+        "Reset clears campaign/title-started progress while preserving accessibility, audio, camera, and other user preferences, and is safe and idempotent even with unavailable or corrupt storage.",
+        "Pass focused unit tests, reload/corrupt/reset/death browser tests, console and failed-request inspection, typecheck, lint, production build, and existing mission, money, equipment, death, title, and smoke regressions."
+      ]
+    },
+    {
+      "id": "MISSION-003A",
+      "title": "Design the second story mission and its cinematic performance",
+      "status": "ready",
+      "priority": "critical",
+      "source": "explicit-user-request",
+      "duplicateKey": "ashfall-second-mission-story-cinematic-production-brief",
+      "dependencies": ["STORY-001", "MISSION-002", "CINEMATIC-005"],
+      "owner": "story-cinematic-design-worker",
+      "skills": ["vanta-story-writer", "vanta-cinematic-director"],
+      "acceptance": [
+        "Adapt the canonical ash-002-carbon-copy premise into one focused story journey with no errand chain: a concise setup, one meaningful travel objective, and one consequential meeting or destination interaction that changes character relationships and campaign facts.",
+        "Use the planned location.ashfall.night-venue or another already-authored production location only when the story and dependency contract support it; reference stable IDs rather than coordinates or loaded objects.",
+        "Deliver runtime-ready mission, dialogue, participant, performance-intent, prop-motion, subtitle, shot, camera-anchor, lighting, skip-confirmation, failure/retry, reward, persistence, and post-mission world-state decisions without implementing runtime code.",
+        "Every shot has story purpose, readable blocking, deliberate pacing and duration, verified performance intent with no applause fallback, responsive composition notes, and exact camera/gameplay/input/HUD restoration requirements.",
+        "Review existing cinematic footage or captured frames at desktop and narrow viewports, inspect the browser console, document continuity and originality decisions, and validate the authored narrative artifacts."
+      ]
+    },
+    {
+      "id": "UI-002A",
+      "title": "Design objective navigation, save reset, map access, and locked loadout UX",
+      "status": "ready",
+      "priority": "critical",
+      "source": "explicit-user-request",
+      "duplicateKey": "ui-objective-distance-map-reset-locked-loadout-death",
+      "dependencies": [
+        "UI-SYSTEM-001",
+        "UI-TIGHTEN-001",
+        "MAP-001",
+        "MISSION-001"
+      ],
+      "owner": "ui-design-worker",
+      "skill": "vanta-ui-art-director",
+      "requiresUiDesign": true,
+      "requiresVisualReview": true,
+      "uiStates": [
+        "exploration-objective-ahead",
+        "exploration-objective-offscreen",
+        "objective-arrival",
+        "full-map-closed",
+        "full-map-open",
+        "locked-loadout",
+        "weapon-acquired",
+        "death-respawn",
+        "title-returning",
+        "reset-confirmation",
+        "reset-complete"
+      ],
+      "viewports": ["1280x720", "390x844", "1920x800"],
+      "designBrief": "docs/ui/ui-002-navigation-persistence-loadout.md",
+      "visualEvidence": ["docs/screenshots/ui-002a"],
+      "acceptance": [
+        "Define one original objective-awareness component that consumes public mission highlights and player pose to show distance, arrival state, and a restrained on-screen or edge cursor without duplicating mission, map, camera, or world truth.",
+        "Define a visible map control that invokes the existing toggleMap action and full-world map, including keyboard, pointer, and gamepad behavior without a second map state or listener authority.",
+        "Define original handgun and knife slot icons plus empty, locked, newly acquired, owned, equipped, and ammunition states; a new game visibly owns neither item.",
+        "Define title-screen reset-game-data placement, destructive confirmation, focus restoration, accessible wording, and separation between campaign data and retained accessibility/audio/camera preferences.",
+        "Define death and respawn presentation for clinic, home-unlocked, and fallback outcomes while preserving the existing screen-space layout and exact gameplay restoration.",
+        "Inspect deterministic live/composition-lab states at all required viewports over bright, dark, and noisy backgrounds, including enlarged text, safe areas, reduced motion, keyboard focus, console errors, failed/external requests, and documented visual decisions; do not implement source UI in this consultation task."
+      ]
+    },
+    {
+      "id": "INTERIOR-POP-001",
+      "title": "Populate the new interiors with the expanded animated cast",
+      "status": "blocked",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "night-venue-home-authored-animated-population",
+      "dependencies": ["WORLD-004", "NPC-002"],
+      "owner": "ambient-performance-worker",
+      "acceptance": [
+        "Populate the night venue and home through one existing or deliberately extended ambient actor authority, using the new cast and authored placement/performance definitions rather than independent scene objects.",
+        "Use genuine dance for dance-tagged performers and verified idle, walk, sit, stand, converse, or service intent elsewhere; never relabel applause or restart one-shots every frame.",
+        "Prove grounding, occlusion, lighting, sector disposal, performance restoration, population caps, desktop/narrow/night visuals, console health, and three load/unload cycles."
+      ]
+    },
+    {
+      "id": "MISSION-003B",
+      "title": "Implement the second story mission and cinematic",
+      "status": "blocked",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "ashfall-second-mission-runtime-cinematic",
+      "dependencies": ["MISSION-003A", "WORLD-004", "NPC-002", "SAVE-001"],
+      "owner": "mission-cinematic-worker",
+      "skills": ["vanta-story-writer", "vanta-cinematic-director"],
+      "acceptance": [
+        "Implement the approved production brief through the existing mission, dialogue, cinematic, level, NPC, camera, input, game-state, save, and highlight authorities.",
+        "Keep the playable mission to the approved focused journey and meeting, with cinematic presentation never advancing gameplay state or granting rewards by itself.",
+        "Pass complete-path, skip, pause, failure, retry, reload, death, reward-once, desktop/narrow/ultrawide, console, performance, and exact-restoration browser evidence."
+      ]
+    },
+    {
+      "id": "NAV-001",
+      "title": "Implement objective distance and world-aware direction guidance",
+      "status": "blocked",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "objective-distance-world-cursor-map-control",
+      "dependencies": ["UI-002A", "WORLD-004"],
+      "owner": "navigation-ui-worker",
+      "skill": "vanta-ui-art-director",
+      "requiresUiDesign": true,
+      "requiresVisualReview": true,
+      "uiStates": [
+        "ahead",
+        "behind",
+        "offscreen",
+        "occluded",
+        "arriving",
+        "map-open"
+      ],
+      "viewports": ["1280x720", "390x844", "1920x800"],
+      "designBrief": "docs/ui/ui-002-navigation-persistence-loadout.md",
+      "visualEvidence": ["docs/screenshots/nav-001"],
+      "acceptance": [
+        "Implement the approved public-snapshot-driven objective awareness and distance component with stable arrival hysteresis, occlusion/offscreen behavior, mission changes, teleports, and exact disposal.",
+        "Add the approved map control through the existing toggleMap action and FullWorldMapSystem only.",
+        "Pass unit, browser, visual, accessibility, console, network, build, and performance checks at required viewports."
+      ]
+    },
+    {
+      "id": "UI-SAVE-001",
+      "title": "Implement title reset and death-respawn presentation",
+      "status": "blocked",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "title-reset-confirmation-death-respawn-ui",
+      "dependencies": ["UI-002A", "SAVE-001"],
+      "owner": "persistence-ui-worker",
+      "skill": "vanta-ui-art-director",
+      "requiresUiDesign": true,
+      "requiresVisualReview": true,
+      "uiStates": [
+        "title-returning",
+        "reset-confirmation",
+        "reset-complete",
+        "death",
+        "respawn"
+      ],
+      "viewports": ["1280x720", "390x844", "1920x800"],
+      "designBrief": "docs/ui/ui-002-navigation-persistence-loadout.md",
+      "visualEvidence": ["docs/screenshots/ui-save-001"],
+      "acceptance": [
+        "Wire the approved reset confirmation to the campaign-save reset API without directly clearing unrelated storage keys.",
+        "Present the selected clinic, home, or fallback respawn outcome accessibly and restore focus, camera, input, HUD, and game state exactly.",
+        "Pass unit, browser, visual, accessibility, console, network, build, and restoration checks at required viewports."
+      ]
+    },
+    {
+      "id": "LOADOUT-001",
+      "title": "Implement original locked handgun and knife quickbar icons",
+      "status": "blocked",
+      "priority": "high",
+      "source": "explicit-user-request",
+      "duplicateKey": "locked-handgun-knife-icons-empty-start",
+      "dependencies": ["UI-002A", "SAVE-001"],
+      "owner": "loadout-ui-worker",
+      "skill": "vanta-ui-art-director",
+      "requiresUiDesign": true,
+      "requiresVisualReview": true,
+      "uiStates": [
+        "locked",
+        "newly-acquired",
+        "owned",
+        "equipped",
+        "empty-ammo"
+      ],
+      "viewports": ["1280x720", "390x844", "1920x800"],
+      "designBrief": "docs/ui/ui-002-navigation-persistence-loadout.md",
+      "visualEvidence": ["docs/screenshots/loadout-001"],
+      "acceptance": [
+        "Replace typographic placeholders with original local SVG or code-native handgun and knife silhouettes that remain recognizable when locked, owned, equipped, and empty.",
+        "Observe authoritative equipment ownership and preserve empty new-game state, store or mission acquisition, ammunition, input, focus, and vehicle HUD ownership.",
+        "Pass unit, composition-lab/live-game visual, accessibility, console, network, build, and restoration checks at required viewports."
       ]
     }
   ],
