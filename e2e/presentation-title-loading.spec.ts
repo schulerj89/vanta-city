@@ -56,6 +56,37 @@ test.describe('Vanta City title presentation @visual', () => {
     await expectNoOverflow(page, 1920, 800);
     expect(diagnostics).toMatchObject({ errors: [], failed: [], external: [] });
   });
+
+  test('a real pre-loader renderer failure becomes the one canonical fatal presentation', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (
+        this: HTMLCanvasElement,
+        contextId: string,
+        ...args: unknown[]
+      ) {
+        if (contextId.startsWith('webgl')) return null;
+        return Reflect.apply(original, this, [contextId, ...args]);
+      } as typeof HTMLCanvasElement.prototype.getContext;
+    });
+    await page.goto('/?e2e=1&title=1&traffic=0');
+    await expect(page.getByTestId('title-start')).toBeFocused();
+
+    await page.getByTestId('title-start').click();
+
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText('Vanta City could not start');
+    await expect(alert).toContainText(/WebGL/i);
+    await expect(page.getByTestId('loading-retry')).toBeFocused();
+    await expect(page.getByTestId('title-screen')).toHaveCount(0);
+    await expect(page.getByTestId('loading-screen')).toHaveCount(1);
+    await expect(page.locator('[data-ui-zone="presentation"]')).toHaveCount(1);
+    await expect(
+      page.locator('[data-ui-zone="presentation"] > .loading-screen'),
+    ).toHaveCount(1);
+  });
 });
 
 test.describe('Vanta City loading presentation @visual', () => {

@@ -108,14 +108,21 @@ import { createCinematicRuntimeAdapters } from './cinematics/CinematicRuntimeInt
 import { TitleScreen } from './ui/TitleScreen';
 
 let activeLoadingScreen: LoadingScreen | undefined;
+let activePresentationMount: HTMLElement | undefined;
 
 async function bootstrap(): Promise<void> {
   const mount = document.querySelector<HTMLElement>('#game');
   if (!mount) throw new Error('Game mount element was not found');
 
+  const uiLayout = new ScreenSpaceLayoutSystem(mount);
+  activePresentationMount = uiLayout.zone('presentation');
   const pageParameters = new URLSearchParams(window.location.search);
   const audioPreferences = new AudioPreferenceStore(window.localStorage);
-  const title = new TitleScreen(mount, audioPreferences, window.localStorage);
+  const title = new TitleScreen(
+    activePresentationMount,
+    audioPreferences,
+    window.localStorage,
+  );
   if (
     (pageParameters.get('e2e') !== '1' ||
       pageParameters.get('title') === '1') &&
@@ -128,7 +135,6 @@ async function bootstrap(): Promise<void> {
 
   const input = new InputSystem(defaultBindings);
   const render = new RenderSystem(mount);
-  const uiLayout = new ScreenSpaceLayoutSystem(mount);
   let assetFaults:
     import('./debug/DevelopmentAssetFaults').DevelopmentAssetFaults | undefined;
   if (import.meta.env.DEV) {
@@ -2429,6 +2435,16 @@ function installHotDisposal(
 }
 
 void bootstrap().catch((error: unknown) => {
-  activeLoadingScreen?.fail(error);
+  if (activeLoadingScreen && !activeLoadingScreen.getSnapshot().disposed) {
+    activeLoadingScreen.fail(error);
+  } else {
+    const mount =
+      activePresentationMount ??
+      document.querySelector<HTMLElement>('#game') ??
+      undefined;
+    if (mount) {
+      activeLoadingScreen = LoadingScreen.createFatal(mount, error);
+    }
+  }
   console.error('Failed to initialize Vanta City', error);
 });

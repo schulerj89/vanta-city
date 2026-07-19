@@ -189,6 +189,12 @@ function createEdgeHarness(
       lodHiddenObjects: 0,
       transitionsPending: false,
       lastError: undefined,
+      policy: new AdaptiveSectorStreamingPolicy().evaluate({
+        sectors: edgeLevel.streaming!.sectors,
+        playerPosition: { x: 0, y: 0, z: 0 },
+        activeSectorIds: new Set(['sector.edge']),
+      }),
+      attempts: {},
     }),
   };
   const playerPosition = { x: 0, y: 0.2, z: 0 };
