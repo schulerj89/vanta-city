@@ -36,10 +36,12 @@ The development Talk fixtures below remain separate.
 `cinematicCastCharacterDefinitions` adds six production candidates to the same
 authoritative presentation registry without adding any `NpcDefinition`, spawn,
 or world placement. Five grounded Ultimate Modular Men variants provide exact
-idle/walk/run plus interact/wave clips. A separate Universal Base venue
-performer uses the rig-compatible Universal Animation Library for exact
-idle/walk/run, `Sitting_Enter` / `Sitting_Idle_Loop` / `Sitting_Exit`, and the
-genuine `Dance_Loop` clip. The dance intent never aliases applause.
+idle/walk/run plus interact/wave clips. A locally composed, fully clothed
+industrial venue performer combines CC0 Universal-compatible outfit, head, and
+hair components on their identical skeleton, then uses the rig-compatible
+Universal Animation Library for exact idle/walk/run, `Sitting_Enter` /
+`Sitting_Idle_Loop` / `Sitting_Exit`, and the genuine `Dance_Loop` clip. The
+dance intent never aliases applause.
 
 | Definition       | Intended role          |  Height | Performance coverage                     |
 | ---------------- | ---------------------- | ------: | ---------------------------------------- |
@@ -48,7 +50,7 @@ genuine `Dance_Loop` clip. The dance intent never aliases applause.
 | `cast-farmer`    | rural/workwear patron  | 1.787 m | neutral, approach, indicate, acknowledge |
 | `cast-hoodie`    | street patron          | 1.800 m | neutral, approach, indicate, acknowledge |
 | `cast-worker`    | industrial patron      | 1.797 m | neutral, approach, indicate, acknowledge |
-| `cast-performer` | staged venue performer | 1.775 m | neutral, approach, sit/hold/stand, dance |
+| `cast-performer` | staged venue performer | 1.798 m | neutral, approach, sit/hold/stand, dance |
 
 Complete archive and file hashes, license evidence, technical metrics, and
 rejected alternatives are recorded in

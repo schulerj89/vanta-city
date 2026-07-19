@@ -98,6 +98,10 @@ export interface CharacterAnimationLabSnapshot {
   readonly graph: CharacterAnimationGraphState;
   readonly logicalAnimations: readonly string[];
   readonly authoredClips: readonly string[];
+  /** Visible runtime meshes, exposed so visual audits can reject incomplete assets. */
+  readonly visibleMeshNames: readonly string[];
+  /** Visible runtime materials, exposed so visual audits can reject untextured assets. */
+  readonly visibleMaterialNames: readonly string[];
   readonly performanceProfileId: string | undefined;
   readonly performanceIntents: readonly string[];
   readonly strippedRootTracks: readonly RootMotionDiagnostic[];
@@ -350,6 +354,19 @@ class CharacterAnimationLabSystem implements GameSystem {
     const performanceProfile = this.loaded
       ? getCharacterPerformanceProfile(this.loaded.definition.id)
       : undefined;
+    const visibleMeshNames: string[] = [];
+    const visibleMaterialNames = new Set<string>();
+    this.loaded?.root.traverse((object) => {
+      if (!(object instanceof Mesh) || !object.visible) return;
+      visibleMeshNames.push(object.name);
+      const mesh = object as Mesh<BufferGeometry, Material | Material[]>;
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const material of materials) {
+        if (material.name) visibleMaterialNames.add(material.name);
+      }
+    });
     return {
       ready: this.ready,
       modelId: this.loaded?.definition.id,
@@ -372,6 +389,8 @@ class CharacterAnimationLabSystem implements GameSystem {
       graph: { ...this.currentGraph },
       logicalAnimations: [...(this.loaded?.animationClips.keys() ?? [])],
       authoredClips: [...(this.loaded?.availableAnimationClips?.keys() ?? [])],
+      visibleMeshNames: visibleMeshNames.sort(),
+      visibleMaterialNames: [...visibleMaterialNames].sort(),
       performanceProfileId: performanceProfile?.profileId,
       performanceIntents: performanceProfile
         ? Object.keys(performanceProfile.intents)

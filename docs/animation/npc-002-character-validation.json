@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-19T07:54:11.648Z",
+  "generatedAt": "2026-07-19T12:09:55.270Z",
   "config": {
     "limits": {
       "minScale": 0.01,
@@ -1537,21 +1537,21 @@
       "issues": [],
       "metrics": {
         "source": "asset",
-        "sourcePath": "public/assets/characters/universal-performer/superhero-female.glb",
-        "meshCount": 3,
-        "materialCount": 3,
-        "textureCount": 7,
+        "sourcePath": "public/assets/characters/universal-performer/venue-performer-industrial.glb",
+        "meshCount": 10,
+        "materialCount": 6,
+        "textureCount": 11,
         "bounds": {
           "min": [
-            -0.8344331101674881, -0.00840710894944254, -0.16246949431349073
+            -0.8319412525303722, -0.003967182163071525, -0.20962995714641297
           ],
-          "max": [0.8344329878487169, 1.766643851798447, 0.14022762239328995]
+          "max": [0.8319412525294245, 1.7940792910874304, 0.16754119829529487]
         },
-        "calculatedHeight": 1.7750509607478897,
-        "lowestPoint": -0.00840710894944254,
-        "visualGroundOffset": 0.00840710894944254,
+        "calculatedHeight": 1.798046473250502,
+        "lowestPoint": -0.003967182163071525,
+        "visualGroundOffset": 0.003967182163071525,
         "scale": [1, 1, 1],
-        "skeletonCount": 3,
+        "skeletonCount": 10,
         "animationClips": [
           {
             "name": "A_TPose",

@@ -14,6 +14,7 @@ The model selector is assembled from the authoritative registries:
 
 - playable `casual` and `punk` definitions;
 - Animated Men `npc-worker`, `npc-hoodie`, and `npc-punk` definitions;
+- production Animated Women pedestrians and the unplaced CC0 cinematic cast;
 - `debug-sparring-target`, including its native Ultimate Modular Men get-hit mapping.
 
 Each switch calls `CharacterLoader.instantiate()`. Stale asynchronous results and the previous live instance are disposed. The mixer is stopped, detached from its `finished` listener, and uncached before the model instance is released. The emergency placeholder remains observable through the source and warning diagnostics.
@@ -76,10 +77,28 @@ setOverlay(
 );
 ```
 
-The snapshot returns model/source, logical and authored clip inventories, graph state, normalized playback, lock/impact/completion sequences, root-track diagnostics, transformed character and equipment bounds, socket position, the live asset-local equipment transform, equipment asset/fallback status, alignment roots, disposal count, and any lab error.
+The snapshot returns model/source, logical and authored clip inventories, exact
+visible runtime mesh and material names, graph state, normalized playback,
+lock/impact/completion sequences, root-track diagnostics, transformed character
+and equipment bounds, socket position, the live asset-local equipment
+transform, equipment asset/fallback status, alignment roots, disposal count,
+and any lab error. The mesh/material inventory is a visual-audit contract: it
+allows browser coverage to reject a placeholder, incomplete modular outfit, or
+missing head/hair before accepting screenshots.
 
 ## Capture policy and limits
 
-The Playwright suite commits two stable locator baselines for the DOM controls surface and attaches full-page presentation captures for Casual, Punk, Animated Men, action impact, bounds, grounding, both playable characters in every handgun/knife state, and both sides of each final weapon pose. State, socket compatibility, local asset status, fixed simulation origin, and measured weapon bounds remain the deterministic test oracles. Full-page SwiftShader output is inspected but is not a pixel oracle because macOS headless captures can contain transient compositor tiles even when the rendered page is correct.
+The Playwright suite commits two stable locator baselines for the DOM controls
+surface and attaches presentation captures for Casual, Punk, Animated Men,
+action impact, bounds, grounding, both playable characters in every
+handgun/knife state, both sides of each final weapon pose, and the complete CC0
+cast at desktop and narrow viewports. The CC0 cast audit asserts idle/walk/run,
+captures idle and run for all six definitions, and captures the performer's
+sit/hold/stand, two distinct dance beats, and four outfit views. State, exact
+performer mesh/material inventory, socket compatibility, local asset status,
+fixed simulation origin, clean console/network diagnostics, and measured
+weapon bounds remain the deterministic test oracles. SwiftShader output is
+inspected but is not a pixel oracle because macOS headless captures can contain
+transient compositor tiles even when the rendered page is correct.
 
 This is an inspection harness, not a persistent editor or combat system. Transform changes last only for the current selected item and reset when the item is reselected; send the copyable JSON back for a production definition update. The lab does not save asset changes, author clips, retarget skeletons, apply damage, create health, add AI/navigation, or mutate production character registries.

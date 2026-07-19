@@ -298,17 +298,21 @@ export const assetManifest = {
   },
   'character.cast-performer.model': {
     type: 'model',
-    url: '/assets/characters/universal-performer/superhero-female.glb',
+    url: '/assets/characters/universal-performer/venue-performer-industrial.glb',
     attribution: {
-      title: 'Superhero Female Full Body — Universal Base Characters',
+      title: 'Female Ranger — Modular Character Outfits: Fantasy',
       creator: 'Quaternius',
-      sourceUrl: 'https://quaternius.com/packs/universalbasecharacters.html',
+      sourceUrl:
+        'https://quaternius.com/packs/modularcharacteroutfitsfantasy.html',
       license: 'CC0 1.0 Universal',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     },
     metadata: {
       intendedUse: 'cinematic-venue-performer',
       embeddedAnimations: 0,
+      presentation: 'fully-clothed-1997-industrial-stage-outfit',
+      runtimeTextureResolution: 1024,
+      sourceComponents: 3,
     },
   },
   'character.cast-performer.animations': {

@@ -1,36 +1,1712 @@
 {
+  "schemaVersion": 2,
   "task": "NPC-002",
-  "capturedAt": "2026-07-19",
-  "viewport": [1280, 720],
+  "capturedAt": "2026-07-19T12:02:14.495Z",
   "route": "/?sandbox=character-animation-lab",
-  "browser": "Playwright Desktop Chrome / SwiftShader",
-  "command": "VANTA_E2E_PORT=4393 pnpm exec playwright test e2e/character-animation-lab.spec.ts --grep 'unplaced CC0 cast'",
-  "result": "1 passed",
-  "determinism": {
-    "playing": false,
-    "ambientNormalizedTime": 0.35,
-    "performerNormalizedTime": 0.55,
-    "view": "front",
-    "overlays": ["bounds", "alignment"]
+  "baseUrl": "http://127.0.0.1:4395",
+  "renderer": "Playwright Chromium / ANGLE SwiftShader",
+  "viewports": [
+    {
+      "name": "desktop-1280x720",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "name": "narrow-390x844",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "evidenceContract": {
+    "acceptedCharacters": [
+      "cast-business",
+      "cast-beach",
+      "cast-farmer",
+      "cast-hoodie",
+      "cast-worker",
+      "cast-performer"
+    ],
+    "verifiedLogicalStatesPerCharacter": ["idle", "walk", "run"],
+    "capturedStatesPerCharacter": ["idle", "run"],
+    "performerStates": [
+      "sit",
+      "seatedHold",
+      "stand",
+      "dance-beat-a",
+      "dance-beat-b"
+    ],
+    "performerViews": ["front", "right", "rear", "left"],
+    "labPanelHiddenForUnobstructedCanvasEvidence": true
+  },
+  "performerSourceGuard": {
+    "productionModel": "venue-performer-industrial.glb",
+    "requiredVisibleMeshes": [
+      "Female_Performer_Eyebrows",
+      "Female_Performer_Eyes",
+      "Female_Performer_Hair",
+      "Female_Performer_Head",
+      "Female_Ranger_Arms_1",
+      "Female_Ranger_Arms_2",
+      "Female_Ranger_Body",
+      "Female_Ranger_Feet",
+      "Female_Ranger_Head_Hood",
+      "Female_Ranger_Legs"
+    ],
+    "requiredVisibleMaterials": [
+      "MI_Eyes",
+      "MI_Industrial_Stagewear",
+      "MI_Performer_Eyebrows",
+      "MI_Performer_Hair_Plum",
+      "MI_Performer_Head_Skin",
+      "MI_Regular_Female"
+    ],
+    "rejectedRuntimeAsset": "superhero-female.glb"
   },
   "review": {
     "desktop1280x720": "pass",
-    "characterReadability": "pass",
-    "footAlignment": "pass",
-    "boundsContainment": "pass",
+    "narrow390x844": "pass",
+    "outfitCompleteFrontRearSides": "pass",
+    "groundedIdleAndLocomotion": "pass",
     "sitHoldStandContinuity": "pass",
-    "danceIsDistinctFromApplause": "pass",
-    "notes": "All five ambient candidates are distinct clothed silhouettes at consistent human scale. The specialty performer is intentionally unplaced and reserved for venue staging. Chair geometry is owned by the future scene, not by the character asset."
+    "genuineDanceMotion": "pass",
+    "characterReadability": "pass",
+    "visualDecision": "Charcoal/black, oxblood, and deep-plum industrial/goth stagewear; armor accessories and undressed body geometry removed."
   },
-  "files": {
-    "cast-business-run.png": "a419476ad8c3d70e32e57fb18a55553f2da7700412a84fffd9fb6e65b61e40bc",
-    "cast-beach-run.png": "bd0a5c35d14fb82e3e0e093003fc8286f077ea852752e10840bcb1d7682bf269",
-    "cast-farmer-run.png": "e4aa5a59199ed082769b94ca6b20147677d925936acac0948c32883c96c0c00d",
-    "cast-hoodie-run.png": "3163c5990d6635f869d62ba061456004e6da41b081f97d980afe4b794fa4dfde",
-    "cast-worker-run.png": "ce6aadf3c5fe58588a7f412965c4c10cbed2aab3102d496106aa117d47b4e788",
-    "cast-performer-sit.png": "32a864b59fc0890d9b73c508b336135b9042509eb36ec0903865b1b5a3120bc7",
-    "cast-performer-seated-hold.png": "7f29f60c900332b0dc3c7df746958b4070e9696397e6a6e2812bff8a5236306d",
-    "cast-performer-stand.png": "971b9d3ea600e3fda6d65ae9c74102ce23d287330b15e62fbc15d0272059cc30",
-    "cast-performer-dance.png": "0f27817566c68ee1ec7f6feeddc1d1e952b60d07514af77c2a19a7d48709b289"
+  "captures": [
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-business-idle.png",
+      "sha256": "7ec46bae8412b67b3dfaf8f7900aa2bedb6c8ef1d2cf21291bcbabe00ef146c7",
+      "bytes": 29413,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-business",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Suit_Body_1",
+        "Suit_Body_2",
+        "Suit_Body_3",
+        "Suit_Body_4",
+        "Suit_Feet",
+        "Suit_Head_1",
+        "Suit_Head_2",
+        "Suit_Head_3",
+        "Suit_Head_4",
+        "Suit_Legs"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "Skin",
+        "Suit",
+        "Tie",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-business-run.png",
+      "sha256": "94a7faa4332c2fcdc24d46c43af96c7d8039e0672a9629d3571e4f8fc80fffda",
+      "bytes": 26223,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-business",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Suit_Body_1",
+        "Suit_Body_2",
+        "Suit_Body_3",
+        "Suit_Body_4",
+        "Suit_Feet",
+        "Suit_Head_1",
+        "Suit_Head_2",
+        "Suit_Head_3",
+        "Suit_Head_4",
+        "Suit_Legs"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "Skin",
+        "Suit",
+        "Tie",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-beach-idle.png",
+      "sha256": "d433d3fbf949e0c1b471b4108d6c32e5ebb5d3c0d9206c5a22a37700586d08b2",
+      "bytes": 33971,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-beach",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Beach_Body_1",
+        "Beach_Body_2",
+        "Beach_Feet_1",
+        "Beach_Feet_2",
+        "Beach_Head_1",
+        "Beach_Head_2",
+        "Beach_Head_3",
+        "Beach_Head_4",
+        "Beach_Head_5",
+        "Beach_Legs_1",
+        "Beach_Legs_2",
+        "Beach_Legs_3"
+      ],
+      "visibleMaterialNames": [
+        "Earrings",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBrown",
+        "Red_Dark",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-beach-run.png",
+      "sha256": "b0e1f5bfea91ca5615fa0e40254836124c9bb1dd4ea72b06b8214dd7ecc071f8",
+      "bytes": 30453,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-beach",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Beach_Body_1",
+        "Beach_Body_2",
+        "Beach_Feet_1",
+        "Beach_Feet_2",
+        "Beach_Head_1",
+        "Beach_Head_2",
+        "Beach_Head_3",
+        "Beach_Head_4",
+        "Beach_Head_5",
+        "Beach_Legs_1",
+        "Beach_Legs_2",
+        "Beach_Legs_3"
+      ],
+      "visibleMaterialNames": [
+        "Earrings",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBrown",
+        "Red_Dark",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-farmer-idle.png",
+      "sha256": "418428ed4400b0ed40d83b0237ed8d24b439a22ce250e154a3eeea354220baad",
+      "bytes": 32184,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-farmer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Farmer_Body_1",
+        "Farmer_Body_2",
+        "Farmer_Body_3",
+        "Farmer_Body_4",
+        "Farmer_Feet_1",
+        "Farmer_Feet_2",
+        "Farmer_Head_1",
+        "Farmer_Head_2",
+        "Farmer_Head_3",
+        "Farmer_Head_4",
+        "Farmer_Head_5",
+        "Farmer_Pants"
+      ],
+      "visibleMaterialNames": [
+        "Beige",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "LightBlue",
+        "Red",
+        "Skin"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-farmer-run.png",
+      "sha256": "fc8e98f4e5ece2e07ebc6411c8ae671a7b160736332ffee99a1c147b99e9d0b7",
+      "bytes": 28789,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-farmer",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Farmer_Body_1",
+        "Farmer_Body_2",
+        "Farmer_Body_3",
+        "Farmer_Body_4",
+        "Farmer_Feet_1",
+        "Farmer_Feet_2",
+        "Farmer_Head_1",
+        "Farmer_Head_2",
+        "Farmer_Head_3",
+        "Farmer_Head_4",
+        "Farmer_Head_5",
+        "Farmer_Pants"
+      ],
+      "visibleMaterialNames": [
+        "Beige",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "LightBlue",
+        "Red",
+        "Skin"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-hoodie-idle.png",
+      "sha256": "338bec7ee68189714d7867d70f5f82cd7498b24aaee44de801a0ee0f9dda12e1",
+      "bytes": 31974,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-hoodie",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Casual_Body_1",
+        "Casual_Body_2",
+        "Casual_Feet_1",
+        "Casual_Feet_2",
+        "Casual_Head_1",
+        "Casual_Head_2",
+        "Casual_Head_3",
+        "Casual_Head_4",
+        "Casual_Legs_1",
+        "Casual_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBlue",
+        "Purple",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-hoodie-run.png",
+      "sha256": "489e435cb855d8a7a345a2f13171c4e80eecdcf750beff79c701d51a1ee0cbd6",
+      "bytes": 28661,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-hoodie",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Casual_Body_1",
+        "Casual_Body_2",
+        "Casual_Feet_1",
+        "Casual_Feet_2",
+        "Casual_Head_1",
+        "Casual_Head_2",
+        "Casual_Head_3",
+        "Casual_Head_4",
+        "Casual_Legs_1",
+        "Casual_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBlue",
+        "Purple",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-worker-idle.png",
+      "sha256": "7a72c758ed5b7385ebf7a77138cd1c6ef9d821452e5768c86d2d3e63c7f4e00a",
+      "bytes": 32810,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-worker",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Worker_Body_1",
+        "Worker_Body_2",
+        "Worker_Body_3",
+        "Worker_Body_4",
+        "Worker_Feet_1",
+        "Worker_Feet_2",
+        "Worker_Head_1",
+        "Worker_Head_2",
+        "Worker_Head_3",
+        "Worker_Head_4",
+        "Worker_Head_5",
+        "Worker_Legs_1",
+        "Worker_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "Grey",
+        "LightBrown",
+        "Moustache",
+        "Skin",
+        "Worker_Vest",
+        "Worker_Yellow"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-worker-run.png",
+      "sha256": "eaff742e614ee5dc5b6e1df0416e2b854454b776611e5a8597b83f8b10382546",
+      "bytes": 29853,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-worker",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Worker_Body_1",
+        "Worker_Body_2",
+        "Worker_Body_3",
+        "Worker_Body_4",
+        "Worker_Feet_1",
+        "Worker_Feet_2",
+        "Worker_Head_1",
+        "Worker_Head_2",
+        "Worker_Head_3",
+        "Worker_Head_4",
+        "Worker_Head_5",
+        "Worker_Legs_1",
+        "Worker_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "Grey",
+        "LightBrown",
+        "Moustache",
+        "Skin",
+        "Worker_Vest",
+        "Worker_Yellow"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-idle.png",
+      "sha256": "067f1d9a852826abdee87ba179a9705bd9fe4e0dd1af778e40beb1fc13d0b801",
+      "bytes": 48150,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-run.png",
+      "sha256": "322beffe89508f01cc0daf85fff5c387eb0883450dd9c78142bbe7834b806a58",
+      "bytes": 39154,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.933333,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-sit.png",
+      "sha256": "851692cdf1b9612daf487eaa534635e2b6dd91914e43db0b324fca42921e5e22",
+      "bytes": 38766,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "sit",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.55,
+      "duration": 1.3,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-seatedHold.png",
+      "sha256": "7b39a76cc99a8478141ec9a6a482bc22cde52e99fce24ca80cddd92d93ba1d06",
+      "bytes": 38758,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "seatedHold",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.55,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-stand.png",
+      "sha256": "4352131e8e748a984c8e9ed87afd2b066d6d9ca867ec78545a73377e53d6a289",
+      "bytes": 43146,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "stand",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.55,
+      "duration": 1.033333,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-dance-beat-a.png",
+      "sha256": "7bcc3a645821875e5b1ed342e8ff08f5ce435a31589d4c5bc322fcaaaa903378",
+      "bytes": 45006,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "dance",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.18,
+      "duration": 1,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-dance-beat-b.png",
+      "sha256": "fc20a58eef65616ec5f27585c9ae5861416e392b833f70616ddeabf0c653d116",
+      "bytes": 44593,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "dance",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.68,
+      "duration": 1,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-idle-right.png",
+      "sha256": "d54e545a6a012bc0042cd5a6a0fc06cd2d4d7d48cb67914136ffabc3c2596ff8",
+      "bytes": 41971,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "right",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-idle-rear.png",
+      "sha256": "b73b2bc1753881909caafce1cfafb8141a7f196e073e0405bb04a5f088efb7c8",
+      "bytes": 43663,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "rear",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/desktop-1280x720-cast-performer-idle-left.png",
+      "sha256": "a33d7e850c2251481d706438cf476d3caee36c1525ba56a26b796da902848abd",
+      "bytes": 42573,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "left",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-business-idle.png",
+      "sha256": "99067b0267cdfc2316fb5a20c2ac69ab2bc6351fc1c5cf96b1e41f66829b7411",
+      "bytes": 30874,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-business",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Suit_Body_1",
+        "Suit_Body_2",
+        "Suit_Body_3",
+        "Suit_Body_4",
+        "Suit_Feet",
+        "Suit_Head_1",
+        "Suit_Head_2",
+        "Suit_Head_3",
+        "Suit_Head_4",
+        "Suit_Legs"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "Skin",
+        "Suit",
+        "Tie",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-business-run.png",
+      "sha256": "9a8d01b657843c3faa0600e2a11ab36a83d7095d6ef9d94ed97f57b849c616c3",
+      "bytes": 27694,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-business",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Suit_Body_1",
+        "Suit_Body_2",
+        "Suit_Body_3",
+        "Suit_Body_4",
+        "Suit_Feet",
+        "Suit_Head_1",
+        "Suit_Head_2",
+        "Suit_Head_3",
+        "Suit_Head_4",
+        "Suit_Legs"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "Skin",
+        "Suit",
+        "Tie",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-beach-idle.png",
+      "sha256": "76983ad2d9487eccf4d1d9455d1fb4b189faeba58744641456d69d249c57ce33",
+      "bytes": 36364,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-beach",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Beach_Body_1",
+        "Beach_Body_2",
+        "Beach_Feet_1",
+        "Beach_Feet_2",
+        "Beach_Head_1",
+        "Beach_Head_2",
+        "Beach_Head_3",
+        "Beach_Head_4",
+        "Beach_Head_5",
+        "Beach_Legs_1",
+        "Beach_Legs_2",
+        "Beach_Legs_3"
+      ],
+      "visibleMaterialNames": [
+        "Earrings",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBrown",
+        "Red_Dark",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-beach-run.png",
+      "sha256": "976917d091bb7a83ebd7a0e19056b1fb0396a754cfed660682b14c2e8f9873dd",
+      "bytes": 32793,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-beach",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Beach_Body_1",
+        "Beach_Body_2",
+        "Beach_Feet_1",
+        "Beach_Feet_2",
+        "Beach_Head_1",
+        "Beach_Head_2",
+        "Beach_Head_3",
+        "Beach_Head_4",
+        "Beach_Head_5",
+        "Beach_Legs_1",
+        "Beach_Legs_2",
+        "Beach_Legs_3"
+      ],
+      "visibleMaterialNames": [
+        "Earrings",
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBrown",
+        "Red_Dark",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-farmer-idle.png",
+      "sha256": "8eb2ee5e0bbdd7e5f3e448e3d5600fe56873479408415ac89bb5c49cb5ab8734",
+      "bytes": 34145,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-farmer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Farmer_Body_1",
+        "Farmer_Body_2",
+        "Farmer_Body_3",
+        "Farmer_Body_4",
+        "Farmer_Feet_1",
+        "Farmer_Feet_2",
+        "Farmer_Head_1",
+        "Farmer_Head_2",
+        "Farmer_Head_3",
+        "Farmer_Head_4",
+        "Farmer_Head_5",
+        "Farmer_Pants"
+      ],
+      "visibleMaterialNames": [
+        "Beige",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "LightBlue",
+        "Red",
+        "Skin"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-farmer-run.png",
+      "sha256": "253d16d4bac77d6dbd86dbc493102dd25caa829403211efb4a6dd239a101fa98",
+      "bytes": 30626,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-farmer",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Farmer_Body_1",
+        "Farmer_Body_2",
+        "Farmer_Body_3",
+        "Farmer_Body_4",
+        "Farmer_Feet_1",
+        "Farmer_Feet_2",
+        "Farmer_Head_1",
+        "Farmer_Head_2",
+        "Farmer_Head_3",
+        "Farmer_Head_4",
+        "Farmer_Head_5",
+        "Farmer_Pants"
+      ],
+      "visibleMaterialNames": [
+        "Beige",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "LightBlue",
+        "Red",
+        "Skin"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-hoodie-idle.png",
+      "sha256": "8d3cbbab8b2c3a622bc15c5497a3855dc073a2347e65f5bc5cf05e8a87e0cb6e",
+      "bytes": 33923,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-hoodie",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Casual_Body_1",
+        "Casual_Body_2",
+        "Casual_Feet_1",
+        "Casual_Feet_2",
+        "Casual_Head_1",
+        "Casual_Head_2",
+        "Casual_Head_3",
+        "Casual_Head_4",
+        "Casual_Legs_1",
+        "Casual_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBlue",
+        "Purple",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-hoodie-run.png",
+      "sha256": "99b28012e36d393111d7c376bb14559b502a2a913b9d05290b67f41278afdba8",
+      "bytes": 30406,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-hoodie",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Casual_Body_1",
+        "Casual_Body_2",
+        "Casual_Feet_1",
+        "Casual_Feet_2",
+        "Casual_Head_1",
+        "Casual_Head_2",
+        "Casual_Head_3",
+        "Casual_Head_4",
+        "Casual_Legs_1",
+        "Casual_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Eye",
+        "Eyebrows",
+        "Hair",
+        "LightBlue",
+        "Purple",
+        "Skin",
+        "White"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-worker-idle.png",
+      "sha256": "d56e83608a47682757ac03a60ff95187d8cfb28f45285660f682a2a2d5dc82a6",
+      "bytes": 34919,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-worker",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Worker_Body_1",
+        "Worker_Body_2",
+        "Worker_Body_3",
+        "Worker_Body_4",
+        "Worker_Feet_1",
+        "Worker_Feet_2",
+        "Worker_Head_1",
+        "Worker_Head_2",
+        "Worker_Head_3",
+        "Worker_Head_4",
+        "Worker_Head_5",
+        "Worker_Legs_1",
+        "Worker_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "Grey",
+        "LightBrown",
+        "Moustache",
+        "Skin",
+        "Worker_Vest",
+        "Worker_Yellow"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-worker-run.png",
+      "sha256": "c8d09ce643c01600f8c8078c78a7a215bc7110e873a5ff7c7ce74bc397f65a0e",
+      "bytes": 31796,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-worker",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.791667,
+      "visibleMeshNames": [
+        "Worker_Body_1",
+        "Worker_Body_2",
+        "Worker_Body_3",
+        "Worker_Body_4",
+        "Worker_Feet_1",
+        "Worker_Feet_2",
+        "Worker_Head_1",
+        "Worker_Head_2",
+        "Worker_Head_3",
+        "Worker_Head_4",
+        "Worker_Head_5",
+        "Worker_Legs_1",
+        "Worker_Legs_2"
+      ],
+      "visibleMaterialNames": [
+        "Black",
+        "Brown",
+        "Brown2",
+        "Eye",
+        "Eyebrows",
+        "Grey",
+        "LightBrown",
+        "Moustache",
+        "Skin",
+        "Worker_Vest",
+        "Worker_Yellow"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-idle.png",
+      "sha256": "f649593ae9e7866c2d4381b454a03fcdf77c99867e43fd4ec8808c7fbd9eb650",
+      "bytes": 55297,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-run.png",
+      "sha256": "46ae74ee38d7d57cb6fb537c3e31757b3caf3bb39afeb7d413022500f3b298a0",
+      "bytes": 45343,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "run",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 0.933333,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-sit.png",
+      "sha256": "1e5667bf75f40827a81c1245312f2aa1d887fabaa56223dbd60424bf05593a5f",
+      "bytes": 44313,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "sit",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.55,
+      "duration": 1.3,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-seatedHold.png",
+      "sha256": "a996c74e93100ce95ea72611c26237d26b30a7b706c306d7a28c588d00579ac1",
+      "bytes": 44376,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "seatedHold",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.55,
+      "duration": 1.666667,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-stand.png",
+      "sha256": "6bf6b9e744aa0876aa9696caf0d8a3201a654cbbccc7f254ccbd4608b21a43ee",
+      "bytes": 49080,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "stand",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.55,
+      "duration": 1.033333,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-dance-beat-a.png",
+      "sha256": "88785e6032a94b8145784ca28184e8b598c7c8ffa951435c18d79864344faf2d",
+      "bytes": 51737,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "dance",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.18,
+      "duration": 1,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-dance-beat-b.png",
+      "sha256": "9d601e1c5cd749d6cc44f1cbaf0b8e792412c75768e4458002152748b1f21180",
+      "bytes": 51012,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "dance",
+      "selectionKind": "logical",
+      "view": "front",
+      "playing": false,
+      "normalizedTime": 0.68,
+      "duration": 1,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-idle-right.png",
+      "sha256": "91db1b04e4d053d9a027abbee8f65699ca2eefda2fcd40e40ff1fc1f41480891",
+      "bytes": 47518,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "right",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-idle-rear.png",
+      "sha256": "392eab4cafee97746a2f7313715686a9a3cc5a3565b2bcdd0c3cf4f899bff1d5",
+      "bytes": 49408,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "rear",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    },
+    {
+      "path": "docs/screenshots/npc-002-cc0-animated-cast/narrow-390x844-cast-performer-idle-left.png",
+      "sha256": "614f6061c5a21eb5dd24704a6c6cac9dd17c6075819cda0e5440b500e2d0fb13",
+      "bytes": 48245,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "modelId": "cast-performer",
+      "modelSource": "asset",
+      "selection": "idle",
+      "selectionKind": "logical",
+      "view": "left",
+      "playing": false,
+      "normalizedTime": 0.35,
+      "duration": 2.5,
+      "visibleMeshNames": [
+        "Female_Performer_Eyebrows",
+        "Female_Performer_Eyes",
+        "Female_Performer_Hair",
+        "Female_Performer_Head",
+        "Female_Ranger_Arms_1",
+        "Female_Ranger_Arms_2",
+        "Female_Ranger_Body",
+        "Female_Ranger_Feet",
+        "Female_Ranger_Head_Hood",
+        "Female_Ranger_Legs"
+      ],
+      "visibleMaterialNames": [
+        "MI_Eyes",
+        "MI_Industrial_Stagewear",
+        "MI_Performer_Eyebrows",
+        "MI_Performer_Hair_Plum",
+        "MI_Performer_Head_Skin",
+        "MI_Regular_Female"
+      ],
+      "error": null
+    }
+  ],
+  "diagnostics": {
+    "consoleErrors": [],
+    "pageErrors": [],
+    "failedRequests": [
+      "HEAD http://127.0.0.1:4395/assets/characters/ultimate-modular-men/casual-character.glb (net::ERR_ABORTED)",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/business-man.glb (net::ERR_ABORTED)",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/beach-character.glb (net::ERR_ABORTED)",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/farmer.glb (net::ERR_ABORTED)",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/hoodie-character.glb (net::ERR_ABORTED)",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/worker.glb (net::ERR_ABORTED)",
+      "HEAD http://127.0.0.1:4395/assets/characters/universal-performer/venue-performer-industrial.glb (net::ERR_ABORTED)",
+      "HEAD http://127.0.0.1:4395/assets/characters/universal-performer/universal-animation-library.glb (net::ERR_ABORTED)"
+    ],
+    "failedApplicationRequests": [],
+    "externalRuntimeRequests": [],
+    "applicationRequestCount": 175,
+    "localAssetRequests": [
+      "GET http://127.0.0.1:4395/assets/characters/cc0-animated-cast/beach-character.glb",
+      "GET http://127.0.0.1:4395/assets/characters/cc0-animated-cast/business-man.glb",
+      "GET http://127.0.0.1:4395/assets/characters/cc0-animated-cast/farmer.glb",
+      "GET http://127.0.0.1:4395/assets/characters/cc0-animated-cast/hoodie-character.glb",
+      "GET http://127.0.0.1:4395/assets/characters/cc0-animated-cast/worker.glb",
+      "GET http://127.0.0.1:4395/assets/characters/ultimate-modular-men/casual-character.glb",
+      "GET http://127.0.0.1:4395/assets/characters/universal-performer/universal-animation-library.glb",
+      "GET http://127.0.0.1:4395/assets/characters/universal-performer/venue-performer-industrial.glb",
+      "GET http://127.0.0.1:4395/assets/presentation/vanta-title-loading/junction-loading-road.jpg",
+      "GET http://127.0.0.1:4395/src/assets/AssetCatalog.ts",
+      "GET http://127.0.0.1:4395/src/assets/AssetLoader.ts",
+      "GET http://127.0.0.1:4395/src/assets/catalog.ts?t=1784462080616",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/beach-character.glb",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/business-man.glb",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/farmer.glb",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/hoodie-character.glb",
+      "HEAD http://127.0.0.1:4395/assets/characters/cc0-animated-cast/worker.glb",
+      "HEAD http://127.0.0.1:4395/assets/characters/ultimate-modular-men/casual-character.glb",
+      "HEAD http://127.0.0.1:4395/assets/characters/universal-performer/universal-animation-library.glb",
+      "HEAD http://127.0.0.1:4395/assets/characters/universal-performer/venue-performer-industrial.glb"
+    ]
   }
 }

@@ -194,6 +194,15 @@ describe('NPC definition validation', () => {
       seatedHold: { clipNames: ['Sitting_Idle_Loop'], required: true },
       stand: { clipNames: ['Sitting_Exit'], required: true },
     });
+    const performerModel =
+      manifest[cinematicCastCharacterDefinitions.at(-1)!.modelAssetId!];
+    expect(performerModel?.url).toContain('venue-performer-industrial.glb');
+    expect(performerModel?.metadata?.presentation).toBe(
+      'fully-clothed-1997-industrial-stage-outfit',
+    );
+    expect(performerModel?.metadata?.runtimeTextureResolution).toBe(1024);
+    expect(performerModel?.metadata?.sourceComponents).toBe(3);
+    expect(performerModel?.url).not.toContain('superhero-female.glb');
     expect(
       npcDefinitions.some(({ characterId }) => characterId.startsWith('cast-')),
     ).toBe(false);
