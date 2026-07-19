@@ -1,9 +1,13 @@
 import type {
+  CinematicBlockingRequest,
   CinematicCompletionResult,
   CinematicDestinationRequest,
   CinematicLandingTransaction,
+  CinematicPathRequest,
   CinematicPerformanceRequest,
+  CinematicShotDefinition,
 } from './CinematicDefinition';
+import type { WorldPosition } from '../world/Spatial';
 
 export type CinematicPreflightResult =
   { readonly ready: true } | { readonly ready: false; readonly reason: string };
@@ -45,6 +49,83 @@ export interface CinematicPerformanceAdapter {
     participantId: string,
     token: CinematicPerformanceRestoreToken,
   ): void;
+}
+
+export interface CinematicResolvedBlocking {
+  readonly participantId: string;
+  readonly markId: string;
+  readonly requestedPosition: WorldPosition;
+  readonly resolvedPosition: WorldPosition;
+  readonly displacementMetres: number;
+  readonly clearanceMetres: number;
+  readonly grounded: boolean;
+  readonly groundColliderId: string;
+  readonly facingParticipantId?: string;
+}
+
+export type CinematicBlockingPreflight =
+  | {
+      readonly ready: true;
+      readonly resolved: readonly CinematicResolvedBlocking[];
+    }
+  | { readonly ready: false; readonly reason: string };
+
+export interface CinematicStagingAdapter {
+  preflightBlocking(
+    requests: readonly CinematicBlockingRequest[],
+  ): CinematicBlockingPreflight;
+  stageBlocking(resolved: readonly CinematicResolvedBlocking[]): void;
+}
+
+export interface CinematicCompositionSubject {
+  readonly participantId: string;
+  readonly screenX: number;
+  readonly screenY: number;
+  readonly headScreenY: number;
+  readonly marginPercent: number;
+  readonly inFront: boolean;
+  readonly occluded: boolean;
+  readonly blockerId?: string;
+}
+
+export interface CinematicCompositionVisual {
+  readonly visualId: string;
+  readonly screenX: number;
+  readonly screenY: number;
+  readonly marginPercent: number;
+  readonly inFront: boolean;
+  readonly occluded: boolean;
+  readonly blockerId?: string;
+}
+
+export type CinematicCompositionPreflight =
+  | {
+      readonly ready: true;
+      readonly selectedCameraAnchorId: string;
+      readonly selectedFieldOfView: number;
+      readonly usedAlternate: boolean;
+      readonly subjects: readonly CinematicCompositionSubject[];
+      readonly visuals: readonly CinematicCompositionVisual[];
+    }
+  | { readonly ready: false; readonly reason: string };
+
+export interface CinematicCompositionAdapter {
+  preflightShot(
+    shot: CinematicShotDefinition,
+    resolved: readonly CinematicResolvedBlocking[],
+  ): CinematicCompositionPreflight;
+}
+
+export interface CinematicPathHandle {
+  update(deltaSeconds: number): void;
+  pause(): void;
+  resume(): void;
+  release(reason: CinematicPerformanceReleaseReason): void;
+}
+
+export interface CinematicSceneAdapter {
+  preflightPath(request: CinematicPathRequest): CinematicPreflightResult;
+  requestPath(request: CinematicPathRequest): CinematicPathHandle;
 }
 
 export type CinematicDestinationReadiness =
@@ -96,6 +177,9 @@ export interface CinematicLandingAdapter {
 
 export interface CinematicRuntimeAdapters {
   readonly performances?: CinematicPerformanceAdapter;
+  readonly staging?: CinematicStagingAdapter;
+  readonly composition?: CinematicCompositionAdapter;
+  readonly scene?: CinematicSceneAdapter;
   readonly destination?: CinematicDestinationAdapter;
   readonly landing?: CinematicLandingAdapter;
 }

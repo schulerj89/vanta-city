@@ -27,12 +27,22 @@ describe('CinematicDefinition', () => {
       'shot.ash-001.wagon-entry',
       'shot.ash-001.wagon-departure',
     ]);
+    expect(
+      opening!.shots.reduce((total, shot) => total + shot.durationSeconds, 0) +
+        opening!.destinationShot!.durationSeconds,
+    ).toBeCloseTo(46.9);
+    expect(opening?.destinationShot).toMatchObject({
+      id: 'shot.ash-001.junction-arrival',
+      durationSeconds: 4.8,
+      requiredSubjectIds: ['casual'],
+    });
+    expect(opening?.blocking).toHaveLength(3);
     expect(JSON.parse(JSON.stringify(opening))).toEqual(opening);
   });
 
   it('rejects subtitle windows outside their shot', () => {
     const opening: CinematicDefinition = cinematicDefinitions[0];
-    const first = opening.shots[0]!;
+    const first = opening.shots[1]!;
     expect(() =>
       validateCinematicDefinition({
         ...opening,

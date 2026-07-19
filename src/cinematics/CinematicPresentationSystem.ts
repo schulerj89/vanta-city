@@ -63,10 +63,12 @@ export class CinematicPresentationSystem implements GameSystem {
   public update(): void {
     const snapshot = this.coordinator.getSnapshot();
     const active = snapshot.state !== 'idle';
-    this.root.hidden = !active;
+    const landing = snapshot.state === 'landing';
+    const destinationShotVisible =
+      landing && snapshot.destinationReadiness === 'ready';
+    this.root.hidden = !active || destinationShotVisible;
     this.root.dataset.state = snapshot.state;
     this.root.dataset.shotId = snapshot.shotId ?? '';
-    const landing = snapshot.state === 'landing';
     this.speaker.textContent = landing
       ? 'Ashfall Junction'
       : snapshot.speakerId

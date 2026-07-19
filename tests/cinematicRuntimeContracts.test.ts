@@ -19,6 +19,8 @@ const destinationDefinition: CinematicDefinition = {
   completionEventId: 'cinematic.test.destination.completed',
   restorationPolicy: 'authoritative-destination',
   participantFailurePolicy: 'land-at-destination',
+  blocking: undefined,
+  destinationShot: undefined,
   dependencies: {
     ...cinematicDefinitions[0].dependencies,
     levelId: 'test-district',
@@ -43,6 +45,7 @@ const destinationDefinition: CinematicDefinition = {
       id: 'shot.test.multi-cue',
       cameraAnchorId: 'camera.ash-001.north-arrival',
       participantIds: ['casual', 'mack'],
+      requiredSubjectIds: undefined,
       durationSeconds: 3,
       subtitle: undefined,
       subtitleCues: [
@@ -247,7 +250,7 @@ describe('CINEMATIC-003 runtime contracts', () => {
     });
   });
 
-  it.each(['completed', 'skipped', 'failed'] as const)(
+  it.each(['completed', 'skipped'] as const)(
     'commits the same landing transaction exactly once for %s landing',
     (result) => {
       const h = harness();
@@ -256,10 +259,6 @@ describe('CINEMATIC-003 runtime contracts', () => {
       if (result === 'skipped') {
         h.coordinator.requestSkip();
         h.coordinator.confirmSkip();
-      }
-      if (result === 'failed') {
-        h.removeMack();
-        h.update(0.1);
       }
       expect(h.coordinator.getSnapshot()).toMatchObject({
         state: 'landing',
@@ -283,6 +282,21 @@ describe('CINEMATIC-003 runtime contracts', () => {
       expect(h.destinationDisposals).toEqual(['travel.test.destination']);
     },
   );
+
+  it('lands participant failures without committing story facts', () => {
+    const app = harness();
+    expect(app.coordinator.start(destinationDefinition.id)).toBe(true);
+    app.removeMack();
+    app.update(0.1);
+    app.setReadiness({ state: 'ready' });
+    app.update(0.1);
+    expect(app.coordinator.getSnapshot()).toMatchObject({
+      state: 'idle',
+      lastResult: 'failed',
+      committedLandingTransactionId: undefined,
+    });
+    expect(app.commits).toEqual([]);
+  });
 
   it('never enters or commits landing when skip confirmation is cancelled', () => {
     const h = harness();

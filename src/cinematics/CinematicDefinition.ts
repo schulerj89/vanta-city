@@ -38,19 +38,40 @@ export interface CinematicPerformanceRequest {
   readonly required?: boolean;
 }
 
+export interface CinematicBlockingRequest {
+  readonly participantId: string;
+  readonly markId: string;
+  readonly facingParticipantId?: string;
+  readonly maximumDisplacementMetres: number;
+}
+
+export interface CinematicPathRequest {
+  readonly id: string;
+  readonly visualIds: readonly string[];
+  readonly pointIds: readonly string[];
+  readonly startSeconds: number;
+  readonly durationSeconds: number;
+}
+
 export interface CinematicShotDefinition {
   readonly id: string;
   readonly purpose: string;
   readonly cameraAnchorId: string;
+  readonly alternateCameraAnchorId?: string;
   readonly durationSeconds: number;
   readonly transition: 'cut' | 'ease';
   readonly transitionSeconds: number;
   readonly obstructionPolicy: 'shared-camera-collision';
   readonly participantIds: readonly string[];
+  /** Subjects that must pass the live projection/occlusion gate before filming. */
+  readonly requiredSubjectIds?: readonly string[];
+  /** Level-owned visuals that motivate an exterior/action shot without actor claims. */
+  readonly requiredVisualIds?: readonly string[];
   /** Legacy one-cue authoring surface. Prefer subtitleCues for new scenes. */
   readonly subtitle?: CinematicSubtitleRequest;
   readonly subtitleCues?: readonly CinematicSubtitleRequest[];
   readonly performanceRequests?: readonly CinematicPerformanceRequest[];
+  readonly pathRequests?: readonly CinematicPathRequest[];
   readonly safeFrame: {
     readonly minSubjectMarginPercent: number;
     readonly narrowFieldOfView?: number;
@@ -80,6 +101,7 @@ export interface CinematicDefinition {
   readonly entryEventId: string;
   readonly completionEventId: string;
   readonly shots: readonly CinematicShotDefinition[];
+  readonly blocking?: readonly CinematicBlockingRequest[];
   readonly skipPolicy: 'confirm';
   readonly dependencies: {
     readonly levelId: string;
@@ -92,6 +114,7 @@ export interface CinematicDefinition {
   readonly restorationPolicy:
     'exact-prior-gameplay' | 'authoritative-destination';
   readonly destination?: CinematicDestinationRequest;
+  readonly destinationShot?: CinematicShotDefinition;
   readonly landingTransaction?: CinematicLandingTransaction;
   readonly participantFailurePolicy?:
     'fail-and-restore' | 'land-at-destination';
@@ -174,6 +197,43 @@ export function validateCinematicDefinition(
       }
       performanceCueIds.add(request.cueId);
     }
+    for (const request of shot.pathRequests ?? []) {
+      if (
+        !request.id ||
+        request.visualIds.length === 0 ||
+        request.pointIds.length < 2 ||
+        request.visualIds.some((id) => !id) ||
+        request.pointIds.some((id) => !id) ||
+        request.startSeconds < 0 ||
+        request.durationSeconds <= 0 ||
+        request.startSeconds + request.durationSeconds > shot.durationSeconds
+      ) {
+        throw new Error(
+          `Cinematic shot "${shot.id}" has an invalid path request`,
+        );
+      }
+    }
+    if (
+      shot.requiredSubjectIds?.some((id) => !shot.participantIds.includes(id))
+    ) {
+      throw new Error(
+        `Cinematic shot "${shot.id}" requires an undeclared subject`,
+      );
+    }
+  }
+  if (definition.blocking) {
+    const participants = new Set<string>();
+    for (const request of definition.blocking) {
+      if (
+        !definition.participantIds.includes(request.participantId) ||
+        participants.has(request.participantId) ||
+        !request.markId ||
+        request.maximumDisplacementMetres < 0
+      ) {
+        throw new Error(`Cinematic "${definition.id}" has invalid blocking`);
+      }
+      participants.add(request.participantId);
+    }
   }
   const destinationPolicy =
     definition.restorationPolicy === 'authoritative-destination';
@@ -200,6 +260,31 @@ export function validateCinematicDefinition(
         `Cinematic "${definition.id}" has an invalid destination transaction`,
       );
     }
+  }
+  if (definition.destinationShot) {
+    if (!definition.destination || !definition.landingTransaction) {
+      throw new Error(
+        `Cinematic "${definition.id}" has a destination shot without a destination`,
+      );
+    }
+    validateDestinationShot(definition.destinationShot, definition);
+  }
+}
+
+function validateDestinationShot(
+  shot: CinematicShotDefinition,
+  definition: CinematicDefinition,
+): void {
+  if (
+    !shot.id ||
+    shot.durationSeconds <= 0 ||
+    shot.cameraAnchorId !== definition.destination?.cameraAnchorId ||
+    shot.performanceRequests?.length ||
+    shot.pathRequests?.length
+  ) {
+    throw new Error(
+      `Cinematic "${definition.id}" has an invalid destination shot`,
+    );
   }
 }
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Group, Scene, Texture } from 'three';
+import { Group, Scene, Texture, Vector3 } from 'three';
 import type { GameAssetLoader } from '../../src/assets/AssetLoader';
 import { EventBus } from '../../src/core/events';
+import { StaticCollisionWorld } from '../../src/physics/CollisionWorld';
+import { defaultPlayerMovementConfig } from '../../src/player/PlayerMovement';
 import { validateLevelDefinition } from '../../src/world/LevelDefinition';
 import { LevelRegistry } from '../../src/world/LevelRegistry';
 import { LevelSystem } from '../../src/world/LevelSystem';
@@ -50,6 +52,29 @@ describe('Northbar Coach Depot level', () => {
       expect(x).toBeLessThanOrEqual(ground.position[0] + ground.size[0] / 2);
       expect(z).toBeGreaterThanOrEqual(ground.position[2] - ground.size[2] / 2);
       expect(z).toBeLessThanOrEqual(ground.position[2] + ground.size[2] / 2);
+    }
+  });
+
+  it('settles every cinematic blocking capsule authoritatively within 0.20 metres', () => {
+    const collision = new StaticCollisionWorld(-100);
+    definition.staticCollision.forEach((entry) =>
+      collision.addDefinition(entry),
+    );
+    for (const mark of [
+      northbarCoachDepotLayout.marks.rookCurb,
+      northbarCoachDepotLayout.marks.mackPillar,
+      northbarCoachDepotLayout.marks.dellaCounter,
+    ]) {
+      const requested = new Vector3(...mark);
+      const settled = collision.moveCharacter(
+        requested,
+        new Vector3(0, -defaultPlayerMovementConfig.groundSnapDistance, 0),
+        defaultPlayerMovementConfig,
+        true,
+      );
+      expect(settled.grounded).toBe(true);
+      expect(settled.position.distanceTo(requested)).toBeLessThanOrEqual(0.2);
+      expect(settled.groundColliderId).toMatch(/^c\.northbar-/);
     }
   });
 
@@ -171,6 +196,27 @@ describe('Northbar Coach Depot level', () => {
     await system.init();
     const baseline = system.getStreamingSnapshot();
     expect(baseline.active).toHaveLength(3);
+
+    const wagon = scene.getObjectByName('visual:vehicle.mack.service-wagon')!;
+    const wagonOrigin = wagon.position.clone();
+    const path = system.requestVisualPath({
+      owner: 'test:cinematic-wagon',
+      visualIds: ['vehicle.mack.service-wagon'],
+      points: northbarVehiclePaths.wagonExit.slice(0, 2),
+      startSeconds: 0,
+      durationSeconds: 2,
+    });
+    path.update(1);
+    expect(wagon.position.x).toBeGreaterThan(wagonOrigin.x);
+    const pausedAt = wagon.position.clone();
+    path.pause();
+    path.update(1);
+    expect(wagon.position).toEqual(pausedAt);
+    path.resume();
+    path.update(1);
+    expect(wagon.position.x).toBeCloseTo(northbarVehiclePaths.wagonExit[1][0]);
+    path.release('cancelled');
+    expect(wagon.position).toEqual(wagonOrigin);
 
     for (let cycle = 0; cycle < 3; cycle += 1) {
       await system.refreshStreaming({ x: 80, y: 0, z: 80 });

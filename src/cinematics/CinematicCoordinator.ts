@@ -20,10 +20,13 @@ import type {
 } from './CinematicDefinition';
 import { getCinematicSubtitleCues } from './CinematicDefinition';
 import type {
+  CinematicCompositionPreflight,
   CinematicDestinationHandle,
+  CinematicPathHandle,
   CinematicPerformanceHandle,
   CinematicPerformanceReleaseReason,
   CinematicPerformanceRestoreToken,
+  CinematicResolvedBlocking,
   CinematicRuntimeAdapters,
 } from './CinematicRuntimeContracts';
 
@@ -48,6 +51,11 @@ export interface CinematicSnapshot {
   >;
   readonly destinationReadiness?: 'pending' | 'ready' | 'failed';
   readonly committedLandingTransactionId?: string;
+  readonly resolvedBlocking: readonly CinematicResolvedBlocking[];
+  readonly selectedCameraAnchorId?: string;
+  readonly compositionUsedAlternate: boolean;
+  readonly compositionSubjects: readonly import('./CinematicRuntimeContracts').CinematicCompositionSubject[];
+  readonly compositionVisuals: readonly import('./CinematicRuntimeContracts').CinematicCompositionVisual[];
 }
 
 export interface CinematicCoordinatorEvents {
@@ -62,6 +70,9 @@ export interface CinematicCoordinatorEvents {
 export interface CinematicLevelSource {
   readonly activeLevel?: { readonly id: string };
   getCinematicAnchor(id: string): CinematicAnchorDefinition;
+  getSpawn?(id: string): {
+    readonly position: readonly [number, number, number];
+  };
 }
 
 export interface CinematicParticipantSource {
@@ -87,6 +98,13 @@ interface ActiveCinematic {
   readonly performanceTokens: Map<string, CinematicPerformanceRestoreToken>;
   readonly performanceHandles: Map<string, CinematicPerformanceHandle>;
   readonly firedPerformanceCueIds: Set<string>;
+  readonly resolvedBlocking: readonly CinematicResolvedBlocking[];
+  readonly compositions: ReadonlyMap<
+    string,
+    Extract<CinematicCompositionPreflight, { readonly ready: true }>
+  >;
+  readonly pathHandles: Map<string, CinematicPathHandle>;
+  readonly retainedPathHandles: Map<string, CinematicPathHandle>;
   destination?: CinematicDestinationHandle;
   landingResult?: Extract<
     CinematicCompletionResult,
@@ -94,6 +112,12 @@ interface ActiveCinematic {
   >;
   landingFailure?: string;
   landingCommitted: boolean;
+  landingShotStarted: boolean;
+  landingShotElapsedSeconds: number;
+  destinationComposition?: Extract<
+    CinematicCompositionPreflight,
+    { readonly ready: true }
+  >;
 }
 
 export class CinematicCoordinator implements GameSystem {
@@ -162,6 +186,19 @@ export class CinematicCoordinator implements GameSystem {
       this.events.emit('completed', { cinematicId: id, result: 'failed' });
       return false;
     }
+    const blocking = this.preflightBlocking(definition);
+    if (!blocking.ready) {
+      this.publishStartFailure(id, blocking.reason);
+      return false;
+    }
+    const compositions = this.preflightCompositions(
+      definition,
+      blocking.resolved,
+    );
+    if (typeof compositions === 'string') {
+      this.publishStartFailure(id, compositions);
+      return false;
+    }
     const focus =
       typeof document !== 'undefined' &&
       typeof HTMLElement !== 'undefined' &&
@@ -181,7 +218,13 @@ export class CinematicCoordinator implements GameSystem {
       performanceTokens: new Map(),
       performanceHandles: new Map(),
       firedPerformanceCueIds: new Set(),
+      resolvedBlocking: blocking.resolved,
+      compositions,
+      pathHandles: new Map(),
+      retainedPathHandles: new Map(),
       landingCommitted: false,
+      landingShotStarted: false,
+      landingShotElapsedSeconds: 0,
     };
     try {
       for (const participantId of this.performanceParticipantIds(definition)) {
@@ -195,6 +238,16 @@ export class CinematicCoordinator implements GameSystem {
       this.publishStartFailure(
         id,
         `Performance capture failed: ${errorText(error)}`,
+      );
+      return false;
+    }
+    try {
+      this.adapters.staging?.stageBlocking(active.resolvedBlocking);
+    } catch (error) {
+      this.restorePerformances(active);
+      this.publishStartFailure(
+        id,
+        `Blocking stage failed: ${errorText(error)}`,
       );
       return false;
     }
@@ -216,7 +269,7 @@ export class CinematicCoordinator implements GameSystem {
     if (!active) return;
     if (active.pausedByGame || this.state.current === 'paused') return;
     if (active.landingResult) {
-      this.updateLanding(active);
+      this.updateLanding(active, time.delta);
       return;
     }
     if (!active.pausedForSkip && this.input.wasPressed('skipCinematic')) {
@@ -242,6 +295,7 @@ export class CinematicCoordinator implements GameSystem {
       }
     }
     active.shotElapsedSeconds += Math.max(0, time.delta);
+    for (const handle of active.pathHandles.values()) handle.update(time.delta);
     if (!this.runDuePerformanceRequests(active)) return;
     const shot = active.definition.shots[active.shotIndex]!;
     if (active.shotElapsedSeconds >= shot.durationSeconds) {
@@ -305,14 +359,28 @@ export class CinematicCoordinator implements GameSystem {
 
   private requestShot(active: ActiveCinematic): void {
     active.camera?.release();
+    active.camera = undefined;
     this.releasePerformanceHandles(active, 'shot-completed');
+    this.releasePathHandles(active, 'shot-completed');
     const shot = active.definition.shots[active.shotIndex]!;
-    const anchor = this.level.getCinematicAnchor(shot.cameraAnchorId);
+    const composition = active.compositions.get(shot.id);
+    const anchor = this.level.getCinematicAnchor(
+      composition?.selectedCameraAnchorId ?? shot.cameraAnchorId,
+    );
     active.camera = this.camera.requestCamera({
       owner: `cinematic:${active.definition.id}`,
       mode: 'cinematic',
-      anchor: toCameraAnchor(anchor),
+      anchor: toCameraAnchor({
+        ...anchor,
+        fieldOfView: composition?.selectedFieldOfView ?? anchor.fieldOfView,
+      }),
+      transitionDurationSeconds:
+        shot.transition === 'cut' ? 0 : shot.transitionSeconds,
     });
+    for (const request of shot.pathRequests ?? []) {
+      const handle = this.adapters.scene?.requestPath(request);
+      if (handle) active.pathHandles.set(request.id, handle);
+    }
   }
 
   private runDuePerformanceRequests(active: ActiveCinematic): boolean {
@@ -366,6 +434,7 @@ export class CinematicCoordinator implements GameSystem {
     active.camera?.release();
     active.camera = undefined;
     this.releasePerformanceHandles(active, 'landing');
+    this.releasePathHandles(active, 'landing');
     this.restorePerformances(active);
     try {
       active.destination =
@@ -375,10 +444,10 @@ export class CinematicCoordinator implements GameSystem {
       return;
     }
     this.publish();
-    this.updateLanding(active);
+    this.updateLanding(active, 0);
   }
 
-  private updateLanding(active: ActiveCinematic): void {
+  private updateLanding(active: ActiveCinematic, deltaSeconds: number): void {
     if (!active.destination || !active.landingResult) return;
     const readiness = active.destination.getReadiness();
     if (readiness.state === 'pending') {
@@ -389,8 +458,57 @@ export class CinematicCoordinator implements GameSystem {
       this.finish('failed', readiness.reason);
       return;
     }
+    const destinationShot = active.definition.destinationShot;
+    if (destinationShot && !active.destinationComposition) {
+      const spawn = (
+        this.level as CinematicLevelSource & {
+          getSpawn?: (id: string) => {
+            readonly position: readonly [number, number, number];
+          };
+        }
+      ).getSpawn?.(active.definition.destination!.spawnId);
+      if (!spawn) {
+        this.finish(
+          'failed',
+          'Destination spawn is unavailable for composition',
+        );
+        return;
+      }
+      const [x, y, z] = spawn.position;
+      const composition = this.adapters.composition?.preflightShot(
+        destinationShot,
+        [
+          {
+            participantId: 'casual',
+            markId: active.definition.destination!.spawnId,
+            requestedPosition: { x, y, z },
+            resolvedPosition: { x, y, z },
+            displacementMetres: 0,
+            clearanceMetres: 0,
+            grounded: true,
+            groundColliderId: 'destination-spawn',
+          },
+        ],
+      );
+      if (composition && !composition.ready) {
+        this.finish('failed', composition.reason);
+        return;
+      }
+      active.destinationComposition = composition?.ready
+        ? composition
+        : {
+            ready: true,
+            selectedCameraAnchorId: destinationShot.cameraAnchorId,
+            selectedFieldOfView:
+              this.level.getCinematicAnchor(destinationShot.cameraAnchorId)
+                .fieldOfView ?? 50,
+            usedAlternate: false,
+            subjects: [],
+            visuals: [],
+          };
+    }
     const transaction = active.definition.landingTransaction!;
-    if (!active.landingCommitted) {
+    if (!active.landingCommitted && active.landingResult !== 'failed') {
       let commit;
       try {
         commit = this.adapters.landing!.commitLanding(transaction, {
@@ -410,6 +528,38 @@ export class CinematicCoordinator implements GameSystem {
       }
       active.landingCommitted = true;
     }
+    if (destinationShot) {
+      if (!active.landingShotStarted) {
+        active.camera?.release();
+        active.camera = undefined;
+        const anchor = this.level.getCinematicAnchor(
+          active.destinationComposition!.selectedCameraAnchorId,
+        );
+        active.camera = this.camera.requestCamera({
+          owner: `cinematic:${active.definition.id}`,
+          mode: 'cinematic',
+          anchor: toCameraAnchor({
+            ...anchor,
+            fieldOfView:
+              active.destinationComposition!.selectedFieldOfView ??
+              anchor.fieldOfView,
+          }),
+          transitionDurationSeconds:
+            destinationShot.transition === 'cut'
+              ? 0
+              : destinationShot.transitionSeconds,
+        });
+        active.landingShotStarted = true;
+        active.landingShotElapsedSeconds = 0;
+        this.publish();
+        return;
+      }
+      active.landingShotElapsedSeconds += Math.max(0, deltaSeconds);
+      if (active.landingShotElapsedSeconds < destinationShot.durationSeconds) {
+        this.publish();
+        return;
+      }
+    }
     this.finish(active.landingResult, active.landingFailure);
   }
 
@@ -427,6 +577,7 @@ export class CinematicCoordinator implements GameSystem {
     this.active = undefined;
     active.camera?.release();
     this.releasePerformanceHandles(active, releaseReason);
+    this.releasePathHandles(active, releaseReason);
     this.restorePerformances(active);
     const finalDestinationReadiness = active.destination?.getReadiness().state;
     if (result === 'cancelled') active.destination?.cancel();
@@ -497,6 +648,13 @@ export class CinematicCoordinator implements GameSystem {
             return `Performance "${request.cueId}" rejected an unapproved neutral fallback`;
           }
         }
+        for (const request of shot.pathRequests ?? []) {
+          const adapter = this.adapters.scene;
+          if (!adapter)
+            return `Scene adapter is unavailable for "${request.id}"`;
+          const result = adapter.preflightPath(request);
+          if (!result.ready) return result.reason;
+        }
       }
       if (definition.destination) {
         if (!this.adapters.destination || !this.adapters.landing)
@@ -514,6 +672,48 @@ export class CinematicCoordinator implements GameSystem {
       return `Cinematic preflight failed: ${errorText(error)}`;
     }
     return undefined;
+  }
+
+  private preflightBlocking(definition: CinematicDefinition) {
+    const requests = definition.blocking ?? [];
+    if (requests.length === 0) {
+      return { ready: true as const, resolved: [] };
+    }
+    if (!this.adapters.staging) {
+      return {
+        ready: false as const,
+        reason: 'Cinematic staging adapter is unavailable',
+      };
+    }
+    return this.adapters.staging.preflightBlocking(requests);
+  }
+
+  private preflightCompositions(
+    definition: CinematicDefinition,
+    resolved: readonly CinematicResolvedBlocking[],
+  ):
+    | ReadonlyMap<
+        string,
+        Extract<CinematicCompositionPreflight, { readonly ready: true }>
+      >
+    | string {
+    const results = new Map<
+      string,
+      Extract<CinematicCompositionPreflight, { readonly ready: true }>
+    >();
+    for (const shot of definition.shots) {
+      if ((shot.requiredSubjectIds?.length ?? 0) === 0) continue;
+      const composition = this.adapters.composition?.preflightShot(
+        shot,
+        resolved,
+      );
+      if (!composition) {
+        return `Composition adapter is unavailable for "${shot.id}"`;
+      }
+      if (!composition.ready) return composition.reason;
+      results.set(shot.id, composition);
+    }
+    return results;
   }
 
   private publishStartFailure(id: string, failure: string): void {
@@ -545,11 +745,13 @@ export class CinematicCoordinator implements GameSystem {
   private pauseExternalProgression(active: ActiveCinematic): void {
     for (const handle of active.performanceHandles.values()) handle.pause();
     active.destination?.pause();
+    for (const handle of active.pathHandles.values()) handle.pause();
   }
 
   private resumeExternalProgression(active: ActiveCinematic): void {
     for (const handle of active.performanceHandles.values()) handle.resume();
     active.destination?.resume();
+    for (const handle of active.pathHandles.values()) handle.resume();
   }
 
   private releasePerformanceHandles(
@@ -575,6 +777,23 @@ export class CinematicCoordinator implements GameSystem {
     }
   }
 
+  private releasePathHandles(
+    active: ActiveCinematic,
+    reason: CinematicPerformanceReleaseReason,
+  ): void {
+    for (const [id, handle] of active.pathHandles) {
+      handle.release(reason);
+      if (reason === 'shot-completed')
+        active.retainedPathHandles.set(id, handle);
+    }
+    active.pathHandles.clear();
+    if (reason !== 'shot-completed') {
+      for (const handle of active.retainedPathHandles.values())
+        handle.release(reason);
+      active.retainedPathHandles.clear();
+    }
+  }
+
   private emitDefinitionEvent(id: string, cinematicId: string): void {
     this.emittedEventIds.push(id);
     this.events.emit('event', { id, cinematicId });
@@ -583,17 +802,24 @@ export class CinematicCoordinator implements GameSystem {
   private publish(): void {
     const active = this.active;
     if (!active) return;
-    const shot = active.definition.shots[active.shotIndex]!;
+    const destinationShot = active.landingShotStarted
+      ? active.definition.destinationShot
+      : undefined;
+    const shot = destinationShot ?? active.definition.shots[active.shotIndex]!;
+    const elapsed = destinationShot
+      ? active.landingShotElapsedSeconds
+      : active.shotElapsedSeconds;
     const subtitleIndex = getCinematicSubtitleCues(shot).findIndex(
-      (cue) =>
-        active.shotElapsedSeconds >= cue.startSeconds &&
-        active.shotElapsedSeconds <= cue.endSeconds,
+      (cue) => elapsed >= cue.startSeconds && elapsed <= cue.endSeconds,
     );
     const subtitle =
       subtitleIndex >= 0
         ? getCinematicSubtitleCues(shot)[subtitleIndex]
         : undefined;
     const readiness = active.destination?.getReadiness();
+    const composition = destinationShot
+      ? active.destinationComposition
+      : active.compositions.get(shot.id);
     this.snapshot = {
       state: active.landingResult
         ? 'landing'
@@ -605,7 +831,7 @@ export class CinematicCoordinator implements GameSystem {
       cinematicId: active.definition.id,
       shotId: shot.id,
       shotIndex: active.shotIndex,
-      shotElapsedSeconds: active.shotElapsedSeconds,
+      shotElapsedSeconds: elapsed,
       subtitleVisible: Boolean(subtitle),
       subtitleCueId: subtitle
         ? (subtitle.id ?? `${shot.id}:subtitle:${subtitleIndex}`)
@@ -620,6 +846,12 @@ export class CinematicCoordinator implements GameSystem {
       committedLandingTransactionId: active.landingCommitted
         ? active.definition.landingTransaction?.id
         : undefined,
+      resolvedBlocking: active.resolvedBlocking,
+      selectedCameraAnchorId:
+        composition?.selectedCameraAnchorId ?? shot.cameraAnchorId,
+      compositionUsedAlternate: composition?.usedAlternate ?? false,
+      compositionSubjects: composition?.subjects ?? [],
+      compositionVisuals: composition?.visuals ?? [],
     };
     this.events.emit('changed', this.snapshot);
   }
@@ -634,6 +866,10 @@ function idleSnapshot(): CinematicSnapshot {
     playbackSequence: 0,
     emittedEventIds: [],
     activePerformanceCueIds: [],
+    resolvedBlocking: [],
+    compositionUsedAlternate: false,
+    compositionSubjects: [],
+    compositionVisuals: [],
   };
 }
 function errorText(error: unknown): string {
