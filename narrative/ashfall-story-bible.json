@@ -23,13 +23,14 @@
       "Mack, Nox, and Raze retain their existing NPC, speaker, character-model, spawn, portrait, conversation, and camera-profile authority.",
       "Ashfall Junction is a 56m by 56m authored intersection with north, east, south, and west approaches, Signal Corner, a signal-controller interaction, a mission point at the center, and fixed straight traffic lanes.",
       "The player economy uses integer money, starts at 500, and exposes authoritative credit and debit events.",
-      "The player production composition starts with a knife; the existing test handgun purchase costs 250 and should not be treated as a story shop contract.",
+      "SAVE-001 is authoritative for a corrected new-game loadout with neither the knife nor the handgun owned. The existing HandgunPurchase path remains the handgun acquisition contract; ash-002 grants no weapon.",
       "Current civilian traffic is deterministic and pooled around pickup-truck and sports-car catalog IDs; one production pickup supports enter-drive-exit, but cinematic passenger staging, doors, and NPC driving performances do not yet exist.",
       "Production startup has no ordinary NPCs. Mack, Nox, and Raze currently spawn only as explicit development fixtures, so story use requires production roster work.",
       "Mission, cinematic-sequence, full-map, and single-vehicle control foundations exist. General persistence storage, scheduling, pathfinding, production combat AI, cinematic performance ownership, and cross-level cinematic transition remain unimplemented."
     ],
     "intentionalCorrections": [
-      "The title and boot flow own cinematic.ash-001.opening before the first mission begins; the mission requests cinematic.ash-001.destination-reveal after Mack's briefing, and neither cinematic is an objective or may grant mission progress."
+      "The title and boot flow own cinematic.ash-001.opening before the first mission begins; the mission requests cinematic.ash-001.destination-reveal after Mack's briefing, and neither cinematic is an objective or may grant mission progress.",
+      "Carbon Copy is a fixed accountability beat, not a dialogue branch: Rook rejects Della's private cash, Nox receives the corroborated copy, and the post-completion cinematic cannot decide objectives, rewards, or facts."
     ],
     "runtimeBoundary": "This bible is planning data only. It is not imported by runtime startup, does not register entities or listeners, and does not claim unimplemented systems."
   },
@@ -478,6 +479,12 @@
       "runtimeStatus": "Development fixture only; production roster promotion required."
     },
     {
+      "id": "location.ashfall.night-venue",
+      "name": "Ashfall night venue",
+      "description": "A public after-hours room with two usable doors where Della can expose the original impound register without giving Nox private custody.",
+      "runtimeStatus": "Planned enterable location owned by WORLD-004; MISSION-003A requires a public entrance, mission interaction, staging marks, camera anchors, prop paths, map/readiness metadata, and authored night lighting."
+    },
+    {
       "id": "spawn.npc-deck",
       "name": "Raze fixture spawn",
       "description": "Authoritative current authored transform for Raze.",
@@ -530,6 +537,10 @@
     {
       "date": "September 29, 1997",
       "event": "Rook arrives on the 5:42 a.m. coach at Northbar. Mack reveals that Orin has missed two nights; Della takes the passenger-manifest carbon; Rook gives up the 6:10 eastbound exit and rides with Mack to Ashfall Junction, where the surveillance-check mission becomes playable."
+    },
+    {
+      "date": "September 29, 1997, 11:00 p.m.",
+      "event": "At Ashfall's night venue, Rook matches Orin's marked carbon to Della's original impound register, rejects a private cash offer, and gives Nox the corroborated copy in front of both witnesses."
     },
     {
       "date": "October 6, 1997",
@@ -594,6 +605,16 @@
       "id": "ledger-copy-custody",
       "initialValue": "none",
       "meaning": "Tracks none, rook, nox, or distributed; it is evidence state, not an inventory model reference."
+    },
+    {
+      "id": "orin-transfer-code-verified",
+      "initialValue": "false",
+      "meaning": "Records that Orin's marked carbon was matched to Della's original impound register through the authored verification interaction."
+    },
+    {
+      "id": "della-private-offer-rejected",
+      "initialValue": "false",
+      "meaning": "Records Rook's fixed refusal of Della's private cash offer; this is a canonical consequence, not a player-choice branch."
     },
     {
       "id": "pager-code-compromised",
@@ -781,109 +802,102 @@
       "initialWorldStateFacts": [
         "ledger-copy-custody=none",
         "nox-trust=none",
-        "rook-known-to-marrow=false"
+        "rook-known-to-marrow=false",
+        "orin-transfer-code-verified=false",
+        "della-private-offer-rejected=false"
       ],
       "startTrigger": {
         "kind": "entity-interaction",
         "id": "nox",
-        "locationId": "spawn.npc-alley"
+        "locationId": "location.ash-001.contact-yard"
       },
       "objectives": [
         {
-          "id": "ash-002-talk-to-nox",
-          "summary": "Complete Nox's terse check-in and receive the copy route.",
+          "id": "ash-002-take-nox-copy",
+          "summary": "Take Orin's marked carbon and hear Nox's verification rule.",
           "feasibleMapping": {
             "kind": "conversation-session-complete",
             "referenceId": "conversation.nox.check-in",
-            "status": "implemented-development-fixture"
+            "status": "existing-conversation-id-rewrite-and-production-placement-required"
           }
         },
         {
-          "id": "ash-002-recover-carbon",
-          "summary": "Recover the carbon sheet hidden at Signal Corner.",
+          "id": "ash-002-verify-night-register",
+          "summary": "Cross Ashfall to the night venue, verify Orin's code, and seal Nox's copy.",
           "feasibleMapping": {
             "kind": "mission-owned-interaction",
-            "referenceId": "interaction.signal-controller",
-            "status": "location-implemented-handler-roadmap"
-          }
-        },
-        {
-          "id": "ash-002-verify-impound-code",
-          "summary": "Compare the carbon number with Mack's vehicle history.",
-          "feasibleMapping": {
-            "kind": "entity-interaction",
-            "referenceId": "mack",
-            "status": "production-roster-roadmap"
-          }
-        },
-        {
-          "id": "ash-002-deliver-clean-copy",
-          "summary": "Return the verified copy to Nox despite Della's competing offer.",
-          "feasibleMapping": {
-            "kind": "entity-interaction-and-fact",
-            "referenceId": "nox",
-            "status": "mission-state-roadmap"
+            "referenceId": "interaction.ash-002.verify-register",
+            "status": "MISSION-003B-implementation-after-WORLD-004"
           }
         }
       ],
       "highlights": [
-        { "kind": "world", "referenceId": "spawn.npc-alley" },
+        { "kind": "world", "referenceId": "nox" },
         {
           "kind": "world-and-map",
-          "referenceId": "interaction.signal-controller"
-        },
-        { "kind": "world", "referenceId": "spawn.npc-mechanic" }
+          "referenceId": "interaction.ash-002.verify-register"
+        }
       ],
-      "dialogueIds": [
-        "conversation.nox.check-in",
-        "dialogue.ash-002.mack-verify",
-        "dialogue.ash-002.della-offer",
-        "dialogue.ash-002.nox-delivery"
-      ],
+      "dialogueIds": ["conversation.nox.check-in"],
       "cinematicIds": ["cinematic.ash-002-copy-choice"],
       "gameplayEvents": [
         {
-          "id": "interaction.completed",
-          "system": "interaction",
-          "status": "implemented-generic-event"
+          "id": "dialogue-completed",
+          "system": "dialogue-to-mission-adapter",
+          "status": "implemented-public-mission-event"
         },
         {
-          "id": "mission.choice-committed",
-          "system": "mission",
-          "status": "roadmap-MISSION-001"
+          "id": "interaction-completed",
+          "system": "interaction-to-mission-adapter",
+          "status": "implemented-public-mission-event-new-interaction-required"
         },
         {
           "id": "money.transaction",
           "system": "economy",
-          "status": "implemented-if-choice-reward-used"
+          "status": "implemented-once-only-mission-reward"
+        },
+        {
+          "id": "mission-content-requested",
+          "system": "mission-to-cinematic-adapter",
+          "status": "implemented-completed-phase-request"
         }
       ],
       "systemDependencies": [
         {
-          "id": "mission-001",
+          "id": "world-004",
           "status": "roadmap",
-          "reason": "Requires objective facts, mutually exclusive choice resolution, interactions, and persistence-ready snapshots."
+          "reason": "Must author location.ashfall.night-venue, its public entrance and map reference, the verification interaction, mission-critical sector readiness, blocking marks, camera anchors, evidence visuals, and prop paths."
         },
         {
-          "id": "npc-production-roster",
+          "id": "npc-002",
           "status": "roadmap",
-          "reason": "Nox and Mack are current development fixtures; Della has no entity definition or asset."
+          "reason": "Must promote Nox and Della Voss into the production roster at venue spawns, preserve their entity and speaker IDs, and give focal Della a verified unique production character instead of pedestrian-street."
         },
         {
-          "id": "dialogue-choice-presentation",
+          "id": "save-001",
+          "status": "roadmap",
+          "reason": "Must persist objective status, the 100-unit once-only reward, all five campaign facts, a corrected no-weapon new-game loadout, and retry/respawn state."
+        },
+        {
+          "id": "mission-003b",
+          "status": "roadmap",
+          "reason": "Implements the two objective MissionDefinition, rewrites conversation.nox.check-in, registers interaction.ash-002.verify-register, and connects completed-phase presentation without adding a choice UI."
+        },
+        {
+          "id": "cinematic-006",
           "status": "definition-only",
-          "reason": "Current conversations are linear. If no choice UI is scheduled, Della's offer must resolve through separate world interactions rather than invented dialogue branching."
+          "reason": "Implements cinematic.ash-002-copy-choice as optional post-completion presentation with exact-prior restoration and no story authority."
         }
       ],
       "failure": {
         "conditions": [
-          "The mission copy is lost through a mission-state reset",
-          "Rook is depleted",
-          "The level unloads during a mission interaction"
+          "Rook is depleted before the verification interaction completes",
+          "The mission-critical night-venue location, entrance, or verification interaction becomes unavailable",
+          "The active level changes before interaction.ash-002.verify-register commits"
         ],
-        "retry": "Restore the carbon to its authored interaction and reset offer-local facts; never duplicate a money credit or evidence fact.",
-        "cancel": "Cancel before recovering the carbon; remove offer and copy interactions and preserve ash-001 facts.",
-        "skip": "Skipping the choice cinematic returns to the unresolved world interaction and grants neither offer outcome."
+        "retry": "Reset the attempt at Nox's contact-yard setup, restore Orin's marked carbon there, clear only ash-002 objective-local state, and never duplicate money or campaign facts. A save restored on objective two resumes the venue journey without replaying Nox's completed setup.",
+        "cancel": "Allowed only until ash-002-take-nox-copy completes. Cancellation removes ash-002 highlights and interactions while preserving every ash-001 fact.",
+        "skip": "The cinematic is requested only after interaction.ash-002.verify-register has completed the objective and MissionSystem has committed the reward and facts. Confirmed skip restores exact prior gameplay and cannot undo, duplicate, or alter mission state."
       },
       "rewards": {
         "moneyDelta": 100,
@@ -891,20 +905,24 @@
         "factChanges": [
           "ledger-copy-custody=nox",
           "nox-trust=provisional",
-          "rook-known-to-marrow=true"
+          "rook-known-to-marrow=true",
+          "orin-transfer-code-verified=true",
+          "della-private-offer-rejected=true"
         ]
       },
       "persistentFacts": [
         "ledger-copy-custody",
         "nox-trust",
-        "rook-known-to-marrow"
+        "rook-known-to-marrow",
+        "orin-transfer-code-verified",
+        "della-private-offer-rejected"
       ],
-      "postMissionAvailability": "Unlock the quay introduction and Marrow route pressure once Nox holds the clean copy.",
+      "postMissionAvailability": "Unlock the quay introduction and stronger Marrow route pressure once Nox holds the corroborated copy; world props project from committed facts rather than cinematic playback.",
       "followUpHooks": [
         "The copy lists a berth closure before the inspection that supposedly caused it.",
         "Della now knows Rook rejected an easy payout."
       ],
-      "sceneChange": "Changes Nox's trust, Rook's visibility to Marrow, evidence custody, and the objective from finding Orin to corroborating his discovery."
+      "sceneChange": "Changes Nox's trust, Rook's visibility to Marrow, evidence custody, transfer-code verification, and the objective from finding Orin to corroborating his discovery."
     },
     {
       "id": "ash-003-night-manifest",
@@ -913,7 +931,11 @@
       "characterChange": "Raze shifts from excluding Rook to using Rook as an accountable observer after Rook protects a worker before protecting the document.",
       "prerequisites": {
         "missionIds": ["ash-002-carbon-copy"],
-        "worldStateFacts": ["ledger-copy-custody", "rook-known-to-marrow"]
+        "worldStateFacts": [
+          "ledger-copy-custody",
+          "rook-known-to-marrow",
+          "orin-transfer-code-verified"
+        ]
       },
       "initialWorldStateFacts": [
         "raze-trust=none",
@@ -1562,30 +1584,30 @@
   ],
   "openCreativeDecisions": [
     "Choose Rook's pronouns and any player-facing name customization policy before final dialogue lock; this bible avoids gendered references so the existing casual entity remains usable.",
-    "Decide whether the player can accept Della's ash-002 offer as a temporary branch. The canonical spine assumes Rook ultimately gives Nox the clean copy; a branch must reconverge without duplicating canon or rewards.",
     "Decide whether Vera remains in office after the final hearing. Her survival is preferred because institutional pressure should not collapse into defeating one villain.",
     "Choose the exact Atlantic-region voice references only after casting and cultural review; written voice patterns must not be converted into phonetic accents.",
     "Choose which later world milestone builds Cinder Quay. WORLD-001 expanded the Junction eastward but did not implement the canonical quay, so ash-003 and later premises remain blocked rather than being relocated into implausible Junction space.",
     "Set final mission reward amounts during economy balancing. Current values are conservative whole-unit story proposals and must use PlayerMoneyAccount rather than a second balance."
   ],
   "blockedDependencies": [
-    "MISSION-001 provides the authoritative mission/objective/highlight/event/persistence-ready foundation; MISSION-002 narrows the first playable mission to Mack's briefing and one contact-yard journey.",
+    "MissionSystem provides authoritative objective, highlight, event, content-request, reward, and snapshot behavior; MISSION-003B still must implement the two-objective Carbon Copy definition and its one new interaction without adding a branch.",
     "CORE-001 selects casual through existing character selection while preserving the registry and debug switching; Northbar must reuse that authority.",
-    "Mack, Nox, and Raze need explicit production roster promotion; their current identities are authoritative but their startup presence is development-only.",
-    "WORLD-001/PERF-001 provide Junction expansion and streaming foundations, but Northbar, Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps still require their own authored production levels/sectors and map/readiness facts.",
-    "NPC-001 provides a licensed ambient presentation library, but production identity, performance mappings, scheduling/awareness, and authored placement are still required for Orin, Vera, Della, quay workers, residents, and timed routes. Static fixture behavior is insufficient.",
+    "NPC-002 must promote Nox and Della Voss at stable venue spawns and provide a focal, verified unique production character for Della while preserving entity della-voss and speaker della-voss.",
+    "WORLD-004 must implement location.ashfall.night-venue with a discoverable public entrance, map/readiness facts, mission interaction, collision, staging marks, camera anchors, evidence visuals, prop paths, and authored nighttime fixtures.",
+    "NPC-001 provides a licensed ambient presentation library, but production identity, performance mappings, scheduling/awareness, and authored placement are still required for Orin, Vera, quay workers, residents, and timed routes. Static fixture behavior is insufficient.",
     "VEHICLE-001 provides an enter-drive-exit ownership foundation, but the Northbar opening requires separate verified passenger entry/exit, NPC driving, door/seat choreography, and cross-level vehicle presentation.",
     "CINEMATIC-001 provides camera requests, subtitle staging, skip confirmation, pause, and exact captured-state cleanup; the optional destination reveal remains a separate presentation dependency and cannot become mission progress.",
     "MAP-001 provides full-world route display for implemented level data; future locations remain unavailable until their own map/readiness facts exist.",
-    "Dialogue choice UI, scheduled world-state, and persistence are not current runtime capabilities; missions must use linear interaction alternatives or add roadmap-approved systems.",
+    "SAVE-001 must persist Carbon Copy objective state, five campaign facts, the once-only 100-unit reward, and safe retry/respawn state; it also owns the corrected new-game loadout with neither knife nor handgun.",
+    "Carbon Copy deliberately uses no dialogue choice UI. The authored interaction and mission completion fix Rook's refusal before the cinematic presents it.",
     "AUDIO-001 provides licensed local theme/radio playback, but character voice-over remains prohibited. Every story clue and performance must work through visible action and subtitles."
   ],
   "productionNeeds": [
-    "Original-project-owned or CC0/public-domain production NPC models and reviewed portraits for Orin Bell, Vera Sorn, Della Voss, workers, residents, and clerks, with full source/license/hash/scale/axis/animation provenance.",
-    "Reviewed production promotion and placement for existing Mack, Nox, and Raze CC0 models; no duplication of their entity, speaker, character, spawn, portrait, or conversation authority.",
-    "Authored Northbar opening level plus later streamed world sectors, collision, triggers, landmarks, mission locations, map/readiness references, staging marks, vehicle paths, and cinematic anchors for Northbar, Cinder Quay, Glasshouse Row, Marrow yard, and Reservoir Steps.",
+    "Original-project-owned or CC0/public-domain production NPC models and reviewed portraits for Orin Bell, Vera Sorn, Della Voss, workers, residents, and clerks, with full source/license/hash/scale/axis/animation provenance. Della requires a focal unique production character; pedestrian-street is not a close-up contract.",
+    "Reviewed production promotion and placement for existing Mack, Nox, and Raze CC0 models plus existing Della Voss identity; no duplication of their entity, speaker, character, spawn, portrait, or conversation authority.",
+    "Authored Northbar opening level, WORLD-004's Ashfall night venue, and later streamed world sectors with collision, triggers, landmarks, mission locations, map/readiness references, staging marks, vehicle paths, and cinematic anchors.",
     "Original environmental props for paper records, carbon sheets, pay phones, cassette decks, manifests, filing shelves, garage details, and quay work areas. Placeholder geometry cannot satisfy production acceptance.",
-    "Mission system, persistence-ready facts, objective/event mapping, mission interactions, world/map highlights, deterministic retry/cancel, and debug inspection from MISSION-001.",
+    "MISSION-003B integration for the existing MissionSystem: two objectives, dialogue/event mapping, interaction.ash-002.verify-register, world/map highlights, completed-phase cinematic request, deterministic retry/cancel, and debug inspection.",
     "NPC production roster and performance owner with verified logical-intent mappings, deterministic schedules where needed, and explicit trigger-based pressure. Clapping cannot substitute for conversation, listening, tension, or held acting, and navigation/awareness must not be implied before implementation.",
     "Cinematic sequence and dialogue presentation using stable IDs, existing game-state/camera ownership, subtitle-safe cue arrays, skip confirmation, exact captured-state cleanup, and destination-aware cross-level restoration.",
     "Accessibility and localization pass for subtitle length, reading speed, speaker labels, contrast, reduced motion, and non-audio delivery of every required clue.",
@@ -1593,7 +1615,9 @@
   ],
   "nextSlices": {
     "mission001": "Integrate WORLD-002's physical location.ash-001.contact-yard so the public location-entry event completes ash-001-meet-yard-contact without a debug command. Preserve entity nox, interaction interaction.npc.nox, the 75-unit reward, once-only facts, retry/persistence behavior, and the two-objective limit.",
-    "cinematic001": "Implement cinematic.ash-001.destination-reveal as a brief optional presentation after Mack's completed briefing. Use only verified neutral-hold, indicate, or acknowledge performance intents, and preserve CINEMATIC-001 camera, input, subtitle, pause, skip-confirmation, cleanup, and no-voice-over contracts."
+    "cinematic001": "Implement cinematic.ash-001.destination-reveal as a brief optional presentation after Mack's completed briefing. Use only verified neutral-hold, indicate, or acknowledge performance intents, and preserve CINEMATIC-001 camera, input, subtitle, pause, skip-confirmation, cleanup, and no-voice-over contracts.",
+    "mission003a": "Use docs/mission-003-carbon-copy.md and docs/narrative/mission-003a-carbon-copy-handoff.json as the design contract for MISSION-003B after WORLD-004, NPC-002, and SAVE-001 are integration-ready.",
+    "cinematic006": "Implement docs/cinematics/cinematic-006-carbon-copy.md only after venue anchors, evidence visuals, level-owned prop paths, focal Della, and exact performance preflight are available; the cinematic remains optional post-completion presentation."
   },
   "provenanceAndOriginality": [
     "The setting, names, factions, characters, plot, mission premises, dialogue intentions, and Cinder Ledger concept are original Vanta City material written for this repository.",

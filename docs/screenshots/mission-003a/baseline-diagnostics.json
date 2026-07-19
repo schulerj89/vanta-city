@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-07-19",
+  "baseCommit": "78ff0b83069a406ffb6669238c224977a8e9b6d0",
+  "target": "current-local-opening-cinematic-and-shared-cinematic-ui",
+  "purpose": "composition-subtitle-skip-confirmation-baseline-for-unimplemented-carbon-copy",
+  "viewports": ["1280x720", "390x844"],
+  "screenshots": [
+    "docs/screenshots/mission-003a/baseline-title-1201x720.jpg",
+    "docs/screenshots/mission-003a/baseline-opening-early-1280x720.jpg",
+    "docs/screenshots/mission-003a/baseline-opening-middle-1280x720.jpg",
+    "docs/screenshots/mission-003a/baseline-opening-early-390x844.jpg",
+    "docs/screenshots/mission-003a/baseline-skip-confirmation-390x844.jpg"
+  ],
+  "console": {
+    "runtimeExceptions": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "network": {
+    "observedApplicationRequests": 135,
+    "failedApplicationGets": 0,
+    "cancelledLocalOptionalAssetHeadProbes": 8,
+    "cancelledProbeResult": "net::ERR_ABORTED",
+    "unexpectedApplicationExternalHttpRequests": 0,
+    "browserExtensionImageExcludedFromApplicationTraffic": true
+  },
+  "cdp": {
+    "reviewedActionPeriodCapturedEvents": 143,
+    "hasMoreAfterFinalRead": false,
+    "olderBufferedEventsEvictedBeforeFinalCursor": true
+  },
+  "findings": [
+    "desktop-three-body-wide-has-large-empty-space-and-silhouette-level-actors",
+    "narrow-landscape-three-body-wide-is-not-readable-enough-for-carbon-copy",
+    "medium-della-and-paper-insert-compositions-are-usable-direction-references",
+    "neutral-holds-change-little-so-level-owned-prop-paths-must-carry-visible-action",
+    "subtitle-reserve-is-readable",
+    "skip-modal-fits-narrow-and-initial-focus-is-on-keep-watching",
+    "skip-modal-copy-needs-completed-mission-context-review"
+  ],
+  "limitations": [
+    "carbon-copy-runtime-unimplemented",
+    "world-004-night-venue-unimplemented-at-base",
+    "no-carbon-copy-occlusion-restoration-reduced-motion-or-reward-ordering-proof",
+    "cancelled-optional-head-probes-are-baseline-observation-not-future-acceptance-waiver"
+  ]
+}

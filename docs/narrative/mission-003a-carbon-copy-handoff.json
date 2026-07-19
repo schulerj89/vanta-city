@@ -1,0 +1,720 @@
+{
+  "schemaVersion": 1,
+  "id": "handoff.mission-003a-carbon-copy",
+  "status": "design-complete-runtime-unimplemented",
+  "baseCommit": "78ff0b83069a406ffb6669238c224977a8e9b6d0",
+  "authorities": {
+    "canon": "narrative/ashfall-story-bible.json",
+    "missionBrief": "docs/mission-003-carbon-copy.md",
+    "cinematicBrief": "docs/cinematics/cinematic-006-carbon-copy.md",
+    "missionRuntime": "MissionSystem",
+    "dialogueRuntime": "DialogueSystem",
+    "interactionRuntime": "InteractionSystem",
+    "levelRuntime": "LevelSystem",
+    "cinematicRuntime": "CinematicCoordinator",
+    "persistence": "SAVE-001"
+  },
+  "fixedDecisions": {
+    "objectiveCount": 2,
+    "playerBranch": false,
+    "canonicalOfferOutcome": "della-private-offer-rejected",
+    "cinematicOwnsGameplayTruth": false,
+    "voiceOver": false,
+    "moneyReward": 100,
+    "equipmentRewardIds": [],
+    "newGameOwnedEquipmentIds": [],
+    "handgunAcquisitionPath": "HandgunPurchase",
+    "knifeAcquisitionPath": "unassigned-later-narrative-and-economy-review"
+  },
+  "missionDefinitionDraft": {
+    "id": "ash-002-carbon-copy",
+    "title": "Carbon Copy",
+    "narrativePurpose": "Turn Orin's clue into a verifiable document chain and introduce Nox's rule that one copy is evidence only when another person can locate its source.",
+    "prerequisiteMissionIds": ["ash-001-walk-the-block"],
+    "prerequisiteFacts": [
+      {
+        "id": "contact-yard-meeting-completed",
+        "equals": true
+      }
+    ],
+    "startCondition": {
+      "type": "entity-interaction-completed",
+      "entityId": "nox"
+    },
+    "startLocationId": "location.ash-001.contact-yard",
+    "objectives": [
+      {
+        "id": "ash-002-take-nox-copy",
+        "summary": "Take Orin's marked carbon and hear Nox's verification rule.",
+        "condition": {
+          "type": "dialogue-completed",
+          "conversationId": "conversation.nox.check-in"
+        },
+        "highlights": [
+          {
+            "id": "highlight.ash-002.nox",
+            "channels": ["world"],
+            "target": {
+              "kind": "entity",
+              "referenceId": "nox"
+            },
+            "label": "Nox",
+            "priority": "primary"
+          }
+        ]
+      },
+      {
+        "id": "ash-002-verify-night-register",
+        "summary": "Cross Ashfall to the night venue, verify Orin's code, and seal Nox's copy.",
+        "condition": {
+          "type": "interaction-completed",
+          "interactionId": "interaction.ash-002.verify-register"
+        },
+        "highlights": [
+          {
+            "id": "highlight.ash-002.night-register",
+            "channels": ["world", "map"],
+            "target": {
+              "kind": "interaction",
+              "referenceId": "interaction.ash-002.verify-register"
+            },
+            "label": "Night venue register",
+            "priority": "primary"
+          }
+        ]
+      }
+    ],
+    "contentRequests": [
+      {
+        "kind": "cinematic",
+        "referenceId": "cinematic.ash-002-copy-choice",
+        "optional": true,
+        "phase": "completed"
+      }
+    ],
+    "cancellationUntilObjectiveId": "ash-002-take-nox-copy",
+    "reward": {
+      "id": "reward.ash-002-carbon-copy",
+      "moneyAmount": 100,
+      "equipmentIds": [],
+      "factChanges": {
+        "ledger-copy-custody": "nox",
+        "nox-trust": "provisional",
+        "rook-known-to-marrow": true,
+        "orin-transfer-code-verified": true,
+        "della-private-offer-rejected": true
+      }
+    },
+    "persistentFactIds": [
+      "ledger-copy-custody",
+      "nox-trust",
+      "rook-known-to-marrow",
+      "orin-transfer-code-verified",
+      "della-private-offer-rejected"
+    ]
+  },
+  "conversationDefinitionDraft": {
+    "id": "conversation.nox.check-in",
+    "canCancel": true,
+    "lines": [
+      {
+        "id": "dialogue.ash-002.nox.orin-code",
+        "speakerId": "nox",
+        "text": "Orin wrote ‘Rook’ beside this yard. He left a transfer code.",
+        "portraitPresentation": "none",
+        "nextLine": "dialogue.ash-002.rook.not-chain"
+      },
+      {
+        "id": "dialogue.ash-002.rook.not-chain",
+        "speakerId": "rook",
+        "text": "A code is not a chain.",
+        "portraitPresentation": "none",
+        "nextLine": "dialogue.ash-002.nox.venue"
+      },
+      {
+        "id": "dialogue.ash-002.nox.venue",
+        "speakerId": "nox",
+        "text": "Della has the matching impound book. Night venue, eleven.",
+        "portraitPresentation": "none",
+        "nextLine": "dialogue.ash-002.rook.marrow"
+      },
+      {
+        "id": "dialogue.ash-002.rook.marrow",
+        "speakerId": "rook",
+        "text": "You invited Marrow?",
+        "portraitPresentation": "none",
+        "nextLine": "dialogue.ash-002.nox.two-doors"
+      },
+      {
+        "id": "dialogue.ash-002.nox.two-doors",
+        "speakerId": "nox",
+        "text": "She invited you. I get the second door.",
+        "portraitPresentation": "none",
+        "nextLine": "dialogue.ash-002.rook.cash"
+      },
+      {
+        "id": "dialogue.ash-002.rook.cash",
+        "speakerId": "rook",
+        "text": "And the cash?",
+        "portraitPresentation": "none",
+        "nextLine": "dialogue.ash-002.nox.witness"
+      },
+      {
+        "id": "dialogue.ash-002.nox.witness",
+        "speakerId": "nox",
+        "text": "Easier than a witness. That is why she brings it.",
+        "portraitPresentation": "none"
+      }
+    ]
+  },
+  "worldRequests": {
+    "levelId": "test-district",
+    "locationId": "location.ashfall.night-venue",
+    "interactionId": "interaction.ash-002.verify-register",
+    "intendedTraversableRouteMetres": {
+      "minimum": 85,
+      "maximum": 140,
+      "fromLocationId": "location.ash-001.contact-yard"
+    },
+    "missionCriticalWhileObjectiveId": "ash-002-verify-night-register",
+    "timeOfDayPreset": "night",
+    "timeOwnership": "TimeOfDayLightingSystem-through-approved-mission-adapter-not-cinematic",
+    "spawnIds": [
+      "spawn.npc.nox.night-venue",
+      "spawn.npc.della-voss.night-venue"
+    ],
+    "blockingMarkIds": [
+      "mark.ash-002.rook-table",
+      "mark.ash-002.nox-table",
+      "mark.ash-002.della-table"
+    ],
+    "cameraAnchorIds": [
+      "camera.ash-002.venue-establish",
+      "camera.ash-002.venue-establish-safe",
+      "camera.ash-002.code-match-insert",
+      "camera.ash-002.code-match-insert-safe",
+      "camera.ash-002.della-offer",
+      "camera.ash-002.della-offer-safe",
+      "camera.ash-002.rook-choice",
+      "camera.ash-002.rook-choice-safe",
+      "camera.ash-002.nox-witness",
+      "camera.ash-002.nox-witness-safe",
+      "camera.ash-002.della-mark",
+      "camera.ash-002.della-mark-safe"
+    ],
+    "visualIds": [
+      "prop.ash-002.orin-carbon",
+      "prop.ash-002.impound-register",
+      "prop.ash-002.nox-envelope",
+      "prop.ash-002.della-cash",
+      "prop.ash-002.marrow-receipt"
+    ],
+    "pathPointIds": [
+      "point.ash-002.register-closed",
+      "point.ash-002.register-open",
+      "point.ash-002.carbon-start",
+      "point.ash-002.carbon-match",
+      "point.ash-002.cash-held",
+      "point.ash-002.cash-offer",
+      "point.ash-002.cash-withdrawn",
+      "point.ash-002.copy-envelope",
+      "point.ash-002.receipt-blank",
+      "point.ash-002.receipt-marked"
+    ]
+  },
+  "cinematicDefinitionDraft": {
+    "id": "cinematic.ash-002-copy-choice",
+    "storyBeatId": "story-beat.ash-002-copy-choice",
+    "missionId": "ash-002-carbon-copy",
+    "participantIds": ["casual", "nox", "della-voss"],
+    "speakerIds": ["rook", "nox", "della-voss"],
+    "entryEventId": "cinematic.ash-002-copy-choice.requested",
+    "completionEventId": "cinematic.ash-002-copy-choice.completed",
+    "skipPolicy": "confirm",
+    "dependencies": {
+      "levelId": "test-district",
+      "locationId": "location.ashfall.night-venue",
+      "cameraAnchorIds": [
+        "camera.ash-002.venue-establish",
+        "camera.ash-002.venue-establish-safe",
+        "camera.ash-002.code-match-insert",
+        "camera.ash-002.code-match-insert-safe",
+        "camera.ash-002.della-offer",
+        "camera.ash-002.della-offer-safe",
+        "camera.ash-002.rook-choice",
+        "camera.ash-002.rook-choice-safe",
+        "camera.ash-002.nox-witness",
+        "camera.ash-002.nox-witness-safe",
+        "camera.ash-002.della-mark",
+        "camera.ash-002.della-mark-safe"
+      ],
+      "assetIds": [
+        "prop.ash-002.orin-carbon",
+        "prop.ash-002.impound-register",
+        "prop.ash-002.nox-envelope",
+        "prop.ash-002.della-cash",
+        "prop.ash-002.marrow-receipt"
+      ],
+      "animationIds": ["idle", "Interact"],
+      "worldFactIds": [
+        "ledger-copy-custody",
+        "nox-trust",
+        "rook-known-to-marrow",
+        "orin-transfer-code-verified",
+        "della-private-offer-rejected"
+      ]
+    },
+    "restorationPolicy": "exact-prior-gameplay",
+    "participantFailurePolicy": "fail-and-restore",
+    "blocking": [
+      {
+        "participantId": "casual",
+        "markId": "mark.ash-002.rook-table",
+        "facingParticipantId": "della-voss",
+        "maximumDisplacementMetres": 0.55
+      },
+      {
+        "participantId": "nox",
+        "markId": "mark.ash-002.nox-table",
+        "facingParticipantId": "casual",
+        "maximumDisplacementMetres": 0.55
+      },
+      {
+        "participantId": "della-voss",
+        "markId": "mark.ash-002.della-table",
+        "facingParticipantId": "casual",
+        "maximumDisplacementMetres": 0.55
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot.ash-002.venue-establish",
+        "purpose": "Establish the public two-door venue and the three-person witness triangle without reducing the actors to a distant wide.",
+        "cameraAnchorId": "camera.ash-002.venue-establish",
+        "alternateCameraAnchorId": "camera.ash-002.venue-establish-safe",
+        "durationSeconds": 4.2,
+        "transition": "cut",
+        "transitionSeconds": 0,
+        "obstructionPolicy": "shared-camera-collision",
+        "participantIds": ["casual", "nox", "della-voss"],
+        "requiredSubjectIds": ["casual", "nox", "della-voss"],
+        "requiredVisualIds": [
+          "prop.ash-002.impound-register",
+          "prop.ash-002.orin-carbon",
+          "prop.ash-002.nox-envelope",
+          "prop.ash-002.della-cash"
+        ],
+        "performanceRequests": [
+          {
+            "cueId": "performance.ash-002.establish.rook-hold",
+            "shotId": "shot.ash-002.venue-establish",
+            "atSeconds": 0,
+            "participantId": "casual",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          },
+          {
+            "cueId": "performance.ash-002.establish.nox-hold",
+            "shotId": "shot.ash-002.venue-establish",
+            "atSeconds": 0,
+            "participantId": "nox",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          },
+          {
+            "cueId": "performance.ash-002.establish.della-hold",
+            "shotId": "shot.ash-002.venue-establish",
+            "atSeconds": 0,
+            "participantId": "della-voss",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          }
+        ],
+        "safeFrame": {
+          "minSubjectMarginPercent": 12,
+          "narrowFieldOfView": 38
+        }
+      },
+      {
+        "id": "shot.ash-002.code-match-insert",
+        "purpose": "Show Orin's carbon aligning with the original impound register while Nox names the corroborating fields.",
+        "cameraAnchorId": "camera.ash-002.code-match-insert",
+        "alternateCameraAnchorId": "camera.ash-002.code-match-insert-safe",
+        "durationSeconds": 4.8,
+        "transition": "cut",
+        "transitionSeconds": 0,
+        "obstructionPolicy": "shared-camera-collision",
+        "participantIds": ["nox"],
+        "requiredVisualIds": [
+          "prop.ash-002.impound-register",
+          "prop.ash-002.orin-carbon"
+        ],
+        "subtitleCues": [
+          {
+            "id": "subtitle.ash-002.nox.code-match",
+            "speakerId": "nox",
+            "text": "Same car. Same impound. Closure dated first.",
+            "startSeconds": 0.65,
+            "endSeconds": 4.15
+          }
+        ],
+        "performanceRequests": [
+          {
+            "cueId": "performance.ash-002.code-match.nox-hold",
+            "shotId": "shot.ash-002.code-match-insert",
+            "atSeconds": 0,
+            "participantId": "nox",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          }
+        ],
+        "pathRequests": [
+          {
+            "id": "path.ash-002.register-open",
+            "visualIds": ["prop.ash-002.impound-register"],
+            "pointIds": [
+              "point.ash-002.register-closed",
+              "point.ash-002.register-open"
+            ],
+            "startSeconds": 0.15,
+            "durationSeconds": 0.75
+          },
+          {
+            "id": "path.ash-002.carbon-align",
+            "visualIds": ["prop.ash-002.orin-carbon"],
+            "pointIds": [
+              "point.ash-002.carbon-start",
+              "point.ash-002.carbon-match"
+            ],
+            "startSeconds": 0.95,
+            "durationSeconds": 0.85
+          }
+        ],
+        "safeFrame": {
+          "minSubjectMarginPercent": 14,
+          "narrowFieldOfView": 36
+        }
+      },
+      {
+        "id": "shot.ash-002.della-offer",
+        "purpose": "Frame Della's practical coercion as private cash entering a restrained two-shot.",
+        "cameraAnchorId": "camera.ash-002.della-offer",
+        "alternateCameraAnchorId": "camera.ash-002.della-offer-safe",
+        "durationSeconds": 5.8,
+        "transition": "cut",
+        "transitionSeconds": 0,
+        "obstructionPolicy": "shared-camera-collision",
+        "participantIds": ["casual", "della-voss"],
+        "requiredSubjectIds": ["casual", "della-voss"],
+        "requiredVisualIds": ["prop.ash-002.della-cash"],
+        "subtitleCues": [
+          {
+            "id": "subtitle.ash-002.della.private-offer",
+            "speakerId": "della-voss",
+            "text": "One copy. No witnesses. Your morning gets cheaper.",
+            "startSeconds": 0.55,
+            "endSeconds": 4.85
+          }
+        ],
+        "performanceRequests": [
+          {
+            "cueId": "performance.ash-002.offer.rook-hold",
+            "shotId": "shot.ash-002.della-offer",
+            "atSeconds": 0,
+            "participantId": "casual",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          },
+          {
+            "cueId": "performance.ash-002.offer.della-hold",
+            "shotId": "shot.ash-002.della-offer",
+            "atSeconds": 0,
+            "participantId": "della-voss",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          }
+        ],
+        "pathRequests": [
+          {
+            "id": "path.ash-002.cash-offer",
+            "visualIds": ["prop.ash-002.della-cash"],
+            "pointIds": ["point.ash-002.cash-held", "point.ash-002.cash-offer"],
+            "startSeconds": 0.6,
+            "durationSeconds": 0.9
+          }
+        ],
+        "safeFrame": {
+          "minSubjectMarginPercent": 12,
+          "narrowFieldOfView": 39
+        }
+      },
+      {
+        "id": "shot.ash-002.rook-choice",
+        "purpose": "Make Rook's fixed accountable choice visible by pairing an exact indicate with a level-owned carbon-to-envelope path.",
+        "cameraAnchorId": "camera.ash-002.rook-choice",
+        "alternateCameraAnchorId": "camera.ash-002.rook-choice-safe",
+        "durationSeconds": 4.6,
+        "transition": "cut",
+        "transitionSeconds": 0,
+        "obstructionPolicy": "shared-camera-collision",
+        "participantIds": ["casual"],
+        "requiredSubjectIds": ["casual"],
+        "requiredVisualIds": [
+          "prop.ash-002.della-cash",
+          "prop.ash-002.orin-carbon",
+          "prop.ash-002.nox-envelope"
+        ],
+        "subtitleCues": [
+          {
+            "id": "subtitle.ash-002.rook.cheap-paper",
+            "speakerId": "rook",
+            "text": "Cheap paper burns first.",
+            "startSeconds": 0.7,
+            "endSeconds": 3.2
+          }
+        ],
+        "performanceRequests": [
+          {
+            "cueId": "performance.ash-002.choice.rook-indicate",
+            "shotId": "shot.ash-002.rook-choice",
+            "atSeconds": 0.5,
+            "participantId": "casual",
+            "intent": "indicate",
+            "phase": "start",
+            "targetMarkId": "mark.ash-002.nox-table",
+            "propMarkId": "point.ash-002.copy-envelope",
+            "missingPerformancePolicy": "block",
+            "required": true
+          }
+        ],
+        "pathRequests": [
+          {
+            "id": "path.ash-002.copy-envelope",
+            "visualIds": ["prop.ash-002.orin-carbon"],
+            "pointIds": [
+              "point.ash-002.carbon-match",
+              "point.ash-002.copy-envelope"
+            ],
+            "startSeconds": 0.85,
+            "durationSeconds": 1
+          }
+        ],
+        "safeFrame": {
+          "minSubjectMarginPercent": 14,
+          "narrowFieldOfView": 37
+        }
+      },
+      {
+        "id": "shot.ash-002.nox-witness",
+        "purpose": "Let Nox state the source-copy-witness principle in a restrained medium two-shot.",
+        "cameraAnchorId": "camera.ash-002.nox-witness",
+        "alternateCameraAnchorId": "camera.ash-002.nox-witness-safe",
+        "durationSeconds": 5.4,
+        "transition": "cut",
+        "transitionSeconds": 0,
+        "obstructionPolicy": "shared-camera-collision",
+        "participantIds": ["casual", "nox"],
+        "requiredSubjectIds": ["casual", "nox"],
+        "requiredVisualIds": ["prop.ash-002.nox-envelope"],
+        "subtitleCues": [
+          {
+            "id": "subtitle.ash-002.nox.witness-chain",
+            "speakerId": "nox",
+            "text": "Source. Copy. Witness. Now it survives us.",
+            "startSeconds": 0.6,
+            "endSeconds": 4.4
+          }
+        ],
+        "performanceRequests": [
+          {
+            "cueId": "performance.ash-002.witness.rook-hold",
+            "shotId": "shot.ash-002.nox-witness",
+            "atSeconds": 0,
+            "participantId": "casual",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          },
+          {
+            "cueId": "performance.ash-002.witness.nox-hold",
+            "shotId": "shot.ash-002.nox-witness",
+            "atSeconds": 0,
+            "participantId": "nox",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          }
+        ],
+        "safeFrame": {
+          "minSubjectMarginPercent": 12,
+          "narrowFieldOfView": 39
+        }
+      },
+      {
+        "id": "shot.ash-002.della-mark",
+        "purpose": "Close on Della withdrawing the cash and recording Rook's responsibility without escalating into violence.",
+        "cameraAnchorId": "camera.ash-002.della-mark",
+        "alternateCameraAnchorId": "camera.ash-002.della-mark-safe",
+        "durationSeconds": 6.2,
+        "transition": "cut",
+        "transitionSeconds": 0,
+        "obstructionPolicy": "shared-camera-collision",
+        "participantIds": ["casual", "della-voss"],
+        "requiredSubjectIds": ["casual", "della-voss"],
+        "requiredVisualIds": [
+          "prop.ash-002.della-cash",
+          "prop.ash-002.marrow-receipt"
+        ],
+        "subtitleCues": [
+          {
+            "id": "subtitle.ash-002.della.marrow-remembers",
+            "speakerId": "della-voss",
+            "text": "Then Marrow remembers who carried it.",
+            "startSeconds": 0.4,
+            "endSeconds": 3.45
+          },
+          {
+            "id": "subtitle.ash-002.rook.write-twice",
+            "speakerId": "rook",
+            "text": "Write it twice.",
+            "startSeconds": 3.75,
+            "endSeconds": 5.45
+          }
+        ],
+        "performanceRequests": [
+          {
+            "cueId": "performance.ash-002.mark.rook-hold",
+            "shotId": "shot.ash-002.della-mark",
+            "atSeconds": 0,
+            "participantId": "casual",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          },
+          {
+            "cueId": "performance.ash-002.mark.della-hold",
+            "shotId": "shot.ash-002.della-mark",
+            "atSeconds": 0,
+            "participantId": "della-voss",
+            "intent": "neutral-hold",
+            "phase": "start",
+            "missingPerformancePolicy": "block",
+            "required": true
+          }
+        ],
+        "pathRequests": [
+          {
+            "id": "path.ash-002.cash-withdraw",
+            "visualIds": ["prop.ash-002.della-cash"],
+            "pointIds": [
+              "point.ash-002.cash-offer",
+              "point.ash-002.cash-withdrawn"
+            ],
+            "startSeconds": 0.25,
+            "durationSeconds": 0.85
+          },
+          {
+            "id": "path.ash-002.receipt-mark",
+            "visualIds": ["prop.ash-002.marrow-receipt"],
+            "pointIds": [
+              "point.ash-002.receipt-blank",
+              "point.ash-002.receipt-marked"
+            ],
+            "startSeconds": 1,
+            "durationSeconds": 0.8
+          }
+        ],
+        "safeFrame": {
+          "minSubjectMarginPercent": 12,
+          "narrowFieldOfView": 39
+        }
+      }
+    ]
+  },
+  "completionOrdering": [
+    "interaction-completes-and-emits-public-event",
+    "objective-2-completes",
+    "mission-status-completes",
+    "money-and-five-facts-commit-once",
+    "optional-completed-phase-cinematic-request-emits",
+    "cinematic-preflight-may-own-presentation"
+  ],
+  "failureAndPersistence": {
+    "cancelUntilObjectiveId": "ash-002-take-nox-copy",
+    "retryStartLocationId": "location.ash-001.contact-yard",
+    "retryPreservesPrerequisiteFacts": true,
+    "retryDuplicatesReward": false,
+    "objective2SnapshotReplaysSetup": false,
+    "completedSnapshotReplaysCinematic": false,
+    "deathSpawnOwner": "SAVE-001",
+    "cinematicFailureChangesMission": false,
+    "cinematicSkipChangesMission": false,
+    "worldPropProjectionSource": "committed-campaign-facts"
+  },
+  "responsiveAcceptance": {
+    "viewports": ["1280x720", "390x844", "1920x800"],
+    "textScalePercent": 125,
+    "desktopMinimumSubjectMarginPercent": 12,
+    "narrowCriticalHeadMaximumScreenY": 0.66,
+    "narrowCentralSafeWidthPercent": 76,
+    "ultrawideCentralActionWidthPercent": 70,
+    "reducedMotion": "hard-cuts-and-path-end-state-at-cue-boundary",
+    "unexpectedApplicationExternalHttpRequests": 0,
+    "consoleRuntimeErrors": 0
+  },
+  "dependencies": [
+    {
+      "id": "WORLD-004",
+      "status": "required",
+      "provides": "night venue, route, entrance, map and readiness metadata, interaction, marks, anchors, visuals, paths, lighting fixtures"
+    },
+    {
+      "id": "NPC-002",
+      "status": "required",
+      "provides": "production Nox and focal Della placements plus verified performance capabilities"
+    },
+    {
+      "id": "SAVE-001",
+      "status": "required",
+      "provides": "objective, fact, money, retry, death-spawn, and corrected no-weapon new-game persistence"
+    },
+    {
+      "id": "MISSION-003B",
+      "status": "blocked-on-this-handoff-and-required-integrations",
+      "provides": "runtime mission, dialogue rewrite, interaction registration, and completed-phase presentation request"
+    },
+    {
+      "id": "CINEMATIC-006",
+      "status": "design-provided-runtime-unimplemented",
+      "provides": "post-completion scene implementation and browser evidence"
+    }
+  ],
+  "explicitNonGoals": [
+    "runtime-code-change-in-MISSION-003A",
+    "new-dialogue-choice-ui",
+    "new-character-voice-over",
+    "new-named-npc",
+    "signal-corner-errand",
+    "mack-verification-errand",
+    "return-to-nox-errand",
+    "weapon-reward",
+    "cinematic-owned-progress-or-facts",
+    "raw-threejs-participant-or-prop-mutation",
+    "unverified-applause-nearest-random-combat-or-locomotion-fallback"
+  ]
+}
