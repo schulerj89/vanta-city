@@ -406,7 +406,7 @@ export const cinematicDefinitions = [
     dependencies: {
       levelId: 'test-district',
       locationId: 'location.ash-001.contact-yard',
-      cameraAnchorIds: ['camera.ash-001.destination-reveal'],
+      cameraAnchorIds: ['camera.ash-001.contact-reveal'],
       assetIds: [],
       animationIds: [],
       worldFactIds: [],
@@ -417,7 +417,7 @@ export const cinematicDefinitions = [
         id: 'shot.ash-001.destination-reveal',
         purpose:
           'Briefly establish the meeting yard and return control without advancing the mission.',
-        cameraAnchorId: 'camera.ash-001.destination-reveal',
+        cameraAnchorId: 'camera.ash-001.contact-reveal',
         durationSeconds: 2.8,
         transition: 'ease',
         transitionSeconds: 0.35,
