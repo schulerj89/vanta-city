@@ -58,6 +58,7 @@ import { EquipmentPresentation } from '../../equipment/EquipmentPresentation';
 import type { EquipmentPresentationSnapshot } from '../../equipment/EquipmentPresentation';
 import { equipmentById } from '../../equipment/EquipmentDefinition';
 import type { EquipmentId } from '../../equipment/EquipmentDefinition';
+import { getCharacterPerformanceProfile } from '../../cinematics/CharacterPerformanceProfiles';
 
 type SelectionKind = 'logical' | 'clip';
 type CompletionRelease = 'mixer-finished' | 'duration-fallback' | undefined;
@@ -97,6 +98,8 @@ export interface CharacterAnimationLabSnapshot {
   readonly graph: CharacterAnimationGraphState;
   readonly logicalAnimations: readonly string[];
   readonly authoredClips: readonly string[];
+  readonly performanceProfileId: string | undefined;
+  readonly performanceIntents: readonly string[];
   readonly strippedRootTracks: readonly RootMotionDiagnostic[];
   readonly bounds:
     | { readonly min: readonly number[]; readonly max: readonly number[] }
@@ -344,6 +347,9 @@ class CharacterAnimationLabSystem implements GameSystem {
     const socketPosition = attachment
       ? attachment.socket.getWorldPosition(new Vector3()).toArray()
       : undefined;
+    const performanceProfile = this.loaded
+      ? getCharacterPerformanceProfile(this.loaded.definition.id)
+      : undefined;
     return {
       ready: this.ready,
       modelId: this.loaded?.definition.id,
@@ -366,6 +372,10 @@ class CharacterAnimationLabSystem implements GameSystem {
       graph: { ...this.currentGraph },
       logicalAnimations: [...(this.loaded?.animationClips.keys() ?? [])],
       authoredClips: [...(this.loaded?.availableAnimationClips?.keys() ?? [])],
+      performanceProfileId: performanceProfile?.profileId,
+      performanceIntents: performanceProfile
+        ? Object.keys(performanceProfile.intents)
+        : [],
       strippedRootTracks: [...(this.loaded?.rootMotionDiagnostics ?? [])],
       bounds:
         !modelBounds || modelBounds.isEmpty()
@@ -1076,6 +1086,13 @@ class CharacterAnimationLabSystem implements GameSystem {
       ['Completion', snapshot.completionRelease ?? 'pending / looping'],
       ['Rejected transitions', String(snapshot.rejectedTransitions)],
       ['Root tracks stripped', String(snapshot.strippedRootTracks.length)],
+      ['Performance profile', snapshot.performanceProfileId ?? 'unavailable'],
+      [
+        'Verified intents',
+        snapshot.performanceIntents.length > 0
+          ? snapshot.performanceIntents.join(', ')
+          : 'none',
+      ],
       [
         'Alignment',
         snapshot.alignment

@@ -32,7 +32,7 @@ const npc: NpcDefinition = {
   characterId: 'worker',
   portraitAssetId: 'portrait.mack',
   defaultAnimation: 'idle',
-  gestureAnimation: 'gesture',
+  applauseAnimation: 'applaud',
   spawnId: 'spawn.npc-mack',
   interactionLabel: 'Talk',
   conversationId: 'conversation.test',
@@ -88,38 +88,33 @@ describe('NPC definition validation', () => {
         ({
           id,
           characterId,
-          gestureAnimation,
+          applauseAnimation,
           conversationCameraProfileId,
-          conversationGesture,
         }) => ({
           id,
           characterId,
-          gestureAnimation,
+          applauseAnimation,
           conversationCameraProfileId,
-          conversationGesture,
         }),
       ),
     ).toEqual([
       {
         id: 'mack',
         characterId: 'npc-worker',
-        gestureAnimation: 'gesture',
+        applauseAnimation: 'applaud',
         conversationCameraProfileId: 'close',
-        conversationGesture: undefined,
       },
       {
         id: 'nox',
         characterId: 'npc-hoodie',
-        gestureAnimation: 'gesture',
+        applauseAnimation: 'applaud',
         conversationCameraProfileId: undefined,
-        conversationGesture: false,
       },
       {
         id: 'raze',
         characterId: 'npc-punk',
-        gestureAnimation: 'gesture',
+        applauseAnimation: 'applaud',
         conversationCameraProfileId: 'wide',
-        conversationGesture: false,
       },
     ]);
     expect(npcFixtureCharacterDefinitions.map(({ id }) => id)).toEqual([
@@ -142,7 +137,7 @@ describe('NPC definition validation', () => {
     for (const definition of npcFixtureCharacterDefinitions) {
       expect(definition.animations).toMatchObject({
         idle: { clipNames: ['HumanArmature|Man_Idle'], required: true },
-        gesture: {
+        applaud: {
           clipNames: ['HumanArmature|Man_Clapping'],
           required: true,
         },
@@ -167,14 +162,13 @@ describe('NPC definition validation', () => {
     for (const definition of pedestrianCharacterDefinitions) {
       expect(definition.animations).toMatchObject({
         idle: { clipNames: ['HumanArmature|Female_Idle'], required: true },
-        gesture: {
+        applaud: {
           clipNames: ['HumanArmature|Female_Clapping'],
           required: true,
         },
       });
       expect(definition.transform).toEqual({
         scale: 0.38,
-        rotation: [0, Math.PI, 0],
       });
       expect(definition.fallback).toBe('placeholder');
       const asset = manifest[definition.modelAssetId!];

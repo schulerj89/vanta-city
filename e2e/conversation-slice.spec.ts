@@ -110,10 +110,66 @@ test('character picker through repeatable Mack conversation', async ({
   expect(
     first.npcs.snapshots.find(({ definitionId }) => definitionId === 'mack'),
   ).toMatchObject({
-    lastGestureSource: 'conversation:conversation.mack.introduction',
-    lastGestureAccepted: true,
-    gestureSequence: 1,
+    currentAnimation: 'idle',
+    lastGestureSource: undefined,
+    lastGestureAccepted: false,
+    gestureSequence: 0,
   });
+  const performanceToken = await page.evaluate(() =>
+    window.__VANTA_TEST__!.capturePerformanceState('mack'),
+  );
+  expect(
+    await page.evaluate(() =>
+      window.__VANTA_TEST__!.preflightPerformance('mack', {
+        requestId: 'browser-missing-listen',
+        cueId: 'cue-browser-listen',
+        shotId: 'shot-browser-medium',
+        intent: 'listen',
+      }),
+    ),
+  ).toMatchObject({ ok: false, reason: 'missing-performance' });
+  expect(
+    await page.evaluate(() =>
+      window.__VANTA_TEST__!.startPerformance('mack', {
+        requestId: 'browser-neutral-listen',
+        cueId: 'cue-browser-listen',
+        shotId: 'shot-browser-medium',
+        intent: 'listen',
+        allowNeutralFallback: true,
+        targetParticipantId: 'rook',
+      }),
+    ),
+  ).toMatchObject({ ok: true, resolution: 'neutral-fallback' });
+  expect(
+    (await snapshot(page)).npcs.snapshots.find(
+      ({ definitionId }) => definitionId === 'mack',
+    )?.performance,
+  ).toMatchObject({
+    state: 'performing',
+    requestedIntent: 'listen',
+    resolvedAnimationId: 'idle',
+    mixerOwnerCount: 1,
+  });
+  expect(
+    await page.evaluate(() =>
+      window.__VANTA_TEST__!.holdPerformance('mack', 'browser-neutral-listen'),
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(() =>
+      window.__VANTA_TEST__!.releasePerformance(
+        'mack',
+        'browser-neutral-listen',
+        'cancelled',
+      ),
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      (token) => window.__VANTA_TEST__!.restorePerformance('mack', token),
+      performanceToken,
+    ),
+  ).toBe(true);
   expect(first.dialogue.ui).toMatchObject({
     visible: true,
     speakerName: 'Mack',

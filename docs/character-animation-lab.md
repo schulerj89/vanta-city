@@ -40,6 +40,13 @@ The panel provides:
 
 Logical locomotion, action, and reaction selections pass through the same small `CharacterAnimationStateMachine` used by gameplay. Raw authored clips deliberately bypass graph meaning but remain protected by the same root-motion filtering. A one-shot selection owns the lab action lock until the mixer's `finished` event; a duration fallback releases missing or placeholder playback. Transitions requested while busy are rejected, not queued.
 
+The diagnostics panel and public lab snapshot also expose the selected character's
+cinematic performance profile ID and verified logical intents. These fields come
+from the same public profile registry consumed by runtime owners. They do not add
+a lab-only mapping, inspect mixer actions, or turn raw clips into semantic intents.
+Animated Men/Women list `neutral-hold` and explicit `applaud`; applause is never
+shown as conversation, listening, or generic interaction coverage.
+
 The lab has a fixed `simulationRoot` at `[0, 0, 0]`. Bounds-derived grounding moves only the nested `visualRoot`. Mixer updates restore the simulation origin every frame and never use animation or overlay state to repair gameplay transforms.
 
 ## Debug and automation APIs

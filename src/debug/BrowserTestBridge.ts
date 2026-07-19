@@ -50,6 +50,12 @@ import type {
   AudioPreferenceStore,
 } from '../audio/AudioPreferences';
 import type { CinematicCoordinator } from '../cinematics/CinematicCoordinator';
+import type {
+  CinematicPerformancePreflight,
+  CinematicPerformanceRequest,
+  CinematicPerformanceRestoreToken,
+  PerformanceReleaseReason,
+} from '../cinematics/CinematicPerformanceController';
 
 export const browserTestCharacterDefinitions = [
   {
@@ -211,6 +217,27 @@ export interface BrowserTestApi {
   cancelCinematic(): boolean;
   advanceCinematic(seconds: number): void;
   setCinematicParticipantAvailable(id: string, available: boolean): void;
+  preflightPerformance(
+    participantId: string,
+    request: CinematicPerformanceRequest,
+  ): CinematicPerformancePreflight;
+  startPerformance(
+    participantId: string,
+    request: CinematicPerformanceRequest,
+  ): CinematicPerformancePreflight;
+  capturePerformanceState(
+    participantId: string,
+  ): CinematicPerformanceRestoreToken;
+  holdPerformance(participantId: string, requestId: string): boolean;
+  releasePerformance(
+    participantId: string,
+    requestId: string,
+    reason: PerformanceReleaseReason,
+  ): boolean;
+  restorePerformance(
+    participantId: string,
+    token: CinematicPerformanceRestoreToken,
+  ): boolean;
   executeDebugCommand(id: string, argument?: string): Promise<void>;
   setDebugToggle(id: string, enabled: boolean): void;
   setDebugNumber(id: string, value: number): Promise<void>;
@@ -349,6 +376,23 @@ export function installBrowserTestBridge(
       }),
     setCinematicParticipantAvailable: (id, available) =>
       dependencies.setCinematicParticipantAvailable(id, available),
+    preflightPerformance: (participantId, request) =>
+      performanceOwner(dependencies, participantId).preflightPerformance(
+        request,
+      ),
+    startPerformance: (participantId, request) =>
+      performanceOwner(dependencies, participantId).startPerformance(request),
+    capturePerformanceState: (participantId) =>
+      performanceOwner(dependencies, participantId).capturePerformanceState(),
+    holdPerformance: (participantId, requestId) =>
+      performanceOwner(dependencies, participantId).holdPerformance(requestId),
+    releasePerformance: (participantId, requestId, reason) =>
+      performanceOwner(dependencies, participantId).releasePerformance(
+        requestId,
+        reason,
+      ),
+    restorePerformance: (participantId, token) =>
+      performanceOwner(dependencies, participantId).restorePerformance(token),
     executeDebugCommand: (id, argument) =>
       dependencies.debug.executeCommand(id, argument),
     setDebugToggle: (id, enabled) => dependencies.debug.setToggle(id, enabled),
@@ -376,6 +420,19 @@ export function installBrowserTestBridge(
     unsubscribeCancelled();
     if (target.__VANTA_TEST__ === api) delete target.__VANTA_TEST__;
   };
+}
+
+function performanceOwner(
+  dependencies: BrowserTestBridgeDependencies,
+  participantId: string,
+) {
+  const owner =
+    participantId === dependencies.characterVisual.participantId
+      ? dependencies.characterVisual
+      : dependencies.npcs.getPerformanceOwner(participantId);
+  if (!owner)
+    throw new Error(`Unknown performance participant "${participantId}"`);
+  return owner;
 }
 
 function capturePerformance(

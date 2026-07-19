@@ -980,8 +980,8 @@ function registerVerticalSliceDebug(
         read: () => read(({ modelSource }) => modelSource, 'pending'),
       }),
       debug.registerValue({
-        id: `npc.${definition.id}.gesture`,
-        label: 'Last gesture',
+        id: `npc.${definition.id}.action`,
+        label: 'Last explicit action',
         group: sections.characters,
         read: () =>
           read(

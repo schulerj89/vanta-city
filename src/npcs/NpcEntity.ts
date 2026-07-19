@@ -23,6 +23,17 @@ import type { EquipmentId } from '../equipment/EquipmentDefinition';
 import { HealthComponent } from '../health/Health';
 import { CharacterDeathPresentation } from '../characters/CharacterDeathPresentation';
 import type { WeaponDamageTarget } from '../combat/WeaponDamage';
+import {
+  CinematicPerformanceController,
+  type CharacterPerformanceBinding,
+  type CinematicPerformanceOwner,
+  type CinematicPerformancePreflight,
+  type CinematicPerformanceRequest,
+  type CinematicPerformanceRestoreToken,
+  type CinematicPerformanceSnapshot,
+  type PerformanceReleaseReason,
+} from '../cinematics/CinematicPerformanceController';
+import { getCharacterPerformanceProfile } from '../cinematics/CharacterPerformanceProfiles';
 
 export interface NpcCharacterLoader {
   instantiate(definition: CharacterDefinition): Promise<LoadedCharacter>;
@@ -55,6 +66,7 @@ export interface NpcDebugSnapshot {
   readonly conversationState: NpcConversationState;
   readonly modelFallback: boolean;
   readonly facingYaw: number;
+  readonly performance: CinematicPerformanceSnapshot | undefined;
   readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
   readonly equipmentPresentation: ReturnType<
     EquipmentPresentation['getSnapshot']
@@ -85,7 +97,20 @@ export function smoothFacingYaw(
   return current + difference * (1 - Math.exp(-sharpness * Math.max(0, delta)));
 }
 
-export class NpcEntity implements GameObject, WeaponDamageTarget {
+interface NpcPerformanceGameplayState {
+  readonly animationId: string;
+  readonly actionTime: number;
+  readonly actionPaused: boolean;
+  readonly actionTimeScale: number;
+  readonly gestureActive: boolean;
+  readonly gestureRemaining: number;
+  readonly facingYaw: number;
+  readonly facingTargetYaw: number | undefined;
+}
+
+export class NpcEntity
+  implements GameObject, WeaponDamageTarget, CinematicPerformanceOwner
+{
   public readonly id: string;
   public readonly object3d = new Group();
   public readonly equipment: CharacterEquipment;
@@ -109,6 +134,17 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
   private readonly equipmentPresentation: EquipmentPresentation;
   private readonly deathPresentation = new CharacterDeathPresentation();
   private readonly unsubscribeHealth: (() => void)[] = [];
+  private performance:
+    CinematicPerformanceController<NpcPerformanceGameplayState> | undefined;
+  private performanceFacingYaw: number | undefined;
+
+  public get participantId(): string {
+    return this.definition.id;
+  }
+
+  public get performanceEvents() {
+    return this.requirePerformance().events;
+  }
 
   public get ownerId(): string {
     return this.id;
@@ -169,8 +205,33 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
 
       if (loaded.animationClips.size > 0) {
         this.mixer = new AnimationMixer(loaded.root);
+        this.mixer.addEventListener('finished', this.onMixerFinished);
       }
       this.playIdle();
+      const profile = getCharacterPerformanceProfile(this.character.id);
+      if (profile) {
+        this.performance = new CinematicPerformanceController(
+          this.participantId,
+          profile,
+          {
+            captureGameplayState: () => this.captureGameplayPerformanceState(),
+            restoreGameplayState: (state) =>
+              this.restoreGameplayPerformanceState(state),
+            hasAnimation: (animationId) =>
+              this.loaded?.animationClips.has(animationId) ?? false,
+            playAnimation: (binding) => this.playPerformanceAnimation(binding),
+            holdAnimation: () => {
+              if (this.action) this.action.paused = true;
+            },
+            releaseAnimation: () => this.action?.fadeOut(0.1),
+            setPerformanceFacingTarget: (yaw) => {
+              this.performanceFacingYaw = yaw;
+            },
+            getActionOwnerCount: () => (this.action ? 1 : 0),
+            getMixerOwnerCount: () => (this.mixer ? 1 : 0),
+          },
+        );
+      }
       this.unsubscribeHealth.push(
         this.health.events.on('depleted', () => {
           this.gestureActive = false;
@@ -194,7 +255,9 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
     let targetYaw = this.idleYaw;
     const isActiveConversation =
       this.conversations.active?.npcId === this.definition.id;
-    if (isActiveConversation && playerPose) {
+    if (this.performanceFacingYaw !== undefined) {
+      targetYaw = this.performanceFacingYaw;
+    } else if (isActiveConversation && playerPose) {
       targetYaw = calculateFacingYaw(
         this.getWorldPosition(),
         playerPose.position,
@@ -209,12 +272,9 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
       targetYaw,
       time.delta,
     );
-    // Character assets retain their authored model yaw for idle presentation.
-    // Cancel it only for the live two-person presentation so the rendered body
-    // follows the NPC's authoritative conversational forward direction.
-    this.visualRoot.rotation.y = isActiveConversation
-      ? -(this.character.transform?.rotation?.[1] ?? 0)
-      : 0;
+    // The character definition owns a stable authored-axis correction. The
+    // visual alignment root therefore never changes yaw at conversation entry.
+    this.visualRoot.rotation.y = 0;
     const delta = Math.max(0, time.delta);
     this.mixer?.update(delta);
     this.equipmentPresentation.update(delta);
@@ -224,13 +284,17 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
       this.gestureRemaining = Math.max(0, this.gestureRemaining - delta);
       if (this.gestureRemaining === 0) {
         this.gestureActive = false;
-        if (this.health.alive) this.playIdle();
+        const requestId = this.performance?.getPerformanceSnapshot().requestId;
+        if (requestId)
+          this.performance?.releasePerformance(requestId, 'completed');
+        else if (this.health.alive) this.playIdle();
       }
     }
   }
 
-  public triggerGesture(source = 'interaction'): boolean {
-    return this.triggerOneShot(this.definition.gestureAnimation, source);
+  public triggerApplause(source = 'explicit-applause'): boolean {
+    const animation = this.definition.applauseAnimation;
+    return animation ? this.triggerOneShot(animation, source) : false;
   }
 
   public equip(itemId: EquipmentId): boolean {
@@ -330,6 +394,7 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
       conversationState,
       modelFallback: this.loaded?.source !== 'asset',
       facingYaw: this.object3d.rotation.y,
+      performance: this.performance?.getPerformanceSnapshot(),
       equipment: this.equipment.getSnapshot(),
       equipmentPresentation: this.equipmentPresentation.getSnapshot(),
       health: this.health.getSnapshot(),
@@ -337,6 +402,8 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
   }
 
   public dispose(): void {
+    this.performance?.dispose();
+    this.performance = undefined;
     this.action?.stop();
     this.equipmentPresentation.dispose();
     this.equipment.dispose();
@@ -344,6 +411,7 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
     this.deathPresentation.dispose();
     this.health.dispose();
     if (this.mixer && this.loaded) {
+      this.mixer.removeEventListener('finished', this.onMixerFinished);
       this.mixer.stopAllAction();
       this.mixer.uncacheRoot(this.loaded.root);
     }
@@ -356,6 +424,41 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
     this.visualRoot.clear();
     this.object3d.clear();
     this.currentAnimation = 'disposed';
+  }
+
+  public preflightPerformance(
+    request: CinematicPerformanceRequest,
+  ): CinematicPerformancePreflight {
+    return this.requirePerformance().preflightPerformance(request);
+  }
+
+  public capturePerformanceState(): CinematicPerformanceRestoreToken {
+    return this.requirePerformance().capturePerformanceState();
+  }
+
+  public startPerformance(
+    request: CinematicPerformanceRequest,
+  ): CinematicPerformancePreflight {
+    return this.requirePerformance().startPerformance(request);
+  }
+
+  public holdPerformance(requestId: string): boolean {
+    return this.performance?.holdPerformance(requestId) ?? false;
+  }
+
+  public releasePerformance(
+    requestId: string,
+    reason: PerformanceReleaseReason,
+  ): boolean {
+    return this.performance?.releasePerformance(requestId, reason) ?? false;
+  }
+
+  public restorePerformance(token: CinematicPerformanceRestoreToken): boolean {
+    return this.performance?.restorePerformance(token) ?? false;
+  }
+
+  public getPerformanceSnapshot(): CinematicPerformanceSnapshot {
+    return this.requirePerformance().getPerformanceSnapshot();
   }
 
   private playIdle(): void {
@@ -378,4 +481,85 @@ export class NpcEntity implements GameObject, WeaponDamageTarget {
     this.action.clampWhenFinished = false;
     this.currentAnimation = this.definition.defaultAnimation;
   }
+
+  private requirePerformance(): CinematicPerformanceController<NpcPerformanceGameplayState> {
+    if (!this.performance)
+      throw new Error(`NPC "${this.definition.id}" performance is unavailable`);
+    return this.performance;
+  }
+
+  private captureGameplayPerformanceState(): NpcPerformanceGameplayState {
+    return {
+      animationId: this.currentAnimation,
+      actionTime: this.action?.time ?? 0,
+      actionPaused: this.action?.paused ?? false,
+      actionTimeScale: this.action?.timeScale ?? 1,
+      gestureActive: this.gestureActive,
+      gestureRemaining: this.gestureRemaining,
+      facingYaw: this.object3d.rotation.y,
+      facingTargetYaw: this.performanceFacingYaw,
+    };
+  }
+
+  private restoreGameplayPerformanceState(
+    state: NpcPerformanceGameplayState,
+  ): void {
+    this.action?.stop();
+    const clip = this.loaded?.animationClips.get(state.animationId);
+    if (clip && this.mixer) {
+      this.action = this.mixer.clipAction(clip).reset();
+      this.action
+        .setLoop(
+          state.gestureActive ? LoopOnce : LoopRepeat,
+          state.gestureActive ? 1 : Infinity,
+        )
+        .setEffectiveTimeScale(state.actionTimeScale)
+        .play();
+      this.action.time = state.actionTime;
+      this.action.paused = state.actionPaused;
+      this.action.clampWhenFinished = state.gestureActive;
+    } else {
+      this.action = undefined;
+    }
+    this.currentAnimation = state.animationId;
+    this.gestureActive = state.gestureActive;
+    this.gestureRemaining = state.gestureRemaining;
+    this.object3d.rotation.y = state.facingYaw;
+    this.performanceFacingYaw = state.facingTargetYaw;
+  }
+
+  private playPerformanceAnimation(
+    binding: CharacterPerformanceBinding,
+  ): boolean {
+    const clip = this.loaded?.animationClips.get(binding.animationId);
+    if (!clip || !this.mixer) return false;
+    this.action?.fadeOut(0.12);
+    this.action = this.mixer.clipAction(clip).reset();
+    const oneShot = binding.playback !== 'loop';
+    this.action
+      .setLoop(oneShot ? LoopOnce : LoopRepeat, oneShot ? 1 : Infinity)
+      .setEffectiveTimeScale(1)
+      .fadeIn(0.12)
+      .play();
+    this.action.clampWhenFinished = oneShot;
+    this.currentAnimation = binding.animationId;
+    this.gestureActive = oneShot;
+    this.gestureRemaining = oneShot ? Math.max(0.05, clip.duration + 0.1) : 0;
+    return true;
+  }
+
+  private readonly onMixerFinished = (event: {
+    readonly action: AnimationAction;
+  }): void => {
+    if (event.action !== this.action) return;
+    const snapshot = this.performance?.getPerformanceSnapshot();
+    if (snapshot?.requestId) {
+      this.performance?.releasePerformance(snapshot.requestId, 'completed');
+      return;
+    }
+    if (this.gestureActive) {
+      this.gestureActive = false;
+      if (this.health.alive) this.playIdle();
+    }
+  };
 }

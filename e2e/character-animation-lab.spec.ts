@@ -65,6 +65,10 @@ test('switches every registered definition and safely disposes prior instances',
     expect(snapshot.modelSource).toBe('asset');
     expect(snapshot.logicalAnimations.length).toBeGreaterThan(0);
     expect(snapshot.authoredClips.length).toBeGreaterThan(0);
+    if (id !== 'debug-sparring-target') {
+      expect(snapshot.performanceProfileId).toBe(`performance.${id}`);
+      expect(snapshot.performanceIntents).toContain('neutral-hold');
+    }
     expect(snapshot.alignment?.simulationOrigin).toEqual([0, 0, 0]);
     expect(snapshot.alignment?.footPlane).toBe(0);
     const rawSelection = `clip:${snapshot.authoredClips[0]}`;
@@ -82,7 +86,7 @@ test('switches every registered definition and safely disposes prior instances',
   expect((await labSnapshot(page)).disposalCount).toBe(ids.length);
 });
 
-test('previews every production pedestrian idle and interaction gesture @visual', async ({
+test('previews every production pedestrian neutral and explicit applause @visual', async ({
   page,
 }, testInfo) => {
   const ids = [
@@ -98,7 +102,7 @@ test('previews every production pedestrian idle and interaction gesture @visual'
       id,
     );
     await waitForModel(page, id);
-    for (const logical of ['idle', 'gesture']) {
+    for (const logical of ['idle', 'applaud']) {
       expect(
         await page.evaluate(
           (selection) =>

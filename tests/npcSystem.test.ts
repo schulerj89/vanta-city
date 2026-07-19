@@ -65,7 +65,7 @@ function characterLoader(
 function npcAnimationClips(): ReadonlyMap<string, AnimationClip> {
   return new Map([
     ['idle', new AnimationClip('HumanArmature|Man_Idle', 1, [])],
-    ['gesture', new AnimationClip('HumanArmature|Man_Clapping', 0.6, [])],
+    ['applaud', new AnimationClip('HumanArmature|Man_Clapping', 0.6, [])],
     ['knifeSlash', new AnimationClip('HumanArmature|Man_SwordSlash', 1.04, [])],
   ]);
 }
@@ -217,9 +217,9 @@ describe('NPC foundation', () => {
     expect(system.getDebugSnapshot('mack')).toMatchObject({
       interactionState: 'conversation',
       conversationState: 'active',
-      currentAnimation: 'gesture',
-      gestureActive: true,
-      lastGestureSource: 'conversation:conversation.mack.introduction',
+      currentAnimation: 'idle',
+      gestureActive: false,
+      lastGestureSource: undefined,
     });
     expect(system.getDebugSnapshot('nox')).toMatchObject({
       interactionState: 'blocked',
@@ -378,7 +378,7 @@ describe('NPC foundation', () => {
     );
     const character = npcCharacterDefinitions[0]!;
     const idle = new AnimationClip('Idle', 1, []);
-    const gesture = new AnimationClip('Gesture', 0.6, []);
+    const applause = new AnimationClip('Applause', 0.6, []);
     const dispose = vi.fn();
     const playerPose = {
       position: { x: -7, y: 0.2, z: 4 },
@@ -396,7 +396,7 @@ describe('NPC foundation', () => {
           root: new Group(),
           animationClips: new Map([
             ['idle', idle],
-            ['gesture', gesture],
+            ['applaud', applause],
           ]),
           discoveredClipNames: ['Idle', 'Gesture'],
           source: 'asset',
@@ -413,18 +413,56 @@ describe('NPC foundation', () => {
     entity.update({ delta: 0.25, elapsed: 0.25, frame: 1 });
     const facingPlayer = entity.object3d.rotation.y;
     expect(facingPlayer).not.toBeCloseTo(npcDefinitions[0]!.idleYaw!);
-    expect(entity.object3d.children[0]!.rotation.y).toBeCloseTo(-Math.PI);
+    expect(entity.object3d.children[0]!.rotation.y).toBe(0);
     expect(playerPose).toEqual(playerBefore);
     expect(entity.getDebugSnapshot().currentAnimation).toBe('idle');
-    expect(entity.triggerGesture('unit-test')).toBe(true);
-    entity.update({ delta: 0.2, elapsed: 0.45, frame: 2 });
+    expect(
+      entity.preflightPerformance({
+        requestId: 'missing-listen',
+        cueId: 'cue-listen',
+        shotId: 'shot-medium',
+        intent: 'listen',
+      }),
+    ).toMatchObject({ ok: false, reason: 'missing-performance' });
+    const performanceToken = entity.capturePerformanceState();
+    expect(
+      entity.startPerformance({
+        requestId: 'mack-neutral',
+        cueId: 'cue-neutral',
+        shotId: 'shot-medium',
+        intent: 'listen',
+        allowNeutralFallback: true,
+        targetParticipantId: 'rook',
+        targetFacingYaw: -0.75,
+      }),
+    ).toMatchObject({
+      ok: true,
+      resolution: 'neutral-fallback',
+      resolvedAnimationId: 'idle',
+    });
+    entity.update({ delta: 0.1, elapsed: 0.35, frame: 2 });
     expect(entity.getDebugSnapshot()).toMatchObject({
-      currentAnimation: 'gesture',
+      currentAnimation: 'idle',
+      performance: {
+        state: 'performing',
+        requestedIntent: 'listen',
+        resolution: 'neutral-fallback',
+        mixerOwnerCount: 1,
+      },
+    });
+    expect(entity.object3d.children[0]!.rotation.y).toBe(0);
+    expect(entity.releasePerformance('mack-neutral', 'cancelled')).toBe(true);
+    expect(entity.restorePerformance(performanceToken)).toBe(true);
+    expect(entity.object3d.rotation.y).toBeCloseTo(facingPlayer);
+    expect(entity.triggerApplause('unit-test')).toBe(true);
+    entity.update({ delta: 0.2, elapsed: 0.55, frame: 3 });
+    expect(entity.getDebugSnapshot()).toMatchObject({
+      currentAnimation: 'applaud',
       gestureActive: true,
       lastGestureSource: 'unit-test',
       gestureSequence: 1,
     });
-    entity.update({ delta: 0.5, elapsed: 0.95, frame: 3 });
+    entity.update({ delta: 0.5, elapsed: 1.05, frame: 4 });
     expect(entity.getDebugSnapshot()).toMatchObject({
       currentAnimation: 'idle',
       gestureActive: false,
@@ -432,7 +470,7 @@ describe('NPC foundation', () => {
     });
 
     conversations.end();
-    for (let frame = 4; frame < 30; frame += 1) {
+    for (let frame = 5; frame < 30; frame += 1) {
       entity.update({ delta: 0.1, elapsed: frame * 0.1, frame });
     }
     expect(

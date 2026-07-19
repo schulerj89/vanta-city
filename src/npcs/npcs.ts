@@ -9,7 +9,7 @@ const animatedMenNpcAnimations = {
     clipNames: ['HumanArmature|Man_Idle'],
     required: true,
   },
-  gesture: {
+  applaud: {
     clipNames: ['HumanArmature|Man_Clapping'],
     required: true,
   },
@@ -28,7 +28,7 @@ const animatedWomenPedestrianAnimations = {
     clipNames: ['HumanArmature|Female_Idle'],
     required: true,
   },
-  gesture: {
+  applaud: {
     clipNames: ['HumanArmature|Female_Clapping'],
     required: true,
   },
@@ -41,7 +41,7 @@ export const npcFixtureCharacterDefinitions = validateCharacterDefinitions([
     modelAssetId: 'character.npc-worker.model',
     equipmentRigId: 'animated-men',
     animations: animatedMenNpcAnimations,
-    transform: { scale: 0.37, rotation: [0, Math.PI, 0] },
+    transform: { scale: 0.37 },
     fallback: 'placeholder',
   },
   {
@@ -50,7 +50,7 @@ export const npcFixtureCharacterDefinitions = validateCharacterDefinitions([
     modelAssetId: 'character.npc-hoodie.model',
     equipmentRigId: 'animated-men',
     animations: animatedMenNpcAnimations,
-    transform: { scale: 0.368, rotation: [0, Math.PI, 0] },
+    transform: { scale: 0.368 },
     fallback: 'placeholder',
   },
   {
@@ -59,7 +59,7 @@ export const npcFixtureCharacterDefinitions = validateCharacterDefinitions([
     modelAssetId: 'character.npc-punk.model',
     equipmentRigId: 'animated-men',
     animations: animatedMenNpcAnimations,
-    transform: { scale: 0.369, rotation: [0, Math.PI, 0] },
+    transform: { scale: 0.369 },
     fallback: 'placeholder',
   },
 ] satisfies readonly CharacterDefinition[]);
@@ -71,7 +71,7 @@ export const pedestrianCharacterDefinitions = validateCharacterDefinitions([
     displayName: 'Casual Pedestrian',
     modelAssetId: 'character.pedestrian-casual.model',
     animations: animatedWomenPedestrianAnimations,
-    transform: { scale: 0.38, rotation: [0, Math.PI, 0] },
+    transform: { scale: 0.38 },
     fallback: 'placeholder',
   },
   {
@@ -79,7 +79,7 @@ export const pedestrianCharacterDefinitions = validateCharacterDefinitions([
     displayName: 'Street Pedestrian',
     modelAssetId: 'character.pedestrian-street.model',
     animations: animatedWomenPedestrianAnimations,
-    transform: { scale: 0.38, rotation: [0, Math.PI, 0] },
+    transform: { scale: 0.38 },
     fallback: 'placeholder',
   },
   {
@@ -87,7 +87,7 @@ export const pedestrianCharacterDefinitions = validateCharacterDefinitions([
     displayName: 'Tank Top Pedestrian',
     modelAssetId: 'character.pedestrian-tank-top.model',
     animations: animatedWomenPedestrianAnimations,
-    transform: { scale: 0.38, rotation: [0, Math.PI, 0] },
+    transform: { scale: 0.38 },
     fallback: 'placeholder',
   },
   {
@@ -95,7 +95,7 @@ export const pedestrianCharacterDefinitions = validateCharacterDefinitions([
     displayName: 'Dress Pedestrian',
     modelAssetId: 'character.pedestrian-dress.model',
     animations: animatedWomenPedestrianAnimations,
-    transform: { scale: 0.38, rotation: [0, Math.PI, 0] },
+    transform: { scale: 0.38 },
     fallback: 'placeholder',
   },
 ] satisfies readonly CharacterDefinition[]);
@@ -114,7 +114,7 @@ export const npcDefinitions = validateNpcDefinitions(
       characterId: 'npc-worker',
       portraitAssetId: 'portrait.npc-mack',
       defaultAnimation: 'idle',
-      gestureAnimation: 'gesture',
+      applauseAnimation: 'applaud',
       spawnId: 'spawn.npc-mechanic',
       interactionLabel: 'Talk',
       conversationId: 'conversation.mack.introduction',
@@ -128,11 +128,10 @@ export const npcDefinitions = validateNpcDefinitions(
       characterId: 'npc-hoodie',
       portraitAssetId: 'portrait.npc-nox',
       defaultAnimation: 'idle',
-      gestureAnimation: 'gesture',
+      applauseAnimation: 'applaud',
       spawnId: 'spawn.npc-alley',
       interactionLabel: 'Talk',
       conversationId: 'conversation.nox.check-in',
-      conversationGesture: false,
       idleYaw: Math.PI,
       ambientYaw: 0.12,
     },
@@ -142,11 +141,10 @@ export const npcDefinitions = validateNpcDefinitions(
       characterId: 'npc-punk',
       portraitAssetId: 'portrait.npc-raze',
       defaultAnimation: 'idle',
-      gestureAnimation: 'gesture',
+      applauseAnimation: 'applaud',
       spawnId: 'spawn.npc-deck',
       interactionLabel: 'Talk',
       conversationId: 'conversation.raze.check-in',
-      conversationGesture: false,
       idleYaw: -Math.PI * 0.5,
       ambientYaw: 0.1,
       conversationCameraProfileId: 'wide',

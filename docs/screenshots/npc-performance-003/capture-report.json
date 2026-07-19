@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "taskId": "NPC-PERFORMANCE-003",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "renderer": "Chromium ANGLE SwiftShader",
+  "evidence": [
+    {
+      "path": "docs/screenshots/npc-performance-003/rook-interact-full-body.png",
+      "sha256": "0de88424d2ae6d7090b65d297e720b8581d4872c96cb956edd38b6bdfcf79321",
+      "modelId": "casual",
+      "modelSource": "asset",
+      "selection": "interact",
+      "view": "front",
+      "normalizedTime": 0.55,
+      "performanceProfileId": "performance.casual",
+      "performanceIntents": ["neutral-hold", "indicate", "acknowledge"]
+    },
+    {
+      "path": "docs/screenshots/npc-performance-003/rook-wave-medium-close-up.png",
+      "sha256": "810a96ca041db85d893bae6c6c046fdd2f859cac7121d7def5604788bf0f5c95",
+      "modelId": "casual",
+      "modelSource": "asset",
+      "selection": "wave",
+      "view": "close-up-three-quarter",
+      "normalizedTime": 0.5,
+      "performanceProfileId": "performance.casual",
+      "performanceIntents": ["neutral-hold", "indicate", "acknowledge"]
+    },
+    {
+      "path": "docs/screenshots/npc-performance-003/npc-worker-neutral-full-body.png",
+      "sha256": "22ca1012deb8bc737d8bb421a6967850569ec37f853dbe57e388b499b2c1c1b2",
+      "modelId": "npc-worker",
+      "modelSource": "asset",
+      "selection": "idle",
+      "view": "front",
+      "normalizedTime": 0.35,
+      "performanceProfileId": "performance.npc-worker",
+      "performanceIntents": ["neutral-hold", "applaud"]
+    },
+    {
+      "path": "docs/screenshots/npc-performance-003/npc-worker-neutral-medium-close-up.png",
+      "sha256": "e357e479183f8d03ed56f3101844b37288aa10aba649bfee5bbd5bc15678d9e4",
+      "modelId": "npc-worker",
+      "modelSource": "asset",
+      "selection": "idle",
+      "view": "close-up-three-quarter",
+      "normalizedTime": 0.35,
+      "performanceProfileId": "performance.npc-worker",
+      "performanceIntents": ["neutral-hold", "applaud"]
+    },
+    {
+      "path": "docs/screenshots/npc-performance-003/npc-hoodie-neutral-full-body.png",
+      "sha256": "38cd6a2a08d03602ff9f36b2bf608981a20afe11e773f60a8db1069f790c4174",
+      "modelId": "npc-hoodie",
+      "modelSource": "asset",
+      "selection": "idle",
+      "view": "front",
+      "normalizedTime": 0.35,
+      "performanceProfileId": "performance.npc-hoodie",
+      "performanceIntents": ["neutral-hold", "applaud"]
+    },
+    {
+      "path": "docs/screenshots/npc-performance-003/npc-hoodie-neutral-medium-close-up.png",
+      "sha256": "19d3ef856b8da2d33e7f948156f3b49390748a44a8e402a2698b509a25e4f8b9",
+      "modelId": "npc-hoodie",
+      "modelSource": "asset",
+      "selection": "idle",
+      "view": "close-up-three-quarter",
+      "normalizedTime": 0.35,
+      "performanceProfileId": "performance.npc-hoodie",
+      "performanceIntents": ["neutral-hold", "applaud"]
+    },
+    {
+      "path": "docs/screenshots/npc-performance-003/npc-punk-neutral-full-body.png",
+      "sha256": "5864193b5bc2d364f94f2b0d5baf3b6fc4df989f613b214eb99f3f0c11a6388f",
+      "modelId": "npc-punk",
+      "modelSource": "asset",
+      "selection": "idle",
+      "view": "front",
+      "normalizedTime": 0.35,
+      "performanceProfileId": "performance.npc-punk",
+      "performanceIntents": ["neutral-hold", "applaud"]
+    },
+    {
+      "path": "docs/screenshots/npc-performance-003/npc-punk-neutral-medium-close-up.png",
+      "sha256": "17d7e384938aeacd4217ecabff0fa8f59c693a99437b5583bdbfeff5b1a391ce",
+      "modelId": "npc-punk",
+      "modelSource": "asset",
+      "selection": "idle",
+      "view": "close-up-three-quarter",
+      "normalizedTime": 0.35,
+      "performanceProfileId": "performance.npc-punk",
+      "performanceIntents": ["neutral-hold", "applaud"]
+    }
+  ],
+  "diagnostics": {
+    "consoleErrors": [],
+    "pageErrors": [],
+    "failedRequests": [
+      "HEAD http://127.0.0.1:4374/assets/characters/ultimate-modular-men/casual-character.glb",
+      "HEAD http://127.0.0.1:4374/assets/characters/animated-men/mack-long-sleeves.glb",
+      "HEAD http://127.0.0.1:4374/assets/characters/animated-men/nox-layered-shirt.glb",
+      "HEAD http://127.0.0.1:4374/assets/characters/animated-men/raze-suit.glb"
+    ],
+    "failedRuntimeRequests": [],
+    "externalRequests": []
+  }
+}

@@ -18,6 +18,7 @@ import {
 } from '../src/player/CharacterPlayerVisual';
 import { CharacterEquipment } from '../src/equipment/CharacterEquipment';
 import { flushPromises } from './helpers/flushPromises';
+import { characterDefinitions } from '../src/characters/characters';
 
 const definitions = [
   {
@@ -81,6 +82,72 @@ function movement(
 }
 
 describe('CharacterPlayerVisual', () => {
+  it('composes cinematic intent and exact restoration through the existing mixer', async () => {
+    const casual = characterDefinitions.find(({ id }) => id === 'casual')!;
+    const selection = new CharacterSelectionStore([casual], 'casual');
+    const instance = loadedCharacter(
+      casual,
+      'asset',
+      new Map([
+        ['idle', new AnimationClip('Idle', 1, [])],
+        ['walk', new AnimationClip('Walk', 1, [])],
+        ['interact', new AnimationClip('Interact', 0.8, [])],
+        ['wave', new AnimationClip('Wave', 0.8, [])],
+      ]),
+    );
+    const visual = new CharacterPlayerVisual(selection, {
+      instantiate: vi.fn(async () => instance),
+    });
+    await visual.init();
+    visual.sync(movement('walking', 0.7), 0.32);
+    const before = visual.getDebugSnapshot();
+    const token = visual.capturePerformanceState();
+
+    expect(
+      visual.preflightPerformance({
+        requestId: 'missing',
+        cueId: 'cue-missing',
+        shotId: 'shot-medium',
+        intent: 'speak-restrained',
+      }),
+    ).toMatchObject({ ok: false, reason: 'missing-performance' });
+    expect(
+      visual.startPerformance({
+        requestId: 'rook-indicate',
+        cueId: 'cue-indicate',
+        shotId: 'shot-medium',
+        intent: 'indicate',
+        targetParticipantId: 'mack',
+        targetFacingYaw: 1.4,
+      }),
+    ).toMatchObject({ ok: true, resolvedAnimationId: 'interact' });
+    visual.sync(movement('walking', 0.9), 0.1);
+    expect(visual.getDebugSnapshot()).toMatchObject({
+      animationState: 'action:interact',
+      performance: {
+        state: 'performing',
+        requestedIntent: 'indicate',
+        mixerOwnerCount: 1,
+      },
+    });
+    expect(visual.holdPerformance('rook-indicate')).toBe(true);
+    expect(visual.releasePerformance('rook-indicate', 'skipped')).toBe(true);
+    expect(visual.restorePerformance(token)).toBe(true);
+    visual.sync(movement('walking', 0.7), 0);
+    const restored = visual.getDebugSnapshot();
+    expect(restored.locomotion).toMatchObject({
+      movement: before.locomotion.movement,
+      baseClip: before.locomotion.baseClip,
+    });
+    expect(visual.visualRoot.rotation.y).toBeCloseTo(0.7);
+    expect(restored.performance).toMatchObject({
+      state: 'gameplay',
+      restoreGeneration: 1,
+      mixerOwnerCount: 1,
+    });
+    visual.dispose();
+  });
+
   it('prevents stale asynchronous loads from replacing a newer selection', async () => {
     const selection = new CharacterSelectionStore(definitions, 'first');
     const loads = new Map<string, Deferred<LoadedCharacter>>(
