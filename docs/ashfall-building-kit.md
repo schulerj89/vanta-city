@@ -18,7 +18,7 @@ The 26 reusable shells span 6–22m footprints, 4.5–18m heights, eight wall/fr
 
 ## Runtime and material policy
 
-- Eleven 512×512 JPEG albedo textures form the controlled palette: eight facade/frontage surfaces, one roof, one sidewalk, and one curb. Seven are the accepted image-generated originals; four BUILDINGS-002 surfaces are deterministic project-owned procedural originals. `validate:buildings` hash-pins every file and caps aggregate size at 1.1 MiB; the current set is 817,716 bytes.
+- Thirteen 512×512 JPEG albedo textures form the controlled palette: eight facade/frontage surfaces, one roof, one sidewalk, one curb, and two WORLD-004 interior floors. Seven are accepted image-generated originals; six are deterministic project-owned procedural originals. `validate:buildings` hash-pins every file and caps aggregate size at 1.1 MiB; the current set is 979,948 bytes.
 - Textures load through the authoritative asset catalog and `GameAssetLoader`. Runtime URLs are local project paths; there is no runtime network dependency.
 - Repeating UVs are encoded in box geometry. Facades repeat every 3–4m, the sidewalk every 6m, and the curb every 3m. Shared materials and loader-cached textures prevent per-building texture allocation.
 - Shallow cornice bands, roof caps, frontage bands, and opaque entrance bays improve street readability without creating alternate collision or lifecycle ownership. All detail remains inside the authored footprint. `near-detail` frontage and `far-detail` roof/cornice pieces use the same object tags consumed by gameplay's existing LevelSystem LOD visibility policy.

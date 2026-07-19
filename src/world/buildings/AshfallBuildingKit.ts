@@ -68,6 +68,8 @@ export const ashfallBuildingTextureIds = {
   ceramicTile: 'environment.ashfall-building.ceramic-tile',
   glassBlock: 'environment.ashfall-building.glass-block',
   paintedShopfront: 'environment.ashfall-building.painted-shopfront',
+  venueTerrazzo: 'environment.ashfall-building.venue-terrazzo',
+  homeLinoleum: 'environment.ashfall-building.home-linoleum',
 } as const;
 
 export const ashfallBuildingAssets = {
@@ -125,6 +127,16 @@ export const ashfallBuildingAssets = {
     'painted-shopfront.procedural.jpg',
     'Ashfall painted shopfront panels',
     'painted-shopfront',
+  ),
+  [ashfallBuildingTextureIds.venueTerrazzo]: proceduralTexture(
+    'venue-terrazzo.procedural.jpg',
+    'Ashfall Nightglass terrazzo',
+    'venue-terrazzo',
+  ),
+  [ashfallBuildingTextureIds.homeLinoleum]: proceduralTexture(
+    'home-linoleum.procedural.jpg',
+    'Rook home worn linoleum',
+    'home-linoleum',
   ),
 } as const;
 

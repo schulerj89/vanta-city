@@ -311,10 +311,10 @@ describe('PedestrianSystem', () => {
     await second.system.init();
 
     const snapshot = first.system.getSnapshot();
-    expect(snapshot.residentCount).toBe(16);
-    expect(snapshot.activeCount).toBe(16);
-    expect(snapshot.mixerOwnerCount).toBe(16);
-    expect(snapshot.routeCount).toBe(8);
+    expect(snapshot.residentCount).toBe(18);
+    expect(snapshot.activeCount).toBe(18);
+    expect(snapshot.mixerOwnerCount).toBe(18);
+    expect(snapshot.routeCount).toBe(10);
     expect(new Set(snapshot.pedestrians.map(({ modelId }) => modelId))).toEqual(
       new Set(pedestrianCharacterDefinitions.map(({ id }) => id)),
     );
@@ -355,8 +355,10 @@ describe('PedestrianSystem', () => {
     const moving = system.getSnapshot();
     expect(moving.pedestrians.every(({ grounded }) => grounded)).toBe(true);
     expect(
-      moving.pedestrians.every(({ groundColliderId }) =>
-        groundColliderId.startsWith('c.sidewalk-'),
+      moving.pedestrians.every(
+        ({ groundColliderId }) =>
+          groundColliderId.startsWith('c.sidewalk-') ||
+          groundColliderId.startsWith('c.interior-'),
       ),
     ).toBe(true);
     expect(sawIntentionalIdle).toBe(true);
@@ -395,26 +397,26 @@ describe('PedestrianSystem', () => {
         levelId: testDistrict.definition.id,
         sectorId: 'sector.northwest',
       });
-      expect(system.getSnapshot().residentCount).toBe(13);
+      expect(system.getSnapshot().residentCount).toBe(15);
       events.emit('sector:loaded', {
         levelId: testDistrict.definition.id,
         sectorId: 'sector.northwest',
         colliders: [],
       });
       await flushPromises();
-      expect(system.getSnapshot().residentCount).toBe(16);
-      expect(system.getSnapshot().mixerOwnerCount).toBe(16);
+      expect(system.getSnapshot().residentCount).toBe(18);
+      expect(system.getSnapshot().mixerOwnerCount).toBe(18);
     }
     const snapshot = system.getSnapshot();
     expect(snapshot.disposeCount).toBe(9);
-    expect(snapshot.spawnCount).toBe(25);
-    expect(scene.children).toHaveLength(16);
+    expect(snapshot.spawnCount).toBe(27);
+    expect(scene.children).toHaveLength(18);
     expect(loader.disposed).toBe(9);
     levels.activeLevel = undefined;
     events.emit('level:unloaded', { levelId: testDistrict.definition.id });
     expect(system.getSnapshot().residentCount).toBe(0);
     expect(scene.children).toHaveLength(0);
-    expect(loader.disposed).toBe(25);
+    expect(loader.disposed).toBe(27);
     system.dispose();
   });
 

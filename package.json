@@ -40,6 +40,7 @@
     "validate:intersection": "tsx scripts/validate-intersection-assets.ts",
     "validate:buildings": "tsx scripts/validate-building-assets.ts",
     "validate:traffic": "tsx scripts/validate-traffic-assets.ts",
+    "validate:world-004": "tsx scripts/validate-world-004.ts",
     "validate:narrative": "node scripts/narrative/validate-story-bible.mjs",
     "narrative:render": "node scripts/narrative/render-story-bible.mjs"
   },

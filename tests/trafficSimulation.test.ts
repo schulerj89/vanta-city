@@ -31,9 +31,9 @@ describe('TrafficSimulation', () => {
         signals: { ...defaultTrafficSignalConfig, greenDuration: 30 },
       }),
     );
-    expect(traffic.spawn('north')).toMatchObject({ x: -1.5, z: 32 });
+    expect(traffic.spawn('north')).toMatchObject({ x: -1.5, z: 40.75 });
 
-    traffic.update(7);
+    traffic.update(10);
 
     expect(traffic.getSnapshot()).toMatchObject({
       count: 0,
@@ -81,7 +81,7 @@ describe('TrafficSimulation', () => {
     traffic.spawn('north');
     traffic.spawn('west');
 
-    traffic.update(8);
+    traffic.update(10);
     const north = traffic
       .getSnapshot()
       .vehicles.find(({ approach }) => approach === 'north')!;
@@ -115,14 +115,14 @@ describe('TrafficSimulation', () => {
         speed: 8,
         acceleration: 100,
         signals: {
-          greenDuration: 2.65,
+          greenDuration: 3.5,
           yellowDuration: 3,
           allRedDuration: 1,
         },
       }),
     );
     traffic.spawn('north');
-    traffic.update(2.75);
+    traffic.update(3.6);
     const committed = traffic.getSnapshot().vehicles[0]!;
     expect(committed.signalIndication).toBe('yellow');
     expect(committed.committedToIntersection).toBe(true);
@@ -155,17 +155,15 @@ describe('TrafficSimulation', () => {
     )!;
     expect(east.points.length).toBeGreaterThan(3);
     expect(west.points.length).toBeGreaterThan(3);
-    expect(east.startX).toBeGreaterThan(47);
-    expect(east.startX).toBeLessThan(48);
+    expect(east.startX).toBe(58.6875);
     expect(east.startZ).toBeGreaterThan(8);
-    expect(west.startX).toBe(-33.75);
-    expect(west.points.at(-1)!.x).toBeGreaterThan(47);
-    expect(west.points.at(-1)!.x).toBeLessThan(48.2);
+    expect(west.startX).toBe(-44.6875);
+    expect(west.points.at(-1)!.x).toBe(58.6875);
     expect(west.points.at(-1)!.z).toBeLessThan(8);
 
     const traffic = new TrafficSimulation(config({ speed: 8 }));
     traffic.spawn('east');
-    traffic.update(1);
+    traffic.update(3);
     const curved = traffic.getSnapshot().vehicles[0]!;
     expect(Math.abs(curved.directionX)).toBeGreaterThan(0.7);
     expect(Math.abs(curved.directionZ)).toBeGreaterThan(0.1);

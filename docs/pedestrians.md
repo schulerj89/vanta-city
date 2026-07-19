@@ -43,6 +43,15 @@ and map states already stop simulation updates; the pedestrian owner additionall
 freezes during cinematics and resumes the exact route position, facing, animation,
 and pause timer afterward.
 
+WORLD-004 extends the same route union with optional `purpose: 'interior'`.
+Interior routes must remain looping, use a sector-owned collider tagged
+`pedestrian-interior`, and otherwise retain the same deterministic population,
+verified walk/idle animation, collision, visibility, snapshot, mixer, and
+disposal ownership. One service walker in Nightglass and one modest home walker
+raise the authored resident cap from 16 to 18. Neither route claims dance,
+conversation, applause, or NPC identity; INTERIOR-POP-001 owns the later cast
+and performance handoff.
+
 ## Public diagnostics and visual decisions
 
 `PedestrianSystem.getSnapshot()` is the stable test/debug seam. It reports the

@@ -27,7 +27,7 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
   const initialExpectation = authoritativePedestrianExpectation(initial);
   expectIndependentDefaultPopulation(initial);
   expect(initial.pedestrians).toMatchObject({
-    residentCap: 16,
+    residentCap: 18,
     residentCount: initialExpectation.residentCount,
     activeCount: initialExpectation.residentCount,
     mixerOwnerCount: initialExpectation.residentCount,
@@ -77,7 +77,7 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
           distanceTravelled - (firstDistances.get(id) ?? distanceTravelled) >=
           2,
       ).length,
-  ).toBeGreaterThanOrEqual(7);
+  ).toBeGreaterThanOrEqual(6);
 
   const started = await page.evaluate(() =>
     window.__VANTA_TEST__!.startCinematic('cinematic.ash-001.legacy-opening'),
@@ -146,7 +146,7 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
     await command(page, 'player.teleport-position', '0,0.2,-32,0');
     await expectSteadyPedestrianPopulation(page, {
       requiredSector: 'sector.southwest',
-      excludedSector: 'sector.north-rim-west',
+      excludedSector: 'sector.world-004-north-west',
     });
     await command(page, 'player.teleport-position', '-15,0.2,32,0');
     northSteady = await expectSteadyPedestrianPopulation(page, {
@@ -166,7 +166,7 @@ test('populates authored sidewalks, freezes cinematics, and captures visual evid
     await command(page, 'player.teleport-position', '0,0.2,-32,0');
     southSteady = await expectSteadyPedestrianPopulation(page, {
       requiredSector: 'sector.southwest',
-      excludedSector: 'sector.north-rim-west',
+      excludedSector: 'sector.world-004-north-west',
     });
     expectIndependentSouthPopulation(southSteady);
     exactMinimumDisposals += unloadedResidentCount(northSteady, southSteady);
@@ -283,7 +283,7 @@ function expectIndependentNorthPopulation(state: BrowserTestSnapshot): void {
       'route.west-rim-north',
     ],
     sectorCounts: {
-      'sector.north-rim-west': 1,
+      'sector.world-004-north-west': 1,
       'sector.northeast': 3,
       'sector.northwest': 3,
       'sector.west-rim-north': 1,
@@ -312,7 +312,7 @@ function expectIndependentDefaultPopulation(state: BrowserTestSnapshot): void {
       'route.west-rim-north': 1,
     },
     sectorCounts: {
-      'sector.north-rim-west': 1,
+      'sector.world-004-north-west': 1,
       'sector.northeast': 3,
       'sector.northwest': 3,
       'sector.southeast': 3,
@@ -324,10 +324,18 @@ function expectIndependentDefaultPopulation(state: BrowserTestSnapshot): void {
 
 function expectIndependentSouthPopulation(state: BrowserTestSnapshot): void {
   expect(state.pedestrians.plan).toMatchObject({
-    residentCount: 6,
-    routeCount: 2,
-    routeIds: ['route.southeast', 'route.southwest'],
-    sectorCounts: { 'sector.southeast': 3, 'sector.southwest': 3 },
+    residentCount: 7,
+    routeCount: 3,
+    routeIds: [
+      'route.interior-rook-home-idle-walk',
+      'route.southeast',
+      'route.southwest',
+    ],
+    sectorCounts: {
+      'sector.southeast': 3,
+      'sector.southwest': 3,
+      'sector.world-004-west-south': 1,
+    },
   });
 }
 

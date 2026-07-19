@@ -21,14 +21,14 @@ test.describe('time-of-day lighting', () => {
     await expectLighting(page, 'night', 1);
     const night = await snapshot(page);
     expect(night.lighting).toMatchObject({
-      localLightCount: 2,
-      emissiveFixtureCount: 2,
+      localLightCount: 4,
+      emissiveFixtureCount: 1,
       maxLocalLights: 4,
       shadowsEnabled: false,
     });
-    expect(night.performance.renderer.drawCalls).toBeLessThan(120);
+    expect(night.performance.renderer.drawCalls).toBeLessThan(260);
     await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(
-      10,
+      39,
     );
     expect(await loadedStreetscapeTextures(page)).toHaveLength(7);
     await attachScreenshot(page, testInfo, 'ashfall-night-desktop');

@@ -348,7 +348,7 @@ describe('LevelSystem', () => {
     expect(scene.getObjectByName('collision-geometry')?.visible).toBe(false);
     expect(loaded).toHaveBeenCalledOnce();
     expect(system.getStreamingSnapshot()).toMatchObject({
-      authored: 14,
+      authored: 22,
       active: [
         'sector.core',
         'sector.north-rim-west',

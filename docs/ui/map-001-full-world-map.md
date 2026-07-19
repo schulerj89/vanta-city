@@ -138,6 +138,16 @@ the browser console/page-error list is empty. Baseline changes are intentional
 because `pause-map` moves from a documented unavailable dependency to the first
 production full-map composition.
 
+## WORLD-004 data growth
+
+The existing map component and interaction contract are unchanged. WORLD-004
+updates only `LevelDefinition.mapPresentation`, which now supplies bounds X
+`[-47.6875, 61.6875]`, Z `[-43.75, 43.75]`, ten road references, 39 structure
+footprints (37 catalog shells plus two enterable interior floors), 22 authored
+sectors, and home/clinic/Nightglass/Rook-flat markers. Desktop and narrow visual
+evidence is recorded under `docs/screenshots/world-004`; no second projection,
+map state, focus owner, input listener, or decorative geometry source was added.
+
 ## Implementation and baseline decisions
 
 - The shared MISSION-001 contract was consumed from contract-only commit

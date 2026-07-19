@@ -19,6 +19,8 @@ export interface PedestrianRouteNodeDefinition {
 interface PedestrianRouteBaseDefinition {
   readonly id: string;
   readonly sectorId: string;
+  /** Defaults to sidewalk; interior routes retain the same population owner. */
+  readonly purpose?: 'sidewalk' | 'interior';
   readonly nodes: readonly PedestrianRouteNodeDefinition[];
   readonly population: number;
   readonly speed: readonly [minimum: number, maximum: number];
@@ -92,6 +94,9 @@ export function validatePedestrianPopulation(
     if (routeIds.has(route.id))
       issues.push(`pedestrians duplicate route id "${route.id}"`);
     routeIds.add(route.id);
+    if (route.purpose === 'interior' && !route.loop) {
+      issues.push(`${route.id} interior routes must loop inside their room`);
+    }
     const sector = sectors.get(route.sectorId);
     if (!sector)
       issues.push(
@@ -125,9 +130,11 @@ export function validatePedestrianPopulation(
           `${route.id}.${node.id} references missing surface "${node.surfaceColliderId}"`,
         );
       } else {
-        if (!collider.tags?.includes('sidewalk'))
+        const expectedSurfaceTag =
+          route.purpose === 'interior' ? 'pedestrian-interior' : 'sidewalk';
+        if (!collider.tags?.includes(expectedSurfaceTag))
           issues.push(
-            `${route.id}.${node.id} surface "${collider.id}" is not tagged sidewalk`,
+            `${route.id}.${node.id} surface "${collider.id}" is not tagged ${expectedSurfaceTag}`,
           );
         if (!pointInsideColliderXZ(node.position, collider))
           issues.push(
@@ -156,7 +163,7 @@ export function validatePedestrianPopulation(
     }
     if (surfaceIds.size > 1)
       issues.push(
-        `${route.id} crosses sidewalk surfaces; split it into curb-safe routes`,
+        `${route.id} crosses pedestrian surfaces; split it into safe routes`,
       );
     validateRouteLifecycle(level, colliders, route, issues);
   }

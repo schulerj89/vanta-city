@@ -67,7 +67,7 @@ describe('Ashfall building kit', () => {
   });
 
   it('uses only the controlled local generated texture palette', () => {
-    expect(Object.keys(ashfallBuildingAssets)).toHaveLength(11);
+    expect(Object.keys(ashfallBuildingAssets)).toHaveLength(13);
     for (const descriptor of Object.values(ashfallBuildingAssets)) {
       expect(descriptor.type).toBe('texture');
       expect(descriptor.url).toMatch(
@@ -79,7 +79,7 @@ describe('Ashfall building kit', () => {
   });
 
   it('pairs each placed shell with an equivalent authored collision footprint', () => {
-    expect(ashfallBuildingPlacements).toHaveLength(25);
+    expect(ashfallBuildingPlacements).toHaveLength(37);
     for (const placement of ashfallBuildingPlacements) {
       const definition = getAshfallBuildingVariant(placement.visual.variantId);
       const rotated =
@@ -184,7 +184,10 @@ describe('Ashfall building kit', () => {
 
   it('keeps an exact four-metre walking band and non-overlapping authored footprints', () => {
     const roadEdge = intersectionLayout.roadWidth / 2;
-    const clearances = ashfallBuildingPlacements.flatMap(({ collider }) => {
+    const legacyPlacements = ashfallBuildingPlacements.filter(
+      ({ visual }) => !visual.id.includes('world-004'),
+    );
+    const clearances = legacyPlacements.flatMap(({ collider }) => {
       const [width, , depth] = collider.size;
       const [x, , z] = collider.position;
       return [

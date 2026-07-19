@@ -28,7 +28,13 @@ import {
   world003EastQuayGroundFill,
   world003JunctionPlan,
   world003StreetEdgeVisuals,
+  world004BuildingPlacements,
+  world004ClinicFoyer,
+  world004JunctionPlan,
+  world004Roads,
+  world004Sidewalks,
 } from '../../src/world/levels/junctionGrowth';
+import { ashfallInteriors } from '../../src/world/interiors/AshfallInteriorKit';
 import {
   offsetSplineSamples,
   sampleSplineRoad,
@@ -49,7 +55,8 @@ const approaches = [
 describe('Ashfall Junction intersection', () => {
   it('uses long out-and-back traversals instead of compact box patrols', () => {
     const looping = testDistrict.definition.pedestrians.routes.filter(
-      ({ loop }) => loop,
+      (route) =>
+        route.loop && (!('purpose' in route) || route.purpose !== 'interior'),
     );
     expect(looping).toHaveLength(7);
     for (const route of looping) {
@@ -95,7 +102,7 @@ describe('Ashfall Junction intersection', () => {
           id.startsWith('c.east-quay-ground') ||
           id.startsWith('c.boundary-')),
     );
-    expect(structural).toHaveLength(26);
+    expect(structural).toHaveLength(39);
     for (const definition of structural) {
       const visual = visuals.get(definition.id.replace(/^c\./, 'v.'));
       expect(visual, definition.id).toBeDefined();
@@ -108,10 +115,10 @@ describe('Ashfall Junction intersection', () => {
     const collision = new StaticCollisionWorld();
     collision.addDefinitions(testDistrict.definition.staticCollision);
     for (const [from, to, expected] of [
-      [[0, 1, 32], [0, 1, 36], 'c.boundary-north-east'],
-      [[7, 1, -32], [7, 1, -36], 'c.boundary-south'],
-      [[48, 1, 0], [52, 1, 0], 'c.boundary-east'],
-      [[-34, 1, 0], [-38, 1, 0], 'c.boundary-west'],
+      [[0, 1, 41], [0, 1, 45], 'c.boundary-north-east'],
+      [[0, 1, -41], [0, 1, -45], 'c.boundary-south'],
+      [[59, 1, 0], [63, 1, 0], 'c.boundary-east'],
+      [[-45, 1, 0], [-49, 1, 0], 'c.boundary-west'],
     ] as const) {
       expect(
         collision.castSegment(new Vector3(...from), new Vector3(...to))
@@ -119,7 +126,7 @@ describe('Ashfall Junction intersection', () => {
       ).toBe(expected);
     }
     expect(
-      collision.castSegment(new Vector3(-15, 1, 32), new Vector3(-15, 1, 36), {
+      collision.castSegment(new Vector3(-15, 1, 41), new Vector3(-15, 1, 45), {
         radius: defaultPlayerMovementConfig.radius,
       }),
     ).toMatchObject({
@@ -133,7 +140,11 @@ describe('Ashfall Junction intersection', () => {
       expect.objectContaining({
         id: 'zone.ashfall-junction',
         position: [7, 3, 0],
-        size: [world002BPlan.widthMetres, 10, world002BPlan.depthMetres],
+        size: [
+          world004JunctionPlan.widthMetres,
+          10,
+          world004JunctionPlan.depthMetres,
+        ],
       }),
     );
     for (const control of intersectionTrafficControls.approaches) {
@@ -194,9 +205,7 @@ describe('Ashfall Junction intersection', () => {
     expect(((areaB - areaA) / areaA) * 100).toBe(25);
     expect(world002BPlan.widthMetres / 70).toBe(1.25);
     expect(world002BPlan.depthMetres / 56).toBe(1.25);
-    expect(testDistrict.definition.mapPresentation.bounds).toEqual(bounds);
-    expect(ashfallBuildingPlacements).toHaveLength(25);
-    expect(testDistrict.definition.streaming.sectors).toHaveLength(14);
+    expect(testDistrict.definition.mapPresentation.bounds).not.toEqual(bounds);
     expect(
       testDistrict.definition.streaming.sectors.map(({ id }) => id),
     ).toEqual(
@@ -284,13 +293,102 @@ describe('Ashfall Junction intersection', () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
+  it('grows every current half-extent by exactly 25 percent for WORLD-004', () => {
+    const { bounds } = world004JunctionPlan;
+    expect(bounds).toEqual({
+      minX: -47.6875,
+      maxX: 61.6875,
+      minZ: -43.75,
+      maxZ: 43.75,
+    });
+    expect(bounds.maxX - bounds.minX).toBe(109.375);
+    expect(bounds.maxZ - bounds.minZ).toBe(87.5);
+    expect((bounds.maxX - bounds.minX) * (bounds.maxZ - bounds.minZ)).toBe(
+      9570.3125,
+    );
+    expect(world004JunctionPlan.targetHalfExtents.x / 43.75).toBe(1.25);
+    expect(world004JunctionPlan.targetHalfExtents.z / 35).toBe(1.25);
+    expect(testDistrict.definition.mapPresentation.bounds).toEqual(bounds);
+    expect(world004BuildingPlacements).toHaveLength(12);
+    expect(ashfallBuildingPlacements).toHaveLength(37);
+    expect(testDistrict.definition.streaming.sectors).toHaveLength(22);
+    expect(world004JunctionPlan.addedSectorIds).toHaveLength(8);
+  });
+
+  it('owns every WORLD-004 road, sidewalk, building, clinic, and interior exactly once', () => {
+    const ownerCounts = new Map<string, number>();
+    for (const sector of testDistrict.definition.streaming.sectors) {
+      for (const entryId of sector.entryIds) {
+        ownerCounts.set(entryId, (ownerCounts.get(entryId) ?? 0) + 1);
+      }
+    }
+    const entries = [
+      ...world004Roads.flatMap(({ visual, collider }) => [
+        visual.id,
+        collider.id,
+      ]),
+      ...world004Sidewalks.flatMap(({ visual, collider }) => [
+        visual.id,
+        collider.id,
+      ]),
+      ...world004BuildingPlacements.flatMap(({ visual, collider }) => [
+        visual.id,
+        collider.id,
+      ]),
+      world004ClinicFoyer.visual.id,
+      world004ClinicFoyer.collider.id,
+      ...ashfallInteriors.flatMap(({ visuals, colliders }) => [
+        ...visuals.map(({ id }) => id),
+        ...colliders.map(({ id }) => id),
+      ]),
+    ];
+    for (const id of entries) expect(ownerCounts.get(id), id).toBe(1);
+  });
+
+  it('authors safe home and clinic spawns plus distinct enterable room shells', () => {
+    const collision = new StaticCollisionWorld();
+    collision.addDefinitions(testDistrict.definition.staticCollision);
+    for (const id of ['spawn.player.home', 'spawn.player.clinic'] as const) {
+      const spawn = findSpawn(testDistrict.definition, id);
+      const grounded = collision.moveCharacter(
+        new Vector3(...spawn.position),
+        new Vector3(0, -1, 0),
+        defaultPlayerMovementConfig,
+        false,
+      );
+      expect(grounded.grounded, id).toBe(true);
+      expect(grounded.blocked, id).toBe(false);
+    }
+    expect(ashfallInteriors.map(({ id }) => id)).toEqual([
+      'night-venue',
+      'rook-home',
+    ]);
+    for (const interior of ashfallInteriors) {
+      expect(interior.visuals.length).toBeGreaterThanOrEqual(12);
+      expect(interior.colliders.length).toBeGreaterThanOrEqual(10);
+      expect(testDistrict.definition.locations).toContainEqual(
+        expect.objectContaining({ id: interior.location.id }),
+      );
+      expect(interior.anchors).toHaveLength(2);
+      const route = testDistrict.definition.pedestrians.routes.find(
+        (candidate) =>
+          candidate.sectorId === interior.sectorId &&
+          'purpose' in candidate &&
+          candidate.purpose === 'interior',
+      );
+      expect(route).toBeDefined();
+    }
+  });
+
   it('makes the final footprint legible without applying another area milestone', () => {
     expect(world003JunctionPlan.bounds).toBe(world002BPlan.bounds);
     expect(world003JunctionPlan.playableAreaSquareMetres).toBe(6125);
     expect(world003JunctionPlan.growthPercent).toBe(0);
-    expect(ashfallBuildingPlacements).toHaveLength(
-      world003JunctionPlan.buildingCountAfter,
-    );
+    expect(
+      ashfallBuildingPlacements.filter(
+        ({ visual }) => !visual.id.includes('world-004'),
+      ),
+    ).toHaveLength(world003JunctionPlan.buildingCountAfter);
     expect(world003BuildingPlacements).toHaveLength(3);
     expect(world003StreetEdgeVisuals).toHaveLength(9);
 
@@ -337,7 +435,7 @@ describe('Ashfall Junction intersection', () => {
         new Set(route.nodes.map(({ surfaceColliderId }) => surfaceColliderId))
           .size,
       ).toBe(1);
-      expect(route.nodes[0]!.surfaceColliderId).toMatch(/rim/);
+      expect(route.nodes[0]!.surfaceColliderId).toMatch(/rim|world-004/);
       for (const node of route.nodes) {
         for (const { collider: building } of ashfallBuildingPlacements) {
           const clear =
@@ -361,18 +459,18 @@ describe('Ashfall Junction intersection', () => {
       },
     });
     expect(northExit.nodes.at(-2)!.position[2]).toBeLessThan(
-      world002BPlan.bounds.maxZ,
+      world004JunctionPlan.bounds.maxZ,
     );
     expect(northExit.nodes.at(-1)!.position[2]).toBe(
-      world002BPlan.bounds.maxZ + 0.4,
+      world004JunctionPlan.bounds.maxZ + 0.7,
     );
     expect(
       new Set(
         northExit.nodes.map(({ surfaceColliderId }) => surfaceColliderId),
       ),
-    ).toEqual(new Set(['c.sidewalk-north-rim-west']));
+    ).toEqual(new Set(['c.sidewalk-world-004-north-west']));
     const exitSurface = testDistrict.definition.staticCollision.find(
-      ({ id }) => id === 'c.sidewalk-north-rim-west',
+      ({ id }) => id === 'c.sidewalk-world-004-north-west',
     )!;
     const terminal = northExit.nodes.at(-1)!.position;
     expect(
@@ -396,7 +494,7 @@ describe('Ashfall Junction intersection', () => {
     );
     expect(groundedTerminal).toMatchObject({
       grounded: true,
-      groundColliderId: 'c.sidewalk-north-rim-west',
+      groundColliderId: 'c.sidewalk-world-004-north-west',
     });
     expect(
       routes.some((route) =>

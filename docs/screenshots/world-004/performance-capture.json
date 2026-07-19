@@ -1,0 +1,277 @@
+{
+  "warmupMs": 20000,
+  "measurementMs": 60000,
+  "frames": 33052,
+  "averageFps": 550.8611580550861,
+  "onePercentLowFps": 277.77777777789004,
+  "frameTimeP95Ms": 3,
+  "frameTimeMaxMs": 6.899999999994179,
+  "renderer": {
+    "frameTime": {
+      "enabled": true,
+      "samples": 120,
+      "minMs": 0.19999998807907104,
+      "averageMs": 1.2233333356678486,
+      "maxMs": 2.4000000059604645,
+      "p95Ms": 2.300000011920929
+    },
+    "drawCalls": 83,
+    "triangles": 12446,
+    "geometries": 145,
+    "textures": 62,
+    "pixelRatio": 1,
+    "viewport": {
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "bufferWidth": 1280,
+      "bufferHeight": 720
+    }
+  },
+  "sectors": {
+    "levelId": "test-district",
+    "authored": 22,
+    "active": [
+      "sector.core",
+      "sector.east-quay",
+      "sector.east-rim-north",
+      "sector.east-rim-south",
+      "sector.north-rim-east",
+      "sector.northeast",
+      "sector.world-004-east-north",
+      "sector.world-004-north-east"
+    ],
+    "pending": [],
+    "states": {
+      "sector.core": "active",
+      "sector.east-quay": "active",
+      "sector.east-rim-north": "active",
+      "sector.east-rim-south": "active",
+      "sector.north-rim-east": "active",
+      "sector.north-rim-west": "inactive",
+      "sector.northeast": "active",
+      "sector.northwest": "inactive",
+      "sector.south-rim-east": "inactive",
+      "sector.south-rim-west": "inactive",
+      "sector.southeast": "inactive",
+      "sector.southwest": "inactive",
+      "sector.west-rim-north": "inactive",
+      "sector.west-rim-south": "inactive",
+      "sector.world-004-east-north": "active",
+      "sector.world-004-east-south": "inactive",
+      "sector.world-004-north-east": "active",
+      "sector.world-004-north-west": "inactive",
+      "sector.world-004-south-east": "inactive",
+      "sector.world-004-south-west": "inactive",
+      "sector.world-004-west-north": "inactive",
+      "sector.world-004-west-south": "inactive"
+    },
+    "loadCount": 15,
+    "unloadCount": 7,
+    "sceneObjects": 252,
+    "ownedResources": 318,
+    "modelInstances": 2,
+    "colliders": 51,
+    "lodHiddenObjects": 36,
+    "transitionsPending": false,
+    "pinnedSectors": [],
+    "visualPathPinCount": 0,
+    "policy": {
+      "pressure": "low",
+      "memory": {
+        "pressure": "low",
+        "source": "heap-and-proxy",
+        "estimatedWorkingSetBytes": 221894432,
+        "estimatedWorkingSetMb": 211.61502075195312,
+        "preferredCeilingMb": 650,
+        "hardCeilingMb": 900,
+        "overHardCeiling": false
+      },
+      "teleported": false,
+      "desiredSectorIds": [
+        "sector.core",
+        "sector.east-quay",
+        "sector.east-rim-north",
+        "sector.east-rim-south",
+        "sector.north-rim-east",
+        "sector.northeast",
+        "sector.world-004-east-north",
+        "sector.world-004-north-east"
+      ],
+      "decisions": {
+        "sector.core": {
+          "sectorId": "sector.core",
+          "disposition": "retained",
+          "reason": "always-loaded",
+          "playerDistance": 60.73186972257647,
+          "protected": true
+        },
+        "sector.east-quay": {
+          "sectorId": "sector.east-quay",
+          "disposition": "retained",
+          "reason": "player-near",
+          "playerDistance": 27.154373496731605,
+          "protected": true
+        },
+        "sector.east-rim-north": {
+          "sectorId": "sector.east-rim-north",
+          "disposition": "retained",
+          "reason": "player-near",
+          "playerDistance": 12.821880712282423,
+          "protected": true
+        },
+        "sector.east-rim-south": {
+          "sectorId": "sector.east-rim-south",
+          "disposition": "retained",
+          "reason": "proximity-prefetch",
+          "playerDistance": 44.72583844937958,
+          "protected": false
+        },
+        "sector.north-rim-east": {
+          "sectorId": "sector.north-rim-east",
+          "disposition": "retained",
+          "reason": "player-near",
+          "playerDistance": 26.411183710693468,
+          "protected": true
+        },
+        "sector.north-rim-west": {
+          "sectorId": "sector.north-rim-west",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 75.9085016648333,
+          "protected": false
+        },
+        "sector.northeast": {
+          "sectorId": "sector.northeast",
+          "disposition": "retained",
+          "reason": "proximity-prefetch",
+          "playerDistance": 42.44007540049852,
+          "protected": false
+        },
+        "sector.northwest": {
+          "sectorId": "sector.northwest",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 69.62442100297855,
+          "protected": false
+        },
+        "sector.south-rim-east": {
+          "sectorId": "sector.south-rim-east",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 64.02773324896016,
+          "protected": false
+        },
+        "sector.south-rim-west": {
+          "sectorId": "sector.south-rim-west",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 95.72930912212833,
+          "protected": false
+        },
+        "sector.southeast": {
+          "sectorId": "sector.southeast",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 57.56005559413576,
+          "protected": false
+        },
+        "sector.southwest": {
+          "sectorId": "sector.southwest",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 79.7468494675495,
+          "protected": false
+        },
+        "sector.west-rim-north": {
+          "sectorId": "sector.west-rim-north",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 87.34930237271503,
+          "protected": false
+        },
+        "sector.west-rim-south": {
+          "sectorId": "sector.west-rim-south",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 97.29286009260906,
+          "protected": false
+        },
+        "sector.world-004-east-north": {
+          "sectorId": "sector.world-004-east-north",
+          "disposition": "retained",
+          "reason": "player-current",
+          "playerDistance": 2.6121785089269847,
+          "protected": true
+        },
+        "sector.world-004-east-south": {
+          "sectorId": "sector.world-004-east-south",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 47.9095342970739,
+          "protected": false
+        },
+        "sector.world-004-north-east": {
+          "sectorId": "sector.world-004-north-east",
+          "disposition": "retained",
+          "reason": "proximity-prefetch",
+          "playerDistance": 28.817377569792843,
+          "protected": false
+        },
+        "sector.world-004-north-west": {
+          "sectorId": "sector.world-004-north-west",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 76.77884637059873,
+          "protected": false
+        },
+        "sector.world-004-south-east": {
+          "sectorId": "sector.world-004-south-east",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 71.29474910538643,
+          "protected": false
+        },
+        "sector.world-004-south-west": {
+          "sectorId": "sector.world-004-south-west",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 100.73475691140571,
+          "protected": false
+        },
+        "sector.world-004-west-north": {
+          "sectorId": "sector.world-004-west-north",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 96.642115439194,
+          "protected": false
+        },
+        "sector.world-004-west-south": {
+          "sectorId": "sector.world-004-west-south",
+          "disposition": "inactive",
+          "reason": "outside-retention",
+          "playerDistance": 109.66402544390984,
+          "protected": false
+        }
+      }
+    },
+    "attempts": {}
+  },
+  "assets": {
+    "cacheEntries": 24,
+    "sourceReferences": 24,
+    "instanceReferences": 11,
+    "instancesCreated": 28,
+    "instancesDisposed": 17,
+    "loaded": 24,
+    "inFlight": 0,
+    "failures": 0,
+    "disposed": false
+  },
+  "browserMemory": {
+    "supported": true,
+    "usedJsHeapSize": 24500000,
+    "totalJsHeapSize": 27600000,
+    "jsHeapSizeLimit": 3760000000,
+    "peakUsedJsHeapSize": 24500000
+  }
+}

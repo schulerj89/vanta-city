@@ -950,6 +950,7 @@ export class LevelSystem implements GameSystem, LevelLocations {
           }),
         );
     const mesh = new Mesh(geometry, material);
+    if (visual.materialName) material.name = visual.materialName;
     mesh.name = `visual:${visual.id}`;
     mesh.receiveShadow = true;
     mesh.castShadow = true;

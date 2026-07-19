@@ -29,7 +29,6 @@ import {
   world002AWestRoad,
   world002BBuildingPlacements,
   world002BContact,
-  world002BPlan,
   world002BRimSpawns,
   world002BRoads,
   world002BSidewalks,
@@ -38,7 +37,13 @@ import {
   world003EastQuayGroundFill,
   world003EastQuayRimSeam,
   world003StreetEdgeVisuals,
+  world004BuildingPlacements,
+  world004ClinicFoyer,
+  world004JunctionPlan,
+  world004Roads,
+  world004Sidewalks,
 } from './junctionGrowth';
+import { ashfallInteriors } from '../interiors/AshfallInteriorKit';
 
 const colors = {
   asphalt: 0x24282b,
@@ -178,6 +183,7 @@ export const ashfallBuildingPlacements = [
   ...world002ABuildingPlacements,
   ...world002BBuildingPlacements,
   ...world003BuildingPlacements,
+  ...world004BuildingPlacements,
 ] as const;
 
 const buildings = ashfallBuildingPlacements.map(({ visual }) => visual);
@@ -216,11 +222,11 @@ for (const [id, signX, signZ] of [
 
 // Visible, collidable termination at every road end and around the outer corners.
 for (const [id, position, size] of [
-  ['boundary-north-west', [-25.375, 0.65, 34.5], [22.75, 1.3, 1]],
-  ['boundary-north-east', [18.375, 0.65, 34.5], [64.75, 1.3, 1]],
-  ['boundary-south', [7, 0.65, -34.5], [87.5, 1.3, 1]],
-  ['boundary-east', [50.25, 0.65, 0], [1, 1.3, 70]],
-  ['boundary-west', [-36.25, 0.65, 0], [1, 1.3, 70]],
+  ['boundary-north-west', [-26.84375, 0.65, 43.25], [41.6875, 1.3, 1]],
+  ['boundary-north-east', [27.84375, 0.65, 43.25], [67.6875, 1.3, 1]],
+  ['boundary-south', [7, 0.65, -43.25], [109.375, 1.3, 1]],
+  ['boundary-east', [61.1875, 0.65, 0], [1, 1.3, 87.5]],
+  ['boundary-west', [-47.1875, 0.65, 0], [1, 1.3, 87.5]],
 ] as const)
   surface(id, position, size, colors.boundary, ['boundary']);
 
@@ -329,6 +335,10 @@ const environment = [
   world003EastQuayRimSeam.visual,
   world003EastQuayGroundFill.visual,
   ...world003StreetEdgeVisuals.map(({ visual }) => visual),
+  ...world004Roads.map(({ visual }) => visual),
+  ...world004Sidewalks.map(({ visual }) => visual),
+  world004ClinicFoyer.visual,
+  ...ashfallInteriors.flatMap(({ visuals }) => visuals),
   eastQuayCurvedRoad,
   ...markings,
   ...curbs,
@@ -346,6 +356,10 @@ const staticCollision = [
   world003ContactYardApron.collider,
   world003EastQuayRimSeam.collider,
   world003EastQuayGroundFill.collider,
+  ...world004Roads.map(({ collider: definition }) => definition),
+  ...world004Sidewalks.map(({ collider: definition }) => definition),
+  world004ClinicFoyer.collider,
+  ...ashfallInteriors.flatMap(({ colliders }) => colliders),
   ...splineRoadColliders(eastQuayCurvedRoad),
   ...buildingCollision,
   signalControllerCollider,
@@ -367,6 +381,26 @@ const staticCollision = [
 ] as const;
 
 const streamableEntries = [...environment, ...staticCollision];
+const world004EntryIds = new Set([
+  ...world004BuildingPlacements.flatMap(({ visual, collider: definition }) => [
+    visual.id,
+    definition.id,
+  ]),
+  ...world004Roads.flatMap(({ visual, collider: definition }) => [
+    visual.id,
+    definition.id,
+  ]),
+  ...world004Sidewalks.flatMap(({ visual, collider: definition }) => [
+    visual.id,
+    definition.id,
+  ]),
+  world004ClinicFoyer.visual.id,
+  world004ClinicFoyer.collider.id,
+  ...ashfallInteriors.flatMap(({ visuals, colliders }) => [
+    ...visuals.map(({ id }) => id),
+    ...colliders.map(({ id }) => id),
+  ]),
+]);
 const world003EntryIds = new Set([
   ...world003BuildingPlacements.flatMap(({ visual, collider: definition }) => [
     visual.id,
@@ -428,6 +462,7 @@ const coreEntryIds = streamableEntries
       !world002AEntryIds.has(id) &&
       !world002BEntryIds.has(id) &&
       !world003EntryIds.has(id) &&
+      !world004EntryIds.has(id) &&
       !id.includes('east-quay') &&
       /road-|marking-|crosswalk|traffic-light|signal-controller/.test(id),
   )
@@ -438,6 +473,7 @@ const eastQuayEntryIds = streamableEntries
       !world002AEntryIds.has(id) &&
       !world002BEntryIds.has(id) &&
       !world003EntryIds.has(id) &&
+      !world004EntryIds.has(id) &&
       id.includes('east-quay'),
   )
   .map(({ id }) => id);
@@ -446,6 +482,7 @@ const quadrantEntries = streamableEntries.filter(
     !world002AEntryIds.has(id) &&
     !world002BEntryIds.has(id) &&
     !world003EntryIds.has(id) &&
+    !world004EntryIds.has(id) &&
     !coreEntryIds.includes(id) &&
     !eastQuayEntryIds.includes(id),
 );
@@ -491,6 +528,23 @@ const world003IdsForSector = (sectorId: string): string[] => [
         world003EastQuayGroundFill.collider.id,
       ]
     : []),
+];
+const world004IdsForSector = (sectorId: string): string[] => [
+  ...world004BuildingPlacements
+    .filter((placement) => placement.sectorId === sectorId)
+    .flatMap(({ visual, collider: definition }) => [visual.id, definition.id]),
+  ...[...world004Roads, ...world004Sidewalks]
+    .filter((entry) => entry.sectorId === sectorId)
+    .flatMap(({ visual, collider: definition }) => [visual.id, definition.id]),
+  ...(world004ClinicFoyer.sectorId === sectorId
+    ? [world004ClinicFoyer.visual.id, world004ClinicFoyer.collider.id]
+    : []),
+  ...ashfallInteriors
+    .filter((interior) => interior.sectorId === sectorId)
+    .flatMap(({ visuals, colliders }) => [
+      ...visuals.map(({ id }) => id),
+      ...colliders.map(({ id }) => id),
+    ]),
 ];
 
 const cc0 = {
@@ -616,6 +670,14 @@ export const testDistrict = {
         rotation: [0, yaw, 0] as Vector3Tuple,
         tags: ['world-002b', 'outer-rim'],
       })),
+      ...ashfallInteriors.flatMap(({ spawns }) => spawns),
+      {
+        id: 'spawn.player.clinic',
+        kind: 'player',
+        position: [28, 0.36, -37],
+        rotation: [0, Math.PI, 0],
+        tags: ['safe', 'clinic', 'foyer', 'world-004'],
+      },
     ],
     locations: [
       {
@@ -639,13 +701,25 @@ export const testDistrict = {
         position: world002BContact.position,
         tags: ['ash-001', 'contact-yard', 'north-rim'],
       },
+      ...ashfallInteriors.map(({ location }) => location),
+      {
+        id: 'location.ashfall.clinic',
+        kind: 'interaction',
+        name: 'South Canal Clinic',
+        position: [28, 0.36, -37],
+        tags: ['clinic', 'safe-spawn', 'world-004'],
+      },
     ],
     zones: [
       {
         id: 'zone.ashfall-junction',
         name: 'Ashfall Junction',
         position: [7, 3, 0],
-        size: [87.5, 10, 70],
+        size: [
+          world004JunctionPlan.widthMetres,
+          10,
+          world004JunctionPlan.depthMetres,
+        ],
       },
     ],
     landmarks: intersectionLandmarks.map(({ id, name, position }, index) => ({
@@ -772,6 +846,7 @@ export const testDistrict = {
         fieldOfView: 58,
         tags: ['debug', 'world-002b', 'street', 'south-rim'],
       },
+      ...ashfallInteriors.flatMap(({ anchors }) => anchors),
     ],
     lighting: {
       lamps: [
@@ -781,6 +856,7 @@ export const testDistrict = {
           position: [-6.12, 6.57, 8.5],
           emissiveMaterialName: 'Light',
         },
+        ...ashfallInteriors.flatMap(({ lamps }) => lamps),
         {
           id: 'lamp.street-light-se',
           visualId: 'v.street-light-se',
@@ -792,7 +868,7 @@ export const testDistrict = {
     mapPresentation: {
       orientation: 'north-up',
       bounds: {
-        ...world002BPlan.bounds,
+        ...world004JunctionPlan.bounds,
       },
       geometry: [
         { entryId: 'v.road-east-west', layer: 'roads' },
@@ -803,8 +879,16 @@ export const testDistrict = {
           entryId: visual.id,
           layer: 'roads' as const,
         })),
+        ...world004Roads.map(({ visual }) => ({
+          entryId: visual.id,
+          layer: 'roads' as const,
+        })),
         ...ashfallBuildingPlacements.map(({ visual }) => ({
           entryId: visual.id,
+          layer: 'structures' as const,
+        })),
+        ...ashfallInteriors.map(({ mapFootprintVisualId }) => ({
+          entryId: mapFootprintVisualId,
           layer: 'structures' as const,
         })),
       ],
@@ -837,6 +921,22 @@ export const testDistrict = {
           entryId: id,
           layer: 'spawns' as const,
         })),
+        ...ashfallInteriors.map(({ location }) => ({
+          entryId: location.id,
+          layer: 'interactions' as const,
+        })),
+        {
+          entryId: 'location.ashfall.clinic',
+          layer: 'interactions',
+        },
+        {
+          entryId: 'spawn.player.home',
+          layer: 'spawns',
+        },
+        {
+          entryId: 'spawn.player.clinic',
+          layer: 'spawns',
+        },
       ],
     },
     streaming: {
@@ -902,11 +1002,29 @@ export const testDistrict = {
             ...world003IdsForSector(id),
           ],
         })),
+        ...(
+          [
+            ['sector.world-004-west-north', -42.21875, 24.875],
+            ['sector.world-004-west-south', -42.21875, -24.875],
+            ['sector.world-004-east-north', 56.21875, 28.875],
+            ['sector.world-004-east-south', 56.21875, -20.875],
+            ['sector.world-004-north-west', -21.375, 39.375],
+            ['sector.world-004-north-east', 28.375, 39.375],
+            ['sector.world-004-south-west', -21.375, -39.375],
+            ['sector.world-004-south-east', 28.375, -39.375],
+          ] as const
+        ).map(([id, x, z]) => ({
+          id,
+          center: [x, z] as const,
+          loadDistance: 26,
+          unloadDistance: 32,
+          entryIds: world004IdsForSector(id),
+        })),
       ],
     },
     pedestrians: {
       seed: 0x415348,
-      residentCap: 16,
+      residentCap: 18,
       activationDistance: 38,
       visibilityDistance: 46,
       routes: [
@@ -973,14 +1091,38 @@ export const testDistrict = {
         ),
         pedestrianBoundaryExit(
           'route.north-rim-west',
-          'sector.north-rim-west',
-          'north-rim-west',
+          'sector.world-004-north-west',
+          'world-004-north-west',
           [
-            [-7.5, 0.2, 29],
-            [-23.5, 0.2, 29],
-            [-23.5, 0.2, 33.5],
-            [-15, 0.2, 33.5],
-            [-15, 0.2, 35.4],
+            [-7, 0.2, 36],
+            [-13, 0.2, 36],
+            [-13, 0.2, 42.5],
+            [-7, 0.2, 42.5],
+            [-7, 0.2, 36],
+            [-7, 0.2, 42.5],
+            [-7, 0.2, 44.45],
+          ],
+        ),
+        interiorLoop(
+          'route.interior-night-venue-service',
+          'sector.world-004-east-north',
+          'c.interior-night-venue-floor',
+          [
+            [57.3, 0.4, 24.4],
+            [57.3, 0.4, 29.5],
+            [56.2, 0.4, 29.5],
+            [57.3, 0.4, 24.4],
+          ],
+        ),
+        interiorLoop(
+          'route.interior-rook-home-idle-walk',
+          'sector.world-004-west-south',
+          'c.interior-rook-home-floor',
+          [
+            [-39.2, 0.4, -24.4],
+            [-39.2, 0.4, -29.7],
+            [-40.2, 0.4, -29.7],
+            [-39.2, 0.4, -24.4],
           ],
         ),
       ],
@@ -1035,6 +1177,30 @@ function pedestrianBoundaryExit(
       position,
       surfaceColliderId: `c.sidewalk-${surface}`,
       ...(index === 0 ? { pauseSeconds: [0.65, 1.8] as const } : {}),
+    })),
+  };
+}
+
+function interiorLoop(
+  id: string,
+  sectorId: string,
+  floorColliderId: string,
+  positions: readonly Vector3Tuple[],
+) {
+  return {
+    id,
+    sectorId,
+    purpose: 'interior' as const,
+    loop: true as const,
+    population: 1,
+    speed: [0.72, 0.92] as const,
+    nodes: positions.map((position, index) => ({
+      id: `${id}.node-${index + 1}`,
+      position,
+      surfaceColliderId: floorColliderId,
+      ...(index === 0 || index === positions.length - 1
+        ? { pauseSeconds: [2.5, 6] as const }
+        : {}),
     })),
   };
 }

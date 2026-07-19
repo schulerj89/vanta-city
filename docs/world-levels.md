@@ -73,6 +73,15 @@ Commit event order is source `sector:unloaded` in authored order, source `level:
 
 The default test level is **Ashfall Junction**, a hand-authored 70m × 56m district with 3,920m² of measured playable bounds. Its baseline four-way intersection is joined by the East Quay cubic road corridor. The curve is tangent to the baseline road at entry and the east edge at exit; its render strip, eight overlapping oriented walkable boxes, two traffic paths, and minimap path all sample `eastQuayCurvedRoad` rather than maintaining parallel coordinates. Traffic paths apply the baseline 3m body-clearance inset from the same sampled endpoint. Ten production Ashfall shells include two new outer-edge buildings with a tested 4m pedestrian band. Visible 1.3m perimeter barriers close X=-27.5/+41.5 and Z=±27.5. Source-of-truth dimensions and transforms live in `intersectionLayout.ts`; the [SVG map](world/ashfall-junction-map.svg) and [ASCII recipe](world/ashfall-junction-map.txt) are validated against them.
 
+The current WORLD-004 authored footprint is centered at `(7, 0)`, spans X
+`[-47.6875, 61.6875]` and Z `[-43.75, 43.75]`, and measures 109.375m × 87.5m
+= 9,570.3125m². It retains the baseline geometry as historical construction,
+adds four straight road continuations, 37 catalog buildings, two sector-owned
+enterable room shells, 22 sectors, and exact map/traffic/collision agreement.
+The machine-readable authority and architectural decisions are documented in
+`docs/world/plans/world-004-four-side-interiors.json` and
+`docs/world/world-004-four-side-interiors.md`.
+
 ### WORLD-001 acceptance evidence
 
 The measured area uses the roadmap's playable-bounds convention: `(42 - (-28)) × (28 - (-28)) = 70 × 56 = 3,920m²`. Growth is `3,920 - 3,136 = 784m²`, and `784 / 3,136 × 100 = 25%`, inside the required 3,763–4,077m² gate. The north and south expansion shells are flush with X=42; spline-sampled road-edge clearance is 4.000m and 6.117m respectively, so the minimum continuous pedestrian band is exactly 4m.

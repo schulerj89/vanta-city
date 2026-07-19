@@ -30,6 +30,10 @@ const hashes = {
     'e1ee7d0be134cb93dc106dac94e4a101a914e42a09d4b31bec5e94f35d4a214f',
   'painted-shopfront.procedural.jpg':
     '89c52be626dfcb4a371699c877079a005215b3e8ee4208f04df74f6799d643a9',
+  'venue-terrazzo.procedural.jpg':
+    '9e5ccef8ca182d4b4a83f2658ffee3f68a0abd64b8437684e3409be5f4a8dbf2',
+  'home-linoleum.procedural.jpg':
+    'b923bf21c8a83ba328840cca4774847a075af1a7903d059d59b285eb91a57df4',
 } as const;
 
 const issues = validateAshfallBuildingKit();
@@ -38,8 +42,8 @@ const variantCount: number = ashfallBuildingVariants.length;
 if (variantCount !== 26) {
   throw new Error(`Expected 26 building variants, found ${variantCount}`);
 }
-if (Object.keys(ashfallBuildingAssets).length !== 11) {
-  throw new Error('Expected exactly eleven controlled streetscape textures');
+if (Object.keys(ashfallBuildingAssets).length !== 13) {
+  throw new Error('Expected exactly thirteen controlled streetscape textures');
 }
 
 let totalBytes = 0;
@@ -72,7 +76,7 @@ for (const descriptor of Object.values(ashfallBuildingAssets)) {
 }
 
 console.log(
-  `Validated ${variantCount} variants and 11 local 512px textures (${totalBytes} bytes).`,
+  `Validated ${variantCount} variants and 13 local 512px textures (${totalBytes} bytes).`,
 );
 
 function jpegDimensions(bytes: Buffer): { width: number; height: number } {

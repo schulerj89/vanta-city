@@ -38,3 +38,14 @@ Four additional project-owned textures were generated locally on 2026-07-18 by t
 | `painted-shopfront.procedural.jpg` | `89c52be626dfcb4a371699c877079a005215b3e8ee4208f04df74f6799d643a9` | 33,643 | Charcoal display bays, oxidized teal bulkhead, warm painted fascia; accepted for unsigned 1997 commercial frontage.                                   |
 
 The complete eleven-texture catalog is 817,716 bytes, below the 1,153,433-byte (1.1 MiB) BUILDINGS-002 aggregate limit. JPEG hashes and dimensions are enforced by `pnpm validate:buildings`. Re-running the generator is an intentional source-art operation; accepted runtime bytes remain hash-pinned because OS JPEG encoding can differ across platforms.
+
+## WORLD-004 interior material extension
+
+Two additional original-project-owned textures were added on 2026-07-19 through the same checked-in deterministic generator. No prompt, provider, credential, source image, third-party license, text, logo, brand, character, or runtime request is involved. Both were visually reviewed as abstract repeating material fields rather than copied surfaces.
+
+| Runtime file                    | SHA-256                                                            |   Bytes | Intended material and review                                                                                        |
+| ------------------------------- | ------------------------------------------------------------------ | ------: | ------------------------------------------------------------------------------------------------------------------- |
+| `venue-terrazzo.procedural.jpg` | `9e5ccef8ca182d4b4a83f2658ffee3f68a0abd64b8437684e3409be5f4a8dbf2` | 127,267 | Charcoal terrazzo with restrained teal, amber, and rose chips for the Nightglass room; no symbols or readable text. |
+| `home-linoleum.procedural.jpg`  | `b923bf21c8a83ba328840cca4774847a075af1a7903d059d59b285eb91a57df4` |  34,965 | Worn olive checker linoleum for Rook's modest flat; no copied pattern, mark, or directional baked light.            |
+
+The complete thirteen-texture catalog is 979,948 bytes and remains below the hash-pinned 1.1 MiB ceiling.

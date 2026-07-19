@@ -15,7 +15,12 @@ test.describe('north-up minimap HUD', () => {
       visible: true,
       orientation: 'north-up',
       levelId: 'test-district',
-      bounds: { minX: -36.75, maxX: 50.75, minZ: -35, maxZ: 35 },
+      bounds: {
+        minX: -47.6875,
+        maxX: 61.6875,
+        minZ: -43.75,
+        maxZ: 43.75,
+      },
       layers: {
         roads: true,
         structures: true,
@@ -33,10 +38,10 @@ test.describe('north-up minimap HUD', () => {
       'd',
       /L 99\.25 18/,
     );
-    await expect(page.locator('[data-layer="roads"] rect')).toHaveCount(5);
+    await expect(page.locator('[data-layer="roads"] rect')).toHaveCount(9);
     await expect(page.locator('[data-layer="roads"] path')).toHaveCount(1);
     await expect(page.locator('[data-layer="structures"] rect')).toHaveCount(
-      22,
+      39,
     );
     await expect(page.locator('[data-layer="landmarks"] circle')).toHaveCount(
       5,
@@ -45,10 +50,10 @@ test.describe('north-up minimap HUD', () => {
     await capture(page, testInfo, 'minimap-default');
 
     const corners = [
-      ['spawn.corner-northwest', { x: 31.714, y: 37.143 }, 315],
-      ['spawn.corner-northeast', { x: 52.286, y: 37.143 }, 45],
-      ['spawn.corner-southwest', { x: 31.714, y: 62.857 }, 225],
-      ['spawn.corner-southeast', { x: 52.286, y: 62.857 }, 135],
+      ['spawn.corner-northwest', { x: 35.371, y: 39.714 }, 315],
+      ['spawn.corner-northeast', { x: 51.829, y: 39.714 }, 45],
+      ['spawn.corner-southwest', { x: 35.371, y: 60.286 }, 225],
+      ['spawn.corner-southeast', { x: 51.829, y: 60.286 }, 135],
     ] as const;
     for (const [spawnId, projected, heading] of corners) {
       await command(page, 'player.teleport', spawnId);

@@ -55,16 +55,16 @@ describe('FullWorldMapSystem', () => {
       open: true,
       priorState: 'playing',
       levelId: 'test-district',
-      geometryCount: 31,
-      roadCount: 6,
-      structureCount: 25,
-      sectorCount: 14,
-      placeCount: 8,
+      geometryCount: 49,
+      roadCount: 10,
+      structureCount: 39,
+      sectorCount: 22,
+      placeCount: 11,
       highlightCount: 1,
       locationName: 'Ashfall Junction',
       focusedTestId: 'map-close',
     });
-    expect(fixture.mount.querySelectorAll('[data-sector-id]')).toHaveLength(14);
+    expect(fixture.mount.querySelectorAll('[data-sector-id]')).toHaveLength(22);
     expect(
       fixture.mount.querySelector('[data-entry-id="v.road-east-quay-curve"]'),
     ).not.toBeNull();

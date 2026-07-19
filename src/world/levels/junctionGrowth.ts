@@ -18,7 +18,7 @@ export interface JunctionSurfacePair {
 
 export interface JunctionOwnedBuildingPlacement extends AshfallBuildingPlacement {
   readonly sectorId: string;
-  readonly purpose: 'contact-yard' | 'street-frontage';
+  readonly purpose: 'contact-yard' | 'street-frontage' | 'world-growth';
 }
 
 export interface JunctionOwnedVisual {
@@ -140,6 +140,219 @@ export const world003JunctionPlan = {
     'route.north-rim-west',
   ],
 } as const;
+
+export const world004JunctionPlan = {
+  id: 'world-004-four-side-interiors',
+  centre: [7, 0] as const,
+  bounds: { minX: -47.6875, maxX: 61.6875, minZ: -43.75, maxZ: 43.75 },
+  baselineHalfExtents: { x: 43.75, z: 35 },
+  targetHalfExtents: { x: 54.6875, z: 43.75 },
+  widthMetres: 109.375,
+  depthMetres: 87.5,
+  playableAreaSquareMetres: 9570.3125,
+  linearGrowthPercent: 25,
+  areaGrowthPercent: 56.25,
+  buildingCountBefore: 25,
+  buildingCountAfter: 37,
+  minimumPedestrianClearanceMetres: 4,
+  minimumEntranceClearanceMetres: 3,
+  addedSectorIds: [
+    'sector.world-004-west-north',
+    'sector.world-004-west-south',
+    'sector.world-004-east-north',
+    'sector.world-004-east-south',
+    'sector.world-004-north-west',
+    'sector.world-004-north-east',
+    'sector.world-004-south-west',
+    'sector.world-004-south-east',
+  ],
+} as const;
+
+const world004BuildingCatalog = [
+  [
+    'world-004-west-net-loft',
+    'boardwalk-kiosk',
+    [-43.5, 0.2, -39],
+    -Math.PI / 2,
+    'sector.world-004-west-south',
+  ],
+  [
+    'world-004-west-repair-row',
+    'canal-workshop',
+    [-43.5, 0.2, -13],
+    -Math.PI / 2,
+    'sector.world-004-west-south',
+  ],
+  [
+    'world-004-west-cold-office',
+    'canal-workshop',
+    [-44, 0.2, 34],
+    -Math.PI / 2,
+    'sector.world-004-west-north',
+  ],
+  [
+    'world-004-east-laundry',
+    'boardwalk-kiosk',
+    [57.5, 0.2, -39],
+    Math.PI / 2,
+    'sector.world-004-east-south',
+  ],
+  [
+    'world-004-east-tide-shop',
+    'canal-workshop',
+    [57.5, 0.2, -17],
+    Math.PI / 2,
+    'sector.world-004-east-south',
+  ],
+  [
+    'world-004-east-warehouse',
+    'boardwalk-kiosk',
+    [57.5, 0.2, 40],
+    Math.PI / 2,
+    'sector.world-004-east-north',
+  ],
+  [
+    'world-004-north-foundry',
+    'ticket-arcade',
+    [-28, 0.2, 39.5],
+    Math.PI,
+    'sector.world-004-north-west',
+  ],
+  [
+    'world-004-north-boarding',
+    'boardwalk-kiosk',
+    [15, 0.2, 40],
+    Math.PI,
+    'sector.world-004-north-east',
+  ],
+  [
+    'world-004-north-chemist',
+    'boardwalk-kiosk',
+    [43, 0.2, 40],
+    Math.PI,
+    'sector.world-004-north-east',
+  ],
+  [
+    'world-004-south-printworks',
+    'ticket-arcade',
+    [-28, 0.2, -39.5],
+    0,
+    'sector.world-004-south-west',
+  ],
+  [
+    'world-004-south-municipal',
+    'boardwalk-kiosk',
+    [15, 0.2, -40],
+    0,
+    'sector.world-004-south-east',
+  ],
+  [
+    'world-004-south-freight',
+    'ticket-arcade',
+    [43, 0.2, -39.5],
+    0,
+    'sector.world-004-south-east',
+  ],
+] as const;
+
+export const world004BuildingPlacements: readonly JunctionOwnedBuildingPlacement[] =
+  world004BuildingCatalog.map(([id, variantId, position, yaw, sectorId]) => ({
+    ...createAshfallBuildingPlacement(id, variantId, position, yaw),
+    sectorId,
+    purpose: 'world-growth',
+  }));
+
+export const world004Roads = [
+  ownedSurface(
+    'road-world-004-west',
+    [-42.21875, -0.2, 0],
+    [10.9375, 0.4, 12],
+    'sector.world-004-west-north',
+    ['walkable', 'road', world004JunctionPlan.id],
+  ),
+  ownedSurface(
+    'road-world-004-east',
+    [56.21875, -0.2, 8],
+    [10.9375, 0.4, 12],
+    'sector.world-004-east-north',
+    ['walkable', 'road', world004JunctionPlan.id],
+  ),
+  ownedSurface(
+    'road-world-004-north',
+    [0, -0.2, 39.375],
+    [12, 0.4, 8.75],
+    'sector.world-004-north-west',
+    ['walkable', 'road', world004JunctionPlan.id],
+  ),
+  ownedSurface(
+    'road-world-004-south',
+    [0, -0.2, -39.375],
+    [12, 0.4, 8.75],
+    'sector.world-004-south-west',
+    ['walkable', 'road', world004JunctionPlan.id],
+  ),
+] as const;
+
+export const world004Sidewalks = [
+  ownedSurface(
+    'sidewalk-world-004-west-north',
+    [-42.21875, 0.1, 24.875],
+    [10.9375, 0.2, 37.75],
+    'sector.world-004-west-north',
+  ),
+  ownedSurface(
+    'sidewalk-world-004-west-south',
+    [-42.21875, 0.1, -24.875],
+    [10.9375, 0.2, 37.75],
+    'sector.world-004-west-south',
+  ),
+  ownedSurface(
+    'sidewalk-world-004-east-north',
+    [56.21875, 0.1, 28.875],
+    [10.9375, 0.2, 29.75],
+    'sector.world-004-east-north',
+  ),
+  ownedSurface(
+    'sidewalk-world-004-east-south',
+    [56.21875, 0.1, -20.875],
+    [10.9375, 0.2, 45.75],
+    'sector.world-004-east-south',
+  ),
+  ownedSurface(
+    'sidewalk-world-004-north-west',
+    [-21.375, 0.1, 39.75],
+    [30.75, 0.2, 10.1],
+    'sector.world-004-north-west',
+  ),
+  ownedSurface(
+    'sidewalk-world-004-north-east',
+    [28.375, 0.1, 39.375],
+    [44.75, 0.2, 8.75],
+    'sector.world-004-north-east',
+  ),
+  ownedSurface(
+    'sidewalk-world-004-south-west',
+    [-21.375, 0.1, -39.375],
+    [30.75, 0.2, 8.75],
+    'sector.world-004-south-west',
+  ),
+  ownedSurface(
+    'sidewalk-world-004-south-east',
+    [28.375, 0.1, -39.375],
+    [44.75, 0.2, 8.75],
+    'sector.world-004-south-east',
+  ),
+] as const;
+
+export const world004ClinicFoyer = ownedSurface(
+  'sidewalk-world-004-clinic-foyer',
+  [28, 0.22, -37],
+  [6, 0.24, 4],
+  'sector.world-004-south-east',
+  ['walkable', 'safe-spawn', 'clinic', world004JunctionPlan.id],
+  'environment.ashfall-building.ceramic-tile',
+  3,
+);
 
 const world003BuildingCatalog = [
   {
@@ -515,6 +728,29 @@ function ownedBox(
       textureAssetId: 'environment.ashfall-building.curb-aggregate',
       uvMetersPerRepeat: 3,
     },
+    sectorId,
+  };
+}
+
+function ownedSurface(
+  id: string,
+  position: Vector3Tuple,
+  size: Vector3Tuple,
+  sectorId: string,
+  tags: readonly string[] = ['walkable', 'sidewalk', world004JunctionPlan.id],
+  textureAssetId = 'environment.ashfall-building.sidewalk-concrete',
+  uvMetersPerRepeat = 6,
+): JunctionSurfacePair & { readonly sectorId: string } {
+  return {
+    ...surfacePair(
+      id,
+      position,
+      size,
+      id.includes('road-') ? 0x24282b : 0x858783,
+      tags,
+      textureAssetId,
+      uvMetersPerRepeat,
+    ),
     sectorId,
   };
 }

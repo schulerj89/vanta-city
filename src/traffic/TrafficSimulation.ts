@@ -14,7 +14,11 @@ import {
   eastQuayCurvedRoad,
   intersectionTrafficControls,
 } from '../world/levels/intersectionLayout';
-import { world002APlan, world002BPlan } from '../world/levels/junctionGrowth';
+import {
+  world002APlan,
+  world002BPlan,
+  world004JunctionPlan,
+} from '../world/levels/junctionGrowth';
 import {
   offsetSplineSamples,
   pointAlongSamples,
@@ -58,16 +62,22 @@ export interface TrafficLanePoint {
 
 const curvedCenterline = sampleSplineRoad(eastQuayCurvedRoad);
 const trafficBoundaryInset = world002APlan.trafficEndpointInsetMetres;
-const eastIncomingCurve = trimLaneEnd(
-  offsetSplineSamples(curvedCenterline, 1.5),
-  trafficBoundaryInset,
-)
-  .map(({ position }) => [position[0], position[2]] as const)
-  .reverse();
-const westOutgoingCurve = trimLaneEnd(
-  offsetSplineSamples(curvedCenterline, -1.5),
-  trafficBoundaryInset,
-).map(({ position }) => [position[0], position[2]] as const);
+const eastIncomingCurve = [
+  [world004JunctionPlan.bounds.maxX - trafficBoundaryInset, 9.5] as const,
+  ...trimLaneEnd(
+    offsetSplineSamples(curvedCenterline, 1.5),
+    trafficBoundaryInset,
+  )
+    .map(({ position }) => [position[0], position[2]] as const)
+    .reverse(),
+];
+const westOutgoingCurve = [
+  ...trimLaneEnd(
+    offsetSplineSamples(curvedCenterline, -1.5),
+    trafficBoundaryInset,
+  ).map(({ position }) => [position[0], position[2]] as const),
+  [world004JunctionPlan.bounds.maxX - trafficBoundaryInset, 6.5] as const,
+];
 const straightStopLine =
   24.5 - intersectionTrafficControls.stopLineDistanceFromCenter;
 const curvedStopLine = polylineLength(eastIncomingCurve) + straightStopLine;
@@ -79,16 +89,18 @@ export const ashfallTrafficLanes: readonly TrafficLane[] = [
     [
       [
         -1.5,
-        world002BPlan.bounds.maxZ - world002BPlan.trafficEndpointInsetMetres,
+        world004JunctionPlan.bounds.maxZ -
+          world002BPlan.trafficEndpointInsetMetres,
       ],
       [
         -1.5,
-        world002BPlan.bounds.minZ + world002BPlan.trafficEndpointInsetMetres,
+        world004JunctionPlan.bounds.minZ +
+          world002BPlan.trafficEndpointInsetMetres,
       ],
     ],
-    26.7,
-    26.7,
-    37.3,
+    35.45,
+    35.45,
+    46.05,
   ),
   lane(
     'east',
@@ -104,27 +116,29 @@ export const ashfallTrafficLanes: readonly TrafficLane[] = [
     [
       [
         1.5,
-        world002BPlan.bounds.minZ + world002BPlan.trafficEndpointInsetMetres,
+        world004JunctionPlan.bounds.minZ +
+          world002BPlan.trafficEndpointInsetMetres,
       ],
       [
         1.5,
-        world002BPlan.bounds.maxZ - world002BPlan.trafficEndpointInsetMetres,
+        world004JunctionPlan.bounds.maxZ -
+          world002BPlan.trafficEndpointInsetMetres,
       ],
     ],
-    26.7,
-    26.7,
-    37.3,
+    35.45,
+    35.45,
+    46.05,
   ),
   lane(
     'west',
     'east-west',
     [
-      [world002APlan.bounds.minX + trafficBoundaryInset, -1.5],
+      [world004JunctionPlan.bounds.minX + trafficBoundaryInset, -1.5],
       ...westOutgoingCurve,
     ],
-    28,
-    28,
-    38.6,
+    38.9375,
+    38.9375,
+    49.5375,
   ),
 ];
 

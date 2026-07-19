@@ -30,6 +30,8 @@ export interface BoxVisualDefinition extends WorldEntry {
   readonly textureAssetId?: string;
   /** World metres represented by one texture repeat. */
   readonly uvMetersPerRepeat?: number;
+  /** Optional semantic material name for the shared lighting fixture binder. */
+  readonly materialName?: string;
 }
 
 export interface BuildingVisualDefinition extends WorldEntry {
@@ -254,6 +256,13 @@ export function validateLevelDefinition(definition: LevelDefinition): void {
           `${visual.id}.uvMetersPerRepeat must be positive for a textured box`,
         );
       }
+    }
+    if (
+      visual.kind === 'box' &&
+      visual.materialName !== undefined &&
+      visual.materialName.trim().length === 0
+    ) {
+      issues.push(`${visual.id}.materialName is empty`);
     }
     if (visual.kind === 'spline-road') {
       visual.controlPoints.forEach((point, index) =>

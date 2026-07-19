@@ -12,6 +12,8 @@ const families = {
   'ceramic-tile.procedural.jpg': ceramicTile,
   'glass-block.procedural.jpg': glassBlock,
   'painted-shopfront.procedural.jpg': paintedShopfront,
+  'venue-terrazzo.procedural.jpg': venueTerrazzo,
+  'home-linoleum.procedural.jpg': homeLinoleum,
 };
 
 try {
@@ -96,6 +98,28 @@ function paintedShopfront(x, y) {
   if (fascia) return scratch ? [134, 102, 71] : [118, 80, 55];
   if (bulkhead) return [75, 101, 94];
   return scratch ? [74, 92, 93] : [45, 65, 69];
+}
+
+function venueTerrazzo(x, y) {
+  const base = 48 + Math.floor(noise(x >> 2, y >> 2, 109) * 9);
+  const chip = noise(x, y, 113);
+  if (chip > 0.986) return [164, 98, 86];
+  if (chip > 0.972) return [72, 139, 145];
+  if (chip > 0.957) return [199, 174, 118];
+  const seam = x % 128 < 2 || y % 128 < 2;
+  return seam ? [31, 35, 43] : [base, base + 3, base + 8];
+}
+
+function homeLinoleum(x, y) {
+  const tileX = Math.floor(x / 64);
+  const tileY = Math.floor(y / 64);
+  const alternating = (tileX + tileY) % 2 === 0;
+  const joint = x % 64 < 2 || y % 64 < 2;
+  const wear = noise(x >> 1, y >> 1, 137) > 0.94 ? 7 : 0;
+  if (joint) return [58, 61, 55];
+  return alternating
+    ? [111 + wear, 116 + wear, 96 + wear]
+    : [96 + wear, 105 + wear, 91 + wear];
 }
 
 function noise(x, y, seed) {

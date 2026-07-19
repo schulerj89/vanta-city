@@ -3,23 +3,23 @@
     "warmupMs": 250,
     "measurementMs": 1000,
     "frames": 13,
-    "averageFps": 12.211159120796559,
-    "onePercentLowFps": 8.568980291345277,
-    "frameTimeP95Ms": 116.70000000000073,
-    "frameTimeMaxMs": 116.70000000000073,
+    "averageFps": 13,
+    "onePercentLowFps": 11.890606420927416,
+    "frameTimeP95Ms": 84.10000000000036,
+    "frameTimeMaxMs": 84.10000000000036,
     "renderer": {
       "frameTime": {
         "enabled": true,
-        "samples": 108,
-        "minMs": 0.3999999761581421,
-        "averageMs": 1.8907407398025196,
-        "maxMs": 74.7999999821186,
-        "p95Ms": 2
+        "samples": 26,
+        "minMs": 0.699999988079071,
+        "averageMs": 54.465384614009125,
+        "maxMs": 1089.5,
+        "p95Ms": 260.69999998807907
       },
-      "drawCalls": 67,
-      "triangles": 20636,
-      "geometries": 95,
-      "textures": 271,
+      "drawCalls": 160,
+      "triangles": 31130,
+      "geometries": 134,
+      "textures": 87,
       "pixelRatio": 1,
       "viewport": {
         "cssWidth": 1280,
@@ -30,66 +30,275 @@
     },
     "sectors": {
       "levelId": "test-district",
-      "authored": 6,
-      "active": ["sector.core", "sector.northeast", "sector.northwest"],
+      "authored": 22,
+      "active": [
+        "sector.core",
+        "sector.north-rim-east",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest",
+        "sector.west-rim-north",
+        "sector.world-004-north-east",
+        "sector.world-004-north-west",
+        "sector.world-004-west-north"
+      ],
       "pending": [],
       "states": {
         "sector.core": "active",
         "sector.east-quay": "inactive",
+        "sector.east-rim-north": "inactive",
+        "sector.east-rim-south": "inactive",
+        "sector.north-rim-east": "active",
+        "sector.north-rim-west": "active",
         "sector.northeast": "active",
         "sector.northwest": "active",
+        "sector.south-rim-east": "inactive",
+        "sector.south-rim-west": "inactive",
         "sector.southeast": "inactive",
-        "sector.southwest": "inactive"
+        "sector.southwest": "inactive",
+        "sector.west-rim-north": "active",
+        "sector.west-rim-south": "inactive",
+        "sector.world-004-east-north": "inactive",
+        "sector.world-004-east-south": "inactive",
+        "sector.world-004-north-east": "active",
+        "sector.world-004-north-west": "active",
+        "sector.world-004-south-east": "inactive",
+        "sector.world-004-south-west": "inactive",
+        "sector.world-004-west-north": "active",
+        "sector.world-004-west-south": "inactive"
       },
-      "loadCount": 17,
-      "unloadCount": 14,
-      "sceneObjects": 104,
-      "ownedResources": 109,
-      "modelInstances": 5,
-      "colliders": 14,
-      "lodHiddenObjects": 8,
-      "transitionsPending": false
+      "loadCount": 60,
+      "unloadCount": 51,
+      "sceneObjects": 255,
+      "ownedResources": 282,
+      "modelInstances": 4,
+      "colliders": 37,
+      "lodHiddenObjects": 38,
+      "transitionsPending": false,
+      "pinnedSectors": [],
+      "visualPathPinCount": 0,
+      "policy": {
+        "pressure": "low",
+        "memory": {
+          "pressure": "low",
+          "source": "heap-and-proxy",
+          "estimatedWorkingSetBytes": 262526752,
+          "estimatedWorkingSetMb": 250.36502075195312,
+          "preferredCeilingMb": 650,
+          "hardCeilingMb": 900,
+          "overHardCeiling": false
+        },
+        "teleported": false,
+        "desiredSectorIds": [
+          "sector.core",
+          "sector.north-rim-east",
+          "sector.north-rim-west",
+          "sector.northeast",
+          "sector.northwest",
+          "sector.west-rim-north",
+          "sector.world-004-north-east",
+          "sector.world-004-north-west",
+          "sector.world-004-west-north"
+        ],
+        "decisions": {
+          "sector.core": {
+            "sectorId": "sector.core",
+            "disposition": "retained",
+            "reason": "always-loaded",
+            "playerDistance": 35.34119409414458,
+            "protected": true
+          },
+          "sector.east-quay": {
+            "sectorId": "sector.east-quay",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 55.46169849544819,
+            "protected": false
+          },
+          "sector.east-rim-north": {
+            "sectorId": "sector.east-rim-north",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 63.18141043851428,
+            "protected": false
+          },
+          "sector.east-rim-south": {
+            "sectorId": "sector.east-rim-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 78.53591932994736,
+            "protected": false
+          },
+          "sector.north-rim-east": {
+            "sectorId": "sector.north-rim-east",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 43.37788174865158,
+            "protected": false
+          },
+          "sector.north-rim-west": {
+            "sectorId": "sector.north-rim-west",
+            "disposition": "retained",
+            "reason": "player-current",
+            "playerDistance": 6.394577781214332,
+            "protected": true
+          },
+          "sector.northeast": {
+            "sectorId": "sector.northeast",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 34.132096331752024,
+            "protected": false
+          },
+          "sector.northwest": {
+            "sectorId": "sector.northwest",
+            "disposition": "retained",
+            "reason": "player-near",
+            "playerDistance": 18.027756377319946,
+            "protected": true
+          },
+          "sector.south-rim-east": {
+            "sectorId": "sector.south-rim-east",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 76.90019912197887,
+            "protected": false
+          },
+          "sector.south-rim-west": {
+            "sectorId": "sector.south-rim-west",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 63.81920263525706,
+            "protected": false
+          },
+          "sector.southeast": {
+            "sectorId": "sector.southeast",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 54.378304497290095,
+            "protected": false
+          },
+          "sector.southwest": {
+            "sectorId": "sector.southwest",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 46.01086828130937,
+            "protected": false
+          },
+          "sector.west-rim-north": {
+            "sectorId": "sector.west-rim-north",
+            "disposition": "retained",
+            "reason": "player-near",
+            "playerDistance": 22.95409821796535,
+            "protected": true
+          },
+          "sector.west-rim-south": {
+            "sectorId": "sector.west-rim-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 51.989331838368535,
+            "protected": false
+          },
+          "sector.world-004-east-north": {
+            "sectorId": "sector.world-004-east-north",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 71.28727780300282,
+            "protected": false
+          },
+          "sector.world-004-east-south": {
+            "sectorId": "sector.world-004-east-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 88.70104833970397,
+            "protected": false
+          },
+          "sector.world-004-north-east": {
+            "sectorId": "sector.world-004-north-east",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 43.99751413432354,
+            "protected": false
+          },
+          "sector.world-004-north-west": {
+            "sectorId": "sector.world-004-north-west",
+            "disposition": "retained",
+            "reason": "player-near",
+            "playerDistance": 9.74839730417262,
+            "protected": true
+          },
+          "sector.world-004-south-east": {
+            "sectorId": "sector.world-004-south-east",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 83.52114253289403,
+            "protected": false
+          },
+          "sector.world-004-south-west": {
+            "sectorId": "sector.world-004-south-west",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 71.65913235589724,
+            "protected": false
+          },
+          "sector.world-004-west-north": {
+            "sectorId": "sector.world-004-west-north",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 28.13584860213923,
+            "protected": false
+          },
+          "sector.world-004-west-south": {
+            "sectorId": "sector.world-004-west-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 63.05256518621982,
+            "protected": false
+          }
+        }
+      },
+      "attempts": {}
     },
     "assets": {
-      "cacheEntries": 21,
-      "sourceReferences": 21,
-      "instanceReferences": 16,
-      "instancesCreated": 97,
-      "instancesDisposed": 81,
-      "loaded": 21,
+      "cacheEntries": 24,
+      "sourceReferences": 24,
+      "instanceReferences": 15,
+      "instancesCreated": 91,
+      "instancesDisposed": 76,
+      "loaded": 24,
       "inFlight": 0,
       "failures": 0,
       "disposed": false
     },
     "browserMemory": {
       "supported": true,
-      "usedJsHeapSize": 44700000,
-      "totalJsHeapSize": 60300000,
+      "usedJsHeapSize": 24500000,
+      "totalJsHeapSize": 29400000,
       "jsHeapSizeLimit": 3760000000,
-      "peakUsedJsHeapSize": 44700000
+      "peakUsedJsHeapSize": 24500000
     }
   },
   "afterThreeRespawnCycles": {
     "warmupMs": 250,
     "measurementMs": 1000,
-    "frames": 11,
-    "averageFps": 10.645504693699804,
-    "onePercentLowFps": 8.547008547008547,
-    "frameTimeP95Ms": 117,
-    "frameTimeMaxMs": 117,
+    "frames": 13,
+    "averageFps": 12.561600154604315,
+    "onePercentLowFps": 8.460236886632838,
+    "frameTimeP95Ms": 118.19999999999982,
+    "frameTimeMaxMs": 118.19999999999982,
     "renderer": {
       "frameTime": {
         "enabled": true,
-        "samples": 120,
-        "minMs": 0.3999999761581421,
-        "averageMs": 1.3224999994039535,
-        "maxMs": 16.19999998807907,
-        "p95Ms": 2
+        "samples": 47,
+        "minMs": 0.5,
+        "averageMs": 33.19574467996333,
+        "maxMs": 1089.5,
+        "p95Ms": 83.39999997615814
       },
-      "drawCalls": 64,
-      "triangles": 20098,
-      "geometries": 81,
-      "textures": 321,
+      "drawCalls": 160,
+      "triangles": 31130,
+      "geometries": 136,
+      "textures": 87,
       "pixelRatio": 1,
       "viewport": {
         "cssWidth": 1280,
@@ -100,51 +309,1164 @@
     },
     "sectors": {
       "levelId": "test-district",
-      "authored": 6,
-      "active": ["sector.core", "sector.northeast", "sector.northwest"],
+      "authored": 22,
+      "active": [
+        "sector.core",
+        "sector.north-rim-east",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest",
+        "sector.west-rim-north",
+        "sector.world-004-north-east",
+        "sector.world-004-north-west",
+        "sector.world-004-west-north"
+      ],
       "pending": [],
       "states": {
         "sector.core": "active",
         "sector.east-quay": "inactive",
+        "sector.east-rim-north": "inactive",
+        "sector.east-rim-south": "inactive",
+        "sector.north-rim-east": "active",
+        "sector.north-rim-west": "active",
         "sector.northeast": "active",
         "sector.northwest": "active",
+        "sector.south-rim-east": "inactive",
+        "sector.south-rim-west": "inactive",
         "sector.southeast": "inactive",
-        "sector.southwest": "inactive"
+        "sector.southwest": "inactive",
+        "sector.west-rim-north": "active",
+        "sector.west-rim-south": "inactive",
+        "sector.world-004-east-north": "inactive",
+        "sector.world-004-east-south": "inactive",
+        "sector.world-004-north-east": "active",
+        "sector.world-004-north-west": "active",
+        "sector.world-004-south-east": "inactive",
+        "sector.world-004-south-west": "inactive",
+        "sector.world-004-west-north": "active",
+        "sector.world-004-west-south": "inactive"
       },
-      "loadCount": 29,
-      "unloadCount": 26,
-      "sceneObjects": 104,
-      "ownedResources": 109,
-      "modelInstances": 5,
-      "colliders": 14,
-      "lodHiddenObjects": 8,
-      "transitionsPending": false
+      "loadCount": 108,
+      "unloadCount": 99,
+      "sceneObjects": 255,
+      "ownedResources": 282,
+      "modelInstances": 4,
+      "colliders": 37,
+      "lodHiddenObjects": 38,
+      "transitionsPending": false,
+      "pinnedSectors": [],
+      "visualPathPinCount": 0,
+      "policy": {
+        "pressure": "low",
+        "memory": {
+          "pressure": "low",
+          "source": "heap-and-proxy",
+          "estimatedWorkingSetBytes": 263051040,
+          "estimatedWorkingSetMb": 250.86502075195312,
+          "preferredCeilingMb": 650,
+          "hardCeilingMb": 900,
+          "overHardCeiling": false
+        },
+        "teleported": false,
+        "desiredSectorIds": [
+          "sector.core",
+          "sector.north-rim-east",
+          "sector.north-rim-west",
+          "sector.northeast",
+          "sector.northwest",
+          "sector.west-rim-north",
+          "sector.world-004-north-east",
+          "sector.world-004-north-west",
+          "sector.world-004-west-north"
+        ],
+        "decisions": {
+          "sector.core": {
+            "sectorId": "sector.core",
+            "disposition": "retained",
+            "reason": "always-loaded",
+            "playerDistance": 35.34119409414458,
+            "protected": true
+          },
+          "sector.east-quay": {
+            "sectorId": "sector.east-quay",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 55.46169849544819,
+            "protected": false
+          },
+          "sector.east-rim-north": {
+            "sectorId": "sector.east-rim-north",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 63.18141043851428,
+            "protected": false
+          },
+          "sector.east-rim-south": {
+            "sectorId": "sector.east-rim-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 78.53591932994736,
+            "protected": false
+          },
+          "sector.north-rim-east": {
+            "sectorId": "sector.north-rim-east",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 43.37788174865158,
+            "protected": false
+          },
+          "sector.north-rim-west": {
+            "sectorId": "sector.north-rim-west",
+            "disposition": "retained",
+            "reason": "player-current",
+            "playerDistance": 6.394577781214332,
+            "protected": true
+          },
+          "sector.northeast": {
+            "sectorId": "sector.northeast",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 34.132096331752024,
+            "protected": false
+          },
+          "sector.northwest": {
+            "sectorId": "sector.northwest",
+            "disposition": "retained",
+            "reason": "player-near",
+            "playerDistance": 18.027756377319946,
+            "protected": true
+          },
+          "sector.south-rim-east": {
+            "sectorId": "sector.south-rim-east",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 76.90019912197887,
+            "protected": false
+          },
+          "sector.south-rim-west": {
+            "sectorId": "sector.south-rim-west",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 63.81920263525706,
+            "protected": false
+          },
+          "sector.southeast": {
+            "sectorId": "sector.southeast",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 54.378304497290095,
+            "protected": false
+          },
+          "sector.southwest": {
+            "sectorId": "sector.southwest",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 46.01086828130937,
+            "protected": false
+          },
+          "sector.west-rim-north": {
+            "sectorId": "sector.west-rim-north",
+            "disposition": "retained",
+            "reason": "player-near",
+            "playerDistance": 22.95409821796535,
+            "protected": true
+          },
+          "sector.west-rim-south": {
+            "sectorId": "sector.west-rim-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 51.989331838368535,
+            "protected": false
+          },
+          "sector.world-004-east-north": {
+            "sectorId": "sector.world-004-east-north",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 71.28727780300282,
+            "protected": false
+          },
+          "sector.world-004-east-south": {
+            "sectorId": "sector.world-004-east-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 88.70104833970397,
+            "protected": false
+          },
+          "sector.world-004-north-east": {
+            "sectorId": "sector.world-004-north-east",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 43.99751413432354,
+            "protected": false
+          },
+          "sector.world-004-north-west": {
+            "sectorId": "sector.world-004-north-west",
+            "disposition": "retained",
+            "reason": "player-near",
+            "playerDistance": 9.74839730417262,
+            "protected": true
+          },
+          "sector.world-004-south-east": {
+            "sectorId": "sector.world-004-south-east",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 83.52114253289403,
+            "protected": false
+          },
+          "sector.world-004-south-west": {
+            "sectorId": "sector.world-004-south-west",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 71.65913235589724,
+            "protected": false
+          },
+          "sector.world-004-west-north": {
+            "sectorId": "sector.world-004-west-north",
+            "disposition": "retained",
+            "reason": "proximity-prefetch",
+            "playerDistance": 28.13584860213923,
+            "protected": false
+          },
+          "sector.world-004-west-south": {
+            "sectorId": "sector.world-004-west-south",
+            "disposition": "inactive",
+            "reason": "outside-retention",
+            "playerDistance": 63.05256518621982,
+            "protected": false
+          }
+        }
+      },
+      "attempts": {}
     },
     "assets": {
-      "cacheEntries": 21,
-      "sourceReferences": 21,
-      "instanceReferences": 16,
-      "instancesCreated": 166,
-      "instancesDisposed": 150,
-      "loaded": 21,
+      "cacheEntries": 24,
+      "sourceReferences": 24,
+      "instanceReferences": 15,
+      "instancesCreated": 157,
+      "instancesDisposed": 142,
+      "loaded": 24,
       "inFlight": 0,
       "failures": 0,
       "disposed": false
     },
     "browserMemory": {
       "supported": true,
-      "usedJsHeapSize": 44700000,
-      "totalJsHeapSize": 60300000,
+      "usedJsHeapSize": 24500000,
+      "totalJsHeapSize": 29400000,
       "jsHeapSizeLimit": 3760000000,
-      "peakUsedJsHeapSize": 44700000
+      "peakUsedJsHeapSize": 24500000
     }
   },
   "pedestrianOwnership": {
     "residents": 8,
     "mixers": 8,
-    "spawns": 112,
-    "disposals": 104
+    "spawns": 104,
+    "disposals": 96,
+    "exactMinimumDisposals": 45
   },
+  "adaptiveSteadyPopulations": {
+    "north": {
+      "activeSectorIds": [
+        "sector.core",
+        "sector.north-rim-east",
+        "sector.north-rim-west",
+        "sector.northeast",
+        "sector.northwest",
+        "sector.west-rim-north",
+        "sector.world-004-north-east",
+        "sector.world-004-north-west",
+        "sector.world-004-west-north"
+      ],
+      "expected": {
+        "residentCount": 8,
+        "routeCount": 4,
+        "routeIds": [
+          "route.north-rim-west",
+          "route.northeast",
+          "route.northwest",
+          "route.west-rim-north"
+        ],
+        "sectorCounts": {
+          "sector.northwest": 3,
+          "sector.northeast": 3,
+          "sector.west-rim-north": 1,
+          "sector.world-004-north-west": 1
+        }
+      },
+      "actual": {
+        "residents": 8,
+        "routes": 4,
+        "sectorCounts": {
+          "sector.world-004-north-west": 1,
+          "sector.northeast": 3,
+          "sector.northwest": 3,
+          "sector.west-rim-north": 1
+        }
+      }
+    },
+    "south": {
+      "activeSectorIds": [
+        "sector.core",
+        "sector.south-rim-east",
+        "sector.south-rim-west",
+        "sector.southeast",
+        "sector.southwest",
+        "sector.west-rim-south",
+        "sector.world-004-south-east",
+        "sector.world-004-south-west",
+        "sector.world-004-west-south"
+      ],
+      "expected": {
+        "residentCount": 7,
+        "routeCount": 3,
+        "routeIds": [
+          "route.interior-rook-home-idle-walk",
+          "route.southeast",
+          "route.southwest"
+        ],
+        "sectorCounts": {
+          "sector.southwest": 3,
+          "sector.southeast": 3,
+          "sector.world-004-west-south": 1
+        }
+      },
+      "actual": {
+        "residents": 7,
+        "routes": 3,
+        "sectorCounts": {
+          "sector.world-004-west-south": 1,
+          "sector.southeast": 3,
+          "sector.southwest": 3
+        }
+      }
+    }
+  },
+  "trajectoryEvidence": [
+    {
+      "frame": 8,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-1->route.north-rim-west.node-2",
+          "position": [-7.7991741806173085, 0.2, 36],
+          "distanceTravelled": 0.2991741806173085
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [9.947992527961317, 0.2, 11.5],
+          "distanceTravelled": 0.4479925279613166
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-2->route.northeast.node-3",
+          "position": [15, 0.2, 11.98520628851135],
+          "distanceTravelled": 0.4852062885113497
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [14.496132684379042, 0.2, 11.5],
+          "distanceTravelled": 0.5038673156209583
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 11.997707362386858],
+          "distanceTravelled": 0.4977073623868584
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-2->route.northwest.node-3",
+          "position": [-9.959981786738904, 0.2, 18],
+          "distanceTravelled": 0.4599817867389042
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 17.492677282166557],
+          "distanceTravelled": 0.5073227178334427
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -11.838230509983399],
+          "distanceTravelled": 0.3382305099833989
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-2->route.southeast.node-3",
+          "position": [9.851096842414952, 0.2, -18],
+          "distanceTravelled": 0.3510968424149521
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -17.654035771764843],
+          "distanceTravelled": 0.3459642282351574
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-9.862501416041239, 0.2, -11.5],
+          "distanceTravelled": 0.36250141604123876
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-2->route.southwest.node-3",
+          "position": [-15, 0.2, -11.89362534522578],
+          "distanceTravelled": 0.3936253452257805
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-14.626420823126198, 0.2, -11.5],
+          "distanceTravelled": 0.37357917687380215
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 7.849244595246407],
+          "distanceTravelled": 0.3492445952464074
+        }
+      ]
+    },
+    {
+      "frame": 35,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-1->route.north-rim-west.node-2",
+          "position": [-9.958170532963061, 0.2, 36],
+          "distanceTravelled": 2.458170532963061
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [11.759858252233732, 0.2, 11.5],
+          "distanceTravelled": 2.259858252233732
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-2->route.northeast.node-3",
+          "position": [15, 0.2, 14.266487056700278],
+          "distanceTravelled": 2.766487056700278
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [12.494170410051582, 0.2, 11.5],
+          "distanceTravelled": 2.5058295899484175
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 14.266158927914416],
+          "distanceTravelled": 2.7661589279144163
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-2->route.northwest.node-3",
+          "position": [-12.122665223971607, 0.2, 18],
+          "distanceTravelled": 2.622665223971607
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.200434311724582],
+          "distanceTravelled": 2.7995656882754183
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -13.9908021926854],
+          "distanceTravelled": 2.4908021926854005
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-2->route.southeast.node-3",
+          "position": [12.085552630881816, 0.2, -18],
+          "distanceTravelled": 2.585552630881816
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.452245043413933],
+          "distanceTravelled": 2.5477549565860667
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-11.863151819551183, 0.2, -11.5],
+          "distanceTravelled": 2.3631518195511827
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-2->route.southwest.node-3",
+          "position": [-15, 0.2, -14.398741668908102],
+          "distanceTravelled": 2.8987416689081016
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-12.598035960973148, 0.2, -11.5],
+          "distanceTravelled": 2.4019640390268524
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 10.071912284512623],
+          "distanceTravelled": 2.5719122845126225
+        }
+      ]
+    },
+    {
+      "frame": 65,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-1->route.north-rim-west.node-2",
+          "position": [-12.297343156073527, 0.2, 36],
+          "distanceTravelled": 4.797343156073527
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [11.816916835946627, 0.2, 11.5],
+          "distanceTravelled": 2.3169168359466266
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-2->route.northeast.node-3",
+          "position": [15, 0.2, 16.738149184696947],
+          "distanceTravelled": 5.2381491846969475
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [12.437016396448373, 0.2, 11.5],
+          "distanceTravelled": 2.5629836035516274
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 14.431892301001653],
+          "distanceTravelled": 2.9318923010016533
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-2->route.northwest.node-3",
+          "position": [-14.465832632908034, 0.2, 18],
+          "distanceTravelled": 4.965832632908034
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.052072557340892],
+          "distanceTravelled": 2.9479274426591076
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -14.426518806917528],
+          "distanceTravelled": 2.926518806917528
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-2->route.southeast.node-3",
+          "position": [14.50648206054644, 0.2, -18],
+          "distanceTravelled": 5.006482060546441
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.047436364181435],
+          "distanceTravelled": 2.9525636358185654
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-11.923362488035648, 0.2, -11.5],
+          "distanceTravelled": 2.4233624880356484
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-2->route.southwest.node-3",
+          "position": [-15, 0.2, -17.11291926151869],
+          "distanceTravelled": 5.612919261518691
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-12.543442737458678, 0.2, -11.5],
+          "distanceTravelled": 2.456557262541322
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 12.480069854280993],
+          "distanceTravelled": 4.980069854280993
+        }
+      ]
+    },
+    {
+      "frame": 95,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-1->route.north-rim-west.node-2",
+          "position": [-14.636395821613577, 0.2, 36],
+          "distanceTravelled": 7.136395821613577
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [11.816937927863068, 0.2, 11.5],
+          "distanceTravelled": 2.3169379278630675
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-3->route.northeast.node-4",
+          "position": [15, 0.2, 16.859232864001545],
+          "distanceTravelled": 7.625267792725726
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [12.43699552322033, 0.2, 11.5],
+          "distanceTravelled": 2.5630044767796694
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 14.43194630801768],
+          "distanceTravelled": 2.9319463080176806
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-3->route.northwest.node-4",
+          "position": [-13.217270170308675, 0.2, 18],
+          "distanceTravelled": 7.229212187509395
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.052024658033899],
+          "distanceTravelled": 2.9479753419661012
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -14.426953737885622],
+          "distanceTravelled": 2.926953737885622
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-3->route.southeast.node-4",
+          "position": [13.158107229820294, 0.2, -18],
+          "distanceTravelled": 7.341892770179706
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.047041831601813],
+          "distanceTravelled": 2.9529581683981867
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-11.923374226042595, 0.2, -11.5],
+          "distanceTravelled": 2.4233742260425952
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-3->route.southwest.node-4",
+          "position": [-15, 0.2, -16.213931955467746],
+          "distanceTravelled": 8.234118873008054
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-12.543432410121865, 0.2, -11.5],
+          "distanceTravelled": 2.4565675898781354
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 14.888103928789372],
+          "distanceTravelled": 7.388103928789372
+        }
+      ]
+    },
+    {
+      "frame": 124,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-1->route.north-rim-west.node-2",
+          "position": [-16.935502616205124, 0.2, 36],
+          "distanceTravelled": 9.435502616205124
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [11.816937927863068, 0.2, 11.5],
+          "distanceTravelled": 2.3169379278630675
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-3->route.northeast.node-4",
+          "position": [15, 0.2, 14.429905871940813],
+          "distanceTravelled": 10.054594784786458
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [12.43699552322033, 0.2, 11.5],
+          "distanceTravelled": 2.5630044767796694
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 14.43194630801768],
+          "distanceTravelled": 2.9319463080176806
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-3->route.northwest.node-4",
+          "position": [-10.914237013402238, 0.2, 18],
+          "distanceTravelled": 9.532245344415832
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.052024658033899],
+          "distanceTravelled": 2.9479753419661012
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -14.426953737885622],
+          "distanceTravelled": 2.926953737885622
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-3->route.southeast.node-4",
+          "position": [10.77864397602787, 0.2, -18],
+          "distanceTravelled": 9.72135602397213
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.047031704201487],
+          "distanceTravelled": 2.952968295798513
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-11.923374226042595, 0.2, -11.5],
+          "distanceTravelled": 2.4233742260425952
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-3->route.southwest.node-4",
+          "position": [-15, 0.2, -13.546243353417768],
+          "distanceTravelled": 10.901807475058032
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-12.543432410121865, 0.2, -11.5],
+          "distanceTravelled": 2.4565675898781354
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 17.255014081721704],
+          "distanceTravelled": 9.755014081721704
+        }
+      ]
+    },
+    {
+      "frame": 153,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-2->route.north-rim-west.node-3",
+          "position": [-19, 0.2, 36.159783483794],
+          "distanceTravelled": 11.659783483794001
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [11.816937927863068, 0.2, 11.5],
+          "distanceTravelled": 2.3169379278630675
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-3->route.northeast.node-4",
+          "position": [15, 0.2, 11.979538063816102],
+          "distanceTravelled": 12.504962592911168
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [12.43699552322033, 0.2, 11.5],
+          "distanceTravelled": 2.5630044767796694
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 14.431957932225561],
+          "distanceTravelled": 2.9319579322255613
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 17.13891601782367],
+          "distanceTravelled": 11.775077123277285
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.052014567169591],
+          "distanceTravelled": 2.947985432830409
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -14.426964378397715],
+          "distanceTravelled": 2.926964378397715
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -16.94484721934771],
+          "distanceTravelled": 12.038371713501913
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.047031704201487],
+          "distanceTravelled": 2.952968295798513
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-11.923374226042595, 0.2, -11.5],
+          "distanceTravelled": 2.4233742260425952
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-14.440601038733234, 0.2, -11.5],
+          "distanceTravelled": 13.50268555175144
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-12.543432410121865, 0.2, -11.5],
+          "distanceTravelled": 2.4565675898781354
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 19.64242444781207],
+          "distanceTravelled": 12.142424447812068
+        }
+      ]
+    },
+    {
+      "frame": 183,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-2->route.north-rim-west.node-3",
+          "position": [-19, 0.2, 38.55761535883783],
+          "distanceTravelled": 14.057615358837829
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [11.816937927863068, 0.2, 11.5],
+          "distanceTravelled": 2.3169379278630675
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [13.280546192270462, 0.2, 11.5],
+          "distanceTravelled": 14.644979218112141
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [12.43699552322033, 0.2, 11.5],
+          "distanceTravelled": 2.5630044767796694
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 14.431957932225561],
+          "distanceTravelled": 2.9319579322255613
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.737266412821828],
+          "distanceTravelled": 13.176726728279128
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.052014567169591],
+          "distanceTravelled": 2.947985432830409
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -14.426964378397715],
+          "distanceTravelled": 2.926964378397715
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.710987116381713],
+          "distanceTravelled": 13.272231816467912
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.047031704201487],
+          "distanceTravelled": 2.952968295798513
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-11.923374226042595, 0.2, -11.5],
+          "distanceTravelled": 2.4233742260425952
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-13.191073822997684, 0.2, -11.5],
+          "distanceTravelled": 14.752212767486991
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-12.543432410121865, 0.2, -11.5],
+          "distanceTravelled": 2.4565675898781354
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 22.11097119971464],
+          "distanceTravelled": 14.61097119971464
+        }
+      ]
+    },
+    {
+      "frame": 211,
+      "pedestrians": [
+        {
+          "id": "pedestrian.route.north-rim-west.1",
+          "routeId": "route.north-rim-west",
+          "segmentId": "route.north-rim-west.node-2->route.north-rim-west.node-3",
+          "position": [-19, 0.2, 40.81797585818503],
+          "distanceTravelled": 16.31797585818503
+        },
+        {
+          "id": "pedestrian.route.northeast.1",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-1->route.northeast.node-2",
+          "position": [11.816937927863068, 0.2, 11.5],
+          "distanceTravelled": 2.3169379278630675
+        },
+        {
+          "id": "pedestrian.route.northeast.2",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [13.063868919264053, 0.2, 11.5],
+          "distanceTravelled": 14.86165649111855
+        },
+        {
+          "id": "pedestrian.route.northeast.3",
+          "routeId": "route.northeast",
+          "segmentId": "route.northeast.node-4->route.northeast.node-5",
+          "position": [12.43699552322033, 0.2, 11.5],
+          "distanceTravelled": 2.5630044767796694
+        },
+        {
+          "id": "pedestrian.route.northwest.1",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-1->route.northwest.node-2",
+          "position": [-9.5, 0.2, 14.431957932225561],
+          "distanceTravelled": 2.9319579322255613
+        },
+        {
+          "id": "pedestrian.route.northwest.2",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.674446096108756],
+          "distanceTravelled": 13.2395470449922
+        },
+        {
+          "id": "pedestrian.route.northwest.3",
+          "routeId": "route.northwest",
+          "segmentId": "route.northwest.node-4->route.northwest.node-5",
+          "position": [-9.5, 0.2, 15.052014567169591],
+          "distanceTravelled": 2.947985432830409
+        },
+        {
+          "id": "pedestrian.route.southeast.1",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-1->route.southeast.node-2",
+          "position": [9.5, 0.2, -14.426964378397715],
+          "distanceTravelled": 2.926964378397715
+        },
+        {
+          "id": "pedestrian.route.southeast.2",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.668489986251027],
+          "distanceTravelled": 13.314728946598597
+        },
+        {
+          "id": "pedestrian.route.southeast.3",
+          "routeId": "route.southeast",
+          "segmentId": "route.southeast.node-4->route.southeast.node-5",
+          "position": [9.5, 0.2, -15.047031704201487],
+          "distanceTravelled": 2.952968295798513
+        },
+        {
+          "id": "pedestrian.route.southwest.1",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-1->route.southwest.node-2",
+          "position": [-11.923374226042595, 0.2, -11.5],
+          "distanceTravelled": 2.4233742260425952
+        },
+        {
+          "id": "pedestrian.route.southwest.2",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-13.164021491863403, 0.2, -11.5],
+          "distanceTravelled": 14.779265098621272
+        },
+        {
+          "id": "pedestrian.route.southwest.3",
+          "routeId": "route.southwest",
+          "segmentId": "route.southwest.node-4->route.southwest.node-5",
+          "position": [-12.543432410121865, 0.2, -11.5],
+          "distanceTravelled": 2.4565675898781354
+        },
+        {
+          "id": "pedestrian.route.west-rim-north.1",
+          "routeId": "route.west-rim-north",
+          "segmentId": "route.west-rim-north.node-1->route.west-rim-north.node-2",
+          "position": [-28.6, 0.2, 24.437992383670803],
+          "distanceTravelled": 16.937992383670803
+        }
+      ]
+    }
+  ],
   "network": {
     "consoleErrors": [],
     "failedRequests": [],

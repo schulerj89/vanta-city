@@ -1,0 +1,165 @@
+{
+  "id": "world-004-four-side-interiors",
+  "baseCommit": "78ff0b83069a406ffb6669238c224977a8e9b6d0",
+  "measurementConvention": "linear-half-extent-growth-from-map-centre-on-all-four-sides",
+  "mapCentreMetres": { "x": 7, "z": 0 },
+  "baseline": {
+    "boundsMetres": { "minX": -36.75, "maxX": 50.75, "minZ": -35, "maxZ": 35 },
+    "halfExtentsMetres": { "x": 43.75, "z": 35 },
+    "widthMetres": 87.5,
+    "depthMetres": 70,
+    "playableAreaSquareMetres": 6125,
+    "buildingCount": 25,
+    "sectorCount": 14
+  },
+  "target": {
+    "linearGrowthPercent": 25,
+    "allowedLinearGrowthPercent": { "minimum": 20, "maximum": 30 },
+    "boundsMetres": {
+      "minX": -47.6875,
+      "maxX": 61.6875,
+      "minZ": -43.75,
+      "maxZ": 43.75
+    },
+    "halfExtentsMetres": { "x": 54.6875, "z": 43.75 },
+    "widthMetres": 109.375,
+    "depthMetres": 87.5,
+    "playableAreaSquareMetres": 9570.3125,
+    "areaGrowthPercent": 56.25,
+    "outwardGrowthMetres": {
+      "west": 10.9375,
+      "east": 10.9375,
+      "north": 8.75,
+      "south": 8.75
+    },
+    "buildingCount": 37,
+    "sectorCount": 22
+  },
+  "constructionAuthority": "src/world/levels/junctionGrowth.ts",
+  "levelCompositionAuthority": "src/world/levels/testDistrict.ts",
+  "mapAuthority": "testDistrict.definition.mapPresentation",
+  "streamingAuthority": "testDistrict.definition.streaming with AdaptiveSectorStreamingPolicy",
+  "surfaceStrategy": {
+    "roadExtensions": [
+      "v.road-world-004-west",
+      "v.road-world-004-east",
+      "v.road-world-004-north",
+      "v.road-world-004-south"
+    ],
+    "addedSidewalkSurfaceCount": 8,
+    "boundaryPolicy": "Move the existing continuous player/vehicle boundary colliders to the exact target bounds; retain the north pedestrian exit surface beyond the new north edge.",
+    "trafficPolicy": "Straight road continuations preserve the inherited 12m corridor and do not alter signal-controlled central lanes."
+  },
+  "addedSectors": [
+    "sector.world-004-west-north",
+    "sector.world-004-west-south",
+    "sector.world-004-east-north",
+    "sector.world-004-east-south",
+    "sector.world-004-north-west",
+    "sector.world-004-north-east",
+    "sector.world-004-south-west",
+    "sector.world-004-south-east"
+  ],
+  "addedBuildingIds": [
+    "v.building-world-004-west-net-loft",
+    "v.building-world-004-west-repair-row",
+    "v.building-world-004-west-cold-office",
+    "v.building-world-004-east-laundry",
+    "v.building-world-004-east-tide-shop",
+    "v.building-world-004-east-warehouse",
+    "v.building-world-004-north-foundry",
+    "v.building-world-004-north-boarding",
+    "v.building-world-004-north-chemist",
+    "v.building-world-004-south-printworks",
+    "v.building-world-004-south-municipal",
+    "v.building-world-004-south-freight"
+  ],
+  "textureFamilies": [
+    {
+      "assetId": "environment.ashfall-building.venue-terrazzo",
+      "file": "venue-terrazzo.procedural.jpg",
+      "license": "original-project-owned",
+      "method": "deterministic local pixel generator",
+      "purpose": "night venue floor, service bar, and threshold"
+    },
+    {
+      "assetId": "environment.ashfall-building.home-linoleum",
+      "file": "home-linoleum.procedural.jpg",
+      "license": "original-project-owned",
+      "method": "deterministic local pixel generator",
+      "purpose": "Rook home floor, kitchen block, and threshold"
+    }
+  ],
+  "interiors": [
+    {
+      "id": "interior.ashfall.night-venue",
+      "locationId": "location.ashfall.night-venue",
+      "sectorId": "sector.world-004-east-north",
+      "footprintMetres": { "width": 8.5, "depth": 12 },
+      "entranceWidthMetres": 3,
+      "entranceFacing": "west",
+      "furnishingGrammar": ["service-bar", "booth", "stage", "low-table"],
+      "cameraAnchorIds": [
+        "camera.ashfall.night-venue-wide",
+        "camera.ashfall.night-venue-counter"
+      ],
+      "occupantRouteId": "route.interior-night-venue-service"
+    },
+    {
+      "id": "interior.ashfall.rook-home",
+      "locationId": "location.ashfall.rook-home",
+      "sectorId": "sector.world-004-west-south",
+      "footprintMetres": { "width": 8.5, "depth": 10 },
+      "entranceWidthMetres": 3,
+      "entranceFacing": "east",
+      "furnishingGrammar": ["bed", "kitchen-block", "table", "bookcase"],
+      "cameraAnchorIds": [
+        "camera.ashfall.rook-home-wide",
+        "camera.ashfall.rook-home-table"
+      ],
+      "occupantRouteId": "route.interior-rook-home-idle-walk"
+    }
+  ],
+  "spawns": [
+    {
+      "id": "spawn.player.home",
+      "location": "inside Rook's home",
+      "collisionSafe": true
+    },
+    {
+      "id": "spawn.player.clinic",
+      "location": "south-east clinic foyer apron",
+      "collisionSafe": true
+    }
+  ],
+  "occupantPolicy": {
+    "authority": "PedestrianSystem",
+    "animationIntent": ["Female_Walk", "Female_Idle"],
+    "residentCapBefore": 16,
+    "residentCapAfter": 18,
+    "applauseFallback": false,
+    "handoff": "INTERIOR-POP-001 may replace these existing-cast service/home residents with the NPC-002 cast without adding another actor simulation."
+  },
+  "performanceAcceptance": {
+    "referenceViewport": "1280x720",
+    "preferredPeakWorkingSetMb": 650,
+    "hardPeakWorkingSetMb": 900,
+    "minimumSustainedFps": 50,
+    "minimumOnePercentLowFps": 45,
+    "frameTimeP95Ms": 20,
+    "requiredStreamingCycles": 3,
+    "externalRuntimeRequests": 0
+  },
+  "measuredPerformance": {
+    "evidence": "docs/screenshots/world-004/performance-capture.json",
+    "warmupMs": 20000,
+    "measurementMs": 60000,
+    "averageFps": 550.8611580550861,
+    "onePercentLowFps": 277.77777777789004,
+    "frameTimeP95Ms": 3,
+    "rendererFrameTimeP95Ms": 2.300000011920929,
+    "triangles": 12446,
+    "peakUsedJsHeapSizeBytes": 24500000,
+    "externalRuntimeRequests": 0
+  }
+}
