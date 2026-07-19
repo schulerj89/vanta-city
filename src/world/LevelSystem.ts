@@ -41,6 +41,7 @@ import { validateLevelDefinition } from './LevelDefinition';
 import {
   DefinitionLevelLocations,
   findSafePlayerSpawn,
+  isPlayablePlayerPosition,
   type LevelLocations,
 } from './LevelQueries';
 import type { LevelRegistry } from './LevelRegistry';
@@ -486,6 +487,80 @@ export class LevelSystem implements GameSystem, LevelLocations {
     const level = this.loaded?.definition;
     if (!level) throw new Error('No level is loaded');
     return findSafePlayerSpawn(level, candidateIds);
+  }
+
+  /** Validates a persisted pose against authored support before player seeding. */
+  public resolveInitialPlayerPlacement(
+    position: WorldPosition | undefined,
+    facingYaw: number | undefined,
+  ): {
+    readonly position: WorldPosition;
+    readonly facingYaw: number | undefined;
+    readonly restored: boolean;
+  } {
+    const definition = this.registry.get(this.initialLevelId);
+    if (position && isPlayablePlayerPosition(definition, position)) {
+      return { position: { ...position }, facingYaw, restored: true };
+    }
+    const spawn = findSafePlayerSpawn(definition, []);
+    return {
+      position: toWorldPosition(spawn.position),
+      facingYaw: spawn.rotation?.[1],
+      restored: false,
+    };
+  }
+
+  /** Resolves and streams a same-level respawn without crossing generations. */
+  public async prepareSafePlayerRespawn(
+    candidateIds: readonly string[],
+  ): Promise<SpawnPointDefinition> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (this.transition) {
+        try {
+          await this.transition;
+        } catch {
+          // Re-read the authoritative level after a rolled-back transition.
+        }
+      }
+      const loaded = this.loaded;
+      if (!loaded) throw new Error('No level is loaded');
+      const generation = this.activeLevelGeneration;
+      const preferred = findSafePlayerSpawn(loaded.definition, candidateIds);
+      const fallback = findSafePlayerSpawn(loaded.definition, []);
+      for (const spawn of preferred.id === fallback.id
+        ? [preferred]
+        : [preferred, fallback]) {
+        try {
+          await this.refreshStreaming(toWorldPosition(spawn.position));
+          if (!this.isCurrentPlayerSectorResident(loaded)) {
+            throw new Error(
+              `Respawn residency failed for "${spawn.id}" in level "${loaded.definition.id}"`,
+            );
+          }
+        } catch (error) {
+          if (spawn.id === fallback.id) throw error;
+          continue;
+        }
+        if (
+          this.loaded === loaded &&
+          this.activeLevelGeneration === generation
+        ) {
+          return spawn;
+        }
+        break;
+      }
+    }
+    throw new Error('Level changed while preparing player respawn');
+  }
+
+  private isCurrentPlayerSectorResident(level: LoadedLevel): boolean {
+    const currentSectorIds = Object.values(this.lastPolicySnapshot.decisions)
+      .filter(({ reason }) => reason === 'player-current')
+      .map(({ sectorId }) => sectorId);
+    return (
+      currentSectorIds.length === 0 ||
+      currentSectorIds.every((sectorId) => level.sectors.has(sectorId))
+    );
   }
 
   public getLocation(id: string): NamedLocationDefinition {

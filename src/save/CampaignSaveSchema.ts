@@ -9,6 +9,7 @@ import type {
   MissionPersistenceSnapshot,
   MissionStatus,
 } from '../missions/MissionSystem';
+import { missionPersistenceInvariantError } from '../missions/MissionPersistenceValidation';
 
 export const CAMPAIGN_SAVE_STORAGE_KEY = 'vanta-city:campaign-save';
 export const CAMPAIGN_SAVE_SCHEMA_VERSION = 1 as const;
@@ -203,22 +204,19 @@ function parseMission(
   if (parsed.some((item) => item === undefined)) {
     return invalid('invalid-mission-progress');
   }
-  const active = parsed.filter((item) => item?.status === 'active');
-  if (
-    active.length > 1 ||
-    (active[0]?.id ?? undefined) !== value.activeMissionId
-  ) {
-    return invalid('invalid-active-mission');
+  const snapshot = {
+    schemaVersion: 1 as const,
+    revision: value.revision,
+    activeMissionId: value.activeMissionId,
+    facts,
+    missions: parsed as MissionPersistenceSnapshot['missions'],
+  };
+  if (missionPersistenceInvariantError(snapshot, definitions)) {
+    return invalid('invalid-mission-progress');
   }
   return {
     ok: true,
-    snapshot: freeze({
-      schemaVersion: 1,
-      revision: value.revision,
-      activeMissionId: value.activeMissionId,
-      facts,
-      missions: parsed as MissionPersistenceSnapshot['missions'],
-    }),
+    snapshot: freeze(snapshot),
   };
 }
 

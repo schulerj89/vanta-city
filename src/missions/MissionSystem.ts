@@ -19,6 +19,7 @@ import type {
   MissionHighlightSnapshot,
   MissionHighlightSource,
 } from './MissionHighlight';
+import { missionPersistenceInvariantError } from './MissionPersistenceValidation';
 
 export type MissionStatus =
   'locked' | 'available' | 'active' | 'completed' | 'cancelled' | 'failed';
@@ -161,6 +162,7 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
   private readonly definitionsById: ReadonlyMap<string, MissionDefinition>;
   private readonly progress = new Map<string, MissionProgressState>();
   private readonly facts = new Map<string, MissionFactValue>();
+  private readonly initialFacts: Readonly<Record<string, MissionFactValue>>;
   private readonly unsubscribers: (() => void)[] = [];
   private readonly enteredTriggers = new Set<string>();
   private activeMissionId: string | undefined;
@@ -177,10 +179,11 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
     initialFacts: Readonly<Record<string, MissionFactValue>>,
     private readonly dependencies: MissionSystemDependencies,
   ) {
+    this.initialFacts = Object.freeze({ ...initialFacts });
     this.definitionsById = new Map(
       definitions.map((definition) => [definition.id, definition]),
     );
-    for (const [id, value] of Object.entries(initialFacts)) {
+    for (const [id, value] of Object.entries(this.initialFacts)) {
       this.facts.set(id, value);
     }
     for (const definition of definitions) {
@@ -432,48 +435,14 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
         'Mission persistence must be restored before initialization',
       );
     }
-    const savedIds = new Set(snapshot.missions.map(({ id }) => id));
-    if (savedIds.size !== snapshot.missions.length) {
-      throw new Error('Mission snapshot contains duplicate mission IDs');
-    }
-    for (const saved of snapshot.missions) {
-      if (!this.definitionsById.has(saved.id)) {
-        throw new Error(
-          `Mission snapshot contains unknown mission "${saved.id}"`,
-        );
-      }
-    }
-    const restoredActive = snapshot.missions.filter(
-      ({ status }) => status === 'active',
+    const invariantError = missionPersistenceInvariantError(
+      snapshot,
+      this.definitions,
     );
-    if (
-      restoredActive.length > 1 ||
-      restoredActive[0]?.id !== snapshot.activeMissionId
-    ) {
-      throw new Error('Mission snapshot active mission is inconsistent');
+    if (invariantError) {
+      throw new Error(`Mission snapshot is invalid: ${invariantError}`);
     }
-    for (const saved of snapshot.missions) {
-      const definition = this.requireDefinition(saved.id);
-      if (saved.objectiveStatuses.length !== definition.objectives.length) {
-        throw new Error(
-          `Mission snapshot is incompatible with "${definition.id}"`,
-        );
-      }
-      this.progress.set(definition.id, {
-        status: saved.status,
-        attempt: saved.attempt,
-        objectiveStatuses: [...saved.objectiveStatuses],
-        rewardGranted: saved.rewardGranted,
-        failureReason: saved.failureReason,
-      });
-    }
-    this.facts.clear();
-    for (const [id, value] of Object.entries(snapshot.facts))
-      this.facts.set(id, value);
-    this.activeMissionId = snapshot.activeMissionId;
-    this.revision = snapshot.revision;
-    this.notification = undefined;
-    this.refreshAvailability();
+    this.restoreState(snapshot, undefined);
   }
 
   /** Applies canonical story facts through the mission-owned persistence surface. */
@@ -492,6 +461,27 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
       this.bump();
     }
     return changed;
+  }
+
+  /** Applies a landing's facts/hooks as one rollback-capable mission mutation. */
+  public commitLandingTransaction(
+    transaction: {
+      readonly factChanges: Readonly<Record<string, MissionFactValue>>;
+      readonly eventHookIds: readonly string[];
+    },
+    onRollback: (operation: () => void) => void,
+  ): void {
+    this.assertAvailable();
+    const before = this.getPersistenceSnapshot();
+    const notification = this.notification;
+    onRollback(() => {
+      this.restoreState(before, notification);
+      this.events.emit('changed', this.getSnapshot());
+    });
+    this.applyFactChanges(transaction.factChanges);
+    for (const hookId of transaction.eventHookIds) {
+      this.dispatch({ type: 'event-hook', hookId });
+    }
   }
 
   public dispose(): void {
@@ -720,6 +710,32 @@ export class MissionSystem implements GameSystem, MissionHighlightSource {
   private bump(): void {
     this.revision += 1;
     this.events.emit('changed', this.getSnapshot());
+  }
+
+  private restoreState(
+    snapshot: MissionPersistenceSnapshot,
+    notification: MissionNotificationSnapshot | undefined,
+  ): void {
+    for (const saved of snapshot.missions) {
+      this.progress.set(saved.id, {
+        status: saved.status,
+        attempt: saved.attempt,
+        objectiveStatuses: [...saved.objectiveStatuses],
+        rewardGranted: saved.rewardGranted,
+        failureReason: saved.failureReason,
+      });
+    }
+    this.facts.clear();
+    for (const [id, value] of Object.entries(this.initialFacts)) {
+      this.facts.set(id, value);
+    }
+    for (const [id, value] of Object.entries(snapshot.facts)) {
+      this.facts.set(id, value);
+    }
+    this.activeMissionId = snapshot.activeMissionId;
+    this.revision = snapshot.revision;
+    this.notification = notification;
+    this.refreshAvailability();
   }
 
   private assertAvailable(): void {

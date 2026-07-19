@@ -89,6 +89,15 @@ test('new campaign, purchase, reload, corrupt fallback, and scoped reset', async
       },
     ),
   ).toEqual({ campaign: null, title: null, preference: 'keep' });
+  await page.evaluate(() =>
+    window.dispatchEvent(new PageTransitionEvent('pagehide')),
+  );
+  expect(
+    await page.evaluate(
+      (key) => localStorage.getItem(key),
+      CAMPAIGN_SAVE_STORAGE_KEY,
+    ),
+  ).toBeNull();
   expect(failures).toEqual([]);
 });
 
@@ -159,12 +168,28 @@ test('page hide saves a remote pose and boot restores its collider residency', a
   await expect
     .poll(async () => (await snapshot(page)).player.grounded)
     .toBe(true);
-  const state = await snapshot(page);
+  let state = await snapshot(page);
   expect(state.player.position.x).toBeCloseTo(40, 1);
   expect(state.player.position.z).toBeCloseTo(0, 1);
   expect(state.player.groundColliderId).not.toBe('');
   expect(state.world.sectors.active).toContain('sector.east-rim-north');
   expect(state.world.activeDeclaredColliderCount).toBeGreaterThan(0);
+
+  await mutateStoredPosition(page, [500, 0, 500]);
+  await page.reload();
+  await ready(page);
+  state = await snapshot(page);
+  expect(state.player.position.x).toBeCloseTo(0, 1);
+  expect(state.player.position.z).toBeCloseTo(19, 1);
+  expect(state.player.grounded).toBe(true);
+
+  await mutateStoredPosition(page, [0, 20, 0]);
+  await page.reload();
+  await ready(page);
+  state = await snapshot(page);
+  expect(state.player.position.x).toBeCloseTo(0, 1);
+  expect(state.player.position.z).toBeCloseTo(19, 1);
+  expect(state.player.grounded).toBe(true);
   expect(failures).toEqual([]);
 });
 
@@ -209,9 +234,7 @@ test('opening save replays until its canonical landing checkpoint', async ({
     .toBe('test-district');
   let state = await snapshot(page);
   expect(state.missions.runtime.facts['rook-arrived-in-ashfall']).toBe(true);
-  expect(
-    await page.evaluate(() => window.__VANTA_TEST__!.campaignSaveNow()),
-  ).toBe(true);
+  await expect.poll(() => storedArrivalCheckpoint(page)).toBe(true);
 
   await page.reload();
   await ready(page);
@@ -219,6 +242,73 @@ test('opening save replays until its canonical landing checkpoint', async ({
   expect(state.world.levelId).toBe('test-district');
   expect(state.cinematic.state).toBe('idle');
   expect(state.missions.runtime.facts['rook-arrived-in-ashfall']).toBe(true);
+  expect(failures).toEqual([]);
+});
+
+test('normal opening completion automatically persists its landing checkpoint', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const failures = monitor(page);
+  const openingUrl =
+    '/?e2e=1&opening=1&skipTitle=1&traffic=0&dialogueTypewriter=0';
+  await page.goto(openingUrl);
+  await bridgeReady(page);
+  await expect
+    .poll(
+      async () => {
+        await page.evaluate(() => window.__VANTA_TEST__!.advanceCinematic(100));
+        return (await snapshot(page)).cinematic.state;
+      },
+      { timeout: 20_000 },
+    )
+    .toBe('idle');
+  expect((await snapshot(page)).cinematic.lastResult).toBe('completed');
+  await expect.poll(() => storedArrivalCheckpoint(page)).toBe(true);
+
+  await page.reload();
+  await ready(page);
+  const state = await snapshot(page);
+  expect(state.world.levelId).toBe('test-district');
+  expect(state.cinematic.state).toBe('idle');
+  expect(state.missions.runtime.facts['rook-arrived-in-ashfall']).toBe(true);
+  expect(failures).toEqual([]);
+});
+
+test('failed opening landing remains uncommitted and replays after reload', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const failures = monitor(page);
+  const openingUrl =
+    '/?e2e=1&opening=1&skipTitle=1&traffic=0&dialogueTypewriter=0';
+  await page.goto(openingUrl);
+  await bridgeReady(page);
+  await page.evaluate(() =>
+    window.__VANTA_TEST__!.setCinematicParticipantAvailable('mack', false),
+  );
+  await page.evaluate(() => window.__VANTA_TEST__!.advanceCinematic(0.1));
+  await expect
+    .poll(async () => (await snapshot(page)).cinematic.state, {
+      timeout: 15_000,
+    })
+    .toBe('idle');
+  let state = await snapshot(page);
+  expect(state.cinematic).toMatchObject({
+    lastResult: 'failed',
+    committedLandingTransactionId: undefined,
+  });
+  expect(state.missions.runtime.facts['rook-arrived-in-ashfall']).toBe(false);
+  await expect.poll(() => storedArrivalCheckpoint(page)).toBe(false);
+
+  await page.reload();
+  await bridgeReady(page);
+  await expect
+    .poll(async () => (await snapshot(page)).cinematic.shotId)
+    .toBe('shot.ash-001.northbar-establish');
+  state = await snapshot(page);
+  expect(state.world.levelId).toBe('northbar-coach-depot');
+  expect(state.missions.runtime.facts['rook-arrived-in-ashfall']).toBe(false);
   expect(failures).toEqual([]);
 });
 
@@ -250,6 +340,35 @@ async function command(
       window.__VANTA_TEST__!.executeDebugCommand(commandId, commandArgument),
     { commandId: id, commandArgument: argument },
   );
+}
+
+async function mutateStoredPosition(
+  page: Page,
+  position: [number, number, number],
+): Promise<void> {
+  await page.evaluate(
+    ({ key, nextPosition }) => {
+      const stored = JSON.parse(localStorage.getItem(key)!) as {
+        player: { position: [number, number, number] };
+      };
+      stored.player.position = nextPosition;
+      localStorage.setItem(key, JSON.stringify(stored));
+    },
+    { key: CAMPAIGN_SAVE_STORAGE_KEY, nextPosition: position },
+  );
+}
+
+async function storedArrivalCheckpoint(
+  page: Page,
+): Promise<boolean | undefined> {
+  return page.evaluate((key) => {
+    const raw = localStorage.getItem(key);
+    if (!raw) return undefined;
+    const stored = JSON.parse(raw) as {
+      mission: { facts: Record<string, string | number | boolean> };
+    };
+    return stored.mission.facts['rook-arrived-in-ashfall'] === true;
+  }, CAMPAIGN_SAVE_STORAGE_KEY);
 }
 
 function monitor(page: Page): string[] {

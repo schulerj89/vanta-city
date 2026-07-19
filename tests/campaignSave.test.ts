@@ -131,6 +131,63 @@ describe('campaign save schema and storage authority', () => {
     ).toEqual({ ok: false, reason: 'invalid-mission-progress' });
   });
 
+  it.each([
+    {
+      name: 'active without an active objective',
+      mutate: (save: CampaignSaveSnapshot) => {
+        const mission = save.mission.missions[0] as unknown as {
+          status: string;
+          attempt: number;
+        };
+        mission.status = 'active';
+        mission.attempt = 1;
+        (save.mission as { activeMissionId?: string }).activeMissionId =
+          missionDefinitions[0]!.id;
+      },
+    },
+    {
+      name: 'completed without its reward guard',
+      mutate: (save: CampaignSaveSnapshot) => {
+        const mission = save.mission.missions[0] as unknown as {
+          status: string;
+          attempt: number;
+          objectiveStatuses: string[];
+        };
+        mission.status = 'completed';
+        mission.attempt = 1;
+        mission.objectiveStatuses = mission.objectiveStatuses.map(
+          () => 'completed',
+        );
+      },
+    },
+    {
+      name: 'failed without a failure reason',
+      mutate: (save: CampaignSaveSnapshot) => {
+        const mission = save.mission.missions[0] as unknown as {
+          status: string;
+          attempt: number;
+          objectiveStatuses: string[];
+        };
+        mission.status = 'failed';
+        mission.attempt = 1;
+        mission.objectiveStatuses[0] = 'active';
+      },
+    },
+    {
+      name: 'available after an attempt',
+      mutate: (save: CampaignSaveSnapshot) => {
+        (save.mission.missions[0] as { attempt: number }).attempt = 2;
+      },
+    },
+  ])('rejects impossible mission topology: $name', ({ mutate }) => {
+    const tampered = structuredClone(validSnapshot());
+    mutate(tampered);
+    expect(parseCampaignSave(JSON.stringify(tampered), validation)).toEqual({
+      ok: false,
+      reason: 'invalid-mission-progress',
+    });
+  });
+
   it('reports storage failures and resets only campaign/title progress', () => {
     const storage = new MemoryStorage();
     storage.setItem(CAMPAIGN_SAVE_STORAGE_KEY, JSON.stringify(validSnapshot()));
@@ -146,6 +203,8 @@ describe('campaign save schema and storage authority', () => {
     expect(storage.getItem(CAMPAIGN_SAVE_STORAGE_KEY)).toBeNull();
     expect(storage.getItem(TITLE_STARTED_STORAGE_KEY)).toBeNull();
     expect(storage.getItem('vanta-city:audio')).toBe('preserve');
+    saves.dispose();
+    expect(storage.getItem(CAMPAIGN_SAVE_STORAGE_KEY)).toBeNull();
     expect(saves.reset()).toBe(true);
 
     const unavailable = new CampaignSaveSystem(
@@ -257,10 +316,11 @@ describe('campaign respawn resolution', () => {
 
   it('honors default preference and loads fallback residency after failure', async () => {
     const saves = new CampaignSaveSystem(new MemoryStorage(), validation);
-    const refreshStreaming = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('clinic sector failed'))
-      .mockResolvedValue(undefined);
+    const prepareSafePlayerRespawn = vi.fn().mockResolvedValue({
+      id: 'spawn.player-default',
+      position: [0, 0.2, 7],
+      rotation: [0, 0, 0],
+    });
     const levels = {
       resolveSafePlayerSpawn: (candidates: readonly string[]) =>
         candidates.includes('spawn.player.clinic')
@@ -274,22 +334,15 @@ describe('campaign respawn resolution', () => {
               position: [0, 0.2, 7],
               rotation: [0, 0, 0],
             },
-      refreshStreaming,
+      prepareSafePlayerRespawn,
     };
     saves.setRespawnPreference('clinic');
     await expect(saves.prepareRespawn(levels as never)).resolves.toMatchObject({
       id: 'spawn.player-default',
     });
-    expect(refreshStreaming).toHaveBeenNthCalledWith(1, {
-      x: 40,
-      y: 0.2,
-      z: 0,
-    });
-    expect(refreshStreaming).toHaveBeenNthCalledWith(2, {
-      x: 0,
-      y: 0.2,
-      z: 7,
-    });
+    expect(prepareSafePlayerRespawn).toHaveBeenCalledWith([
+      'spawn.player.clinic',
+    ]);
 
     saves.setRespawnPreference('default');
     expect(saves.resolveRespawn(levels as never).id).toBe(

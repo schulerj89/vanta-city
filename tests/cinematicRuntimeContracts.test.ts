@@ -36,6 +36,7 @@ const destinationDefinition: CinematicDefinition = {
   },
   landingTransaction: {
     id: 'landing.test.destination',
+    factChanges: {},
     storyEffectIds: ['story.test.arrived'],
     missionHandoffIds: ['mission.test.handoff'],
   },

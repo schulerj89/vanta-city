@@ -453,12 +453,13 @@ export class CinematicCoordinator implements GameSystem {
     try {
       active.destination = this.adapters.destination!.requestDestination(
         request,
-        () => {
+        (destinationContext) => {
           if (active.landingResult === 'failed') return;
           const transaction = active.definition.landingTransaction!;
           const commit = this.adapters.landing!.commitLanding(transaction, {
             cinematicId: active.definition.id,
             result: active.landingResult!,
+            onRollback: (operation) => destinationContext.onRollback(operation),
           });
           if (!commit.committed) {
             throw new Error(

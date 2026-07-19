@@ -1,3 +1,5 @@
+import type { MissionFactValue } from '../missions/MissionDefinition';
+
 export type CinematicCompletionResult =
   'completed' | 'skipped' | 'cancelled' | 'failed';
 
@@ -89,6 +91,7 @@ export interface CinematicDestinationRequest {
 
 export interface CinematicLandingTransaction {
   readonly id: string;
+  readonly factChanges: Readonly<Record<string, MissionFactValue>>;
   readonly storyEffectIds: readonly string[];
   readonly missionHandoffIds: readonly string[];
 }
@@ -254,6 +257,7 @@ export function validateCinematicDefinition(
       !definition.destination.spawnId ||
       !definition.destination.cameraAnchorId ||
       !definition.landingTransaction.id ||
+      !validFactChanges(definition.landingTransaction.factChanges) ||
       hasEmptyOrDuplicate(definition.landingTransaction.storyEffectIds) ||
       hasEmptyOrDuplicate(definition.landingTransaction.missionHandoffIds)
     ) {
@@ -270,6 +274,21 @@ export function validateCinematicDefinition(
     }
     validateDestinationShot(definition.destinationShot, definition);
   }
+}
+
+function validFactChanges(
+  changes: Readonly<Record<string, MissionFactValue>>,
+): boolean {
+  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) {
+    return false;
+  }
+  return Object.entries(changes).every(
+    ([id, value]) =>
+      id.trim().length > 0 &&
+      (typeof value === 'string' ||
+        typeof value === 'boolean' ||
+        (typeof value === 'number' && Number.isFinite(value))),
+  );
 }
 
 function validateDestinationShot(

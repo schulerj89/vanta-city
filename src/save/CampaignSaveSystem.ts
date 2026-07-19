@@ -62,6 +62,7 @@ export class CampaignSaveSystem {
   private readResult: CampaignSaveStatus['readResult'] = 'empty';
   private readError: string | undefined;
   private lastObservedRaw: string | null | undefined;
+  private exitFlushSuppressed = false;
   private lastSpawnId: string | undefined;
   private homeUnlocked = false;
   private respawnPreference: CampaignSaveSnapshot['world']['respawnPreference'] =
@@ -147,6 +148,7 @@ export class CampaignSaveSystem {
 
   public requestSave(): void {
     if (!this.sources || this.writeTimer !== undefined) return;
+    this.exitFlushSuppressed = false;
     this.writeTimer = setTimeout(() => {
       this.writeTimer = undefined;
       this.saveNow();
@@ -154,6 +156,7 @@ export class CampaignSaveSystem {
   }
 
   public saveNow(): boolean {
+    this.exitFlushSuppressed = false;
     const sources = this.sources;
     const levelId = sources?.levels.activeLevel?.id;
     if (!sources || !levelId) return false;
@@ -238,16 +241,7 @@ export class CampaignSaveSystem {
     };
     readonly facingYaw: number | undefined;
   } {
-    const candidates =
-      this.respawnPreference === 'default'
-        ? []
-        : [
-            ...(this.homeUnlocked && this.respawnPreference === 'home'
-              ? ['spawn.player.home']
-              : []),
-            'spawn.player.clinic',
-          ];
-    const spawn = levels.resolveSafePlayerSpawn(candidates);
+    const spawn = levels.resolveSafePlayerSpawn(this.respawnCandidates());
     return {
       id: spawn.id,
       position: {
@@ -262,25 +256,18 @@ export class CampaignSaveSystem {
   public async prepareRespawn(
     levels: LevelSystem,
   ): Promise<ReturnType<CampaignSaveSystem['resolveRespawn']>> {
-    const preferred = this.resolveRespawn(levels);
-    try {
-      await levels.refreshStreaming(preferred.position);
-      return preferred;
-    } catch (error) {
-      const fallbackSpawn = levels.resolveSafePlayerSpawn([]);
-      if (fallbackSpawn.id === preferred.id) throw error;
-      const fallback = {
-        id: fallbackSpawn.id,
-        position: {
-          x: fallbackSpawn.position[0],
-          y: fallbackSpawn.position[1],
-          z: fallbackSpawn.position[2],
-        },
-        facingYaw: fallbackSpawn.rotation?.[1],
-      };
-      await levels.refreshStreaming(fallback.position);
-      return fallback;
-    }
+    const spawn = await levels.prepareSafePlayerRespawn(
+      this.respawnCandidates(),
+    );
+    return {
+      id: spawn.id,
+      position: {
+        x: spawn.position[0],
+        y: spawn.position[1],
+        z: spawn.position[2],
+      },
+      facingYaw: spawn.rotation?.[1],
+    };
   }
 
   /** Deletes only campaign progress and the title's first-run marker. */
@@ -301,6 +288,7 @@ export class CampaignSaveSystem {
       this.readResult = 'empty';
       this.readError = undefined;
       this.lastObservedRaw = null;
+      this.exitFlushSuppressed = true;
       return true;
     } catch (error) {
       this.available = false;
@@ -346,8 +334,24 @@ export class CampaignSaveSystem {
     }
   }
 
+  private respawnCandidates(): readonly string[] {
+    return this.respawnPreference === 'default'
+      ? []
+      : [
+          ...(this.homeUnlocked && this.respawnPreference === 'home'
+            ? ['spawn.player.home']
+            : []),
+          'spawn.player.clinic',
+        ];
+  }
+
   /** Avoids overwriting another tab or an intentional external corruption on exit. */
   private saveOnExit(): void {
+    if (this.writeTimer !== undefined) {
+      clearTimeout(this.writeTimer);
+      this.writeTimer = undefined;
+    }
+    if (this.exitFlushSuppressed) return;
     try {
       if (
         this.storage?.getItem(CAMPAIGN_SAVE_STORAGE_KEY) !==

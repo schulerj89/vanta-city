@@ -65,6 +65,7 @@ export const cinematicDefinitions = [
         'orin-status',
         'rook-accepted-orin-search',
         'marrow-has-rook-arrival-time',
+        'rook-arrived-in-ashfall',
       ],
     },
     restorationPolicy: 'authoritative-destination',
@@ -77,6 +78,12 @@ export const cinematicDefinitions = [
     },
     landingTransaction: {
       id: 'transaction.ash-001.northbar-arrival',
+      factChanges: {
+        'orin-status': 'missing',
+        'rook-accepted-orin-search': true,
+        'marrow-has-rook-arrival-time': true,
+        'rook-arrived-in-ashfall': true,
+      },
       storyEffectIds: [
         'story.ash-001.orin-missing-revealed',
         'story.ash-001.rook-chooses-junction',

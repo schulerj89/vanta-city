@@ -11,7 +11,10 @@ import {
   MissionSystem,
   type MissionPersistenceSnapshot,
 } from '../src/missions/MissionSystem';
-import type { MissionDefinition } from '../src/missions/MissionDefinition';
+import type {
+  MissionDefinition,
+  MissionFactValue,
+} from '../src/missions/MissionDefinition';
 import {
   ashfallInitialMissionFacts,
   missionDefinitions,
@@ -22,6 +25,9 @@ import { testDistrict } from '../src/world/levels/testDistrict';
 function harness(
   definitions: readonly MissionDefinition[] = missionDefinitions,
   initialize = true,
+  initialFacts: Readonly<
+    Record<string, MissionFactValue>
+  > = ashfallInitialMissionFacts,
 ) {
   const stateEvents = new EventBus<StateEvents>();
   const state = new GameStateMachine(stateEvents);
@@ -33,7 +39,7 @@ function harness(
   const equipment = new CharacterEquipment('player');
   const position = { x: 2, y: 0.22, z: 19 };
   const locations = new DefinitionLevelLocations(testDistrict.definition);
-  const missions = new MissionSystem(definitions, ashfallInitialMissionFacts, {
+  const missions = new MissionSystem(definitions, initialFacts, {
     state,
     player: {
       getWorldPose: () => ({
@@ -270,6 +276,7 @@ describe('MissionSystem', () => {
     const appended: MissionDefinition = {
       ...missionDefinitions[0]!,
       id: 'ash-002-appended',
+      prerequisiteFacts: [{ id: 'new-catalog-fact', equals: true }],
       objectives: missionDefinitions[0]!.objectives.map((objective, index) => ({
         ...objective,
         id: `ash-002-objective-${index}`,
@@ -280,7 +287,10 @@ describe('MissionSystem', () => {
         id: 'reward.ash-002-appended',
       },
     };
-    const restored = harness([...missionDefinitions, appended], false);
+    const restored = harness([...missionDefinitions, appended], false, {
+      ...ashfallInitialMissionFacts,
+      'new-catalog-fact': true,
+    });
     restored.missions.restore(persisted);
     restored.missions.init();
 
@@ -303,6 +313,69 @@ describe('MissionSystem', () => {
     expect(
       restored.missions.applyFactChanges({ 'rook-arrived-in-ashfall': true }),
     ).toBe(false);
+    expect(restored.missions.getSnapshot().facts['new-catalog-fact']).toBe(
+      true,
+    );
+    restored.missions.dispose();
+  });
+
+  it('rolls a throwing landing hook back to exact mission persistence', () => {
+    const landingMission: MissionDefinition = {
+      ...missionDefinitions[0]!,
+      id: 'landing-rollback-mission',
+      startCondition: { type: 'event-hook', hookId: 'landing-start' },
+      objectives: missionDefinitions[0]!.objectives.map((objective, index) => ({
+        ...objective,
+        id: `landing-rollback-objective-${index}`,
+        highlights: undefined,
+      })),
+      reward: {
+        ...missionDefinitions[0]!.reward,
+        id: 'reward.landing-rollback',
+      },
+    };
+    const h = harness([landingMission]);
+    const before = h.missions.getPersistenceSnapshot();
+    const rollback: (() => void)[] = [];
+    h.missions.events.on('mission:started', () => {
+      throw new Error('landing hook failed');
+    });
+
+    expect(() =>
+      h.missions.commitLandingTransaction(
+        {
+          factChanges: { 'rook-arrived-in-ashfall': true },
+          eventHookIds: ['landing-start'],
+        },
+        (operation) => rollback.push(operation),
+      ),
+    ).toThrow('landing hook failed');
+    expect(rollback).toHaveLength(1);
+    rollback[0]!();
+    expect(h.missions.getPersistenceSnapshot()).toEqual(before);
+    h.missions.dispose();
+  });
+
+  it('rejects the same impossible progress topology during direct restore', () => {
+    const source = harness();
+    const tampered = structuredClone(source.missions.getPersistenceSnapshot());
+    source.missions.dispose();
+    const progress = tampered.missions[0] as unknown as {
+      status: string;
+      attempt: number;
+      objectiveStatuses: string[];
+      rewardGranted: boolean;
+    };
+    progress.status = 'completed';
+    progress.attempt = 1;
+    progress.objectiveStatuses = progress.objectiveStatuses.map(
+      () => 'completed',
+    );
+    progress.rewardGranted = false;
+    const restored = harness(missionDefinitions, false);
+    expect(() => restored.missions.restore(tampered)).toThrow(
+      'invalid-progress-topology',
+    );
     restored.missions.dispose();
   });
 });

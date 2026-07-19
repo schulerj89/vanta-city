@@ -295,6 +295,17 @@ async function bootstrap(): Promise<void> {
   const collision = new StaticCollisionWorld();
   const worldCollision = new WorldCollisionSystem(collision, worldEvents);
   const spawn = findSpawn(initialLevel);
+  const savedPlayer = campaignSave.getSnapshot()?.player;
+  const initialPlacement = levelSystem.resolveInitialPlayerPlacement(
+    savedPlayer
+      ? {
+          x: savedPlayer.position[0],
+          y: savedPlayer.position[1],
+          z: savedPlayer.position[2],
+        }
+      : undefined,
+    savedPlayer?.facingYaw,
+  );
   const objects = new GameObjectWorld(render.scene);
   const availableCharacters = browserTestModule
     ? [
@@ -330,12 +341,14 @@ async function bootstrap(): Promise<void> {
     objects,
     collision,
     new Vector3(
-      ...(campaignSave.getSnapshot()?.player.position ?? spawn.position),
+      initialPlacement.position.x,
+      initialPlacement.position.y,
+      initialPlacement.position.z,
     ),
     undefined,
     () => cameraReference.current?.getYaw() ?? 0,
     characterVisual,
-    campaignSave.getSnapshot()?.player.facingYaw ?? spawn.rotation?.[1] ?? 0,
+    initialPlacement.facingYaw ?? spawn.rotation?.[1] ?? 0,
     playerEquipment,
   );
   levelSystem.setStreamingPositionSource(() => player.getPlayerPosition());

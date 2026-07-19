@@ -509,7 +509,9 @@ class LevelDestinationAdapter implements CinematicDestinationAdapter {
 
   public requestDestination(
     request: Parameters<CinematicDestinationAdapter['requestDestination']>[0],
-    commitLanding?: () => void,
+    commitLanding?: Parameters<
+      CinematicDestinationAdapter['requestDestination']
+    >[1],
   ): CinematicDestinationHandle {
     let state: ReturnType<CinematicDestinationHandle['getReadiness']> = {
       state: 'pending',
@@ -539,7 +541,9 @@ class LevelDestinationAdapter implements CinematicDestinationAdapter {
             new Vector3(...spawn.position),
             spawn.rotation?.[1] ?? 0,
           );
-          commitLanding?.();
+          commitLanding?.({
+            onRollback: (operation) => context.onRollback(operation),
+          });
         }, abort.signal);
         committing = false;
         if (!cancelled) state = { state: 'ready' };
@@ -599,22 +603,28 @@ class MissionLandingAdapter implements CinematicLandingAdapter {
 
   public commitLanding(
     transaction: Parameters<CinematicLandingAdapter['commitLanding']>[0],
+    context: Parameters<CinematicLandingAdapter['commitLanding']>[1],
   ) {
     if (this.committed.has(transaction.id)) return { committed: true };
-    if (transaction.id === 'transaction.ash-001.northbar-arrival') {
-      this.missions.applyFactChanges({
-        'orin-status': 'missing',
-        'rook-accepted-orin-search': true,
-        'marrow-has-rook-arrival-time': true,
-        'rook-arrived-in-ashfall': true,
-      });
+    if (!context.onRollback) {
+      return {
+        committed: false,
+        reason: 'Landing transaction requires rollback registration',
+      };
     }
-    for (const hookId of [
-      ...transaction.storyEffectIds,
-      ...transaction.missionHandoffIds,
-    ]) {
-      this.missions.dispatch({ type: 'event-hook', hookId });
-    }
+    context.onRollback(() => {
+      this.committed.delete(transaction.id);
+    });
+    this.missions.commitLandingTransaction(
+      {
+        factChanges: transaction.factChanges,
+        eventHookIds: [
+          ...transaction.storyEffectIds,
+          ...transaction.missionHandoffIds,
+        ],
+      },
+      context.onRollback,
+    );
     this.committed.add(transaction.id);
     return { committed: true };
   }

@@ -1,3 +1,5 @@
+import { Vector3 } from 'three';
+import { StaticCollisionWorld } from '../physics/CollisionWorld';
 import type {
   CinematicAnchorDefinition,
   LevelDefinition,
@@ -49,6 +51,47 @@ export function findSafePlayerSpawn(
     if (isSafePlayerSpawn(spawn, level.staticCollision)) return spawn;
   }
   throw new Error(`Level "${level.id}" has no collision-safe player spawn`);
+}
+
+/** Proves a saved foot pose has authored walkable support and capsule clearance. */
+export function isPlayablePlayerPosition(
+  level: LevelDefinition,
+  position: WorldPosition,
+): boolean {
+  if (![position.x, position.y, position.z].every(Number.isFinite))
+    return false;
+  const supportIds = new Set(
+    level.staticCollision
+      .filter(({ tags = [] }) =>
+        tags.some(
+          (tag) => tag === 'walkable' || tag === 'ground' || tag === 'ramp',
+        ),
+      )
+      .map(({ id }) => id),
+  );
+  const world = new StaticCollisionWorld(-1_000_000);
+  world.addDefinitions(level.staticCollision);
+  const start = new Vector3(position.x, position.y, position.z);
+  const resolved = world.moveCharacter(
+    start,
+    new Vector3(0, -2, 0),
+    {
+      radius: 0.38,
+      height: 1.8,
+      stepHeight: 0.38,
+      maxSlopeAngle: Math.PI * (48 / 180),
+      groundSnapDistance: 0.18,
+    },
+    true,
+  );
+  return (
+    resolved.grounded &&
+    supportIds.has(resolved.groundColliderId) &&
+    Math.hypot(
+      resolved.position.x - position.x,
+      resolved.position.z - position.z,
+    ) < 0.01
+  );
 }
 
 function isSafePlayerSpawn(

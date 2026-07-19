@@ -145,6 +145,11 @@ export interface CinematicDestinationHandle {
   dispose(): void;
 }
 
+export interface CinematicDestinationCommitContext {
+  /** Registers external restoration before that owner is mutated. */
+  onRollback(operation: () => void | Promise<void>): void;
+}
+
 /** Owns travel, level readiness, grounding, and destination-world validation. */
 export interface CinematicDestinationAdapter {
   preflightDestination(
@@ -152,7 +157,7 @@ export interface CinematicDestinationAdapter {
   ): CinematicPreflightResult;
   requestDestination(
     request: CinematicDestinationRequest,
-    commitLanding?: () => void,
+    commitLanding?: (context: CinematicDestinationCommitContext) => void,
   ): CinematicDestinationHandle;
 }
 
@@ -162,6 +167,8 @@ export interface CinematicLandingCommitContext {
     CinematicCompletionResult,
     'completed' | 'skipped' | 'failed'
   >;
+  /** Present while committing inside an authoritative level transaction. */
+  readonly onRollback?: CinematicDestinationCommitContext['onRollback'];
 }
 
 export interface CinematicLandingCommitResult {

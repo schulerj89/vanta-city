@@ -223,6 +223,83 @@ function textureOwnershipLevel(): LevelModule {
   };
 }
 
+function respawnStreamingLevel(): LevelModule {
+  return {
+    assets: {
+      'model.default': { type: 'model', url: '/default.glb' },
+      'model.clinic': { type: 'model', url: '/clinic.glb' },
+    },
+    definition: {
+      id: 'respawn-streaming-level',
+      name: 'Respawn streaming level',
+      environment: [
+        {
+          id: 'visual.default',
+          kind: 'gltf',
+          assetId: 'model.default',
+          position: [0, 0, 0],
+        },
+        {
+          id: 'visual.clinic',
+          kind: 'gltf',
+          assetId: 'model.clinic',
+          position: [100, 0, 0],
+        },
+      ],
+      staticCollision: [
+        {
+          id: 'ground.default',
+          position: [0, -0.5, 0],
+          size: [20, 1, 20],
+          tags: ['walkable', 'ground'],
+        },
+        {
+          id: 'ground.clinic',
+          position: [100, -0.5, 0],
+          size: [20, 1, 20],
+          tags: ['walkable', 'ground'],
+        },
+      ],
+      spawns: [
+        {
+          id: 'spawn.player-default',
+          kind: 'player',
+          default: true,
+          position: [0, 0, 0],
+        },
+        {
+          id: 'spawn.player.clinic',
+          kind: 'player',
+          position: [100, 0, 0],
+        },
+      ],
+      locations: [],
+      zones: [],
+      landmarks: [],
+      triggers: [],
+      cinematicAnchors: [],
+      streaming: {
+        sectors: [
+          {
+            id: 'sector.default',
+            center: [0, 0],
+            loadDistance: 5,
+            unloadDistance: 8,
+            entryIds: ['visual.default', 'ground.default'],
+          },
+          {
+            id: 'sector.clinic',
+            center: [100, 0],
+            loadDistance: 5,
+            unloadDistance: 8,
+            entryIds: ['visual.clinic', 'ground.clinic'],
+          },
+        ],
+      },
+    },
+  };
+}
+
 function deferred<T>(): {
   readonly promise: Promise<T>;
   readonly resolve: (value: T) => void;
@@ -237,6 +314,36 @@ function deferred<T>(): {
 }
 
 describe('LevelSystem', () => {
+  it('rejects off-map and unsupported restored poses before player seeding', () => {
+    const system = new LevelSystem(
+      new Scene(),
+      unusedAssets,
+      new LevelRegistry([testDistrict]),
+      'test-district',
+      new EventBus<WorldEvents>(),
+    );
+
+    expect(
+      system.resolveInitialPlayerPlacement({ x: 500, y: 0, z: 500 }, 1.2),
+    ).toMatchObject({
+      position: { x: 0, z: 19 },
+      restored: false,
+    });
+    expect(
+      system.resolveInitialPlayerPlacement({ x: 0, y: 20, z: 0 }, 1.2),
+    ).toMatchObject({
+      position: { x: 0, z: 19 },
+      restored: false,
+    });
+    expect(
+      system.resolveInitialPlayerPlacement({ x: 40, y: 0.025, z: 0 }, 1.2),
+    ).toMatchObject({
+      position: { x: 40, z: 0 },
+      facingYaw: 1.2,
+      restored: true,
+    });
+  });
+
   it('chooses initial streaming residency around a restored pose', async () => {
     const system = new LevelSystem(
       new Scene(),
@@ -819,6 +926,71 @@ describe('LevelSystem', () => {
     expect(system.getPreparationSnapshot().state).toBe('idle');
     system.dispose();
     collisionSystem.dispose();
+  });
+
+  it('resolves respawn from the level generation that wins a concurrent commit', async () => {
+    const source = travelLevel('source-level', 'model.source', [0, 0.02, 0]);
+    const destination = travelLevel(
+      'destination-level',
+      'model.destination',
+      [7, 0.02, 9],
+    );
+    const system = new LevelSystem(
+      new Scene(),
+      unusedAssets,
+      new LevelRegistry([source, destination]),
+      source.definition.id,
+      new EventBus<WorldEvents>(),
+    );
+    await system.init();
+    const prepared = await system.prepare(destination.definition.id);
+    const landing = deferred<void>();
+    const commit = prepared.commit(() => landing.promise);
+    await Promise.resolve();
+    expect(system.activeLevel?.id).toBe(destination.definition.id);
+
+    const respawn = system.prepareSafePlayerRespawn([]);
+    landing.resolve(undefined);
+    await commit;
+
+    await expect(respawn).resolves.toMatchObject({
+      id: 'spawn.player-default',
+      position: [7, 0.02, 9],
+    });
+    system.dispose();
+  });
+
+  it('falls back within the same level when preferred respawn residency fails', async () => {
+    const module = respawnStreamingLevel();
+    const failingAssets: GameAssetLoader = {
+      ...unusedAssets,
+      instantiateModel: async (assetId) => {
+        if (assetId === 'model.clinic') {
+          throw new Error('clinic residency failed');
+        }
+        return {
+          assetId,
+          scene: new Group(),
+          animations: [],
+          dispose: vi.fn(),
+        };
+      },
+    };
+    const system = new LevelSystem(
+      new Scene(),
+      failingAssets,
+      new LevelRegistry([module]),
+      module.definition.id,
+      new EventBus<WorldEvents>(),
+    );
+    await system.init();
+
+    await expect(
+      system.prepareSafePlayerRespawn(['spawn.player.clinic']),
+    ).resolves.toMatchObject({ id: 'spawn.player-default' });
+    expect(system.activeLevel?.id).toBe(module.definition.id);
+    expect(system.getStreamingSnapshot().active).toContain('sector.default');
+    system.dispose();
   });
 
   it('cancels staged ownership and restores the source after landing failure', async () => {
