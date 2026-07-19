@@ -1651,9 +1651,10 @@ test.describe('playable debug district', () => {
     ).toMatchObject({
       interactionState: 'conversation',
       conversationState: 'active',
-      lastGestureSource: 'conversation:conversation.mack.introduction',
-      lastGestureAccepted: true,
-      gestureSequence: 1,
+      currentAnimation: 'idle',
+      lastGestureSource: undefined,
+      lastGestureAccepted: false,
+      gestureSequence: 0,
     });
     expect(talking.interaction.activeTargetId).toBeUndefined();
 

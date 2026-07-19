@@ -14,6 +14,7 @@ import type { NpcDefinition } from './NpcDefinition';
 import type { EquipmentId } from '../equipment/EquipmentDefinition';
 import type { GameAssetLoader } from '../assets/AssetLoader';
 import type { WeaponDamageTarget } from '../combat/WeaponDamage';
+import type { CinematicPerformanceOwner } from '../cinematics/CinematicPerformanceController';
 
 export interface NpcInteractionRegistry {
   register(interactable: Interactable): () => void;
@@ -54,12 +55,6 @@ export class NpcSystem implements GameSystem {
 
   public async init(): Promise<void> {
     this.unsubscribeWorld.push(
-      this.conversations.events.on('conversation:started', ({ session }) => {
-        const npc = this.spawned.get(session.npcId)?.entity;
-        if (npc && npc.definition.conversationGesture !== false) {
-          npc.triggerGesture(`conversation:${session.definition.id}`);
-        }
-      }),
       this.worldEvents.on('level:unloaded', () => this.clear()),
       this.worldEvents.on('level:loaded', ({ level }) => {
         void this.spawnLevel(level).catch((error: unknown) => {
@@ -78,6 +73,17 @@ export class NpcSystem implements GameSystem {
 
   public getWorldPoseSource(id: string): WorldPoseSource | undefined {
     return this.spawned.get(id)?.entity;
+  }
+
+  public getPerformanceOwner(
+    id: string,
+  ): CinematicPerformanceOwner | undefined {
+    return this.spawned.get(id)?.entity;
+  }
+
+  /** Applause is never a Talk fallback; callers must request it explicitly. */
+  public requestApplause(id: string, source = 'explicit-applause'): boolean {
+    return this.spawned.get(id)?.entity.triggerApplause(source) ?? false;
   }
 
   public getWeaponDamageTargets(): readonly WeaponDamageTarget[] {
@@ -169,13 +175,7 @@ export class NpcSystem implements GameSystem {
           isAvailable: () =>
             entity.health.alive && this.conversations.active === undefined,
           interact: () => {
-            const conversationStarted = this.conversations.start(
-              definition.conversationId,
-              definition.id,
-            );
-            if (!conversationStarted) {
-              entity.triggerGesture(`interaction:${definition.id}`);
-            }
+            this.conversations.start(definition.conversationId, definition.id);
           },
         });
         this.spawned.set(definition.id, { entity, unregisterInteraction });

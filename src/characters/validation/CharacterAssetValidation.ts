@@ -578,7 +578,7 @@ async function validateAnimations(
         model?.assetId,
       );
     }
-    if (['idle', 'walk', 'run', 'gesture'].includes(logicalName)) {
+    if (['idle', 'walk', 'run', 'gesture', 'applaud'].includes(logicalName)) {
       const translation = rootMotionDistance(clip, model?.scene);
       if (translation > config.limits.rootMotionTolerance) {
         addIssue(

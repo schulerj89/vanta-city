@@ -39,6 +39,17 @@ import {
   createLowerBodyAnimationClip,
   resolveCharacterLocomotionPolicy,
 } from '../characters/CharacterLocomotionPolicy';
+import {
+  CinematicPerformanceController,
+  type CharacterPerformanceBinding,
+  type CinematicPerformanceOwner,
+  type CinematicPerformancePreflight,
+  type CinematicPerformanceRequest,
+  type CinematicPerformanceRestoreToken,
+  type CinematicPerformanceSnapshot,
+  type PerformanceReleaseReason,
+} from '../cinematics/CinematicPerformanceController';
+import { getCharacterPerformanceProfile } from '../cinematics/CharacterPerformanceProfiles';
 import type {
   CharacterActionLayer,
   CharacterLocomotionPolicy,
@@ -82,6 +93,7 @@ export interface CharacterPlayerVisualDebugSnapshot {
   readonly equipment: ReturnType<CharacterEquipment['getSnapshot']>;
   readonly equipmentPresentation: EquipmentPresentationSnapshot;
   readonly death: CharacterDeathPresentationSnapshot;
+  readonly performance: CinematicPerformanceSnapshot | undefined;
   readonly appliedScale: string;
   readonly appliedRotation: string;
   readonly verticalOffset: number;
@@ -114,7 +126,7 @@ export interface CharacterVisualDebugSnapshot {
 
 /** Player presentation backed by the selected character with guaranteed fallback. */
 export class CharacterPlayerVisual
-  implements PlayerVisual, CharacterActionSink
+  implements PlayerVisual, CharacterActionSink, CinematicPerformanceOwner
 {
   public readonly id = 'player';
   public readonly object3d = new Group();
@@ -176,6 +188,16 @@ export class CharacterPlayerVisual
   private readonly equipmentPresentation: EquipmentPresentation;
   private readonly deathPresentation = new CharacterDeathPresentation();
   private depleted = false;
+  private performance:
+    CinematicPerformanceController<PlayerPerformanceGameplayState> | undefined;
+  private performanceFacingYaw: number | undefined;
+  private performanceAnimationId: string | undefined;
+
+  public readonly participantId = 'rook';
+
+  public get performanceEvents() {
+    return this.requirePerformance().events;
+  }
 
   public constructor(
     private readonly selection: CharacterSelectionReader,
@@ -200,7 +222,14 @@ export class CharacterPlayerVisual
 
   public sync(movement: PlayerMovementSimulation, delta = 0): void {
     this.object3d.position.copy(movement.position);
-    this.visualRoot.rotation.y = movement.facingYaw;
+    this.visualRoot.rotation.y =
+      this.performanceFacingYaw === undefined
+        ? movement.facingYaw
+        : smoothPresentationYaw(
+            this.visualRoot.rotation.y,
+            this.performanceFacingYaw,
+            delta,
+          );
     this.horizontalSpeed = movement.velocity
       ? Math.hypot(movement.velocity.x, movement.velocity.z)
       : 0;
@@ -246,6 +275,7 @@ export class CharacterPlayerVisual
       equipment: this.equipment.getSnapshot(),
       equipmentPresentation: this.equipmentPresentation.getSnapshot(),
       death: this.deathPresentation.getSnapshot(),
+      performance: this.performance?.getPerformanceSnapshot(),
       appliedScale: root
         ? formatVector(root.scale.x, root.scale.y, root.scale.z)
         : 'pending',
@@ -392,12 +422,45 @@ export class CharacterPlayerVisual
       this.mixer = new AnimationMixer(next.root);
       this.mixer.addEventListener('finished', this.onMixerFinished);
     }
+    const profile = getCharacterPerformanceProfile(definition.id);
+    if (profile) {
+      this.performance = new CinematicPerformanceController(
+        this.participantId,
+        profile,
+        {
+          captureGameplayState: () => this.captureGameplayPerformanceState(),
+          restoreGameplayState: (state) =>
+            this.restoreGameplayPerformanceState(state),
+          hasAnimation: (animationId) =>
+            this.loaded?.animationClips.has(animationId) ?? false,
+          playAnimation: (binding) => this.playPerformanceAnimation(binding),
+          holdAnimation: () => {
+            if (this.action) this.action.paused = true;
+            if (this.upperBodyAction) this.upperBodyAction.paused = true;
+            if (this.locomotionAction) this.locomotionAction.paused = true;
+          },
+          releaseAnimation: () => {
+            this.performanceAnimationId = undefined;
+            this.action?.fadeOut(0.1);
+            this.upperBodyAction?.fadeOut(0.1);
+          },
+          setPerformanceFacingTarget: (yaw) => {
+            this.performanceFacingYaw = yaw;
+          },
+          getActionOwnerCount: () =>
+            [this.locomotionAction, this.action, this.upperBodyAction].filter(
+              Boolean,
+            ).length,
+          getMixerOwnerCount: () => (this.mixer ? 1 : 0),
+        },
+      );
+    }
   }
 
   private updateAnimation(state: PlayerMovementState, delta: number): void {
     const loaded = this.loaded;
     const mixer = this.mixer;
-    this.movementState = state;
+    this.movementState = this.performanceAnimationId ? 'idle' : state;
     const frameDelta = Math.max(0, delta);
     this.equipmentPresentation.update(frameDelta);
     this.deathPresentation.update(frameDelta);
@@ -427,6 +490,10 @@ export class CharacterPlayerVisual
   }
 
   private disposeLoaded(): void {
+    this.performance?.dispose();
+    this.performance = undefined;
+    this.performanceAnimationId = undefined;
+    this.performanceFacingYaw = undefined;
     this.equipmentPresentation.unbind();
     this.deathPresentation.unbind();
     if (this.mixer && this.loaded) {
@@ -473,6 +540,8 @@ export class CharacterPlayerVisual
     )
       return;
     this.finishActiveAction('mixer-finished');
+    const requestId = this.performance?.getPerformanceSnapshot().requestId;
+    if (requestId) this.performance?.releasePerformance(requestId, 'completed');
   };
 
   private finishActiveAction(
@@ -737,6 +806,132 @@ export class CharacterPlayerVisual
       activeNormalizedTime: 0,
     };
   }
+
+  public preflightPerformance(
+    request: CinematicPerformanceRequest,
+  ): CinematicPerformancePreflight {
+    return this.requirePerformance().preflightPerformance(request);
+  }
+
+  public capturePerformanceState(): CinematicPerformanceRestoreToken {
+    return this.requirePerformance().capturePerformanceState();
+  }
+
+  public startPerformance(
+    request: CinematicPerformanceRequest,
+  ): CinematicPerformancePreflight {
+    return this.requirePerformance().startPerformance(request);
+  }
+
+  public holdPerformance(requestId: string): boolean {
+    return this.performance?.holdPerformance(requestId) ?? false;
+  }
+
+  public releasePerformance(
+    requestId: string,
+    reason: PerformanceReleaseReason,
+  ): boolean {
+    return this.performance?.releasePerformance(requestId, reason) ?? false;
+  }
+
+  public restorePerformance(token: CinematicPerformanceRestoreToken): boolean {
+    return this.performance?.restorePerformance(token) ?? false;
+  }
+
+  public getPerformanceSnapshot(): CinematicPerformanceSnapshot {
+    return this.requirePerformance().getPerformanceSnapshot();
+  }
+
+  private requirePerformance(): CinematicPerformanceController<PlayerPerformanceGameplayState> {
+    if (!this.performance) throw new Error('Player performance is unavailable');
+    return this.performance;
+  }
+
+  private captureGameplayPerformanceState(): PlayerPerformanceGameplayState {
+    return {
+      movementState: this.movementState,
+      visualFacingYaw: this.visualRoot.rotation.y,
+      performanceFacingYaw: this.performanceFacingYaw,
+      characterAction: { ...this.characterAction },
+      activeActionSource: this.activeActionSource,
+      activeActionElapsed: this.activeActionElapsed,
+      activeActionDuration: this.activeActionDuration,
+      activeActionRemaining: this.activeActionRemaining,
+      actionTime: this.action?.time,
+      upperBodyActionTime: this.upperBodyAction?.time,
+      locomotionActionTime: this.locomotionAction?.time,
+    };
+  }
+
+  private restoreGameplayPerformanceState(
+    state: PlayerPerformanceGameplayState,
+  ): void {
+    this.cancelActiveAction();
+    this.performanceAnimationId = undefined;
+    this.movementState = state.movementState;
+    this.characterAction = { ...state.characterAction };
+    this.activeActionSource = state.activeActionSource;
+    this.activeActionElapsed = state.activeActionElapsed;
+    this.activeActionDuration = state.activeActionDuration;
+    this.activeActionRemaining = state.activeActionRemaining;
+    this.animationGraph.reset();
+    this.applyGraphTransition();
+    if (state.actionTime !== undefined && this.action)
+      this.action.time = state.actionTime;
+    if (state.upperBodyActionTime !== undefined && this.upperBodyAction)
+      this.upperBodyAction.time = state.upperBodyActionTime;
+    if (state.locomotionActionTime !== undefined && this.locomotionAction)
+      this.locomotionAction.time = state.locomotionActionTime;
+    this.visualRoot.rotation.y = state.visualFacingYaw;
+    this.performanceFacingYaw = state.performanceFacingYaw;
+  }
+
+  private playPerformanceAnimation(
+    binding: CharacterPerformanceBinding,
+  ): boolean {
+    if (!this.loaded?.animationClips.has(binding.animationId) || !this.mixer)
+      return false;
+    this.cancelActiveAction();
+    this.performanceAnimationId = binding.animationId;
+    if (binding.playback === 'loop') {
+      this.movementState = 'idle';
+      this.animationGraph.reset();
+      this.applyGraphTransition();
+      return this.locomotionClip === binding.animationId;
+    }
+    if (binding.animationId !== 'wave' && binding.animationId !== 'interact')
+      return false;
+    return this.triggerCharacterAction(
+      binding.animationId,
+      'cinematic-performance',
+    );
+  }
+}
+
+interface PlayerPerformanceGameplayState {
+  readonly movementState: PlayerMovementState;
+  readonly visualFacingYaw: number;
+  readonly performanceFacingYaw: number | undefined;
+  readonly characterAction: CharacterActionRequestState;
+  readonly activeActionSource: string | undefined;
+  readonly activeActionElapsed: number;
+  readonly activeActionDuration: number;
+  readonly activeActionRemaining: number;
+  readonly actionTime: number | undefined;
+  readonly upperBodyActionTime: number | undefined;
+  readonly locomotionActionTime: number | undefined;
+}
+
+function smoothPresentationYaw(
+  current: number,
+  target: number,
+  delta: number,
+): number {
+  const difference = Math.atan2(
+    Math.sin(target - current),
+    Math.cos(target - current),
+  );
+  return current + difference * (1 - Math.exp(-10 * Math.max(0, delta)));
 }
 
 function resolveAvailableLocomotionClip(

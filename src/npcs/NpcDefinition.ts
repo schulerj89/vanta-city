@@ -9,7 +9,8 @@ export interface NpcDefinition {
   readonly characterId: string;
   readonly portraitAssetId: string;
   readonly defaultAnimation: string;
-  readonly gestureAnimation: string;
+  /** Explicit celebratory action. Never used as Talk or missing-action fallback. */
+  readonly applauseAnimation?: string;
   readonly spawnId: string;
   readonly interactionLabel: string;
   readonly conversationId: string;
@@ -18,8 +19,6 @@ export interface NpcDefinition {
   readonly idleYaw?: number;
   readonly ambientYaw?: number;
   readonly conversationCameraProfileId?: ConversationCameraProfileId;
-  /** Whether the authored one-shot plays when this NPC starts speaking. */
-  readonly conversationGesture?: boolean;
 }
 
 const idPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -57,8 +56,13 @@ export function validateNpcDefinitions(
     if (definition.defaultAnimation.trim().length === 0) {
       throw new Error(`NPC "${definition.id}" needs a default animation`);
     }
-    if (definition.gestureAnimation.trim().length === 0) {
-      throw new Error(`NPC "${definition.id}" needs a gesture animation`);
+    if (
+      definition.applauseAnimation !== undefined &&
+      definition.applauseAnimation.trim().length === 0
+    ) {
+      throw new Error(
+        `NPC "${definition.id}" has an invalid applause animation`,
+      );
     }
     if (definition.interactionLabel.trim().length === 0) {
       throw new Error(`NPC "${definition.id}" needs an interaction label`);
